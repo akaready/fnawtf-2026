@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0a0a0b"/>
+  <rect x="760" y="390" width="400" height="300" rx="8" fill="#171717" stroke="#a14dfd" stroke-width="2"/>
+  <text x="960" y="560" font-family="system-ui" font-size="24" fill="#a1a1aa" text-anchor="middle">Hero Video</text>
+</svg>

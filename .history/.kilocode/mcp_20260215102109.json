@@ -1,0 +1,49 @@
+{
+  "mcpServers": {
+    "gsap-master": {
+      "command": "npx",
+      "args": [
+        "bruzethegreat-gsap-master-mcp-server@latest"
+      ]
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "motion": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "motion-ai"
+      ]
+    },
+    "lucide-icons": {
+      "command": "npx",
+      "args": [
+        "lucide-icons-mcp",
+        "--stdio"
+      ]
+    },
+    "reactbits": {
+      "command": "npx",
+      "args": [
+        "reactbits-dev-mcp-server"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "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"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@0.5.5",
+        "--access-token",
+        "sbp_c9e10a2162f71d566a5614456f028ec525762f2a"
+      ]
+    }
+  }
+}

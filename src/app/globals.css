@@ -1,0 +1,429 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary Purple Palette */
+    --purple-50: #f5f0ff;
+    --purple-100: #ede5ff;
+    --purple-200: #dcd0ff;
+    --purple-300: #c4a8ff;
+    --purple-400: #a14dfd;
+    --purple-500: #8b3de8;
+    --purple-600: #7a2fd4;
+    --purple-700: #6622b6;
+    --purple-800: #561d94;
+    --purple-900: #471976;
+
+    /* Dark Theme */
+    --background: #0a0a0b;
+    --foreground: #fafafa;
+    --muted: #171717;
+    --muted-foreground: #a1a1aa;
+    --border: #262626;
+    --accent: #a14dfd;
+    --accent-foreground: #ffffff;
+
+    /* Font Families */
+    --font-space-grotesk: 'Space Grotesk', sans-serif;
+    --font-manrope: 'Manrope', sans-serif;
+    --font-space-mono: 'Space Mono', monospace;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Hide scrollbar but allow scrolling */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Smooth scrolling */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--purple-300), var(--purple-500));
+  }
+
+  /* Hide elements visually but keep them accessible */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/*
+ * CSS Marquee - Seamless infinite scroll
+ * Implementation from _assets/css-marquee.md
+ * Uses duplicate list + translateX(-100%) for seamless loop
+ */
+.marquee-css {
+  overflow: hidden;
+  position: relative;
+}
+
+.marquee-css__list {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: max-content;
+}
+
+.marquee-css__track {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  animation: marquee-css-scroll 30s linear infinite;
+}
+
+.marquee-css__list > * {
+  flex-shrink: 0;
+}
+
+/*
+ * Key: translateX(-100%) moves one complete list width,
+ * then loops seamlessly because we have a duplicate list
+ */
+@keyframes marquee-css-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Pause marquee on hover (can be overridden) */
+@media (hover: hover) {
+  .marquee-css:hover .marquee-css__list {
+    animation-play-state: paused;
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-marquee-reverse {
+    animation: none;
+  }
+  
+  .marquee-pause:hover .animate-marquee,
+  .marquee-pause:hover .animate-marquee-reverse {
+    animation-play-state: running;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Directional Button Hover Animation
+ * Implementation from _assets/directional-button-hover.md
+ */
+.btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--border);
+  transition: border-color 0.25s ease;
+}
+
+.btn__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.btn__circle-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.btn__circle {
+  position: absolute;
+  width: 22.5em;
+  height: 22.5em;
+  margin-left: -11.25em;
+  margin-top: -11.25em;
+  border-radius: 50%;
+  transform: scale(0);
+  transform-origin: center;
+  will-change: transform;
+}
+
+.before__100 {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.btn__text,
+.btn-text-p {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-family: var(--font-space-grotesk);
+  font-size: 0.9rem;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Dark theme button (default) */
+.btn--dark {
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.btn--dark .btn__bg {
+  background: transparent;
+}
+
+.btn--dark .before__100,
+.btn--dark .btn__circle {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.btn--dark:hover {
+  border-color: #ffffff;
+}
+
+.btn--dark .btn-text-p {
+  color: #ffffff;
+}
+
+.btn--dark:hover .btn-text-p {
+  color: #0a0a0b;
+}
+
+/* Light theme button */
+.btn--light {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--background);
+  border-color: transparent;
+}
+
+.btn--light .btn__bg {
+  background: transparent;
+}
+
+.btn--light .before__100,
+.btn--light .btn__circle {
+  background: #0a0a0b;
+}
+
+.btn--light:hover .btn-text-p {
+  color: #ffffff;
+}
+
+.btn--light .btn-text-p {
+  color: #0a0a0b;
+}
+
+/* Primary theme button */
+.btn--primary {
+  background: var(--accent);
+  color: white;
+  border-color: transparent;
+}
+
+.btn--primary .btn__bg {
+  background: transparent;
+}
+
+.btn--primary .before__100,
+.btn--primary .btn__circle {
+  background: #ffffff;
+}
+
+.btn--primary:hover .btn-text-p {
+  color: #0a0a0b;
+}
+
+.btn--primary .btn-text-p {
+  color: #ffffff;
+}
+
+/* Ensure button content stays above background */
+.btn > *:not(.btn__bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Scroll Progress Bar
+ * Fixed at bottom of viewport
+ */
+.scroll-progress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: transparent;
+  z-index: 100;
+}
+
+.scroll-progress__bar {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.1s ease-out;
+}
+
+/*
+ * Logo Wall Cycle Animation
+ * Implementation from _assets/logo-wall-cycle.md
+ */
+.logo-wall {
+  position: relative;
+}
+
+.logo-wall__item {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.logo-wall__item--active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/*
+ * Scroll Reveal Animations
+ * Implementation from _assets/elements-reveal-on-scroll.md
+ */
+.reveal {
+  opacity: 0;
+  transform: translateY(2em);
+}
+
+.reveal--active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal--nested {
+  opacity: 0;
+  transform: translateY(1em);
+}
+
+.reveal--nested-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.reveal-children > * {
+  opacity: 0;
+  transform: translateY(2em);
+}
+
+.reveal-children--active > *:nth-child(1) { transition-delay: 0ms; }
+.reveal-children--active > *:nth-child(2) { transition-delay: 100ms; }
+.reveal-children--active > *:nth-child(3) { transition-delay: 200ms; }
+.reveal-children--active > *:nth-child(4) { transition-delay: 300ms; }
+.reveal-children--active > *:nth-child(5) { transition-delay: 400ms; }
+.reveal-children--active > *:nth-child(6) { transition-delay: 500ms; }
+.reveal-children--active > *:nth-child(7) { transition-delay: 600ms; }
+.reveal-children--active > *:nth-child(8) { transition-delay: 700ms; }
+
+.reveal-children--active > * {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+/* Reduced motion for reveal */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal--nested,
+  .reveal-children > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

@@ -1,0 +1,1647 @@
+
+The Vault
+15
+Buttons
+12
+Cursor Animations
+7
+Dropdowns & Information
+4
+Filters & Sorting
+2
+Forms
+6
+Gallery & Images
+9
+Gimmicks
+6
+Hover Interactions
+5
+Loaders
+8
+Navigation
+7
+Page Transitions
+14
+Scroll Animations
+4
+Sections & Layouts
+14
+Sliders & Marquees
+10
+Text Animations
+17
+Utilities & Scripts
+13
+Video & Audio
+Icons
+Learn
+Easings
+Soon
+Adam
+
+Adam
+
+Richman
+
+
+
+The Vault
+Sliders & Marquees
+CSS Marquee
+CSS Marquee
+CSS Marquee
+Documentation
+
+
+Step 1: Add HTML
+
+
+Copy
+<div data-css-marquee="" class="marquee-css">
+  <div data-css-marquee-list="" class="marquee-css__list">
+    <div class="marquee-css__item">
+      <p class="marquee-css__item-p">CSS Marquee</p>
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewbox="0 0 50 50" fill="none" class="marquee-css__item-svg"><path d="M17.6777 32.3223C12.9893 27.6339 6.63041 25 0 25C6.63041 25 12.9893 22.3661 17.6777 17.6777C22.3661 12.9893 25 6.63041 25 0C25 6.63041 27.6339 12.9893 32.3223 17.6777C37.0107 22.3661 43.3696 25 50 25C43.3696 25 37.0107 27.6339 32.3223 32.3223C27.6339 37.0107 25 43.3696 25 50C25 43.3696 22.3661 37.0107 17.6777 32.3223Z" fill="#C9FC7D"></path></svg>
+    </div>
+    <div class="marquee-css__item">
+      <p class="marquee-css__item-p">CSS Marquee</p>
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewbox="0 0 50 50" fill="none" class="marquee-css__item-svg"><path d="M17.6777 32.3223C12.9893 27.6339 6.63041 25 0 25C6.63041 25 12.9893 22.3661 17.6777 17.6777C22.3661 12.9893 25 6.63041 25 0C25 6.63041 27.6339 12.9893 32.3223 17.6777C37.0107 22.3661 43.3696 25 50 25C43.3696 25 37.0107 27.6339 32.3223 32.3223C27.6339 37.0107 25 43.3696 25 50C25 43.3696 22.3661 37.0107 17.6777 32.3223Z" fill="#C9FC7D"></path></svg>
+    </div>
+    <div class="marquee-css__item">
+      <p class="marquee-css__item-p">CSS Marquee</p>
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewbox="0 0 50 50" fill="none" class="marquee-css__item-svg"><path d="M17.6777 32.3223C12.9893 27.6339 6.63041 25 0 25C6.63041 25 12.9893 22.3661 17.6777 17.6777C22.3661 12.9893 25 6.63041 25 0C25 6.63041 27.6339 12.9893 32.3223 17.6777C37.0107 22.3661 43.3696 25 50 25C43.3696 25 37.0107 27.6339 32.3223 32.3223C27.6339 37.0107 25 43.3696 25 50C25 43.3696 22.3661 37.0107 17.6777 32.3223Z" fill="#C9FC7D"></path></svg>
+    </div>
+    <div class="marquee-css__item">
+      <p class="marquee-css__item-p">CSS Marquee</p>
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewbox="0 0 50 50" fill="none" class="marquee-css__item-svg"><path d="M17.6777 32.3223C12.9893 27.6339 6.63041 25 0 25C6.63041 25 12.9893 22.3661 17.6777 17.6777C22.3661 12.9893 25 6.63041 25 0C25 6.63041 27.6339 12.9893 32.3223 17.6777C37.0107 22.3661 43.3696 25 50 25C43.3696 25 37.0107 27.6339 32.3223 32.3223C27.6339 37.0107 25 43.3696 25 50C25 43.3696 22.3661 37.0107 17.6777 32.3223Z" fill="#C9FC7D"></path></svg>
+    </div>  
+  </div>
+</div>
+Step 2: Add CSS
+
+
+Copy
+.marquee-css {
+  color: #efeeec;
+  background-color: #000;
+  width: 100%;
+  max-width: 42em;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.marquee-css__list {
+  flex: none;
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.marquee-css__item {
+  grid-column-gap: 1em;
+  grid-row-gap: 1em;
+  flex: 0;
+  align-items: center;
+  padding-top: 1em;
+  padding-bottom: 1em;
+  padding-right: 1em;
+  display: flex;
+}
+
+.marquee-css__item-p {
+  white-space: nowrap;
+  margin-bottom: 0;
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+.marquee-css__item-svg {
+  width: 1em;
+}
+
+/* CSS Keyframe Animation */
+@keyframes translateX { 
+	to {
+    transform: translateX(-100%);
+  }
+}
+
+[data-css-marquee-list] {
+  animation: translateX 30s linear;
+  animation-iteration-count: infinite;
+  animation-play-state: paused;
+}
+Step 3: Add Javascript
+
+
+Copy
+// Note: The Javascript is optional. Read the documentation below how to use the CSS Only version.
+
+function initCSSMarquee() {
+  const pixelsPerSecond = 75; // Set the marquee speed (pixels per second)
+  const marquees = document.querySelectorAll('[data-css-marquee]');
+  
+  // Duplicate each [data-css-marquee-list] element inside its container
+  marquees.forEach(marquee => {
+    marquee.querySelectorAll('[data-css-marquee-list]').forEach(list => {
+      const duplicate = list.cloneNode(true);
+      marquee.appendChild(duplicate);
+    });
+  });
+
+  // Create an IntersectionObserver to check if the marquee container is in view
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      entry.target.querySelectorAll('[data-css-marquee-list]').forEach(list => 
+        list.style.animationPlayState = entry.isIntersecting ? 'running' : 'paused'
+      );
+    });
+  }, { threshold: 0 });
+  
+  // Calculate the width and set the animation duration accordingly
+  marquees.forEach(marquee => {
+    marquee.querySelectorAll('[data-css-marquee-list]').forEach(list => {
+      list.style.animationDuration = (list.offsetWidth / pixelsPerSecond) + 's';
+      list.style.animationPlayState = 'paused';
+    });
+    observer.observe(marquee);
+  });
+}
+
+// Initialize CSS Marquee
+document.addEventListener('DOMContentLoaded', function() {
+  initCSSMarquee();
+});
+Implementation
+Attributes
+The marquee is targeted via the attribute [data-css-marquee]. The part that is moving on the X axis is targeted by the attribute [data-css-marquee-list].
+
+Speed
+The speed of the marquee can be changed in the JavaScript by changing the const pixelPerSecond = 75; variable. Make it higher to go faster.
+
+Functions of the script
+The CSS animation will be paused when out of view.
+The width of the [data-css-marquee-list] element is used to calculate the animation duration.
+The [data-css-marquee-list] is duplicated to create the looping effect.
+CSS Only version
+Note: For the CSS Only version you don't need the javascript part of this resource. This removes the automatically speed calculation, duplication of the list and the in-view observer.
+
+Step 1: Duplicate the [data-css-marquee-list].
+Step 2: Fine-tune the animation: translateX 30s linear; speed to match the desired result.
+Step 3: Remove the line animation-play-state: paused; from the CSS.
+/* CSS Keyframe Animation */
+@keyframes translateX { 
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+[data-css-marquee-list] {
+  animation: translateX 30s linear; /* Tweak this number in seconds */
+  animation-iteration-count: infinite;
+  /* Removed: animation-play-state: paused; */
+}
+Related resources
+Stacked Cards Slider
+
+Stacked Cards Slider
+Line Reveal Testimonials
+
+Line Reveal Testimonials
+K
+
+
+
+Resource details
+
+Last updated
+
+February 12, 2026
+
+Category
+
+Sliders & Marquees
+
+Need help?
+
+Join Slack
+
+CSS
+Marquee
+Banner
+Looping
+Basic
+Setup
+
+Dennis Snellenberg
+Dennis Snellenberg
+
+
+
+
+
+The Vault
+15
+Buttons
+12
+Cursor Animations
+7
+Dropdowns & Information
+4
+Filters & Sorting
+2
+Forms
+6
+Gallery & Images
+9
+Gimmicks
+6
+Hover Interactions
+5
+Loaders
+8
+Navigation
+7
+Page Transitions
+14
+Scroll Animations
+4
+Sections & Layouts
+14
+Sliders & Marquees
+10
+Text Animations
+17
+Utilities & Scripts
+13
+Video & Audio
+Icons
+Learn
+Easings
+Soon
+Adam
+
+Adam
+
+Richman
+
+
+
+The Vault
+Scroll Animations
+Scroll Progress Bar
+Scroll Progress Bar
+Scroll Progress Bar
+Documentation
+
+
+Setup: External Scripts
+
+
+Copy
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<!-- Optional if you want to have the 'click to scroll to' functionality-->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollToPlugin.min.js"></script>
+Step 1: Add HTML
+
+
+Copy
+<div class="progress-bar-wrap">
+  <div class="progress-bar"></div>
+</div>
+Step 2: Add CSS
+
+
+Copy
+.progress-bar-wrap {
+  z-index: 10;
+  cursor: pointer;
+  width: 100%;
+  height: 1.5rem;
+  transition: background-color .2s;
+  position: fixed;
+  inset: 0% 0% auto;
+}
+
+.progress-bar-wrap:hover {
+  background-color: #0000000d;
+}
+
+.progress-bar {
+  transform-origin: 0%;
+  transform-style: preserve-3d;
+  background-color: #ff4c24;
+  width: 100%;
+  height: 100%;
+  transform: scale3d(0, 1, 1);
+}
+Step 3: Add Javascript
+
+
+Copy
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+function initScrollProgressBar() {  
+
+  const progressBar = document.querySelector('.progress-bar');
+  const progressBarWrap = document.querySelector('.progress-bar-wrap');
+
+  // Animate the progress bar as you scroll
+  gsap.to(progressBar, {
+    scaleX: 1,
+    ease: 'none', // no ease, we control smoothness with the 'scrub' property
+    scrollTrigger: {
+      trigger: document.body, // Track the entire page
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 0.5, // control the amount of time it takes for the bar to catch up with scroll position
+    },
+  });
+
+  // Click listener to scroll to a specific position, feel free to remove if you dont want it!
+  progressBarWrap.addEventListener('click', (event) => {
+    const clickX = event.clientX;
+    const progress = clickX / progressBarWrap.offsetWidth;
+    const scrollPosition = progress * (document.body.scrollHeight - window.innerHeight);
+  
+    gsap.to(window, {
+      scrollTo: scrollPosition,
+      duration: 0.725,
+      ease: 'power3.out',
+    });
+  });  
+}
+
+// Initialize Scroll Progress Bar
+document.addEventListener('DOMContentLoaded', () => {
+  initScrollProgressBar();
+});
+Implementation
+Click-to-scroll option
+For demo purposes, we've added a click listener on the progress-bar-wrap. This is of course optional, so if you don't want this feature, feel free to remove the entire click event listener and remove the GSAP ScrollToPlugin.
+
+Related resources
+Locomotive Smooth Scroll Setup
+
+Locomotive Smooth Scroll Setup
+Draw Path on Scroll
+
+Draw Path on Scroll
+K
+
+
+
+Resource details
+
+Last updated
+
+February 12, 2026
+
+Category
+
+Scroll Animations
+
+Need help?
+
+Join Slack
+
+GSAP
+Navigation
+Scrolling
+Script
+Osmo
+Osmo
+
+
+
+
+The Vault
+15
+Buttons
+12
+Cursor Animations
+7
+Dropdowns & Information
+4
+Filters & Sorting
+2
+Forms
+6
+Gallery & Images
+9
+Gimmicks
+6
+Hover Interactions
+5
+Loaders
+8
+Navigation
+7
+Page Transitions
+14
+Scroll Animations
+4
+Sections & Layouts
+14
+Sliders & Marquees
+10
+Text Animations
+17
+Utilities & Scripts
+13
+Video & Audio
+Icons
+Learn
+Easings
+Soon
+Adam
+
+Adam
+
+Richman
+
+
+
+The Vault
+Scroll Animations
+Global Parallax Setup
+Global Parallax Setup
+Global Parallax Setup
+Documentation
+
+
+Setup: External Scripts
+
+
+Copy
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+Step 1: Add HTML
+
+
+Copy
+<div class="parallax-demo-wrap">
+  <div class="parallax-demo-hero">
+    <div data-parallax-scroll-start="top top" data-parallax="trigger" data-parallax-start="0" data-parallax-end="40" class="parallax-demo-bg"><img src="https://cdn.prod.website-files.com/68348a3398ed51b777cbfd0d/683d928d5346bddfd3ac9f94_pawel-czerwinski-H8kzolaZjIM-unsplash.avif" class="parallax-demo-img"></div>
+    <h1 class="parallax-demo-h">Osmo Parallax Setup</h1>
+    <div class="parallax-demo-details">
+      <p class="parallax-demo-p">data-parallax-start=”0”<br>data-parallax-end=”40”<br>data-parallax-scroll-start=&quot;top top&quot;</p>
+    </div>
+  </div>
+  <div class="parallax-demo-row">
+    <div class="parallax-demo-row__third">
+      <div data-parallax-disable="mobileLandscape" data-parallax="trigger" class="parallax-demo-card">
+        <p class="parallax-demo-p">data-parallax-start=”20”<br>data-parallax-end=”-20”<br>data-parallax-disable=&quot;mobileLandscape&quot;</p>
+      </div>
+    </div>
+    <div class="parallax-demo-row__third">
+      <div data-parallax-disable="mobileLandscape" data-parallax="trigger" data-parallax-start="30" data-parallax-end="-30" class="parallax-demo-card">
+        <p class="parallax-demo-p">data-parallax-start=”30”<br>data-parallax-end=”-30”<br>data-parallax-disable=&quot;mobileLandscape&quot;</p>
+      </div>
+    </div>
+    <div class="parallax-demo-row__third">
+      <div data-parallax-disable="mobileLandscape" data-parallax="trigger" data-parallax-start="40" data-parallax-end="-40" class="parallax-demo-card">
+        <p class="parallax-demo-p">data-parallax-start=”40”<br>data-parallax-end=”-40”<br>data-parallax-disable=&quot;mobileLandscape&quot;</p>
+      </div>
+    </div>
+  </div>
+  <div class="parallax-demo-row">
+    <h1 class="parallax-demo-h">One single function. Fully flexible setup with <span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">a</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="40" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">t</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="60" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">t</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="80" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">r</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="100" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">i</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="120" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">b</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="140" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">u</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="160" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">t</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="180" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">e</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="200" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">s</span><span data-parallax-disable="mobile" data-parallax="trigger" data-parallax-start="220" data-parallax-end="0" data-parallax-scroll-end="center center" class="data-parallax-span">.</span></h1>
+  </div>
+  <div class="parallax-demo-row">
+    <div class="parallax-demo-row__half">
+      <div data-parallax-scrub="2" data-parallax="trigger" data-parallax-start="-30" data-parallax-end="0" class="parallax-demo-bg">
+        <img src="https://cdn.prod.website-files.com/68348a3398ed51b777cbfd0d/683d928d8799f0d832b9a30c_pawel-czerwinski-V558Lx_ji6I-unsplash.avif" class="parallax-demo-img">
+      </div>
+      <div class="parallax-demo-details">
+        <p class="parallax-demo-p">data-parallax-scrub=&quot;2&quot;<br>data-parallax-start=&quot;-30&quot;<br>data-parallax-end=&quot;0&quot;</p>
+      </div>
+    </div>
+    <div class="parallax-demo-row__half">
+      <div data-parallax-end="0" data-parallax="trigger" data-parallax-scrub="2" data-parallax-start="-30" class="parallax-demo-bg">
+        <img src="https://cdn.prod.website-files.com/68348a3398ed51b777cbfd0d/683d928eb38a241d3d8801fe_pawel-czerwinski-d-gcPDVNO1E-unsplash.avif" class="parallax-demo-img">
+      </div>
+      <div class="parallax-demo-details">
+        <p class="parallax-demo-p">data-parallax-scrub=&quot;2&quot;<br>data-parallax-start=&quot;-30&quot;<br>data-parallax-end=&quot;0&quot;</p>
+      </div>
+    </div>
+  </div>
+  <div class="parallax-demo-row">
+    <h1 class="parallax-demo-h">Even control the parallax direc<span data-parallax-scroll-start="center 60%" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-scrub="2" data-parallax-start="0" data-parallax-end="200" class="data-parallax-span">t</span><span data-parallax-scroll-start="center 60%" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-scrub="2" data-parallax-start="0" data-parallax-end="400" class="data-parallax-span">i</span><span data-parallax-scroll-start="center 60%" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-scrub="2" data-parallax-start="0" data-parallax-end="600" class="data-parallax-span">o</span><span data-parallax-scroll-start="center 60%" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-scrub="2" data-parallax-start="0" data-parallax-end="800" class="data-parallax-span">n</span></h1>
+  </div>
+  <div class="parallax-demo-row">
+    <div class="parallax-demo-card__wrap">
+      <div data-parallax-scroll-end="center center" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-start="50" data-parallax-end="0" class="parallax-demo-card">
+        <p class="parallax-demo-p">data-parallax-direction=&quot;horizontal&quot;<br>data-parallax-start=”50”<br>data-parallax-end=”0”<br>data-parallax-scroll-end=&quot;center center&quot;<br>data-parallax-scrub=&quot;true&quot;</p>
+      </div>
+      <div data-parallax-scroll-end="center center" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-start="50" data-parallax-end="0" data-parallax-scrub="0.5" class="parallax-demo-card">
+        <p class="parallax-demo-p">data-parallax-direction=&quot;horizontal&quot;<br>data-parallax-start=”50”<br>data-parallax-end=”0”<br>data-parallax-scroll-end=&quot;center center&quot;<br>data-parallax-scrub=&quot;0.5&quot;</p>
+      </div>
+      <div data-parallax-scroll-end="center center" data-parallax="trigger" data-parallax-direction="horizontal" data-parallax-start="50" data-parallax-end="0" data-parallax-scrub="1" class="parallax-demo-card">
+        <p class="parallax-demo-p">data-parallax-direction=&quot;horizontal&quot;<br>data-parallax-start=”50”<br>data-parallax-end=”0”<br>data-parallax-scroll-end=&quot;center center&quot;<br>data-parallax-scrub=&quot;1&quot;</p>
+      </div>
+    </div>
+  </div>
+  <div class="parallax-demo-row">
+    <h1 class="parallax-demo-h">
+      <span data-parallax-end="0" data-parallax="trigger" data-parallax-scroll-end="center center" class="data-parallax-span">H</span>
+      <span data-parallax-start="-100" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">a</span>
+      <span data-parallax-start="200" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">v</span>
+      <span data-parallax-start="50" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">e</span> 
+      <span data-parallax-start="-75" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">f</span>
+      <span data-parallax-start="-300" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">u</span>
+      <span data-parallax-start="400" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">n</span>
+      <span data-parallax-start="-100" data-parallax="trigger" data-parallax-scroll-end="center center" data-parallax-end="0" class="data-parallax-span">!</span>
+    </h1>
+  </div>
+</div>
+Step 2: Add CSS
+
+
+Copy
+.parallax-demo-wrap {
+  grid-column-gap: 15em;
+  grid-row-gap: 15em;
+  flex-flow: column;
+  width: 100%;
+  padding-bottom: 50vh;
+  font-size: min(.85vw, 1rem);
+  display: flex;
+}
+
+.parallax-demo-hero {
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  padding-left: 2em;
+  padding-right: 2em;
+  display: flex;
+  position: relative;
+  overflow: clip;
+}
+
+.parallax-demo-bg {
+  z-index: 0;
+  width: 100%;
+  height: 120%;
+  position: absolute;
+}
+
+.parallax-demo-img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.parallax-demo-h {
+  z-index: 1;
+  text-align: center;
+  max-width: 15ch;
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 4em;
+  font-weight: 500;
+  line-height: 1;
+  position: relative;
+}
+
+.parallax-demo-row {
+  grid-column-gap: 1.25em;
+  grid-row-gap: 1.25em;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding-left: 2em;
+  padding-right: 2em;
+  display: flex;
+  position: relative;
+}
+
+.parallax-demo-row__third {
+  aspect-ratio: 1;
+  width: calc(33.3333% - .833333em);
+}
+
+.parallax-demo-card {
+  grid-column-gap: 2rem;
+  grid-row-gap: 2rem;
+  background-color: #ffffff0d;
+  border: 1px solid #fff3;
+  border-radius: .75em;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: 2em;
+  display: flex;
+}
+
+.parallax-demo-p {
+  margin-bottom: 0;
+  font-family: RM Mono, Arial, sans-serif;
+  font-size: 1.25em;
+}
+
+.parallax-demo-row__half {
+  aspect-ratio: 1;
+  border-radius: .75em;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.parallax-demo-card__wrap {
+  grid-column-gap: 2rem;
+  grid-row-gap: 2rem;
+  background-color: #ffffff0d;
+  border: 1px solid #fff3;
+  border-radius: .75em;
+  flex-flow: row;
+  justify-content: flex-start;
+  align-items: flex-end;
+  width: 100%;
+  height: 35em;
+  padding: 2em;
+  display: flex;
+  overflow: hidden;
+}
+
+.parallax-demo-details {
+  z-index: 1;
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+}
+
+.data-parallax-span {
+  display: inline-block;
+}
+
+@media screen and (max-width: 767px) {
+  .parallax-demo-wrap {
+    font-size: 1rem;
+  }
+
+  .parallax-demo-h {
+    font-size: 3em;
+  }
+
+  .parallax-demo-row {
+    flex-flow: wrap;
+    padding-left: 1.25em;
+    padding-right: 1.25em;
+  }
+
+  .parallax-demo-row__third {
+    width: 100%;
+  }
+
+  .parallax-demo-card {
+    padding: 1.25em;
+  }
+
+  .parallax-demo-p {
+    font-size: .75em;
+  }
+
+  .parallax-demo-card__wrap {
+    flex-flow: column;
+    height: auto;
+  }
+}
+Step 3: Add Javascript
+
+
+Copy
+gsap.registerPlugin(ScrollTrigger)
+
+function initGlobalParallax() {
+  const mm = gsap.matchMedia()
+
+  mm.add(
+    {
+      isMobile: "(max-width:479px)",
+      isMobileLandscape: "(max-width:767px)",
+      isTablet: "(max-width:991px)",
+      isDesktop: "(min-width:992px)"
+    },
+    (context) => {
+      const { isMobile, isMobileLandscape, isTablet } = context.conditions
+
+      const ctx = gsap.context(() => {
+        document.querySelectorAll('[data-parallax="trigger"]').forEach((trigger) => {
+            // Check if this trigger has to be disabled on smaller breakpoints
+            const disable = trigger.getAttribute("data-parallax-disable")
+            if (
+              (disable === "mobile" && isMobile) ||
+              (disable === "mobileLandscape" && isMobileLandscape) ||
+              (disable === "tablet" && isTablet)
+            ) {
+              return
+            }
+            
+            // Optional: you can target an element inside a trigger if necessary 
+            const target = trigger.querySelector('[data-parallax="target"]') || trigger
+
+            // Get the direction value to decide between xPercent or yPercent tween
+            const direction = trigger.getAttribute("data-parallax-direction") || "vertical"
+            const prop = direction === "horizontal" ? "xPercent" : "yPercent"
+            
+            // Get the scrub value, our default is 'true' because that feels nice with Lenis
+            const scrubAttr = trigger.getAttribute("data-parallax-scrub")
+            const scrub = scrubAttr ? parseFloat(scrubAttr) : true
+            
+            // Get the start position in % 
+            const startAttr = trigger.getAttribute("data-parallax-start")
+            const startVal = startAttr !== null ? parseFloat(startAttr) : 20
+            
+            // Get the end position in %
+            const endAttr = trigger.getAttribute("data-parallax-end")
+            const endVal = endAttr !== null ? parseFloat(endAttr) : -20
+            
+            // Get the start value of the ScrollTrigger
+            const scrollStartRaw = trigger.getAttribute("data-parallax-scroll-start") || "top bottom"
+            const scrollStart = `clamp(${scrollStartRaw})`
+            
+           // Get the end value of the ScrollTrigger  
+            const scrollEndRaw = trigger.getAttribute("data-parallax-scroll-end") || "bottom top"
+            const scrollEnd = `clamp(${scrollEndRaw})`
+
+            gsap.fromTo(
+              target,
+              { [prop]: startVal },
+              {
+                [prop]: endVal,
+                ease: "none",
+                scrollTrigger: {
+                  trigger,
+                  start: scrollStart,
+                  end: scrollEnd,
+                  scrub,
+                },
+              }
+            )
+          })
+      })
+
+      return () => ctx.revert()
+    }
+  )
+}
+
+// Initialize Global Parallax Setup
+document.addEventListener("DOMContentLoaded", () => {
+  initGlobalParallax()
+})
+Documentation
+This setup is aimed at giving you a super flexible function, with which you can make almost any parallax effect you need for your project. The complete GSAP tween is dynamic, even the actual property that we animate. Below is the list of all available attributes you can use. You don't need to specify every attribute on each parallax trigger. This is important to understand, and the reason we have set default values. Only add the attributes you actually need to override the default for.
+
+Trigger element (required)
+[data-parallax="trigger"] is the main attribute that the code will look for. By default, the element that we 'tag' as the trigger, will also be the element that we animate, our target. So any other attributes that you want to add, need to go on your trigger.
+
+Target element (optional)
+alternatively, if you want to animate a child element of your trigger, you can give it the [data-parallax="target"] attribute. All other attributes still need to go on your trigger. If your trigger is the element you want to animate, you do not need to add this attribute anywhere.
+
+Horizontal or vertical parallax
+[data-parallax-direction] Controls the property that we animate, so either the xPercent or yPercent of an element. If you want to move an element vertically (along the y-axis) you don't need to add this, the default will rule. The value can be either horizontal or vertical
+
+Scrub duration
+[data-parallax-scrub] links the progress of the animation directly to the scrollbar so it acts like a scrubber. Our default is true because that feels most natural paired with Lenis Scrolling. If you add a number value here, you'll define the amount of seconds it takes for your parallax to "catch up", so data-parallax-scrub="2" would cause the animation's playhead to take 2 seconds to catch up with the scrollbar's position. Default is "true"
+
+Scroll start position
+[data-parallax-scroll-start] defines when your parallax trigger or target will start moving. Our default of "top bottom" means the defined target will start moving when the top of the trigger, reaches the bottom of our screen (so when it starts to enter your viewport). Definitely check out the GSAP docs for the full explanation of this option.
+
+Scroll end position
+Similar to the previous attribute, except [data-parallax-scroll-end] controls when our parallax element will stop moving. Our default of "bottom top" means our parallax will stop when the bottom of our trigger, reaches the top of our screen.
+
+Parallax start position
+[data-parallax-start] is used to define the starting position in % of our target once your target reaches data-parallax-scroll-start. This is either for xPercent or yPercent depending on data-parallax-direction. Example: you have an element with data-parallax-direction="horizontal" and you add data-parallax-start="35". Your target will start 35% to the right of its original position. Our default is 20.
+
+Parallax end position
+[data-parallax-end] controls the end position in % of our target once it hits the position defined with data-parallax-scroll-end. Our default is -20.
+
+Responsive disabling
+If you have a parallax effect that needs to be disabled on smaller breakpoints, you can add [data-parallax-disable] to it. We have defined 3 breakpoints for you, but feel free to adjust them for your needs. Since we're working with GSAPs MatchMedia function, we don't have to add our own resize handlers, everything is taken care of. Simply don't add this attribute if your parallax should always run. Choose between tablet or mobileLandscape or mobile.
+
+Tip for backgrounds:
+A common effect for parallax is to have an image, that seems to move inside of a 'mask'. You can see it in our Live Preview link as well. Here's how to do that:
+
+Create a parent “mask” div with overflow: hidden and give it a position relative. This will be your data-parallax="trigger".
+Inside the mask, add a wrapper div that is taller than 100% (e.g. height: 120%). This extra height gives the image room to move without exposing empty space. Give it a position of absolute to sit behind other content.
+Place your image inside that taller wrapper so it completely fills the 120%-high area.
+On the taller, inner wrapper div, add data-parallax="target".
+When GSAP animates the target wrapper’s yPercent (or xPercent), the image has 20% extra height to shift into view inside the masked container. The mask (trigger) stays fixed at its original height, hiding any overflow.
+Result: as you scroll, the taller wrapper moves up or down inside the overflow-hidden mask, creating a smooth parallax “image-inside-a-frame” effect without ever showing blank gaps.
+Related resources
+Sticky Features
+
+Sticky Features
+Scaling Element on Scroll (GSAP Flip)
+
+Scaling Element on Scroll (GSAP Flip)
+K
+
+
+
+Resource details
+
+Last updated
+
+February 12, 2026
+
+Category
+
+Scroll Animations
+
+Need help?
+
+Join Slack
+
+Advanced
+GSAP
+Scrolltrigger
+Background
+Code
+Parallax
+Scrolling
+Setup
+Transform
+Ilja van Eck
+Ilja van Eck
+
+
+
+
+The Vault
+15
+Buttons
+12
+Cursor Animations
+7
+Dropdowns & Information
+4
+Filters & Sorting
+2
+Forms
+6
+Gallery & Images
+9
+Gimmicks
+6
+Hover Interactions
+5
+Loaders
+8
+Navigation
+7
+Page Transitions
+14
+Scroll Animations
+4
+Sections & Layouts
+14
+Sliders & Marquees
+10
+Text Animations
+17
+Utilities & Scripts
+13
+Video & Audio
+Icons
+Learn
+Easings
+Soon
+Adam
+
+Adam
+
+Richman
+
+
+
+The Vault
+Scroll Animations
+Sticky Features
+Sticky Features
+Sticky Features
+Documentation
+
+
+Setup: External Scripts
+
+
+Copy
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+Step 1: Add HTML
+
+
+Copy
+<div data-sticky-feature-wrap="" class="sticky-features__wrap">
+  <div class="sticky-features__scroll">
+    <div class="sticky-features__container">
+      <div class="sticky-feaures__col is--img">
+        <div class="sticky-features__img-collection">
+          <div class="sticky-features__img-list">
+            <div data-sticky-feature-visual-wrap="" class="sticky-features__img-item">
+              <img src="https://cdn.prod.website-files.com/68b83c9a431270d8deb1e6b1/68b847956497fe87b81b7025_Iced%20Matcha%20Latte.avif" class="sticky-features__img">
+            </div>
+            <div data-sticky-feature-visual-wrap="" class="sticky-features__img-item">
+              <img src="https://cdn.prod.website-files.com/68b83c9a431270d8deb1e6b1/68b847956468e74ee70e259e_Matcha%20Whisking%20Art.avif" class="sticky-features__img">
+            </div>
+            <div data-sticky-feature-visual-wrap="" class="sticky-features__img-item">
+              <img src="https://cdn.prod.website-files.com/68b83c9a431270d8deb1e6b1/68b84795dd49cb5a5f2a2640_Steaming%20Orange%20Beverage.avif" class="sticky-features__img">
+            </div>
+            <div data-sticky-feature-visual-wrap="" class="sticky-features__img-item">
+              <img src="https://cdn.prod.website-files.com/68b83c9a431270d8deb1e6b1/68b8479522525b321756af2e_Hands%20Holding%20Matcha%20Cup.avif" class="sticky-features__img">
+            </div>
+          </div>
+        </div>
+      	<div class="sticky-features__progress-w">
+          <div class="sticky-features__progress-bar" data-sticky-feature-progress></div>
+        </div>
+      </div>
+      <div class="sticky-feaures__col">
+        <div class="sticky-features__text-collection">
+          <div class="sticky-features__text-list">
+            <div data-sticky-feature-item="" class="sticky-features__text-item">
+              <span data-sticky-feature-text="" class="sticky-features__tag">01</span>
+              <h2 data-sticky-feature-text="" class="sticky-features__heading">Fresh Iced Matcha Latte</h2>
+              <p data-sticky-feature-text="" class="sticky-features__p">A glass of iced matcha latte with a metal straw, sitting on a red surface against a dark background, showcasing its vibrant green color.</p>
+              <p data-sticky-feature-text="" class="sticky-features__p is--link">Learn more</p>
+            </div>
+            <div data-sticky-feature-item="" class="sticky-features__text-item">
+              <span data-sticky-feature-text="" class="sticky-features__tag">02</span>
+              <h2 data-sticky-feature-text="" class="sticky-features__heading">Matcha Whisking Art</h2>
+              <p data-sticky-feature-text="" class="sticky-features__p">A hand sprinkles green powder using a bamboo whisk into another hand, set against a dark fabric background, creating a dramatic visual.</p>
+              <p data-sticky-feature-text="" class="sticky-features__p is--link">Learn more</p>
+            </div>
+            <div data-sticky-feature-item="" class="sticky-features__text-item">
+              <span data-sticky-feature-text="" class="sticky-features__tag">03</span>
+              <h2 data-sticky-feature-text="" class="sticky-features__heading">Steaming Orange Fizz</h2>
+              <p data-sticky-feature-text="" class="sticky-features__p">A glass of orange beverage with a sugared rim and a floating leaf, emitting steam, set against a warm orange background.</p>
+              <p data-sticky-feature-text="" class="sticky-features__p is--link">Learn more</p>
+            </div>
+            <div data-sticky-feature-item="" class="sticky-features__text-item">
+              <span data-sticky-feature-text="" class="sticky-features__tag">04</span>
+              <h2 data-sticky-feature-text="" class="sticky-features__heading">Home Away From Home</h2>
+              <p data-sticky-feature-text="" class="sticky-features__p">Hands holding a copper cup of green matcha tea on a brown surface, adorned with simple bracelets, creating a warm and serene scene.</p>
+              <p data-sticky-feature-text="" class="sticky-features__p is--link">Learn more</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+Step 2: Add CSS
+
+
+Copy
+.sticky-features__wrap {
+  width: 100%;
+  padding-left: 1.25em;
+  padding-right: 1.25em;
+  position: relative;
+}
+
+.sticky-features__scroll {
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  display: flex;
+}
+
+.sticky-features__container {
+  grid-column-gap: 1.25em;
+  grid-row-gap: 1.25em;
+  justify-content: center;
+  align-items: stretch;
+  width: 100%;
+  max-width: 70em;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+}
+
+.sticky-feaures__col {
+  flex: 1;
+  position: relative;
+}
+
+.sticky-feaures__col.is--img {
+  overflow: hidden;
+  border-radius: 0.75em;
+}
+
+.sticky-features__progress-w {
+  position: absolute;
+  left: 0em;
+  right: 0em;
+  bottom: 0em;
+  height: 0.25em;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.sticky-features__progress-bar {
+  width: 100%;
+  height: 100%;
+  background-color: rgb(255, 255, 255);
+  transform: scale3d(0, 1, 1);
+  transform-origin: 0% 50%;
+}
+
+.sticky-features__img-collection {
+  width: 100%;
+}
+
+.sticky-features__img-list {
+  aspect-ratio: 1 / 1.3;
+  width: 100%;
+  position: relative;
+}
+
+.sticky-features__img-item {
+  -webkit-clip-path: inset(50% round .75em);
+  clip-path: inset(50% round .75em);
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0%;
+}
+
+/* Show only 1st items on live site */
+[data-sticky-feature-visual-wrap]:first-of-type{ clip-path: inset(0% round 0.75em); }
+
+.sticky-features__img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.sticky-features__text-collection {
+  height: 100%;
+}
+
+.sticky-features__text-list {
+  flex-flow: column;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  position: relative;
+}
+
+.sticky-features__text-item {
+  grid-column-gap: 1.5em;
+  grid-row-gap: 1.5em;
+  visibility: hidden;
+  flex-flow: column;
+  grid-template-rows: auto auto;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-columns: 1fr;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 27.5em;
+  margin-left: auto;
+  display: flex;
+  position: absolute;
+  right: 0;
+}
+
+/* Show only 1st items on live site */
+[data-sticky-feature-item]:first-of-type{ visibility: visible; }
+
+.sticky-features__heading {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 3.75em;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sticky-features__p {
+  color: #ffffffb3;
+  margin-bottom: 0;
+  font-size: 1.25em;
+  line-height: 1.2;
+}
+
+.sticky-features__p.is--link {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.sticky-features__tag {
+  background-color: #ffffff1a;
+  border-radius: .25em;
+  margin-bottom: 1.5em;
+  padding: .5em .625em;
+  font-size: 1em;
+  line-height: 1;
+}
+
+.resource-end {
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  display: flex;
+}
+
+@media screen and (max-width: 767px) {
+  .sticky-features__scroll {
+    justify-content: center;
+    align-items: center;
+    height: auto;
+    min-height: 100svh;
+    padding-top: 1.25em;
+    padding-bottom: 2.5em;
+  }
+
+  .sticky-features__container {
+    grid-column-gap: 2em;
+    grid-row-gap: 2em;
+    flex-flow: column;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  .sticky-features__img-list {
+    aspect-ratio: 1;
+  }
+
+  .sticky-features__text-list {
+    min-height: 20em;
+    max-height: none;
+  }
+
+  .sticky-features__text-item {
+    max-width: none;
+  }
+
+  .sticky-features__heading {
+    font-size: 2.5em;
+  }
+
+  .sticky-features__p {
+    font-size: 1em;
+  }
+
+  .sticky-features__tag {
+    margin-bottom: 0;
+  }
+}
+Step 3: Add Javascript
+
+
+Copy
+gsap.registerPlugin(ScrollTrigger);
+
+function initStickyFeatures(root){
+  const wraps = Array.from((root || document).querySelectorAll("[data-sticky-feature-wrap]"));
+  if(!wraps.length) return;
+
+  wraps.forEach(w => {
+    const visualWraps = Array.from(w.querySelectorAll("[data-sticky-feature-visual-wrap]"));
+    const items = Array.from(w.querySelectorAll("[data-sticky-feature-item]"));
+    const progressBar = w.querySelector("[data-sticky-feature-progress]");
+    
+    if (visualWraps.length !== items.length) {
+      console.warn("[initStickyFeatures] visualWraps and items count do not match:", {
+        visualWraps: visualWraps.length,
+        items: items.length,
+        wrap: w
+      });
+    }
+    
+    const count = Math.min(visualWraps.length, items.length);
+    if(count < 1) return;
+
+    const rm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const DURATION = rm ? 0.01 : 0.75; // If user prefers reduced motion, reduce duration
+    const EASE = "power4.inOut";
+    const SCROLL_AMOUNT = 0.9; // % of scroll used for step transitions
+
+    const getTexts = el => Array.from(el.querySelectorAll("[data-sticky-feature-text]"));
+
+    if(visualWraps[0]) gsap.set(visualWraps[0], { clipPath: "inset(0% round 0.75em)" });
+    gsap.set(items[0], { autoAlpha: 1 });
+
+    let currentIndex = 0;
+
+    // Transition Function
+    function transition(fromIndex, toIndex){
+      if(fromIndex === toIndex) return;
+      const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
+      
+      if(fromIndex < toIndex){
+        tl.to(visualWraps[toIndex], { 
+          clipPath: "inset(0% round 0.75em)",
+          duration: DURATION,
+          ease: EASE
+        }, 0);
+      } else {
+        tl.to(visualWraps[fromIndex], { 
+          clipPath: "inset(50% round 0.75em)",
+          duration: DURATION,
+          ease: EASE
+        }, 0);
+      }
+      animateOut(items[fromIndex]);
+      animateIn(items[toIndex]);
+    }
+
+    // Fade out text content items
+    function animateOut(itemEl){
+      const texts = getTexts(itemEl);
+      gsap.to(texts, {
+        autoAlpha: 0,
+        y: -30,
+        ease: "power4.out",
+        duration: 0.4,
+        onComplete: () => gsap.set(itemEl, { autoAlpha: 0 })
+      });
+    }
+
+    // Reveal incoming text content items
+    function animateIn(itemEl){
+      const texts = getTexts(itemEl);
+      gsap.set(itemEl, { autoAlpha: 1 });
+      gsap.fromTo(texts, {
+        autoAlpha: 0, 
+        y: 30
+      }, {
+        autoAlpha: 1,
+        y: 0,
+        ease: "power4.out",
+        duration: DURATION,
+        stagger: 0.1
+      });
+    }
+
+    const steps = Math.max(1, count - 1);
+
+    ScrollTrigger.create({
+      trigger: w,
+      start: "center center",
+      end: () => `+=${steps * 100}%`,
+      pin: true,
+      scrub: true,
+      invalidateOnRefresh: true,
+      onUpdate: self => {
+        const p = Math.min(self.progress, SCROLL_AMOUNT) / SCROLL_AMOUNT;
+        let idx = Math.floor(p * steps + 1e-6);
+        idx = Math.max(0, Math.min(steps, idx));
+        
+        gsap.to(progressBar,{
+          scaleX: p,
+          ease: "none"
+        })
+        
+        if (idx !== currentIndex) {
+          transition(currentIndex, idx);
+          currentIndex = idx;
+        }
+      }
+    });
+  });
+}
+
+// Initialize Sticky Features
+document.addEventListener("DOMContentLoaded", () =>{
+  initStickyFeatures();
+});
+Implementation
+Container
+Use [data-sticky-feature-wrap] to define the pinned scroll section that controls step-based transitions between visuals and text items.
+
+Visual
+Use [data-sticky-feature-visual-wrap] to wrap each visual panel that reveals with a rounded clip-path as its corresponding step becomes active.
+
+Item
+Use [data-sticky-feature-item] to define the text block for each step, matching the order and count of the visual wraps for synchronized transitions.
+
+Text
+Use [data-sticky-feature-text] inside each item to target child elements that fade and slide during step changes with a staggered sequence.
+
+Amount of items
+You're free to add as many visuals + items to the wrap as you want. Ensure [data-sticky-feature-visual-wrap] and [data-sticky-feature-item] occur in equal numbers though.
+
+Scroll length
+The total pin distance scales with the number of steps so the section ends at += (steps × 100%).
+
+Scroll progress
+We use the onUpdate method in the ScrollTrigger to track the progress of the full section. The progress can be used in any tween you want. In our example, we animate the scaleX property on a div marked with [data-sticky-feature-progress].
+
+Reading band
+Only the first 90% of the ScrollTrigger is used for step switching so the last step remains readable near the end of [data-sticky-feature-wrap].
+
+Reduced motion
+If the user prefers reduced motion, the tween durations shorten automatically while maintaining visibility logic for [data-sticky-feature-item] and [data-sticky-feature-text].
+
+Initial state
+On load, the first visual in [data-sticky-feature-visual-wrap] is revealed and the first item in [data-sticky-feature-item] is set visible, while other items remain hidden until activated.
+
+Ordering
+The step order is determined by DOM order, so keep [data-sticky-feature-visual-wrap] and [data-sticky-feature-item] aligned index-wise from top to bottom.
+
+Related resources
+Scroll Progress Bar
+
+Scroll Progress Bar
+Scaling Element on Scroll (GSAP Flip)
+
+Scaling Element on Scroll (GSAP Flip)
+K
+
+
+
+Resource details
+
+Last updated
+
+February 12, 2026
+
+Category
+
+Scroll Animations
+
+Need help?
+
+Join Slack
+
+GSAP
+Scrolltrigger
+Scrolling
+Animation
+Information
+Steps
+Tabs
+
+Ilja van Eck
+Ilja van Eck
+
+
+
+
+The Vault
+Icons
+Learn
+Easings
+Soon
+Adam
+
+Adam
+
+Richman
+
+
+
+The Vault
+Scroll Animations
+Elements Reveal on Scroll
+Elements Reveal on Scroll
+Elements Reveal on Scroll
+Documentation
+
+
+Setup: External Scripts
+
+
+Copy
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+Step 1: Add HTML
+
+
+Step 2: Add Javascript
+
+
+Copy
+gsap.registerPlugin(ScrollTrigger);
+
+function initContentRevealScroll(){
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const ctx = gsap.context(() => {
+
+    document.querySelectorAll('[data-reveal-group]').forEach(groupEl => {
+      // Config from attributes or defaults (group-level)
+      const groupStaggerSec = (parseFloat(groupEl.getAttribute('data-stagger')) || 100) / 1000; // ms → sec
+      const groupDistance = groupEl.getAttribute('data-distance') || '2em';
+      const triggerStart = groupEl.getAttribute('data-start') || 'top 80%';
+
+      const animDuration = 0.8;
+      const animEase = "power4.inOut";
+
+      // Reduced motion: show immediately
+      if (prefersReduced) {
+        gsap.set(groupEl, { clearProps: 'all', y: 0, autoAlpha: 1 });
+        return;
+      }
+
+      // If no direct children, animate the group element itself
+      const directChildren = Array.from(groupEl.children).filter(el => el.nodeType === 1);
+      if (!directChildren.length) {
+        gsap.set(groupEl, { y: groupDistance, autoAlpha: 0 });
+        ScrollTrigger.create({
+          trigger: groupEl,
+          start: triggerStart,
+          once: true,
+          onEnter: () => gsap.to(groupEl, { 
+            y: 0, 
+            autoAlpha: 1, 
+            duration: animDuration, 
+            ease: animEase,
+            onComplete: () => gsap.set(groupEl, { clearProps: 'all' })
+          })
+        });
+        return;
+      }
+
+      // Build animation slots: item or nested (deep layers allowed)
+      const slots = [];
+      directChildren.forEach(child => {
+        const nestedGroup = child.matches('[data-reveal-group-nested]')
+          ? child
+          : child.querySelector(':scope [data-reveal-group-nested]');
+
+        if (nestedGroup) {
+          const includeParent = child.getAttribute('data-ignore') === 'false' || nestedGroup.getAttribute('data-ignore') === 'false';
+          slots.push({ type: 'nested', parentEl: child, nestedEl: nestedGroup, includeParent });
+        } else {
+          slots.push({ type: 'item', el: child });
+        }
+      });
+
+      // Initial hidden state
+      slots.forEach(slot => {
+        if (slot.type === 'item') {
+          // If the element itself is a nested group, force group distance (prevents it from using its own data-distance)
+          const isNestedSelf = slot.el.matches('[data-reveal-group-nested]');
+          const d = isNestedSelf ? groupDistance : (slot.el.getAttribute('data-distance') || groupDistance);
+          gsap.set(slot.el, { y: d, autoAlpha: 0 });
+        } else {
+          // Parent follows the group's distance when included, regardless of nested's data-distance
+          if (slot.includeParent) gsap.set(slot.parentEl, { y: groupDistance, autoAlpha: 0 });
+          // Children use nested group's own distance (fallback to group distance)
+          const nestedD = slot.nestedEl.getAttribute('data-distance') || groupDistance;
+          Array.from(slot.nestedEl.children).forEach(target => gsap.set(target, { y: nestedD, autoAlpha: 0 }));
+        }
+      });
+
+      // Extra safety: if a nested parent is included, re-assert its distance to the group's value
+      slots.forEach(slot => {
+        if (slot.type === 'nested' && slot.includeParent) {
+          gsap.set(slot.parentEl, { y: groupDistance }); 
+        }
+      });
+
+      // Reveal sequence
+      ScrollTrigger.create({
+        trigger: groupEl,
+        start: triggerStart,
+        once: true,
+        onEnter: () => {
+          const tl = gsap.timeline();
+
+          slots.forEach((slot, slotIndex) => {
+            const slotTime = slotIndex * groupStaggerSec;
+
+            if (slot.type === 'item') {
+              tl.to(slot.el, { 
+                y: 0, 
+                autoAlpha: 1, 
+                duration: animDuration, 
+                ease: animEase,
+                onComplete: () => gsap.set(slot.el, { clearProps: 'all' })
+              }, slotTime);
+            } else {
+              // Optionally include the parent at the same slot time (parent uses group distance)
+              if (slot.includeParent) {
+                tl.to(slot.parentEl, {
+                  y: 0,
+                  autoAlpha: 1,
+                  duration: animDuration,
+                  ease: animEase,
+                  onComplete: () => gsap.set(slot.parentEl, { clearProps: 'all' })
+                }, slotTime);
+              }
+              // Nested children use nested stagger (ms → sec); fallback to group stagger
+              const nestedMs = parseFloat(slot.nestedEl.getAttribute('data-stagger'));
+              const nestedStaggerSec = isNaN(nestedMs) ? groupStaggerSec : nestedMs / 1000;
+              Array.from(slot.nestedEl.children).forEach((nestedChild, nestedIndex) => {
+                tl.to(nestedChild, { 
+                  y: 0, 
+                  autoAlpha: 1, 
+                  duration: animDuration, 
+                  ease: animEase,
+                  onComplete: () => gsap.set(nestedChild, { clearProps: 'all' })
+                }, slotTime + nestedIndex * nestedStaggerSec);
+              });
+            }
+          });
+        }
+      });
+    });
+
+  });
+
+  return () => ctx.revert();
+}
+
+// Initialize Elements Reveal on Scroll
+document.addEventListener("DOMContentLoaded", () =>{
+  initContentRevealScroll();
+})
+Implementation
+This setup gives you a flexible way to reveal content blocks with GSAP + ScrollTrigger, including support for nested groups with independent staggers and distances. You don’t need to set every attribute on each group because defaults are provided for everything. Only add attributes when you need to override the defaults.
+
+1. Wrap your reveal items inside a container with the data-reveal-group attribute. This will animate all of the direct children elements inside this wrapper:
+
+<div data-reveal-group>
+  <!-- children to reveal -->
+</div>
+2. Inside your data-reveal-group, you can add any HTML structure.
+
+Direct children will animate in sequence based on the group’s data-stagger.
+If a direct child contains data-reveal-group-nested, that nested group’s children will reveal in their own sequence.
+By default, the parent of a nested group is skipped from the main reveal. Add data-ignore="false" to the parent (or nested group) if you also want it included in the main group’s animation.
+3. Here's a quick example structure with comments to explain what happens:
+
+<div data-reveal-group>
+  <img> <!-- this item will reveal -->
+  <img> <!-- this item will reveal -->
+  <div data-reveal-group-nested> <!-- this item will NOT reveal -->
+    <img> <!-- this item will reveal -->
+    <img> <!-- this item will reveal -->
+    <img> <!-- this item will reveal -->
+  </div> 
+  <div data-reveal-group-nested data-ignore="false"> <!-- this item WILL reveal -->
+    <img> <!-- this item will reveal -->
+    <img> <!-- this item will reveal -->
+    <img> <!-- this item will reveal -->
+  </div>   
+</div>
+Available attributes
+Group
+‍Use [data-reveal-group] on a wrapper to animate all direct children one-by-one (default) unless a child contains a nested group; required for each group.
+
+Nested
+‍Place [data-reveal-group-nested] on a child so its own children animate in sequence when the parent’s turn comes, skipping the parent by default unless data-ignore=“false” is set.
+
+Stagger
+‍Set [data-stagger] (default 100 ms) to control the delay between animations for direct children or nested children, depending on where it’s applied.
+
+Distance
+‍Use [data-distance] (default 2em) to define the starting offset for animations, applying to all children of a group or only to nested children when set on a nested group.
+
+Start
+‍Set [data-start] (default top 80%) to define the ScrollTrigger start position for when the group’s reveal begins.
+
+Ignore
+‍Add [data-ignore="false"] to include a nested group’s parent in the main reveal sequence while still animating its nested children.
+
+Related resources
+Scroll Progress Number
+
+Scroll Progress Number
+Stacking Cards Parallax
+
+Stacking Cards Parallax
+K
+
+
+
+Resource details
+
+Last updated
+
+February 12, 2026
+
+Category
+
+Scroll Animations
+
+Need help?
+
+Join Slack
+
+Scrolling
+Scrolltrigger
+GSAP
+Stagger
+Reveal
+Animation
+Setup
+Ilja van Eck
+Ilja van Eck
+

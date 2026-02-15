@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0a0a0b"/>
+  <circle cx="960" cy="540" r="80" fill="#a14dfd"/>
+  <polygon points="940,500 940,580 1000,540" fill="#0a0a0b"/>
+  <text x="960" y="680" font-family="system-ui" font-size="24" fill="#a1a1aa" text-anchor="middle">Click to play reel</text>
+</svg>

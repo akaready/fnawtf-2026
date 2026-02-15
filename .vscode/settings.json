@@ -1,0 +1,28 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true
+    },
+    "hide-files.files": [],
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#562263",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e2c3ea99",
+        "statusBar.background": "#662976",
+        "statusBar.foreground": "#e7e7e7"
+    },
+    "workspaceColorPicker.color": "#562263",
+    "workspaceColorPicker.affectTitleBar": false,
+    "workspaceColorPicker.affectActivityBar": true,
+    "workspaceColorPicker.affectStatusBar": true,
+    "workspaceColorPicker.elementAdjustments": {
+        "titleBar": -0.2,
+        "activityBar": 0,
+        "statusBar": 0.2,
+        "iconContrast": 0.4,
+        "iconContrastEnabled": true
+    }
+}
