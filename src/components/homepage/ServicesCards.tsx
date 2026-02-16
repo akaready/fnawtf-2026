@@ -1,9 +1,10 @@
 'use client';
 
 import { Hammer, Rocket, TrendingUp, LucideIcon } from 'lucide-react';
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import gsap from 'gsap';
 import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 
 interface ServiceCard {
   title: string;
@@ -43,43 +44,21 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
 
   const Icon = card.icon;
 
-  useEffect(() => {
-    if (!cardRef.current || !fillRef.current) return;
+  // Use the reusable directional fill hook
+  useDirectionalFill(cardRef, fillRef, {
+    onFillStart: () => {
+      const cardElement = cardRef.current;
+      if (!cardElement) return;
 
-    const cardElement = cardRef.current;
-    const fill = fillRef.current;
-    const iconEl = cardElement.querySelector('[data-icon]') as HTMLElement;
-    const titleEl = cardElement.querySelector('[data-title]') as HTMLElement;
-    const descEl = cardElement.querySelector('[data-desc]') as HTMLElement;
-    const ctaEl = cardElement.querySelector('[data-cta]') as HTMLElement;
-
-    const handleMouseEnter = (e: MouseEvent) => {
-      if (!fill) return;
-
-      const rect = cardElement.getBoundingClientRect();
-      const x = (e.clientX || e.pageX) - rect.left;
-      const direction = x < rect.width / 2 ? 'left' : 'right';
-
-      gsap.killTweensOf([fill, iconEl, titleEl, descEl, ctaEl]);
-
-      if (direction === 'left') {
-        gsap.fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '0 50%' },
-          { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      } else {
-        gsap.fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '100% 50%' },
-          { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      }
+      const iconEl = cardElement.querySelector('[data-icon]') as HTMLElement;
+      const titleEl = cardElement.querySelector('[data-title]') as HTMLElement;
+      const descEl = cardElement.querySelector('[data-desc]') as HTMLElement;
+      const ctaEl = cardElement.querySelector('[data-cta]') as HTMLElement;
 
       // Animate card scale (grows from center)
       gsap.to(cardElement, { scaleY: 1.05, duration: 0.3, ease: 'power2.out' });
 
-      // Animate text colors
+      // Animate text colors to white
       if (iconEl) {
         gsap.to(iconEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out', scale: 1.15 });
       }
@@ -92,10 +71,15 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
       if (ctaEl) {
         gsap.to(ctaEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
       }
-    };
+    },
+    onFillEnd: () => {
+      const cardElement = cardRef.current;
+      if (!cardElement) return;
 
-    const handleMouseLeave = () => {
-      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+      const iconEl = cardElement.querySelector('[data-icon]') as HTMLElement;
+      const titleEl = cardElement.querySelector('[data-title]') as HTMLElement;
+      const descEl = cardElement.querySelector('[data-desc]') as HTMLElement;
+      const ctaEl = cardElement.querySelector('[data-cta]') as HTMLElement;
 
       // Revert card scale
       gsap.to(cardElement, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
@@ -113,16 +97,8 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
       if (ctaEl) {
         gsap.to(ctaEl, { color: '#a14dfd', duration: 0.3, ease: 'power2.out' });
       }
-    };
-
-    cardElement.addEventListener('mouseenter', handleMouseEnter);
-    cardElement.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      cardElement.removeEventListener('mouseenter', handleMouseEnter);
-      cardElement.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, []);
+    }
+  });
 
   return (
     <RevealItem>
