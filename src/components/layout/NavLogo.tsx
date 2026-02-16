@@ -159,7 +159,8 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
             ref={fillRef}
             className="absolute inset-0 bg-white rounded-full pointer-events-none"
             style={{
-              zIndex: 0
+              zIndex: 0,
+              transform: 'translate(100%, 0%)'
             }}
           />
 
