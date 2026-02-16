@@ -76,8 +76,8 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
         );
       }
 
-      // Animate card height
-      gsap.to(cardElement, { height: '105%', duration: 0.3, ease: 'power2.out' });
+      // Animate card scale (grows from center)
+      gsap.to(cardElement, { scaleY: 1.05, duration: 0.3, ease: 'power2.out' });
 
       // Animate text colors
       if (iconEl) {
@@ -97,8 +97,8 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
     const handleMouseLeave = () => {
       gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
 
-      // Revert card height
-      gsap.to(cardElement, { height: '100%', duration: 0.3, ease: 'power2.out' });
+      // Revert card scale
+      gsap.to(cardElement, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
 
       // Revert text colors
       if (iconEl) {
