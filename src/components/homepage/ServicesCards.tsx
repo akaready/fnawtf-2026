@@ -44,13 +44,10 @@ export function ServicesCards({ cards = defaultCards }: ServicesCardsProps) {
       <style jsx>{`
         @keyframes shimmer {
           0% {
-            transform: translateX(-50%) rotate(45deg);
-          }
-          5% {
-            transform: translateX(30%) rotate(45deg);
+            transform: translateX(-150%) rotate(45deg);
           }
           100% {
-            transform: translateX(350%) rotate(45deg);
+            transform: translateX(600%) rotate(45deg);
           }
         }
 
@@ -64,25 +61,24 @@ export function ServicesCards({ cards = defaultCards }: ServicesCardsProps) {
           position: absolute;
           top: -50%;
           left: -50%;
-          width: 60%;
+          width: 80%;
           height: 200%;
           background: linear-gradient(
             90deg,
-            rgba(59, 7, 100, 0),
-            rgba(88, 28, 135, 0.3),
-            rgba(107, 33, 168, 0.4),
-            rgba(88, 28, 135, 0.3),
-            rgba(59, 7, 100, 0)
+            rgba(59, 7, 100, 0) 0%,
+            rgba(88, 28, 135, 0.3) 40%,
+            rgba(107, 33, 168, 0.4) 50%,
+            rgba(88, 28, 135, 0.3) 60%,
+            rgba(59, 7, 100, 0) 100%
           );
           opacity: 0;
           pointer-events: none;
           z-index: 1;
-          transition: opacity 0.05s ease-out;
         }
 
         .service-card:hover::after {
           opacity: 1;
-          animation: shimmer 4s linear;
+          animation: shimmer 3.5s cubic-bezier(0.12, 0, 0.2, 1);
         }
       `}</style>
 
