@@ -28,7 +28,6 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
     const purpleText = textRef.current;
     const whiteText = whiteTextRef.current;
     const whiteTextContainer = whiteTextContainerRef.current;
-    const dotContainer = dotContainerRef.current;
     const mask = maskRef.current;
     const outer = outerRef.current;
 
