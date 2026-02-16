@@ -1,214 +1,57 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
-
 /**
- * Client data interface
+ * Client Logos Section
+ * Grid of client logos with cycling fade animation
+ * Implements: resources/logo-wall-cycle.md
  */
-export interface Client {
-  id: string;
-  name: string;
-  logoUrl: string;
-}
 
-/**
- * Props for the ClientLogos component
- */
-interface ClientLogosProps {
-  clients?: Client[];
-  shuffle?: boolean;
-}
+import { ClientLogosCycle } from './ClientLogosCycle';
 
-/**
- * ClientLogos component displaying a grid of client logos with cycling animation.
- * Uses ScrollTrigger to start animation on viewport enter.
- */
-export function ClientLogos({ clients: initialClients, shuffle = false }: ClientLogosProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [activeSet, setActiveSet] = useState<number[]>([]);
-  const [clients, setClients] = useState<Client[]>(initialClients || []);
-  const [isLoading, setIsLoading] = useState(!initialClients);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+export async function ClientLogos() {
+  // Using local logo files from /public/images/clients/
+  // When Supabase is configured, replace with:
+  // const supabase = createClient();
+  // const { data: clients } = await supabase
+  //   .from('clients')
+  //   .select('id, name, logo_url')
+  //   .order('name');
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  // Fetch clients from Supabase if not provided
-  useEffect(() => {
-    if (initialClients) return;
-
-    const fetchClients = async () => {
-      try {
-        const response = await fetch('/api/clients');
-        if (response.ok) {
-          const data = await response.json();
-          // Shuffle if needed
-          const clientList = shuffle
-            ? data.sort(() => Math.random() - 0.5)
-            : data;
-          setClients(clientList);
-        }
-      } catch (error) {
-        console.error('Failed to fetch clients:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchClients();
-  }, [initialClients, shuffle]);
-
-  const placeholderClients: Client[] = [
-    { id: 'ph-1', name: 'Northline', logoUrl: '/logos/placeholders/northline.svg' },
-    { id: 'ph-2', name: 'ThreadLab', logoUrl: '/logos/placeholders/threadlab.svg' },
-    { id: 'ph-3', name: 'Rift Health', logoUrl: '/logos/placeholders/rift-health.svg' },
-    { id: 'ph-4', name: 'Anchor AI', logoUrl: '/logos/placeholders/anchor-ai.svg' },
-    { id: 'ph-5', name: 'Foundry', logoUrl: '/logos/placeholders/foundry.svg' },
-    { id: 'ph-6', name: 'Nova Studio', logoUrl: '/logos/placeholders/nova-studio.svg' },
-    { id: 'ph-7', name: 'Brightline', logoUrl: '/logos/placeholders/brightline.svg' },
-    { id: 'ph-8', name: 'Pioneer', logoUrl: '/logos/placeholders/pioneer.svg' },
+  const clients = [
+    { id: '1', name: 'Cal Water', logoUrl: '/images/clients/cal-water.png' },
+    { id: '2', name: 'Couples Institute', logoUrl: '/images/clients/couples-institute.png' },
+    { id: '3', name: 'Crave', logoUrl: '/images/clients/crave.png' },
+    { id: '4', name: 'Daily Grill', logoUrl: '/images/clients/daily-grill.png' },
+    { id: '5', name: 'Dell', logoUrl: '/images/clients/dell.png' },
+    { id: '6', name: 'Designer Pages', logoUrl: '/images/clients/designer-pages.png' },
+    { id: '7', name: 'Epson', logoUrl: '/images/clients/epson.png' },
+    { id: '8', name: 'ERI', logoUrl: '/images/clients/eri-logo.png' },
+    { id: '9', name: 'KEY', logoUrl: '/images/clients/key-logo.png' },
+    { id: '10', name: 'Light Pong', logoUrl: '/images/clients/light-pong.png' },
+    { id: '11', name: 'Lumen', logoUrl: '/images/clients/lumen.png' },
+    { id: '12', name: 'Lumos', logoUrl: '/images/clients/lumos.png' },
+    { id: '13', name: 'Lynx', logoUrl: '/images/clients/lynx-1.png' },
+    { id: '14', name: 'Monterey Bay Aquarium', logoUrl: '/images/clients/monteray-bay-aquarium.png' },
+    { id: '15', name: 'New Holland', logoUrl: '/images/clients/new-holland.png' },
+    { id: '16', name: 'Nine Arches', logoUrl: '/images/clients/nine-arches.png' },
+    { id: '17', name: 'Octopus Camera', logoUrl: '/images/clients/octopus-camera.png' },
+    { id: '18', name: 'Omega Events', logoUrl: '/images/clients/omega-events.png' },
+    { id: '19', name: 'Planned Parenthood', logoUrl: '/images/clients/planned-parenthood.png' },
+    { id: '20', name: 'Samsung', logoUrl: '/images/clients/samsung.png' },
   ];
 
-  const logos = clients.length > 0 ? clients : placeholderClients;
-
-  // Set up scroll-triggered animation
-  useEffect(() => {
-    if (prefersReducedMotion || isLoading || logos.length === 0) return;
-
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Simple fade-in animation on scroll
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            container.classList.add('animate-in');
-            observer.disconnect();
-          }
-        });
-      },
-      { threshold: 0.2 }
-    );
-
-    observer.observe(container);
-
-    return () => observer.disconnect();
-  }, [logos.length, isLoading, prefersReducedMotion]);
-
-  useEffect(() => {
-    if (logos.length === 0) return;
-
-    const visibleCount = 8;
-    const first = Array.from({ length: Math.min(visibleCount, logos.length) }, (_, i) => i);
-    setActiveSet(first);
-
-    if (prefersReducedMotion) return;
-
-    let cursor = 0;
-    const interval = window.setInterval(() => {
-      cursor += 1;
-      const next = Array.from({ length: Math.min(visibleCount, logos.length) }, (_, i) => (i + cursor) % logos.length);
-      setActiveSet(next);
-    }, 1600);
-
-    return () => window.clearInterval(interval);
-  }, [logos, prefersReducedMotion]);
-
   return (
-    <section className="py-16 md:py-24 bg-background border-t border-border" data-reveal-group>
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="text-center mb-12" data-reveal-group-nested>
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-            Trusted by founders
+    <section className="py-20 px-6 bg-background">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            Trusted by Founders
           </h2>
-          <p className="mt-2 text-muted-foreground">
-            Companies we've had the pleasure of working with
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            We partner with visionary founders and ambitious teams to bring their stories to life through compelling visual content.
           </p>
         </div>
 
-        {/* Logo Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="aspect-[3/2] rounded-lg bg-muted-foreground/10 animate-pulse"
-              />
-            ))}
-          </div>
-        ) : (
-          <div
-            ref={containerRef}
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 opacity-0"
-            data-logo-wall-cycle-init
-            data-logo-wall-shuffle={shuffle}
-            data-reveal-group-nested
-          >
-            {logos.map((client, index) => (
-              <LogoTile
-                key={client.id}
-                client={client}
-                isActive={activeSet.includes(index)}
-                prefersReducedMotion={prefersReducedMotion}
-              />
-            ))}
-          </div>
-        )}
+        <ClientLogosCycle clients={clients} />
       </div>
     </section>
-  );
-}
-
-interface LogoTileProps {
-  client: Client;
-  isActive: boolean;
-  prefersReducedMotion: boolean;
-}
-
-function LogoTile({ client, isActive, prefersReducedMotion }: LogoTileProps) {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  return (
-    <div
-      className="flex items-center justify-center p-6 rounded-lg bg-muted/20 border border-border/60 transition-all duration-500 group"
-      data-logo-wall-item
-      data-logo-wall-target={isActive ? 'active' : 'idle'}
-      style={{
-        opacity: prefersReducedMotion ? 1 : isActive ? 1 : 0.2,
-        transform: prefersReducedMotion
-          ? 'none'
-          : isActive
-          ? 'translateY(0px) scale(1)'
-          : 'translateY(10px) scale(0.98)',
-        transition: prefersReducedMotion ? 'opacity 0.3s, transform 0.3s' : 'opacity 0.5s, transform 0.5s',
-      }}
-    >
-      <div className="relative w-full h-12 grayscale opacity-60 transition-all duration-300 flex items-center justify-center">
-        {!imageFailed ? (
-          <Image
-            src={client.logoUrl}
-            alt={client.name}
-            fill
-            onError={() => setImageFailed(true)}
-            className="object-contain invert dark:invert-0"
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          />
-        ) : (
-          <span className="font-display text-sm md:text-base tracking-wide text-foreground/80">{client.name}</span>
-        )}
-      </div>
-    </div>
   );
 }

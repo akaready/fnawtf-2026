@@ -1,40 +1,34 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { Database } from '@/types/database.types';
 
 /**
- * Creates a Supabase client for server-side operations.
- * This client handles cookies for authentication state.
- * 
- * @returns Configured Supabase client instance
+ * Supabase Server Client
+ * Use in Server Components for server-side data fetching with RLS
  */
-export const createClient = async () => {
+export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: CookieOptions }>) {
           try {
-            cookieStore.set({ name, value, ...options });
-          } catch (error) {
-            // Handle cookie setting errors in server context
-            console.error('Error setting cookie:', error);
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options });
-          } catch (error) {
-            // Handle cookie removal errors in server context
-            console.error('Error removing cookie:', error);
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options as CookieOptions)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
           }
         },
       },
     }
   );
-};
+}

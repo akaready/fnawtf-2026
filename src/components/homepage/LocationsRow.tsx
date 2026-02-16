@@ -1,33 +1,40 @@
-/**
- * Props for the LocationsRow component
- */
+import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
+
 interface LocationsRowProps {
-  locations: string[];
+  locations?: string[];
 }
 
 /**
- * LocationsRow component displaying a row of location names.
- * Simple, static component with bullet separators.
+ * LocationsRow - Small centered text showing locations
+ * Appears with scroll reveal animation
  */
-export function LocationsRow({ locations }: LocationsRowProps) {
+export function LocationsRow({
+  locations = [
+    'San Francisco',
+    'Los Angeles',
+    'Austin',
+    'New York',
+    'Global',
+  ],
+}: LocationsRowProps) {
   return (
-    <section
-      className="py-6 border-y border-border/50"
-      data-locations-row
-      data-reveal-group
-    >
-      <div className="max-w-7xl mx-auto px-6 lg:px-12">
-        <p className="text-center text-sm text-muted-foreground font-mono tracking-wider" data-reveal-group-nested>
+    <div className="py-6 px-6 bg-background border-y border-border">
+      <div className="max-w-7xl mx-auto">
+        <RevealGroup
+          className="text-sm md:text-base text-muted-foreground text-center"
+          distance="1em"
+          stagger={100}
+        >
           {locations.map((location, index) => (
-            <span key={location}>
-              <span className="text-accent">{location}</span>
-              {index < locations.length - 1 && (
-                <span className="mx-3 text-border">•</span>
-              )}
-            </span>
+            <RevealItem key={location}>
+              <span>
+                {location}
+                {index < locations.length - 1 && ' • '}
+              </span>
+            </RevealItem>
           ))}
-        </p>
+        </RevealGroup>
       </div>
-    </section>
+    </div>
   );
 }

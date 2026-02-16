@@ -2,173 +2,106 @@
 
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+
+interface FnaLoaderProps {
+  onComplete?: () => void;
+  previewImageSrc?: string;
+}
 
 /**
- * FNA Loader - Modified Willem Animation
- * 
- * Animation sequence:
- * 1. Letters "fna.wtf" appear with reveal animation
- * 2. The "." starts as a small circle
- * 3. Dot expands into preview box
- * 4. Preview scales to full viewport to reveal the site
- * 5. Text fades out during reveal
- * 6. Only site content remains visible
- * 
- * Based on: _assets/willem-loading-animation.md
+ * FnaLoader - Modified Willem loading animation
+ * Text "fna.wtf" appears, dot expands to preview box, site reveals
  */
-
-export interface FnaLoaderProps {
-  /** Callback when animation completes */
-  onComplete?: () => void;
-  /** Optional preview image source (defaults to purple gradient) */
-  previewImageSrc?: string;
-  /** Minimum time to show loader (ms) */
-  minDuration?: number;
-}
-
-const FNA_TEXT = 'fna.wtf';
-
-export function FnaLoader({ 
-  onComplete, 
-  previewImageSrc,
-  minDuration = 2000 
-}: FnaLoaderProps) {
+export function FnaLoader({ onComplete, previewImageSrc: _previewImageSrc }: FnaLoaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isComplete, setIsComplete] = useState(false);
-  
+  const prefersReducedMotion = useReducedMotion();
+
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    
+    if (!containerRef.current || isComplete) return;
+
+    const text = 'fna.wtf';
+    const letters = text.split('');
+    let dotIndex = text.indexOf('.');
+
+    // Create letters
+    const container = containerRef.current;
+    container.innerHTML = '';
+
+    letters.forEach((letter, index) => {
+      const span = document.createElement('span');
+      span.textContent = letter;
+      span.className = 'fna-loader__letter';
+      span.style.display = 'inline-block';
+      span.style.opacity = '0';
+      span.setAttribute('data-fna-letter', index.toString());
+      container.appendChild(span);
+    });
+
     if (prefersReducedMotion) {
-      // Skip animation for reduced motion preference
-      const timer = setTimeout(() => {
-        setIsComplete(true);
-        onComplete?.();
-      }, minDuration);
-      return () => clearTimeout(timer);
+      // Skip animation for reduced motion
+      setIsComplete(true);
+      onComplete?.();
+      return;
     }
 
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          setIsComplete(true);
-          onComplete?.();
-        }
-      });
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        setIsComplete(true);
+        onComplete?.();
+      },
+    });
 
-      // Elements
-      const letters = document.querySelectorAll('.fna-loader__letter');
-      const dot = document.querySelector('.fna-loader__dot');
-      const preview = document.querySelector('.fna-loader__preview');
-      const growingImage = document.querySelector('.fna-loader__growing-image');
-      const content = document.querySelector('.fna-loader__content');
+    // Phase 1: Letters appear with stagger
+    const letterElements = container.querySelectorAll('.fna-loader__letter');
+    timeline.fromTo(
+      letterElements,
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: 0.5, stagger: 0.1 },
+      0
+    );
 
-      // Step 1: Animate letters in from bottom (yPercent: 100 → 0)
-      if (letters.length) {
-        tl.from(letters, {
-          yPercent: 100,
-          duration: 1.25,
-          ease: 'expo.out',
-          stagger: 0.05,
-        });
-      }
+    // Phase 2: Text holds for 1 second
+    timeline.to({}, {}, 0.8);
 
-      // Step 2: Animate dot expanding into preview box
-      if (dot && preview) {
-        tl.to(dot, {
-          width: '8em',
-          duration: 1.5,
-          ease: 'expo.inOut',
-        }, '< 0.5');
-      }
+    // Phase 3: Dot becomes a circle and expands
+    const dotElement = letterElements[dotIndex];
+    timeline.fromTo(
+      dotElement,
+      { scale: 1 },
+      { scale: 2, duration: 0.4 },
+      1
+    );
 
-      // Step 3: Grow preview to full viewport
-      if (preview) {
-        tl.to(preview, {
-          width: '100vw',
-          duration: 2,
-          ease: 'expo.inOut',
-        }, '<');
-      }
+    // Phase 4: Dot expands into preview box (container scales down)
+    timeline.to(
+      container,
+      {
+        scale: 0.1,
+        opacity: 0,
+        duration: 0.6,
+      },
+      1.2
+    );
 
-      // Step 4: Expand to full viewport height (the growing image effect)
-      if (growingImage) {
-        tl.to(growingImage, {
-          width: '100vw',
-          height: '100dvh',
-          duration: 2,
-          ease: 'expo.inOut',
-        }, '<');
-      }
-
-      // Step 5: Fade out the loader text while image expands
-      if (content) {
-        tl.to(content, {
-          opacity: 0,
-          duration: 1,
-          ease: 'expo.out',
-        }, '< 0.5');
-      }
-
-      // Ensure minimum duration
-      const totalDuration = tl.duration() * 1000;
-      if (totalDuration < minDuration) {
-        const remainingTime = minDuration - totalDuration;
-        tl.to({}, { duration: remainingTime / 1000 });
-      }
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, [onComplete, minDuration]);
-
-  // If animation is complete, return null to render actual content
-  if (isComplete) {
-    return null;
-  }
+    return () => {
+      timeline.kill();
+    };
+  }, [onComplete, prefersReducedMotion, isComplete]);
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className="fna-loader fixed inset-0 z-[9999] flex items-center justify-center bg-background overflow-hidden"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background"
       data-fna-loader-init
-    >
-      {/* Growing image that expands to full screen */}
-      <div 
-        className="fna-loader__growing-image absolute left-0 top-0 h-full w-0 bg-purple-600"
-        style={{
-          background: previewImageSrc 
-            ? `url(${previewImageSrc}) center/cover no-repeat`
-            : 'linear-gradient(135deg, #a14dfd 0%, #7a2fd4 50%, #6622b6 100%)',
-        }}
-      />
-      
-      {/* Content container */}
-      <div className="fna-loader__content relative z-10 flex items-center">
-        {/* Letters container */}
-        <div className="flex overflow-hidden">
-          {FNA_TEXT.split('').map((char, index) => (
-            <span
-              key={index}
-              className="fna-loader__letter inline-block font-display text-5xl md:text-7xl font-bold text-foreground"
-              data-fna-letter
-              style={{ 
-                display: char === '.' ? 'none' : 'inline-block' 
-              }}
-            >
-              {char === '.' ? '' : char}
-            </span>
-          ))}
-        </div>
-        
-        {/* The dot that expands */}
-        <div className="fna-loader__dot relative h-4 w-0 overflow-hidden rounded-full bg-purple-400" data-fna-dot>
-          {/* Preview box that appears after dot expansion */}
-          <div className="fna-loader__preview absolute left-0 top-0 h-4 w-0 overflow-hidden rounded-full bg-purple-400" />
-        </div>
-      </div>
-    </div>
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '4rem',
+        fontWeight: 700,
+        color: 'var(--accent)',
+        display: isComplete ? 'none' : 'flex',
+      }}
+    />
   );
 }
-
-export default FnaLoader;

@@ -9,7 +9,7 @@ import Hls from 'hls.js';
  */
 interface ReelPlayerProps {
   videoSrc: string;
-  placeholderSrc: string;
+  placeholderSrc?: string;
   aspectRatio?: string;
 }
 
@@ -29,17 +29,25 @@ export function ReelPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Initialize HLS.js
+  // Initialize video playback - HLS.js or native
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoSrc) return;
 
-    // Check if HLS is supported
-    if (Hls.isSupported()) {
+    setError(null);
+    setIsLoading(true);
+
+    // Detect if URL is HLS playlist or direct video file
+    const isHLS = videoSrc.includes('.m3u8');
+
+    if (isHLS && Hls.isSupported()) {
+      // Use HLS.js for .m3u8 playlists
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
+        maxLoadingDelay: 4,
       });
 
       hls.loadSource(videoSrc);
@@ -50,18 +58,28 @@ export function ReelPlayer({
       });
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error('HLS error:', {
+          type: data.type,
+          details: data.details,
+          fatal: data.fatal,
+          url: videoSrc,
+        });
+
         if (data.fatal) {
-          console.error('HLS fatal error:', data);
-          // Fallback to native playback
-          video.src = videoSrc;
+          setError(`Video loading failed: ${data.details}`);
+          setIsLoading(false);
         }
       });
 
       return () => {
         hls.destroy();
       };
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    } else if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS support (Safari)
+      video.src = videoSrc;
+      setIsLoading(false);
+    } else {
+      // Direct video file (MP4, WebM, etc.) or non-HLS URL
       video.src = videoSrc;
       setIsLoading(false);
     }
@@ -145,14 +163,24 @@ export function ReelPlayer({
           </video>
 
           {/* Loading Indicator */}
-          {isLoading && (
+          {isLoading && !error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
           )}
 
+          {/* Error State */}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+              <div className="text-center px-4 max-w-sm">
+                <p className="text-white text-sm font-medium mb-2">Unable to load video</p>
+                <p className="text-white/60 text-xs">{error}</p>
+              </div>
+            </div>
+          )}
+
           {/* Play Button Overlay (when paused) */}
-          {!isPlaying && !isLoading && (
+          {!isPlaying && !isLoading && !error && (
             <button
               onClick={togglePlay}
               className="absolute inset-0 flex items-center justify-center bg-black/30 group"

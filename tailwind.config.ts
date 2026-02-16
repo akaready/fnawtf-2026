@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: ['class'],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,13 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#0a0a0b',
-        foreground: '#fafafa',
-        muted: '#171717',
-        'muted-foreground': '#a1a1aa',
-        border: '#262626',
-        accent: '#a14dfd',
-        'accent-foreground': '#ffffff',
+        // Purple palette based on primary color #a14dfd
         purple: {
           50: '#f5f0ff',
           100: '#ede5ff',
@@ -28,29 +23,31 @@ const config: Config = {
           800: '#561d94',
           900: '#471976',
         },
+        // Dark theme
+        background: '#0a0a0b',
+        foreground: '#fafafa',
+        muted: '#171717',
+        'muted-foreground': '#a1a1aa',
+        border: '#262626',
+        accent: '#a14dfd',
+        'accent-foreground': '#ffffff',
       },
       fontFamily: {
         display: ['var(--font-space-grotesk)', 'sans-serif'],
         body: ['var(--font-manrope)', 'sans-serif'],
         mono: ['var(--font-space-mono)', 'monospace'],
       },
-      animation: {
-        marquee: 'marquee 25s linear infinite',
-        'marquee-reverse': 'marquee-reverse 25s linear infinite',
-      },
-      keyframes: {
-        marquee: {
-          '0%': { transform: 'translateX(0%)' },
-          '100%': { transform: 'translateX(-100%)' },
-        },
-        'marquee-reverse': {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(0%)' },
+      typography: {
+        DEFAULT: {
+          css: {
+            color: 'var(--foreground)',
+            backgroundColor: 'var(--background)',
+          },
         },
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss/plugin')],
 };
 
 export default config;

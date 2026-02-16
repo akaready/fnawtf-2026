@@ -1,295 +1,185 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
-
 /**
- * Featured project data interface
+ * Featured Work Section
+ * Masonry grid of featured portfolio items with hover video preview
  */
-export interface FeaturedProject {
-  id: string;
-  title: string;
-  subtitle: string;
-  slug: string;
-  thumbnailUrl: string;
-  hoverVideoSrc?: string;
-}
 
-/**
- * Props for the FeaturedWork component
- */
-interface FeaturedWorkProps {
-  projects?: FeaturedProject[];
-}
+import { FeaturedWorkCard } from './FeaturedWorkCard';
+import { FeaturedProject } from '@/types/project';
+import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
 
-/**
- * FeaturedWork component displaying a masonry grid of featured projects.
- * Fetches data from Supabase if not provided.
- */
-export function FeaturedWork({ projects: initialProjects }: FeaturedWorkProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [projects, setProjects] = useState<FeaturedProject[]>(initialProjects || []);
-  const [isLoading, setIsLoading] = useState(!initialProjects);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  // Fetch featured projects from Supabase if not provided
-  useEffect(() => {
-    if (initialProjects) return;
-
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch('/api/projects/featured');
-        if (response.ok) {
-          const data = await response.json();
-          setProjects(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch featured projects:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, [initialProjects]);
-
-  const placeholderProjects: FeaturedProject[] = [
+export async function FeaturedWork() {
+  // Mock featured projects - replace with Supabase query when credentials are configured
+  const projects: FeaturedProject[] = [
     {
-      id: 'placeholder-1',
-      title: 'Stealth Fintech Launch Film',
-      subtitle: 'Brand film + launch page + paid social cutdowns',
-      slug: 'stealth-fintech-launch-film',
-      thumbnailUrl: '/images/placeholders/work-01.jpg',
-      hoverVideoSrc: '/videos/placeholders/work-01.mp4',
+      id: '1',
+      title: 'Brand Identity Launch',
+      subtitle: 'Comprehensive brand refresh campaign',
+      slug: 'project-1',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&h=450&fit=crop',
+      featured: true,
+      published: true,
+      is_hero: true,
+      aspect_ratio: '16:9',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
     {
-      id: 'placeholder-2',
-      title: 'Healthcare Product Story',
-      subtitle: 'Narrative explainer for enterprise rollout',
-      slug: 'healthcare-product-story',
-      thumbnailUrl: '/images/placeholders/work-02.jpg',
-      hoverVideoSrc: '/videos/placeholders/work-02.mp4',
+      id: '2',
+      title: 'Product Launch Campaign',
+      subtitle: 'Full-scale product announcement',
+      slug: 'project-2',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=338&fit=crop',
+      featured: true,
+      published: true,
+      aspect_ratio: '16:9',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
     {
-      id: 'placeholder-3',
-      title: 'SaaS Founder Mini-Doc',
-      subtitle: 'Founder-led campaign across web + email',
-      slug: 'saas-founder-mini-doc',
-      thumbnailUrl: '/images/placeholders/work-03.jpg',
-      hoverVideoSrc: '/videos/placeholders/work-03.mp4',
+      id: '3',
+      title: 'Social Media Campaign',
+      subtitle: 'Instagram-first content series',
+      slug: 'project-3',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=600&fit=crop',
+      featured: true,
+      published: true,
+      aspect_ratio: '1:1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
     {
-      id: 'placeholder-4',
-      title: 'Consumer Brand Launch Teaser',
-      subtitle: 'Social-first teaser system and paid motion ads',
-      slug: 'consumer-brand-launch-teaser',
-      thumbnailUrl: '/images/placeholders/work-04.jpg',
-      hoverVideoSrc: '/videos/placeholders/work-04.mp4',
+      id: '4',
+      title: 'Documentary Series',
+      subtitle: 'Long-form storytelling initiative',
+      slug: 'project-4',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=338&fit=crop',
+      featured: true,
+      published: true,
+      aspect_ratio: '16:9',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
     {
-      id: 'placeholder-5',
-      title: 'AI Product Positioning Reel',
-      subtitle: 'Positioning film and homepage story arc',
-      slug: 'ai-product-positioning-reel',
-      thumbnailUrl: '/images/placeholders/work-05.jpg',
-      hoverVideoSrc: '/videos/placeholders/work-05.mp4',
+      id: '5',
+      title: 'Corporate Rebrand',
+      subtitle: 'Enterprise identity redesign',
+      slug: 'project-5',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'design',
+      thumbnail_url: 'https://images.unsplash.com/photo-1522202176988-e25ad9e90207?w=600&h=600&fit=crop',
+      featured: true,
+      published: true,
+      aspect_ratio: '1:1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
     {
-      id: 'placeholder-6',
-      title: 'Ecom Brand Relaunch',
-      subtitle: 'Performance creative suite for paid channels',
-      slug: 'ecom-brand-relaunch',
-      thumbnailUrl: '/images/placeholders/work-06.jpg',
-      hoverVideoSrc: '/videos/placeholders/work-06.mp4',
+      id: '6',
+      title: 'Fashion Editorial',
+      subtitle: 'High-end lifestyle production',
+      slug: 'project-6',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=450&fit=crop',
+      featured: true,
+      published: true,
+      is_hero: true,
+      aspect_ratio: '16:9',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: '7',
+      title: 'Tech Product Demo',
+      subtitle: 'Software feature showcase',
+      slug: 'project-7',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600&h=338&fit=crop',
+      featured: true,
+      published: true,
+      aspect_ratio: '16:9',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: '8',
+      title: 'Culinary Content',
+      subtitle: 'Food and beverage storytelling',
+      slug: 'project-8',
+      description: 'Project description',
+      client_name: 'Client Name',
+      type: 'video',
+      thumbnail_url: 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=600&h=600&fit=crop',
+      featured: true,
+      published: true,
+      aspect_ratio: '1:1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     },
   ];
 
-  const projectsToRender = projects.length > 0 ? projects : placeholderProjects;
+  // Uncomment when Supabase is configured:
+  // const supabase = createClient();
+  // const { data: projects, error } = await supabase
+  //   .from('projects')
+  //   .select('id, title, subtitle, slug, thumbnail_url, featured, published')
+  //   .eq('featured', true)
+  //   .eq('published', true)
+  //   .order('created_at', { ascending: false })
+  //   .limit(6);
 
-  return (
-    <section className="py-16 md:py-24 bg-background" data-reveal-group>
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12 gap-4">
-          <div data-reveal-group-nested>
-            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-              Featured Work
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Selected projects from our portfolio
-            </p>
+  if (!projects || projects.length === 0) {
+    return (
+      <section className="py-20 px-6 bg-background">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center text-muted-foreground">
+            Featured work coming soon...
           </div>
-          <a
-            href="/work"
-            className="inline-flex items-center text-accent hover:text-accent/80 transition-colors font-medium"
-            data-reveal-group-nested
-          >
-            View all projects
-            <svg
-              className="w-4 h-4 ml-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 8l4 4m0 0l-4 4m4-4H3"
-              />
-            </svg>
-          </a>
         </div>
-
-        {/* Masonry Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="aspect-[4/3] rounded-lg bg-muted-foreground/10 animate-pulse"
-              />
-            ))}
-          </div>
-        ) : (
-          <div
-            ref={containerRef}
-            className="columns-1 md:columns-2 lg:columns-3 gap-6 [column-fill:_balance]"
-            data-reveal-group
-            data-stagger={100}
-          >
-            {projectsToRender.map((project, index) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                index={index}
-                prefersReducedMotion={prefersReducedMotion}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/**
- * Individual project card component
- */
-interface ProjectCardProps {
-  project: FeaturedProject;
-  index: number;
-  prefersReducedMotion: boolean;
-}
-
-function ProjectCard({ project, index, prefersReducedMotion }: ProjectCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const [imageFailed, setImageFailed] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const heightClass =
-    index % 5 === 0
-      ? 'h-[30rem]'
-      : index % 3 === 0
-      ? 'h-[24rem]'
-      : 'h-[20rem]';
+      </section>
+    );
+  }
 
   return (
-    <a
-      href={`/work/${project.slug}`}
-      className="group relative mb-6 block break-inside-avoid overflow-hidden rounded-2xl border border-border bg-black"
-      data-reveal-group-nested
-      data-video-on-hover={isHovered ? 'active' : 'not-active'}
-      data-video-src={project.hoverVideoSrc || ''}
-      style={{
-        opacity: prefersReducedMotion ? 1 : 0,
-        transform: prefersReducedMotion ? 'none' : 'translateY(2em)',
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setVideoLoaded(false);
-      }}
-    >
-      {/* Thumbnail / video area */}
-      <div className={`relative ${heightClass} overflow-hidden`}>
-        {!imageFailed ? (
-          <Image
-            src={project.thumbnailUrl}
-            alt={project.title}
-            fill
-            onError={() => setImageFailed(true)}
-            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
-              isHovered && project.hoverVideoSrc ? 'opacity-0' : 'opacity-100'
-            }`}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/60 via-purple-700/60 to-black flex items-end p-5">
-            <span className="font-mono text-xs uppercase tracking-[0.18em] text-white/80">
-              Placeholder Preview
-            </span>
-          </div>
-        )}
-
-        {/* Hover Video */}
-        {project.hoverVideoSrc && (
-          <video
-            ref={videoRef}
-            src={project.hoverVideoSrc}
-            muted
-            loop
-            playsInline
-            preload={isHovered ? 'auto' : 'none'}
-            onLoadedData={() => setVideoLoaded(true)}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-              isHovered && videoLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        )}
-      </div>
-
-      {/* White detail panel */}
-      <div className="bg-white px-5 py-4 text-black">
-        <div className="transform transition-transform duration-300 group-hover:-translate-y-1">
-          <h3 className="font-display text-xl font-bold text-black">
-            {project.title}
-          </h3>
-          <p className="mt-1 text-sm text-black/70 line-clamp-2">
-            {project.subtitle}
+    <section className="py-20 px-6 bg-background">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-16 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            Featured Work
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Explore our latest projects showcasing innovative storytelling and creative excellence.
           </p>
         </div>
 
-        <div className="mt-3 flex items-center text-black/60 group-hover:text-black transition-all duration-300">
-          <span className="text-sm font-medium">View Project</span>
-          <svg
-            className="w-4 h-4 ml-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 8l4 4m0 0l-4 4m4-4H3"
-            />
-          </svg>
-        </div>
+        <RevealGroup
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[16rem]"
+          style={{ gridAutoFlow: 'dense' }}
+          stagger={150}
+        >
+          {projects.map((project: FeaturedProject, index: number) => (
+            <RevealItem key={project.id}>
+              <FeaturedWorkCard project={project} index={index} />
+            </RevealItem>
+          ))}
+        </RevealGroup>
       </div>
-    </a>
+    </section>
   );
 }

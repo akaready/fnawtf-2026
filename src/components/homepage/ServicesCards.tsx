@@ -1,85 +1,82 @@
-'use client';
+import { Hammer, Rocket, TrendingUp, LucideIcon } from 'lucide-react';
+import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
 
-import { useRef } from 'react';
-import { ArrowUpRight } from 'lucide-react';
-
-/**
- * Service card data interface
- */
-export interface ServiceCard {
+interface ServiceCard {
   title: string;
   description: string;
   href: string;
-  icon?: React.ReactNode;
+  icon: LucideIcon;
 }
 
-/**
- * Props for the ServicesCards component
- */
 interface ServicesCardsProps {
-  cards: ServiceCard[];
+  cards?: ServiceCard[];
 }
 
-/**
- * ServicesCards component displaying three service offerings.
- * Uses grid layout with hover animations.
- */
-export function ServicesCards({ cards }: ServicesCardsProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+const defaultCards: ServiceCard[] = [
+  {
+    title: 'Build',
+    description: 'Foundation services to establish your brand identity and visual language.',
+    href: '/services#build',
+    icon: Hammer,
+  },
+  {
+    title: 'Launch',
+    description: 'Launch services to bring your product or campaign to market with impact.',
+    href: '/services#launch',
+    icon: Rocket,
+  },
+  {
+    title: 'Scale',
+    description: 'Growth services to expand your reach and amplify your message.',
+    href: '/services#scale',
+    icon: TrendingUp,
+  },
+];
 
+/**
+ * ServicesCards - Three service tier cards with scroll reveal
+ */
+export function ServicesCards({ cards = defaultCards }: ServicesCardsProps) {
   return (
-    <section className="py-16 md:py-24 bg-background">
-      <div className="max-w-6xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-            How can we help?
+    <section className="py-20 px-6 bg-background">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            How We Work
           </h2>
-          <p className="mt-2 text-muted-foreground">
-            Choose your path to success
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Our three-phase approach ensures your vision comes to life with clarity, impact, and sustainable growth.
           </p>
         </div>
 
-        {/* Cards Grid */}
-        <div
-          ref={containerRef}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-          data-reveal-group
-          data-stagger={150}
+        <RevealGroup
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          stagger={150}
+          distance="2em"
         >
-          {cards.map((card, index) => (
-            <a
-              key={card.title}
-              href={card.href}
-              className="group relative flex flex-col p-8 rounded-xl bg-muted/30 border border-border hover:border-accent/50 transition-all duration-300 hover:shadow-lg hover:shadow-accent/10"
-              data-reveal-group-nested
-            >
-              {/* Card Number */}
-              <span className="absolute top-4 left-4 font-mono text-sm text-muted-foreground">
-                0{index + 1}
-              </span>
-
-              {/* Card Content */}
-              <div className="flex-1 mt-4">
-                <h3 className="font-display text-2xl font-bold text-foreground group-hover:text-accent transition-colors">
-                  {card.title}
-                </h3>
-                <p className="mt-3 text-muted-foreground leading-relaxed">
-                  {card.description}
-                </p>
-              </div>
-
-              {/* Arrow Icon */}
-              <div className="mt-6 flex items-center text-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="font-display text-sm font-medium">Learn more</span>
-                <ArrowUpRight className="w-4 h-4 ml-1" />
-              </div>
-
-              {/* Hover Border Effect */}
-              <div className="absolute inset-0 rounded-xl border-2 border-accent/0 group-hover:border-accent/30 transition-colors duration-300 pointer-events-none" />
-            </a>
-          ))}
-        </div>
+          {cards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <RevealItem key={card.title}>
+                <a
+                  href={card.href}
+                  className="group p-8 border border-border rounded-lg hover:bg-purple-950 hover:border-purple-500 transition-all cursor-pointer"
+                >
+                  <Icon className="w-12 h-12 mb-6 text-foreground group-hover:text-purple-300 transition-colors" strokeWidth={1.5} />
+                  <h3 className="font-display text-2xl font-bold text-foreground mb-4 group-hover:text-white transition-colors">
+                    {card.title}
+                  </h3>
+                  <p className="font-body text-muted-foreground group-hover:text-purple-200 leading-relaxed mb-6 transition-colors">
+                    {card.description}
+                  </p>
+                  <div className="text-accent group-hover:text-purple-300 text-sm font-semibold transition-colors">
+                    Explore {card.title} →
+                  </div>
+                </a>
+              </RevealItem>
+            );
+          })}
+        </RevealGroup>
       </div>
     </section>
   );
