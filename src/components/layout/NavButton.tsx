@@ -18,11 +18,13 @@ const iconVariants = {
     opacity: 0,
     x: -8,
     width: 0,
+    marginRight: -8,
   },
   visible: {
     opacity: 1,
     x: 0,
     width: 'auto',
+    marginRight: 0,
     transition: {
       duration: 0.3,
       ease: [0.22, 1, 0.36, 1],
