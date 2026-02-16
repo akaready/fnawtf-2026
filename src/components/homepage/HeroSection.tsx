@@ -116,7 +116,7 @@ export function HeroSection({
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40 pointer-events-none" />
 
       {/* Content - positioned lower with bottom padding for marquee */}
-      <div className="relative z-10 flex-1 flex items-center justify-center pb-32 pt-[33vh]">
+      <div className="relative z-10 flex-1 flex items-center justify-center pb-32 pt-[30vh]">
         <div className="max-w-4xl mx-auto px-6 text-center space-y-6">
         <h1
           ref={headlineRef}

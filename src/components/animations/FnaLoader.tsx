@@ -63,7 +63,7 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
     purpleDotSvg.style.margin = '0 2px 0 4px'; // Small spacing like a period, shifted 2px right
 
     const purpleDotCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    purpleDotCircle.setAttribute('cx', '10');
+    purpleDotCircle.setAttribute('cx', '8');
     purpleDotCircle.setAttribute('cy', '8');
     purpleDotCircle.setAttribute('r', '6');
     purpleDotCircle.setAttribute('fill', 'var(--accent)');
@@ -114,7 +114,7 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
     whiteDotSvg.style.margin = '0 2px 0 4px'; // Small spacing like a period, shifted 2px right
 
     const whiteDotCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    whiteDotCircle.setAttribute('cx', '10');
+    whiteDotCircle.setAttribute('cx', '8');
     whiteDotCircle.setAttribute('cy', '8');
     whiteDotCircle.setAttribute('r', '6');
     whiteDotCircle.setAttribute('fill', 'white');
@@ -207,16 +207,23 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
 
       // === INTRO: letters stagger in ===
       const intro = gsap.timeline();
+      let fillStarted = false;
 
       intro.fromTo(
         [...purpleLetters, ...whiteLetters],
         { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: 0.6, stagger: 0.12 },
+        {
+          opacity: 1, y: 0, duration: 0.6, stagger: 0.12,
+          onUpdate() {
+            // Start fill once most letters are visible
+            if (!fillStarted && this.progress() >= 0.6) {
+              fillStarted = true;
+              startFill();
+            }
+          },
+        },
         0,
       );
-
-      intro.to({}, { duration: 0.3 });
-      intro.call(() => startFill());
 
       // === COLOR FILL: tracks actual page load ===
       function startFill() {
@@ -294,31 +301,51 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
           },
         });
 
-        // Both dot SVGs shrink to center (transform-origin is center by default for SVG)
+        // 1. Dot swells larger, pushing text outward
         revealTl.to([purpleDotSvg, whiteDotSvg], {
-          scale: 0,
-          duration: 0.4,
-          ease: 'back.in(2)',
+          scale: 1.8,
+          duration: 0.3,
+          ease: 'power2.out',
           transformOrigin: 'center center',
         }, 0);
-
-        // Letters nudge inward
         revealTl.to([...purpleLeftGroup, ...whiteLeftGroup], {
-          x: 5, duration: 0.4, ease: 'power2.inOut',
+          x: -4, duration: 0.3, ease: 'power2.out',
         }, 0);
         revealTl.to([...purpleRightGroup, ...whiteRightGroup], {
-          x: -5, duration: 0.4, ease: 'power2.inOut',
+          x: 4, duration: 0.3, ease: 'power2.out',
         }, 0);
 
-        // Beat at zero
-        revealTl.to({}, { duration: 0.2 });
+        // 2. Dot snaps to zero, pulling text inward
+        revealTl.to([purpleDotSvg, whiteDotSvg], {
+          scale: 0,
+          duration: 0.35,
+          ease: 'back.in(3)',
+          transformOrigin: 'center center',
+        });
+        revealTl.to([...purpleLeftGroup, ...whiteLeftGroup], {
+          x: 3, duration: 0.35, ease: 'power3.in',
+        }, '<');
+        revealTl.to([...purpleRightGroup, ...whiteRightGroup], {
+          x: -3, duration: 0.35, ease: 'power3.in',
+        }, '<');
 
-        // Portal springs open
+        // Brief beat at zero
+        revealTl.to({}, { duration: 0.08 });
+
+        // Letters spring/scatter outward as portal expands
+        revealTl.to([...purpleLeftGroup, ...whiteLeftGroup], {
+          x: -30, duration: 2, ease: 'back.out(1.4)',
+        }, '>');
+        revealTl.to([...purpleRightGroup, ...whiteRightGroup], {
+          x: 30, duration: 2, ease: 'back.out(1.4)',
+        }, '<');
+
+        // Portal springs open (same start as text scatter)
         revealTl.to(outer, {
           '--reveal-r': maxRadius,
-          duration: 2.2,
-          ease: 'expo.out',
-        });
+          duration: 3,
+          ease: 'back.out(0.8)',
+        }, '<');
       }
     });
 
