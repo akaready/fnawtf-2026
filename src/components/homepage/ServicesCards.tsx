@@ -76,9 +76,12 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
         );
       }
 
+      // Animate card height
+      gsap.to(cardElement, { height: '105%', duration: 0.3, ease: 'power2.out' });
+
       // Animate text colors
       if (iconEl) {
-        gsap.to(iconEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+        gsap.to(iconEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out', scale: 1.15 });
       }
       if (titleEl) {
         gsap.to(titleEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
@@ -94,9 +97,12 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
     const handleMouseLeave = () => {
       gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
 
+      // Revert card height
+      gsap.to(cardElement, { height: '100%', duration: 0.3, ease: 'power2.out' });
+
       // Revert text colors
       if (iconEl) {
-        gsap.to(iconEl, { color: '#c4a8ff', duration: 0.3, ease: 'power2.out' });
+        gsap.to(iconEl, { color: '#c4a8ff', duration: 0.3, ease: 'power2.out', scale: 1 });
       }
       if (titleEl) {
         gsap.to(titleEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
