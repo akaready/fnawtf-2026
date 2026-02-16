@@ -13,6 +13,7 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
     const fillRef = useRef<HTMLDivElement>(null);
     const svgPathRef = useRef<SVGPathElement>(null);
     const isHoveredRef = useRef(false);
+    const entryDirectionRef = useRef({ x: '100%', y: '0%' });
 
     useEffect(() => {
       const logo = ref && typeof ref === 'object' ? ref.current : null;
@@ -76,6 +77,9 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
           translateY = '-100%';
         }
 
+        // Store entry direction for use on exit
+        entryDirectionRef.current = { x: translateX, y: translateY };
+
         gsap.killTweensOf([fill, svgPath]);
 
         // Animate circle sliding in from entry direction
@@ -103,25 +107,9 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
         if (!isHoveredRef.current) return;
         isHoveredRef.current = false;
 
-        let exitTranslateX = '0%';
-        let exitTranslateY = '0%';
-
-        // Calculate which direction to slide out by checking current position relative to center
-        const rect = fill.getBoundingClientRect();
-        const parentRect = fill.parentElement?.getBoundingClientRect();
-        if (parentRect) {
-          const centerX = parentRect.left + parentRect.width / 2;
-          const centerY = parentRect.top + parentRect.height / 2;
-          const fillCenterX = rect.left + rect.width / 2;
-          const fillCenterY = rect.top + rect.height / 2;
-
-          // Slide out in the direction it came from
-          if (fillCenterX > centerX) exitTranslateX = '100%';
-          else if (fillCenterX < centerX) exitTranslateX = '-100%';
-
-          if (fillCenterY > centerY) exitTranslateY = '100%';
-          else if (fillCenterY < centerY) exitTranslateY = '-100%';
-        }
+        // Use the stored entry direction to determine exit
+        const exitTranslateX = entryDirectionRef.current.x;
+        const exitTranslateY = entryDirectionRef.current.y;
 
         gsap.to(fill, {
           x: exitTranslateX,
