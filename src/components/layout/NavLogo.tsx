@@ -103,13 +103,58 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
         }
       };
 
-      const handleMouseLeave = () => {
+      const handleMouseLeave = (e: MouseEvent) => {
         if (!isHoveredRef.current) return;
         isHoveredRef.current = false;
 
-        // Use the stored entry direction to determine exit
-        const exitTranslateX = entryDirectionRef.current.x;
-        const exitTranslateY = entryDirectionRef.current.y;
+        // Calculate exit direction based on where mouse left
+        const buttonRect = fill.parentElement?.getBoundingClientRect();
+        if (!buttonRect) return;
+
+        const x = (e.clientX || e.pageX) - buttonRect.left;
+        const y = (e.clientY || e.pageY) - buttonRect.top;
+        const centerX = buttonRect.width / 2;
+        const centerY = buttonRect.height / 2;
+
+        // Calculate angle to determine exit direction
+        const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI);
+
+        let exitTranslateX: string;
+        let exitTranslateY: string;
+
+        if (angle >= -22.5 && angle < 22.5) {
+          // E (right)
+          exitTranslateX = '100%';
+          exitTranslateY = '0%';
+        } else if (angle >= 22.5 && angle < 67.5) {
+          // SE (bottom-right)
+          exitTranslateX = '100%';
+          exitTranslateY = '100%';
+        } else if (angle >= 67.5 && angle < 112.5) {
+          // S (bottom)
+          exitTranslateX = '0%';
+          exitTranslateY = '100%';
+        } else if (angle >= 112.5 && angle < 157.5) {
+          // SW (bottom-left)
+          exitTranslateX = '-100%';
+          exitTranslateY = '100%';
+        } else if (angle >= 157.5 || angle < -157.5) {
+          // W (left)
+          exitTranslateX = '-100%';
+          exitTranslateY = '0%';
+        } else if (angle >= -157.5 && angle < -112.5) {
+          // NW (top-left)
+          exitTranslateX = '-100%';
+          exitTranslateY = '-100%';
+        } else if (angle >= -112.5 && angle < -67.5) {
+          // N (top)
+          exitTranslateX = '0%';
+          exitTranslateY = '-100%';
+        } else {
+          // NE (top-right)
+          exitTranslateX = '100%';
+          exitTranslateY = '-100%';
+        }
 
         gsap.to(fill, {
           x: exitTranslateX,
