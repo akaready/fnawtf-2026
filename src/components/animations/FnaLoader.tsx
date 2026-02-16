@@ -25,7 +25,6 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
         !whiteTextContainerRef.current || !whiteTextRef.current ||
         !dotContainerRef.current || isComplete) return;
 
-    const textWithoutDot = 'fnawtf'; // No dot in text
     const purpleText = textRef.current;
     const whiteText = whiteTextRef.current;
     const whiteTextContainer = whiteTextContainerRef.current;
