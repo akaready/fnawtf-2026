@@ -23,25 +23,33 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
       const handleMouseEnter = (e: MouseEvent) => {
         if (!fill) return;
 
-        const rect = logo.getBoundingClientRect();
-        const x = (e.clientX || e.pageX) - rect.left;
-        const direction = x < rect.width / 2 ? 'left' : 'right';
+        const buttonRect = fill.parentElement?.getBoundingClientRect();
+        if (!buttonRect) return;
+
+        // Calculate mouse position relative to button
+        const x = (e.clientX || e.pageX) - buttonRect.left;
+        const y = (e.clientY || e.pageY) - buttonRect.top;
+
+        // Calculate position as percentage (0-100 on both axes)
+        const posX = (x / buttonRect.width) * 100;
+        const posY = (y / buttonRect.height) * 100;
 
         gsap.killTweensOf([fill, svgPath]);
 
-        if (direction === 'left') {
-          gsap.fromTo(
-            fill,
-            { scaleX: 0, transformOrigin: '0 50%' },
-            { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-          );
-        } else {
-          gsap.fromTo(
-            fill,
-            { scaleX: 0, transformOrigin: '100% 50%' },
-            { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-          );
-        }
+        // Animate radial gradient mask from entry point
+        gsap.fromTo(
+          fill,
+          {
+            maskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 0%)`,
+            WebkitMaskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 0%)`
+          },
+          {
+            maskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 150%)`,
+            WebkitMaskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 150%)`,
+            duration: 0.3,
+            ease: 'power2.out'
+          }
+        );
 
         // Animate SVG fill color from white to black
         if (svgPath) {
@@ -50,7 +58,13 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
       };
 
       const handleMouseLeave = () => {
-        gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+        // Animate radial gradient mask back to 0
+        gsap.to(fill, {
+          maskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)',
+          duration: 0.3,
+          ease: 'power2.out'
+        });
 
         // Animate SVG fill color back to white
         if (svgPath) {
@@ -76,11 +90,15 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
         aria-label="Friends 'n Allies - Home"
       >
         <div className="relative w-14 h-14 bg-black rounded-full flex items-center justify-center transition-transform duration-200 ease-out group-hover:scale-[1.08] group-active:scale-[0.92] border border-gray-600 overflow-hidden">
-          {/* Fill element for directional animation */}
+          {/* Fill element for radial animation */}
           <div
             ref={fillRef}
             className="absolute inset-0 bg-white rounded-full pointer-events-none"
-            style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+            style={{
+              zIndex: 0,
+              maskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)',
+              WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)'
+            }}
           />
 
           <svg
