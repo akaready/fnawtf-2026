@@ -85,10 +85,32 @@ export function NavButton({ href, children, isPrimary = false, onClick, iconName
       }
     };
 
-    const handleMouseLeave = () => {
+    const handleMouseLeave = (e: MouseEvent) => {
       setIsHovered(false);
 
-      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+      if (!fill) return;
+
+      // Detect exit direction based on mouse position when leaving
+      const rect = button.getBoundingClientRect();
+      const x = (e.clientX || e.pageX) - rect.left;
+      const exitDirection = x < rect.width / 2 ? 'left' : 'right';
+
+      // Animate fill out in the exit direction
+      if (exitDirection === 'left') {
+        gsap.to(fill, {
+          scaleX: 0,
+          transformOrigin: '0 50%',
+          duration: 0.3,
+          ease: 'power2.out'
+        });
+      } else {
+        gsap.to(fill, {
+          scaleX: 0,
+          transformOrigin: '100% 50%',
+          duration: 0.3,
+          ease: 'power2.out'
+        });
+      }
 
       // Animate text color back to initial state
       if (textSpan) {
