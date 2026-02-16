@@ -1,48 +1,54 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
+type Logo = { id: string; name: string; logoUrl: string };
+
 interface ClientLogosProps {
-  clients: Array<{
-    id: string;
-    name: string;
-    logoUrl: string;
-  }>;
+  clients: Logo[];
   shuffle?: boolean;
 }
 
 /**
  * ClientLogosCycle - Animated logo wall with cycling effect
- * Shows 8 logos at a time, randomly cycling through full pool
+ * Shows 12 logos at a time, randomly cycling through full pool
  * Pauses when out of viewport or browser tab is hidden
  * Respects user motion preferences
  */
 export function ClientLogosCycle({ clients, shuffle = false }: ClientLogosProps) {
-  const VISIBLE_COUNT = 12; // 4 columns × 3 rows
-  const SWAP_INTERVAL = 2400; // 1500ms delay + 900ms animation
+  const VISIBLE_COUNT = 12;
+  const SWAP_INTERVAL = 2400;
   const ANIMATION_DURATION = 0.9;
+  const HOVER_ANIMATION_DURATION = 0.6;
+  const PER_SLOT_COOLDOWN = 1800;
 
-  // State - combine visible and pool for easier management
+  // Visible logos + pool
   const [state, setState] = useState(() => {
     const visible = clients.slice(0, VISIBLE_COUNT);
     const pool = shuffle ? shuffleArray(clients.slice(VISIBLE_COUNT)) : clients.slice(VISIBLE_COUNT);
     return { visible, pool };
   });
 
+  // Outgoing logos per slot (for exit animation)
+  const [outgoing, setOutgoing] = useState<Record<number, Logo>>({});
+
+  // Track which slots were hover-triggered (for faster animation)
+  const [hoverTriggered, setHoverTriggered] = useState<Record<number, boolean>>({});
+
   // Refs
   const patternRef = useRef(generatePattern(VISIBLE_COUNT));
   const patternIndexRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const slotCooldownsRef = useRef<Map<number, number>>(new Map());
 
   // Hooks
   const { ref: containerRef, isVisible } = useIntersectionObserver({ once: false });
   const prefersReducedMotion = useReducedMotion();
   const [isTabHidden, setIsTabHidden] = useState(false);
 
-  // Helper functions
   function shuffleArray<T>(array: T[]): T[] {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -56,16 +62,65 @@ export function ClientLogosCycle({ clients, shuffle = false }: ClientLogosProps)
     return shuffleArray(Array.from({ length: count }, (_, i) => i));
   }
 
-  // Tab visibility listener
+  // Tab visibility
   useEffect(() => {
     const handler = () => setIsTabHidden(document.hidden);
     document.addEventListener('visibilitychange', handler);
     return () => document.removeEventListener('visibilitychange', handler);
   }, []);
 
-  // Main cycling effect
+  // Check if a specific slot is ready to swap
+  const isSlotReady = useCallback((slotIndex: number) => {
+    const now = Date.now();
+    const lastSwap = slotCooldownsRef.current.get(slotIndex) || 0;
+    return now - lastSwap >= PER_SLOT_COOLDOWN;
+  }, [PER_SLOT_COOLDOWN]);
+
+  // Swap a slot - sets outgoing + updates visible
+  const swapSlot = useCallback((slotIndex: number, fromHover = false) => {
+    // Per-slot cooldown: skip if this slot is still cooling down or mid-animation
+    if (!isSlotReady(slotIndex)) return;
+
+    slotCooldownsRef.current.set(slotIndex, Date.now());
+
+    if (fromHover) {
+      setHoverTriggered((prev) => ({ ...prev, [slotIndex]: true }));
+    }
+
+    setState((current) => {
+      if (current.pool.length === 0) return current;
+
+      const [nextLogo, ...remainingPool] = current.pool;
+      const replacedLogo = current.visible[slotIndex];
+
+      setOutgoing((prev) => ({ ...prev, [slotIndex]: replacedLogo }));
+
+      const updatedVisible = [...current.visible];
+      updatedVisible[slotIndex] = nextLogo;
+
+      return {
+        visible: updatedVisible,
+        pool: [...remainingPool, replacedLogo],
+      };
+    });
+  }, [isSlotReady]);
+
+  // Clear outgoing after animation completes
+  const clearOutgoing = useCallback((slotIndex: number) => {
+    setOutgoing((prev) => {
+      const next = { ...prev };
+      delete next[slotIndex];
+      return next;
+    });
+    setHoverTriggered((prev) => {
+      const next = { ...prev };
+      delete next[slotIndex];
+      return next;
+    });
+  }, []);
+
+  // Auto-cycle
   useEffect(() => {
-    // Don't cycle if: reduced motion, out of viewport, or tab is hidden
     if (prefersReducedMotion || !isVisible || isTabHidden) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -74,40 +129,21 @@ export function ClientLogosCycle({ clients, shuffle = false }: ClientLogosProps)
       return;
     }
 
-    // Clear existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
-    // Start cycling
     intervalRef.current = setInterval(() => {
-      setState((current) => {
-        if (current.pool.length === 0) return current;
+      const pattern = patternRef.current;
+      const slotIndex = pattern[patternIndexRef.current % VISIBLE_COUNT];
+      patternIndexRef.current++;
 
-        // Get next slot index from pattern
-        const pattern = patternRef.current;
-        const slotIndex = pattern[patternIndexRef.current % VISIBLE_COUNT];
-        patternIndexRef.current++;
+      if (patternIndexRef.current % VISIBLE_COUNT === 0) {
+        patternRef.current = generatePattern(VISIBLE_COUNT);
+        patternIndexRef.current = 0;
+      }
 
-        // Reshuffle pattern when exhausted
-        if (patternIndexRef.current % VISIBLE_COUNT === 0) {
-          patternRef.current = generatePattern(VISIBLE_COUNT);
-          patternIndexRef.current = 0;
-        }
-
-        // Get next logo from pool
-        const [nextLogo, ...remainingPool] = current.pool;
-        const replacedLogo = current.visible[slotIndex];
-
-        // Update visible logos and pool
-        const updatedVisible = [...current.visible];
-        updatedVisible[slotIndex] = nextLogo;
-
-        return {
-          visible: updatedVisible,
-          pool: [...remainingPool, replacedLogo],
-        };
-      });
+      swapSlot(slotIndex);
     }, SWAP_INTERVAL);
 
     return () => {
@@ -116,21 +152,14 @@ export function ClientLogosCycle({ clients, shuffle = false }: ClientLogosProps)
         intervalRef.current = null;
       }
     };
-  }, [prefersReducedMotion, isVisible, isTabHidden]);
+  }, [prefersReducedMotion, isVisible, isTabHidden, swapSlot]);
 
-  // Animation variants - slot machine effect (both slide down)
-  const logoVariants = {
-    initial: { y: '-100%' },  // Start above (entering from top)
-    animate: { y: '0%' },     // Center position
-    exit: { y: '100%' },      // Exit below (sliding down)
-  };
+  const ease = [0.87, 0, 0.13, 1] as const;
 
-  const transition = {
-    duration: ANIMATION_DURATION,
-    ease: [0.87, 0, 0.13, 1], // expo.inOut
-  };
+  const autoTransition = { duration: ANIMATION_DURATION, ease };
+  const hoverTransition = { duration: HOVER_ANIMATION_DURATION, ease };
 
-  // Fallback for reduced motion
+  // Reduced motion fallback
   if (prefersReducedMotion) {
     return (
       <div className="relative" ref={containerRef}>
@@ -156,19 +185,42 @@ export function ClientLogosCycle({ clients, shuffle = false }: ClientLogosProps)
   return (
     <div className="relative" ref={containerRef}>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-        {state.visible.map((client, index) => (
-          <div
-            key={`slot-${index}`}
-            className="relative h-24 md:h-32 bg-muted/50 rounded-lg overflow-hidden"
-          >
-            <AnimatePresence mode="popLayout">
+        {state.visible.map((client, index) => {
+          const isHover = hoverTriggered[index];
+          const transition = isHover ? hoverTransition : autoTransition;
+
+          return (
+            <motion.div
+              key={`slot-${index}`}
+              className="relative h-24 md:h-32 bg-muted/50 rounded-lg overflow-hidden cursor-pointer"
+              onMouseEnter={() => swapSlot(index, true)}
+              whileHover={{ scale: 1.04 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            >
+              {/* Outgoing logo - slides down and out */}
+              {outgoing[index] && (
+                <motion.div
+                  key={`out-${outgoing[index].id}`}
+                  className="absolute inset-0 flex items-center justify-center p-8"
+                  initial={{ y: '0%' }}
+                  animate={{ y: '100%' }}
+                  transition={transition}
+                  onAnimationComplete={() => clearOutgoing(index)}
+                >
+                  <img
+                    src={outgoing[index].logoUrl}
+                    alt={outgoing[index].name}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </motion.div>
+              )}
+
+              {/* Current logo - slides in from top (or static on first mount) */}
               <motion.div
-                key={client.id}
+                key={`in-${client.id}`}
                 className="absolute inset-0 flex items-center justify-center p-8"
-                variants={logoVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
+                initial={outgoing[index] ? { y: '-100%' } : false}
+                animate={{ y: '0%' }}
                 transition={transition}
               >
                 <img
@@ -178,9 +230,9 @@ export function ClientLogosCycle({ clients, shuffle = false }: ClientLogosProps)
                   loading="lazy"
                 />
               </motion.div>
-            </AnimatePresence>
-          </div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

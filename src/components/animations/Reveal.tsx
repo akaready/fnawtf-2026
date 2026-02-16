@@ -36,6 +36,7 @@ interface RevealGroupProps {
   threshold?: number;
   once?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /**
@@ -73,6 +74,7 @@ export function RevealGroup({
   threshold = 0.2,
   once = true,
   className,
+  style,
 }: RevealGroupProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -127,6 +129,7 @@ export function RevealGroup({
     <motion.div
       ref={ref}
       className={className}
+      style={style}
       initial={isMounted ? 'hidden' : 'visible'}
       animate={isVisible ? 'visible' : 'hidden'}
       variants={containerVariants}

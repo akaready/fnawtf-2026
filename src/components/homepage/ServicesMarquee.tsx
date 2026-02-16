@@ -70,6 +70,12 @@ export function ServicesMarquee({
         <div className="flex whitespace-nowrap flex-shrink-0">
           {renderItems()}
         </div>
+        <div className="flex whitespace-nowrap flex-shrink-0">
+          {renderItems()}
+        </div>
+        <div className="flex whitespace-nowrap flex-shrink-0">
+          {renderItems()}
+        </div>
       </div>
     </div>
   );

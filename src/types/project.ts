@@ -23,8 +23,8 @@ export interface FeaturedProject {
   location_count?: number;
   created_at: string;
   updated_at: string;
-  is_hero?: boolean;
-  aspect_ratio?: '16:9' | '1:1';
+  fullWidth?: boolean;
+  category?: string;
 }
 
 export interface ProjectVideo {

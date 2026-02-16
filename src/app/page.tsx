@@ -6,7 +6,7 @@ import { ReelPlayer } from '@/components/homepage/ReelPlayer';
 import { FeaturedWork } from '@/components/homepage/FeaturedWork';
 import { ClientLogos } from '@/components/homepage/ClientLogos';
 import { FooterCTA } from '@/components/layout/FooterCTA';
-import { getBunnyVideoUrl, getBunnyVideoThumbnail } from '@/lib/bunny/client';
+import { getBunnyVideoUrl, getBunnyVideoThumbnail, getBunnyVideoMp4Url } from '@/lib/bunny/client';
 
 export const metadata = {
   title: 'FNA.WTF - Video Production & Digital Storytelling',
@@ -15,12 +15,14 @@ export const metadata = {
 
 export default function Home() {
   // Bunny CDN HLS video configuration
-  const heroVideoId = 'a7a33b5c-afea-4623-95e3-d7756fd7985c';
+  const heroVideoId = '0540ef55-62e5-466f-b1f6-acef297a614d';
   const heroVideoSrc = getBunnyVideoUrl(heroVideoId);
   const heroVideoPoster = getBunnyVideoThumbnail(heroVideoId);
 
-  // Reel video (update when available on Bunny CDN)
-  const reelVideoSrc = 'https://fna-wtf.b-cdn.net/reel-showcase.mp4';
+  // Reel video — direct MP4 (HLS has audio+video codecs that break HLS.js SourceBuffers)
+  const reelVideoId = '199273f8-c684-49cc-97fc-a36220a68085';
+  const reelVideoSrc = getBunnyVideoMp4Url(reelVideoId, '1080p');
+  const reelVideoPoster = getBunnyVideoThumbnail(reelVideoId);
 
   return (
     <main className="bg-background text-foreground">
@@ -38,7 +40,7 @@ export default function Home() {
       </HeroSection>
 
       {/* Reel Player */}
-      <ReelPlayer videoSrc={reelVideoSrc} />
+      <ReelPlayer videoSrc={reelVideoSrc} placeholderSrc={reelVideoPoster} />
 
       {/* Services Cards */}
       <ServicesCards />

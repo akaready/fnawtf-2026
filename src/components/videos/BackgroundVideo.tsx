@@ -24,7 +24,6 @@ export function BackgroundVideo({
   overlayClassName = 'bg-black/60',
 }: BackgroundVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
 
@@ -34,21 +33,20 @@ export function BackgroundVideo({
     if (!video || !videoSrc) return;
 
     setError(null);
-    setIsLoading(true);
 
-    let playAttempted = false;
+    let active = true;
     let currentPlayPromise: Promise<void> | null = null;
 
     // Helper to safely play video with proper promise handling
     const safePlay = async () => {
-      if (playAttempted || !video.paused) return;
-      playAttempted = true;
+      if (!active || !video.paused) return;
 
       try {
-        // Wait for previous play promise if it exists
         if (currentPlayPromise) {
           await currentPlayPromise;
         }
+
+        if (!active) return;
 
         currentPlayPromise = video.play();
         await currentPlayPromise;
@@ -85,7 +83,6 @@ export function BackgroundVideo({
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setIsLoading(false);
         // Video will play when canplay event fires
       });
 
@@ -97,27 +94,29 @@ export function BackgroundVideo({
             url: videoSrc,
           });
           setError(data.details);
-          setIsLoading(false);
         }
       });
 
       return () => {
+        active = false;
         video.removeEventListener('canplay', handleCanPlay);
-        hls.destroy();
+        const destroy = () => hls.destroy();
+        if (currentPlayPromise) {
+          currentPlayPromise.then(destroy).catch(destroy);
+        } else {
+          destroy();
+        }
       };
     } else if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS support (Safari)
       video.src = videoSrc;
-      setIsLoading(false);
-      // Video will play when canplay event fires
     } else {
       // Direct video file (MP4, WebM, etc.)
       video.src = videoSrc;
-      setIsLoading(false);
-      // Video will play when canplay event fires
     }
 
     return () => {
+      active = false;
       video.removeEventListener('canplay', handleCanPlay);
     };
   }, [videoSrc]);

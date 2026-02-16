@@ -18,11 +18,11 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&h=450&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=1200&h=600&fit=crop',
       featured: true,
       published: true,
-      is_hero: true,
-      aspect_ratio: '16:9',
+      fullWidth: true,
+      category: 'Branding',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -34,10 +34,10 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=338&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=400&fit=crop',
       featured: true,
       published: true,
-      aspect_ratio: '16:9',
+      category: 'Video',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -49,10 +49,10 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=600&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&h=400&fit=crop',
       featured: true,
       published: true,
-      aspect_ratio: '1:1',
+      category: 'Social',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -64,10 +64,10 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=338&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=600&fit=crop',
       featured: true,
       published: true,
-      aspect_ratio: '16:9',
+      category: 'Film',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -79,10 +79,10 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'design',
-      thumbnail_url: 'https://images.unsplash.com/photo-1522202176988-e25ad9e90207?w=600&h=600&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop',
       featured: true,
       published: true,
-      aspect_ratio: '1:1',
+      category: 'Branding',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -94,11 +94,11 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=450&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=600&h=400&fit=crop',
       featured: true,
       published: true,
-      is_hero: true,
-      aspect_ratio: '16:9',
+      fullWidth: true,
+      category: 'Fashion',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -110,10 +110,10 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600&h=338&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1560419015-7c427e8ae5ba?w=600&h=400&fit=crop',
       featured: true,
       published: true,
-      aspect_ratio: '16:9',
+      category: 'Tech',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -125,10 +125,10 @@ export async function FeaturedWork() {
       description: 'Project description',
       client_name: 'Client Name',
       type: 'video',
-      thumbnail_url: 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=600&h=600&fit=crop',
+      thumbnail_url: 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=600&h=400&fit=crop',
       featured: true,
       published: true,
-      aspect_ratio: '1:1',
+      category: 'Food',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
@@ -169,15 +169,17 @@ export async function FeaturedWork() {
         </div>
 
         <RevealGroup
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[16rem]"
-          style={{ gridAutoFlow: 'dense' }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
           stagger={150}
         >
-          {projects.map((project: FeaturedProject, index: number) => (
-            <RevealItem key={project.id}>
-              <FeaturedWorkCard project={project} index={index} />
-            </RevealItem>
-          ))}
+          {projects.map((project: FeaturedProject, index: number) => {
+            const colSpanClass = project.fullWidth ? 'lg:col-span-2' : '';
+            return (
+              <RevealItem key={project.id}>
+                <FeaturedWorkCard project={project} index={index} className={colSpanClass} />
+              </RevealItem>
+            );
+          })}
         </RevealGroup>
       </div>
     </section>

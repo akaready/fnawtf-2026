@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
-import Hls from 'hls.js';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Play, Volume2, VolumeX, Maximize } from 'lucide-react';
+import { useVideoPlayer } from '@/contexts/VideoPlayerContext';
 
-/**
- * Props for the ReelPlayer component
- */
 interface ReelPlayerProps {
   videoSrc: string;
   placeholderSrc?: string;
@@ -14,8 +11,8 @@ interface ReelPlayerProps {
 }
 
 /**
- * ReelPlayer component with HLS.js support for Bunny CDN streaming.
- * Features custom controls, lazy loading, and placeholder image.
+ * ReelPlayer - Click-to-play video with direct MP4 loading.
+ * Integrates with VideoPlayerContext for dimming overlay.
  */
 export function ReelPlayer({
   videoSrc,
@@ -24,109 +21,153 @@ export function ReelPlayer({
 }: ReelPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+  const playPendingRef = useRef(false);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setIsVideoPlaying, setPauseVideo } = useVideoPlayer();
 
-  // Initialize video playback - HLS.js or native
+  // Initialize video source
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !videoSrc) return;
+    if (!video) return;
 
     setError(null);
     setIsLoading(true);
 
-    // Detect if URL is HLS playlist or direct video file
-    const isHLS = videoSrc.includes('.m3u8');
+    video.src = videoSrc;
 
-    if (isHLS && Hls.isSupported()) {
-      // Use HLS.js for .m3u8 playlists
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        maxLoadingDelay: 4,
-      });
-
-      hls.loadSource(videoSrc);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setIsLoading(false);
-      });
-
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        console.error('HLS error:', {
-          type: data.type,
-          details: data.details,
-          fatal: data.fatal,
-          url: videoSrc,
-        });
-
-        if (data.fatal) {
-          setError(`Video loading failed: ${data.details}`);
-          setIsLoading(false);
-        }
-      });
-
-      return () => {
-        hls.destroy();
-      };
-    } else if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
-      video.src = videoSrc;
+    const handleCanPlay = () => setIsLoading(false);
+    const handleError = () => {
+      setError('Video failed to load');
       setIsLoading(false);
-    } else {
-      // Direct video file (MP4, WebM, etc.) or non-HLS URL
-      video.src = videoSrc;
-      setIsLoading(false);
-    }
+    };
+
+    video.addEventListener('canplaythrough', handleCanPlay, { once: true });
+    video.addEventListener('error', handleError, { once: true });
+
+    return () => {
+      video.removeEventListener('canplaythrough', handleCanPlay);
+      video.removeEventListener('error', handleError);
+    };
   }, [videoSrc]);
 
-  // Handle play/pause
-  const togglePlay = () => {
+  // Safe pause — waits for any pending play() to settle before calling pause()
+  const safePause = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (video.paused) {
-      video.play().catch(console.error);
-      setIsPlaying(true);
-    } else {
-      video.pause();
+    // Don't pause if play is pending or already paused
+    if (playPendingRef.current || video.paused) return;
+
+    const doPause = () => {
+      if (!video.paused) {
+        video.pause();
+      }
       setIsPlaying(false);
-    }
-  };
+      setIsVideoPlaying(false);
+    };
 
-  // Handle mute/unmute
-  const toggleMute = () => {
+    if (playPromiseRef.current) {
+      playPromiseRef.current.then(doPause).catch(() => {});
+    } else {
+      doPause();
+    }
+  }, [setIsVideoPlaying]);
+
+  // Register pause function with context for external control
+  useEffect(() => {
+    setPauseVideo(() => safePause);
+    return () => setPauseVideo(null);
+  }, [safePause, setPauseVideo]);
+
+  // Pause when reel is more than 50% out of viewport
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!isPlaying || !container) return;
+
+    let observer: IntersectionObserver | null = null;
+
+    // Wait a brief moment for play to settle before observing
+    const timeoutId = setTimeout(() => {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          // Only pause if play is not pending and promise has settled
+          if (!entry.isIntersecting && !playPendingRef.current && !playPromiseRef.current) {
+            safePause();
+          }
+        },
+        { threshold: 0.5 },
+      );
+
+      observer.observe(container);
+    }, 150); // Small delay to let play() settle
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (observer) observer.disconnect();
+    };
+  }, [isPlaying, safePause]);
+
+  // Play / Pause
+  const togglePlay = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    video.muted = !video.muted;
-    setIsMuted(video.muted);
-  };
+    if (video.paused && !playPendingRef.current) {
+      playPendingRef.current = true;
+      const promise = video.play();
+      playPromiseRef.current = promise;
+      promise
+        .then(() => {
+          playPromiseRef.current = null;
+          playPendingRef.current = false;
+          setIsPlaying(true);
+          setIsVideoPlaying(true);
+        })
+        .catch((err: Error) => {
+          playPromiseRef.current = null;
+          playPendingRef.current = false;
+          // Silently ignore AbortError as it's handled by the pause mechanism
+          if (err.name !== 'AbortError') {
+            console.error('Play failed:', err);
+          }
+        });
+    } else if (!playPendingRef.current) {
+      safePause();
+    }
+  }, [setIsVideoPlaying, safePause]);
 
-  // Handle fullscreen
-  const toggleFullscreen = () => {
+  // Mute / Unmute
+  const toggleMute = useCallback(() => {
+    setIsMuted(prev => !prev);
+  }, []);
+
+  // Fullscreen
+  const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
 
     if (!document.fullscreenElement) {
       container.requestFullscreen().catch(console.error);
       setIsFullscreen(true);
+      setIsVideoPlaying(false);
     } else {
       document.exitFullscreen();
       setIsFullscreen(false);
+      if (isPlaying) {
+        setIsVideoPlaying(true);
+      }
     }
-  };
+  }, [isPlaying, setIsVideoPlaying]);
 
   return (
-    <section
-      className="py-16 md:py-24 bg-muted"
-      data-bunny-player-init
-    >
+    <section className="py-16 md:py-24 bg-muted">
       <div className="max-w-6xl mx-auto px-6">
         {/* Section Title */}
         <div className="text-center mb-8">
@@ -141,23 +182,18 @@ export function ReelPlayer({
         {/* Video Player */}
         <div
           ref={containerRef}
-          className="relative rounded-lg overflow-hidden bg-black"
+          className={`relative rounded-lg overflow-hidden bg-black ${isPlaying ? 'z-[51]' : ''}`}
           style={{ aspectRatio }}
           onMouseEnter={() => setShowControls(true)}
           onMouseLeave={() => setShowControls(false)}
-          data-player-src={videoSrc}
-          data-player-status={isPlaying ? 'playing' : 'paused'}
         >
-          {/* Placeholder / Video */}
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
             poster={placeholderSrc}
             playsInline
-            muted
-            loop
+            muted={isMuted}
             onClick={togglePlay}
-            data-player-lazy="meta"
           >
             Your browser does not support video playback.
           </video>
@@ -179,64 +215,40 @@ export function ReelPlayer({
             </div>
           )}
 
-          {/* Play Button Overlay (when paused) */}
+          {/* Center Play Button (when paused) */}
           {!isPlaying && !isLoading && !error && (
             <button
               onClick={togglePlay}
-              className="absolute inset-0 flex items-center justify-center bg-black/30 group"
+              className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-colors duration-300 group"
               aria-label="Play video"
             >
-              <div className="w-20 h-20 flex items-center justify-center rounded-full bg-accent/90 text-white group-hover:bg-accent transition-colors">
-                <Play className="w-8 h-8 ml-1" />
+              <div className="w-20 h-20 flex items-center justify-center rounded-full bg-accent/90 text-white group-hover:bg-accent group-hover:scale-110 transition-all duration-300">
+                <Play className="w-8 h-8 ml-1" fill="currentColor" />
               </div>
             </button>
           )}
 
-          {/* Custom Controls */}
+          {/* Controls - Bottom Right */}
           <div
-            className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${
+            className={`absolute bottom-4 right-4 flex items-center gap-3 transition-opacity duration-300 ${
               showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <div className="flex items-center justify-between gap-4">
-              {/* Play/Pause */}
-              <button
-                onClick={togglePlay}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-                data-player-control="playpause"
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5 ml-0.5" />
-                )}
-              </button>
+            <button
+              onClick={toggleMute}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
 
-              {/* Mute/Unmute */}
-              <button
-                onClick={toggleMute}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
-                aria-label={isMuted ? 'Unmute' : 'Mute'}
-                data-player-control="mute"
-              >
-                {isMuted ? (
-                  <VolumeX className="w-5 h-5" />
-                ) : (
-                  <Volume2 className="w-5 h-5" />
-                )}
-              </button>
-
-              {/* Fullscreen */}
-              <button
-                onClick={toggleFullscreen}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
-                aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                data-player-control="fullscreen"
-              >
-                <Maximize className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={toggleFullscreen}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              <Maximize className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>

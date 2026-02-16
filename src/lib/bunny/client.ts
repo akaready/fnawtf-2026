@@ -24,6 +24,18 @@ export function getBunnyVideoThumbnail(videoId: string): string {
 }
 
 /**
+ * Get direct MP4 playback URL from Bunny CDN
+ * Used as fallback when HLS streaming is unavailable
+ */
+export function getBunnyVideoMp4Url(videoId: string, quality: '720p' | '1080p' | '360p' = '720p'): string {
+  const cdnHostname =
+    process.env.NEXT_PUBLIC_BUNNY_CDN_HOSTNAME ||
+    process.env.BUNNY_CDN_HOSTNAME ||
+    'vz-8955c328-692.b-cdn.net';
+  return `https://${cdnHostname}/${videoId}/play_${quality}.mp4`;
+}
+
+/**
  * Format bytes for video file sizes
  */
 export function formatFileSize(bytes: number): string {

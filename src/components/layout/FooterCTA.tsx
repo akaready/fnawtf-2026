@@ -7,10 +7,10 @@ export async function FooterCTA() {
       <div className="max-w-7xl mx-auto text-center space-y-6">
         <div>
           <h2 className="text-3xl md:text-4xl font-display mb-4">
-            Ready to bring your vision to life?
+            Like what you see?
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Let's talk about your project and how we can help you succeed.
+            Snag some time on our calendar and let's chat about your project.
           </p>
         </div>
 
