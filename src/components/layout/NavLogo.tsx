@@ -26,26 +26,91 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
         const buttonRect = fill.parentElement?.getBoundingClientRect();
         if (!buttonRect) return;
 
-        // Calculate mouse position relative to button
+        // Calculate mouse position relative to button center
         const x = (e.clientX || e.pageX) - buttonRect.left;
         const y = (e.clientY || e.pageY) - buttonRect.top;
+        const centerX = buttonRect.width / 2;
+        const centerY = buttonRect.height / 2;
 
-        // Calculate position as percentage (0-100 on both axes)
-        const posX = (x / buttonRect.width) * 100;
-        const posY = (y / buttonRect.height) * 100;
+        // Calculate angle to determine direction (0-360 degrees)
+        const angle = Math.atan2(y - centerY, x - centerX) * (180 / Math.PI);
+
+        // Map angle to 8 directions (N, NE, E, SE, S, SW, W, NW)
+        // Each direction is 45 degrees (360/8)
+        let transformOrigin: string;
+        let scaleXFrom: number, scaleYFrom: number;
+        let scaleXTo: number, scaleYTo: number;
+
+        if (angle >= -22.5 && angle < 22.5) {
+          // E (right)
+          transformOrigin = '100% 50%';
+          scaleXFrom = 0;
+          scaleYFrom = 1;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else if (angle >= 22.5 && angle < 67.5) {
+          // SE (bottom-right)
+          transformOrigin = '100% 100%';
+          scaleXFrom = 0;
+          scaleYFrom = 0;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else if (angle >= 67.5 && angle < 112.5) {
+          // S (bottom)
+          transformOrigin = '50% 100%';
+          scaleXFrom = 1;
+          scaleYFrom = 0;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else if (angle >= 112.5 && angle < 157.5) {
+          // SW (bottom-left)
+          transformOrigin = '0% 100%';
+          scaleXFrom = 0;
+          scaleYFrom = 0;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else if (angle >= 157.5 || angle < -157.5) {
+          // W (left)
+          transformOrigin = '0% 50%';
+          scaleXFrom = 0;
+          scaleYFrom = 1;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else if (angle >= -157.5 && angle < -112.5) {
+          // NW (top-left)
+          transformOrigin = '0% 0%';
+          scaleXFrom = 0;
+          scaleYFrom = 0;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else if (angle >= -112.5 && angle < -67.5) {
+          // N (top)
+          transformOrigin = '50% 0%';
+          scaleXFrom = 1;
+          scaleYFrom = 0;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        } else {
+          // NE (top-right)
+          transformOrigin = '100% 0%';
+          scaleXFrom = 0;
+          scaleYFrom = 0;
+          scaleXTo = 1;
+          scaleYTo = 1;
+        }
 
         gsap.killTweensOf([fill, svgPath]);
 
-        // Animate radial gradient mask from entry point
         gsap.fromTo(
           fill,
           {
-            maskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 0%)`,
-            WebkitMaskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 0%)`
+            scaleX: scaleXFrom,
+            scaleY: scaleYFrom,
+            transformOrigin
           },
           {
-            maskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 150%)`,
-            WebkitMaskImage: `radial-gradient(circle at ${posX}% ${posY}%, transparent 0%, white 150%)`,
+            scaleX: scaleXTo,
+            scaleY: scaleYTo,
             duration: 0.3,
             ease: 'power2.out'
           }
@@ -58,10 +123,9 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
       };
 
       const handleMouseLeave = () => {
-        // Animate radial gradient mask back to 0
         gsap.to(fill, {
-          maskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)',
-          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)',
+          scaleX: 0,
+          scaleY: 0,
           duration: 0.3,
           ease: 'power2.out'
         });
@@ -90,14 +154,14 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
         aria-label="Friends 'n Allies - Home"
       >
         <div className="relative w-14 h-14 bg-black rounded-full flex items-center justify-center transition-transform duration-200 ease-out group-hover:scale-[1.08] group-active:scale-[0.92] border border-gray-600 overflow-hidden">
-          {/* Fill element for radial animation */}
+          {/* Fill element for 8-directional animation */}
           <div
             ref={fillRef}
             className="absolute inset-0 bg-white rounded-full pointer-events-none"
             style={{
               zIndex: 0,
-              maskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)',
-              WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 0%, white 0%)'
+              transform: 'scale(0)',
+              transformOrigin: 'center'
             }}
           />
 
