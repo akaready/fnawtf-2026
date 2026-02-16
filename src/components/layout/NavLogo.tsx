@@ -37,80 +37,55 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
 
         // Map angle to 8 directions (N, NE, E, SE, S, SW, W, NW)
         // Each direction is 45 degrees (360/8)
-        let transformOrigin: string;
-        let scaleXFrom: number, scaleYFrom: number;
-        let scaleXTo: number, scaleYTo: number;
+        let translateX: string;
+        let translateY: string;
 
         if (angle >= -22.5 && angle < 22.5) {
           // E (right)
-          transformOrigin = '100% 50%';
-          scaleXFrom = 0;
-          scaleYFrom = 1;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '100%';
+          translateY = '0%';
         } else if (angle >= 22.5 && angle < 67.5) {
           // SE (bottom-right)
-          transformOrigin = '100% 100%';
-          scaleXFrom = 0;
-          scaleYFrom = 0;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '100%';
+          translateY = '100%';
         } else if (angle >= 67.5 && angle < 112.5) {
           // S (bottom)
-          transformOrigin = '50% 100%';
-          scaleXFrom = 1;
-          scaleYFrom = 0;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '0%';
+          translateY = '100%';
         } else if (angle >= 112.5 && angle < 157.5) {
           // SW (bottom-left)
-          transformOrigin = '0% 100%';
-          scaleXFrom = 0;
-          scaleYFrom = 0;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '-100%';
+          translateY = '100%';
         } else if (angle >= 157.5 || angle < -157.5) {
           // W (left)
-          transformOrigin = '0% 50%';
-          scaleXFrom = 0;
-          scaleYFrom = 1;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '-100%';
+          translateY = '0%';
         } else if (angle >= -157.5 && angle < -112.5) {
           // NW (top-left)
-          transformOrigin = '0% 0%';
-          scaleXFrom = 0;
-          scaleYFrom = 0;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '-100%';
+          translateY = '-100%';
         } else if (angle >= -112.5 && angle < -67.5) {
           // N (top)
-          transformOrigin = '50% 0%';
-          scaleXFrom = 1;
-          scaleYFrom = 0;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '0%';
+          translateY = '-100%';
         } else {
           // NE (top-right)
-          transformOrigin = '100% 0%';
-          scaleXFrom = 0;
-          scaleYFrom = 0;
-          scaleXTo = 1;
-          scaleYTo = 1;
+          translateX = '100%';
+          translateY = '-100%';
         }
 
         gsap.killTweensOf([fill, svgPath]);
 
+        // Animate circle sliding in from entry direction
         gsap.fromTo(
           fill,
           {
-            scaleX: scaleXFrom,
-            scaleY: scaleYFrom,
-            transformOrigin
+            x: translateX,
+            y: translateY
           },
           {
-            scaleX: scaleXTo,
-            scaleY: scaleYTo,
+            x: '0%',
+            y: '0%',
             duration: 0.3,
             ease: 'power2.out'
           }
@@ -123,9 +98,29 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
       };
 
       const handleMouseLeave = () => {
+        let exitTranslateX = '0%';
+        let exitTranslateY = '0%';
+
+        // Calculate which direction to slide out by checking current position relative to center
+        const rect = fill.getBoundingClientRect();
+        const parentRect = fill.parentElement?.getBoundingClientRect();
+        if (parentRect) {
+          const centerX = parentRect.left + parentRect.width / 2;
+          const centerY = parentRect.top + parentRect.height / 2;
+          const fillCenterX = rect.left + rect.width / 2;
+          const fillCenterY = rect.top + rect.height / 2;
+
+          // Slide out in the direction it came from
+          if (fillCenterX > centerX) exitTranslateX = '100%';
+          else if (fillCenterX < centerX) exitTranslateX = '-100%';
+
+          if (fillCenterY > centerY) exitTranslateY = '100%';
+          else if (fillCenterY < centerY) exitTranslateY = '-100%';
+        }
+
         gsap.to(fill, {
-          scaleX: 0,
-          scaleY: 0,
+          x: exitTranslateX,
+          y: exitTranslateY,
           duration: 0.3,
           ease: 'power2.out'
         });
@@ -154,14 +149,12 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
         aria-label="Friends 'n Allies - Home"
       >
         <div className="relative w-14 h-14 bg-black rounded-full flex items-center justify-center transition-transform duration-200 ease-out group-hover:scale-[1.08] group-active:scale-[0.92] border border-gray-600 overflow-hidden">
-          {/* Fill element for 8-directional animation */}
+          {/* Fill element for directional slide animation */}
           <div
             ref={fillRef}
             className="absolute inset-0 bg-white rounded-full pointer-events-none"
             style={{
-              zIndex: 0,
-              transform: 'scale(0)',
-              transformOrigin: 'center'
+              zIndex: 0
             }}
           />
 
