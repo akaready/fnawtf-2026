@@ -19,6 +19,7 @@ interface FeaturedWorkCardProps {
 export function FeaturedWorkCard({ project, index: _index = 0, className }: FeaturedWorkCardProps) {
   const { ref: cardRef, isVisible } = useIntersectionObserver({ once: false });
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
 
   // Determine aspect ratio class - hero projects use 2.4:1, regular projects use fixed height
   const aspectClass = project.fullWidth
@@ -28,14 +29,25 @@ export function FeaturedWorkCard({ project, index: _index = 0, className }: Feat
   // Video handlers
   const handleHover = () => {
     if (videoRef.current && isVisible) {
-      videoRef.current.play();
+      const promise = videoRef.current.play();
+      if (promise) {
+        playPromiseRef.current = promise;
+        promise.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
+      }
     }
   };
 
   const handleUnhover = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
+    const video = videoRef.current;
+    if (!video) return;
+    const doPause = () => {
+      video.pause();
+      video.currentTime = 0;
+    };
+    if (playPromiseRef.current) {
+      playPromiseRef.current.then(doPause).catch(() => {});
+    } else {
+      doPause();
     }
   };
 
