@@ -12,6 +12,7 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
   ({ className = '', style }, ref) => {
     const fillRef = useRef<HTMLDivElement>(null);
     const svgPathRef = useRef<SVGPathElement>(null);
+    const isHoveredRef = useRef(false);
 
     useEffect(() => {
       const logo = ref && typeof ref === 'object' ? ref.current : null;
@@ -21,6 +22,7 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
       const svgPath = svgPathRef.current;
 
       const handleMouseEnter = (e: MouseEvent) => {
+        isHoveredRef.current = true;
         if (!fill) return;
 
         const buttonRect = fill.parentElement?.getBoundingClientRect();
@@ -98,6 +100,9 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
       };
 
       const handleMouseLeave = () => {
+        if (!isHoveredRef.current) return;
+        isHoveredRef.current = false;
+
         let exitTranslateX = '0%';
         let exitTranslateY = '0%';
 
@@ -125,10 +130,10 @@ export const NavLogo = forwardRef<HTMLAnchorElement, NavLogoProps>(
           ease: 'power2.out'
         });
 
-        // Animate SVG fill color back to white
-        if (svgPath) {
-          gsap.to(svgPath, { fill: '#ffffff', duration: 0.3, ease: 'power2.out' });
-        }
+        // Force SVG fill color back to white - this ensures it always resets
+        gsap.killTweensOf(svgPath);
+        gsap.set(svgPath, { fill: '#ffffff' });
+        gsap.to(svgPath, { fill: '#ffffff', duration: 0.3, ease: 'power2.out' });
       };
 
       logo.addEventListener('mouseenter', handleMouseEnter);
