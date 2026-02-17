@@ -31,7 +31,7 @@ interface PricingCardProps {
 }
 
 export function PricingCard({ tier }: PricingCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const fillRef = useRef<HTMLDivElement>(null);
 
   // Track when card is visible to trigger animation
@@ -43,7 +43,9 @@ export function PricingCard({ tier }: PricingCardProps) {
   // Combine refs - need cardRef for hover effects and visibilityRef for visibility
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
+      // Update cardRef (mutable ref for hover effects)
       cardRef.current = node;
+      // Update visibilityRef (read-only ref from useIntersectionObserver)
       (visibilityRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     },
     [visibilityRef]
