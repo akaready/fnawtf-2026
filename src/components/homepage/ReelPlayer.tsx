@@ -167,7 +167,7 @@ export function ReelPlayer({
   }, [isPlaying, setIsVideoPlaying]);
 
   return (
-    <section className="py-16 md:py-24 bg-muted">
+    <section className="py-16 md:py-24 bg-background">
       <div className="max-w-6xl mx-auto px-6">
         {/* Section Title */}
         <div className="text-center mb-8">

@@ -98,7 +98,7 @@ export function HeroSection({
     return () => {
       timeline.kill();
     };
-  }, [headline, subheadline, locations, prefersReducedMotion]);
+  }, []);
 
   return (
     <section

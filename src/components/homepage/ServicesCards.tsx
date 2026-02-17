@@ -50,13 +50,15 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
       const cardElement = cardRef.current;
       if (!cardElement) return;
 
+      const contentEl = cardElement.querySelector('[data-content]') as HTMLElement;
       const iconEl = cardElement.querySelector('[data-icon]') as HTMLElement;
       const titleEl = cardElement.querySelector('[data-title]') as HTMLElement;
       const descEl = cardElement.querySelector('[data-desc]') as HTMLElement;
       const ctaEl = cardElement.querySelector('[data-cta]') as HTMLElement;
 
-      // Animate card scale (grows from center)
+      // Scale card (border + background grows), counter-scale content so text stays still
       gsap.to(cardElement, { scaleY: 1.05, duration: 0.3, ease: 'power2.out' });
+      if (contentEl) gsap.to(contentEl, { scaleY: 1 / 1.05, duration: 0.3, ease: 'power2.out' });
 
       // Animate text colors to white
       if (iconEl) {
@@ -76,13 +78,15 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
       const cardElement = cardRef.current;
       if (!cardElement) return;
 
+      const contentEl = cardElement.querySelector('[data-content]') as HTMLElement;
       const iconEl = cardElement.querySelector('[data-icon]') as HTMLElement;
       const titleEl = cardElement.querySelector('[data-title]') as HTMLElement;
       const descEl = cardElement.querySelector('[data-desc]') as HTMLElement;
       const ctaEl = cardElement.querySelector('[data-cta]') as HTMLElement;
 
-      // Revert card scale
+      // Revert card + content scale
       gsap.to(cardElement, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
+      if (contentEl) gsap.to(contentEl, { scaleY: 1, duration: 0.3, ease: 'power2.out' });
 
       // Revert text colors
       if (iconEl) {
@@ -112,7 +116,7 @@ function ServiceCardItem({ card }: { card: ServiceCard }) {
           className="absolute inset-0 bg-purple-950 pointer-events-none"
           style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
         />
-        <div className="relative" style={{ zIndex: 10 }}>
+        <div className="relative" style={{ zIndex: 10 }} data-content>
           <Icon
             className="w-12 h-12 mb-6 text-purple-300"
             strokeWidth={1.5}

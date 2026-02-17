@@ -57,7 +57,7 @@ export function ServicesMarquee({
   );
 
   return (
-    <div className="w-full overflow-hidden bg-muted/50 border-y border-border py-8">
+    <div className="w-full overflow-hidden bg-background border-y border-border py-8">
       <div
         className="flex whitespace-nowrap w-max will-change-transform"
         style={{

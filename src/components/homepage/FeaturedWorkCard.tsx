@@ -21,10 +21,12 @@ export function FeaturedWorkCard({ project, index: _index = 0, className }: Feat
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
-  // Determine aspect ratio class - hero projects use 2.4:1, regular projects use fixed height
+  // Determine aspect ratio class - mobile-first responsive sizing
+  // Hero items: 1:1 on mobile, 2.4:1 on desktop
+  // Regular items: 2.4:1 on mobile, fixed height on desktop
   const aspectClass = project.fullWidth
-    ? 'aspect-[2.4/1]'
-    : 'h-96 md:h-80';
+    ? 'aspect-[1/1] md:aspect-[2.4/1]'
+    : 'aspect-[2.4/1] md:aspect-auto md:h-96 md:h-80';
 
   // Video handlers
   const handleHover = () => {
