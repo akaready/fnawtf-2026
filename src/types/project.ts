@@ -14,6 +14,7 @@ export interface FeaturedProject {
   thumbnail_url?: string;
   featured: boolean;
   published: boolean;
+  category?: string;
   style_tags?: string[];
   premium_addons?: string[];
   camera_techniques?: string[];
@@ -24,7 +25,6 @@ export interface FeaturedProject {
   created_at: string;
   updated_at: string;
   fullWidth?: boolean;
-  category?: string;
 }
 
 export interface ProjectVideo {
