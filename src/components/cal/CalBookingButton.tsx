@@ -4,6 +4,7 @@ import { getCalApi } from '@calcom/embed-react';
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { Calendar } from 'lucide-react';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 
 interface CalBookingButtonProps {
   className?: string;
@@ -50,58 +51,43 @@ export function CalBookingButton({
     })();
   }, [namespace, config]);
 
-  useEffect(() => {
-    if (!buttonRef.current || !fillRef.current) return;
+  // Use the reusable directional fill hook
+  useDirectionalFill(buttonRef, fillRef, {
+    onFillStart: () => {
+      const button = buttonRef.current;
+      if (!button) return;
 
-    const button = buttonRef.current;
-    const fill = fillRef.current;
-    const textSpan = button.querySelector('span');
+      const textSpan = button.querySelector('span') as HTMLElement;
+      const iconEl = button.querySelector('svg') as SVGElement;
 
-    const handleMouseEnter = (e: MouseEvent) => {
-      if (!fill) return;
+      gsap.killTweensOf([textSpan, iconEl]);
 
-      const rect = button.getBoundingClientRect();
-      const x = (e.clientX || e.pageX) - rect.left;
-      const direction = x < rect.width / 2 ? 'left' : 'right';
-
-      gsap.killTweensOf([fill, textSpan]);
-
-      if (direction === 'left') {
-        gsap.fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '0 50%' },
-          { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      } else {
-        gsap.fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '100% 50%' },
-          { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      }
-
+      // Animate text and icon to black
       if (textSpan) {
         gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
       }
-    };
+      if (iconEl) {
+        gsap.to(iconEl, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+      }
+    },
+    onFillEnd: () => {
+      const button = buttonRef.current;
+      if (!button) return;
 
-    const handleMouseLeave = () => {
-      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+      const textSpan = button.querySelector('span') as HTMLElement;
+      const iconEl = button.querySelector('svg') as SVGElement;
 
+      const targetColor = '#a14dfd';
+
+      // Revert text and icon to purple
       if (textSpan) {
-        const targetColor = isPrimary ? '#a14dfd' : '#a14dfd';
         gsap.to(textSpan, { color: targetColor, duration: 0.3, ease: 'power2.out' });
       }
-    };
-
-    button.addEventListener('mouseenter', handleMouseEnter);
-    button.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      button.removeEventListener('mouseenter', handleMouseEnter);
-      button.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, [isPrimary]);
+      if (iconEl) {
+        gsap.to(iconEl, { color: targetColor, duration: 0.3, ease: 'power2.out' });
+      }
+    }
+  });
 
   return (
     <button

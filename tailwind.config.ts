@@ -32,7 +32,8 @@ const config: Config = {
           900: '#471976',
         },
         // Dark theme
-        background: '#0a0a0b',
+        background: '#000000',
+        surface: '#070707',
         foreground: '#fafafa',
         muted: '#171717',
         'muted-foreground': '#a1a1aa',
