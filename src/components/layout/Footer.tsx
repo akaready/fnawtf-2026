@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-[4fr_1fr_1fr] gap-12 mb-8">
           {/* Left Column - Logo & Mission */}
           <div className="space-y-4">
-            <Logo width={150} height={58} />
+            <Logo width={150} height={58} className="text-white" />
             <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
               Friends 'n Allies is a boutique agency crafting visual stories for ambitious brands.
               We help build brands, launch products, and scale startups through video production,

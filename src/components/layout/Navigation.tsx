@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import gsap from 'gsap';
-import { Logo } from './Logo';
+import { NavLogo } from './NavLogo';
 import { NavButton } from './NavButton';
 import { CalBookingButton } from '@/components/cal/CalBookingButton';
 import { MobileMenu } from './MobileMenu';
@@ -21,7 +22,11 @@ const navLinks = [
   { href: '/about', label: 'About', iconName: 'info' as const },
 ];
 
-export function Navigation({ currentPage = '/' }: NavigationProps) {
+export function Navigation({ currentPage }: NavigationProps) {
+  // Get current pathname if not provided
+  const pathname = usePathname();
+  const currentPage_ = currentPage ?? pathname;
+
   // Animation state
   const [hasAnimated, setHasAnimated] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
@@ -46,11 +51,16 @@ export function Navigation({ currentPage = '/' }: NavigationProps) {
 
   // Scroll listener effect
   useEffect(() => {
-    // Skip animation on mobile, if already animated, or if reduced motion preferred
-    if (!isDesktop || hasAnimated || prefersReducedMotion) {
+    // Skip animation on non-home pages, mobile, if already animated, or if reduced motion preferred
+    const isHomePage = currentPage_ === '/';
+    if (!isDesktop || hasAnimated || prefersReducedMotion || !isHomePage) {
       // Ensure nav is visible immediately if conditions not met
       if (navRef.current) {
         navRef.current.style.transform = 'translateY(0)';
+      }
+      // Skip animation on non-home pages
+      if (!isHomePage && !hasAnimated) {
+        setHasAnimated(true);
       }
       return;
     }
@@ -72,7 +82,7 @@ export function Navigation({ currentPage = '/' }: NavigationProps) {
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(timeoutId);
     };
-  }, [isDesktop, hasAnimated, prefersReducedMotion]);
+  }, [isDesktop, hasAnimated, prefersReducedMotion, currentPage_]);
 
   // Animation effect
   useGsap(() => {
@@ -136,10 +146,8 @@ export function Navigation({ currentPage = '/' }: NavigationProps) {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
-        <Logo
+        <NavLogo
           ref={logoRef}
-          width={120}
-          height={47}
           style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
         />
 
