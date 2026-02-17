@@ -1,15 +1,16 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import gsap from 'gsap';
 import {
   Hammer, Rocket, TrendingUp, Lightbulb, Video, Sparkles,
   Zap, Users, BarChart, Coins, Megaphone, Check, LucideIcon,
 } from 'lucide-react';
 import { RevealItem } from '@/components/animations/Reveal';
-import { NavButton } from '@/components/layout/NavButton';
 import { PricingTier, IconName } from '@/types/pricing';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
+import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
+import { AnimatedPrice } from './AnimatedPrice';
 
 const iconMap: Record<IconName, LucideIcon> = {
   'hammer': Hammer,
@@ -32,6 +33,21 @@ interface PricingCardProps {
 export function PricingCard({ tier }: PricingCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
+
+  // Track when card is visible to trigger animation
+  const { ref: visibilityRef, isVisible } = useIntersectionObserver({
+    threshold: 0.3,
+    once: true,
+  });
+
+  // Combine refs - need cardRef for hover effects and visibilityRef for visibility
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      cardRef.current = node;
+      (visibilityRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    },
+    [visibilityRef]
+  );
 
   const Icon = iconMap[tier.icon];
 
@@ -82,9 +98,23 @@ export function PricingCard({ tier }: PricingCardProps) {
   return (
     <RevealItem>
       <div
-        ref={cardRef}
-        className="relative p-8 border border-border rounded-lg cursor-pointer overflow-hidden hover:border-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
-        style={{ backgroundColor: '#0b0b0b' }}
+        ref={setRefs}
+        className="relative p-8 border border-border rounded-lg cursor-pointer overflow-hidden hover:border-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] bg-background"
+        onClick={() => {
+          if (tier.id === 'scale') {
+            window.location.href = 'mailto:hello@fna.wtf';
+          } else {
+            // Set the tab parameter and scroll to calculator
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tier.id);
+            window.history.pushState({}, '', url);
+
+            // Dispatch custom event to notify calculator
+            window.dispatchEvent(new CustomEvent('tabChange', { detail: { tab: tier.id } }));
+
+            document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }}
       >
         <div
           ref={fillRef}
@@ -103,19 +133,16 @@ export function PricingCard({ tier }: PricingCardProps) {
             {tier.name}
           </h3>
 
-          <div className="text-4xl md:text-5xl font-bold text-accent mb-4" data-price>
-            {tier.price}
-          </div>
+          <AnimatedPrice
+            priceNumber={tier.priceNumber}
+            priceString={tier.price}
+            trigger={isVisible}
+            className="text-4xl md:text-5xl font-bold text-accent mb-4"
+          />
 
-          <p className="font-body text-muted-foreground leading-relaxed mb-8" data-tagline>
+          <p className="font-body text-muted-foreground leading-relaxed mb-6" data-tagline>
             {tier.tagline}
           </p>
-
-          <div className="mb-8">
-            <NavButton href={tier.ctaHref}>
-              {tier.ctaText}
-            </NavButton>
-          </div>
 
           <div className="h-px bg-border mb-6" />
 
