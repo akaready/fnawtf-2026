@@ -25,7 +25,7 @@ export function CalBookingButton({
   buttonText = 'Schedule a Call',
   namespace = 'introduction',
   calLink = 'fnawtf/introduction',
-  isPrimary = false,
+  isPrimary: _isPrimary = false,
   config = {
     layout: 'month_view',
     theme: 'dark',
