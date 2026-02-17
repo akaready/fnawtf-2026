@@ -6,3 +6,5 @@ node_modules
 .claude/
 .kilocode/
 tsconfig.tsbuildinfo
+.vercel
+.mcp.json
