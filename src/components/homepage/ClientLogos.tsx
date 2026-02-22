@@ -5,7 +5,10 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { Database } from '@/types/database.types';
 import { ClientLogosCycle } from './ClientLogosCycle';
+
+type ClientRow = Pick<Database['public']['Tables']['clients']['Row'], 'id' | 'name' | 'logo_url'>;
 
 export async function ClientLogos() {
   const supabase = await createClient();
@@ -15,7 +18,7 @@ export async function ClientLogos() {
     .not('logo_url', 'is', null)
     .order('name');
 
-  const clients = (data ?? []).map((c) => ({
+  const clients = ((data ?? []) as ClientRow[]).map((c) => ({
     id: c.id,
     name: c.name,
     logoUrl: c.logo_url as string,
