@@ -21,6 +21,7 @@
   --background: #000000;
   --foreground: #fafafa;
   --surface: #070707;
+  --surface-elevated: #111111;
   --muted: #171717;
   --muted-foreground: #a1a1aa;
   --border: #262626;
@@ -105,6 +106,11 @@ a:hover {
   @apply text-accent;
 }
 
+/* Nav buttons manage their own hover color via GSAP — never go purple */
+a[data-btn-hover]:hover {
+  color: inherit;
+}
+
 /* Selection */
 ::selection {
   @apply bg-purple-400 text-background;
@@ -140,6 +146,16 @@ a:hover {
   to {
     transform: translateY(0);
   }
+}
+
+@keyframes reelLeft {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes reelRight {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
 }
 
 .testimonial-scroll-up {

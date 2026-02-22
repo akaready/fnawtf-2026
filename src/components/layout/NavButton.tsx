@@ -3,14 +3,17 @@
 import React, { useRef, useEffect, useState } from 'react';
 import gsap from 'gsap';
 import { motion } from 'framer-motion';
-import { Home, Play, ClipboardList, DollarSign, Info } from 'lucide-react';
+import { Home, Play, ClipboardList, DollarSign, Info, ExternalLink } from 'lucide-react';
 
 interface NavButtonProps {
   href: string;
   children: React.ReactNode;
   isPrimary?: boolean;
+  inverted?: boolean;
+  size?: 'default' | 'lg';
   onClick?: () => void;
-  iconName?: 'home' | 'play' | 'clipboard-list' | 'dollar-sign' | 'info';
+  iconName?: 'home' | 'play' | 'clipboard-list' | 'dollar-sign' | 'info' | 'external-link';
+  isActive?: boolean;
 }
 
 const iconVariants = {
@@ -38,14 +41,32 @@ const iconComponentMap: Record<string, React.ComponentType<any>> = {
   'clipboard-list': ClipboardList,
   'dollar-sign': DollarSign,
   'info': Info,
+  'external-link': ExternalLink,
 };
 
-export function NavButton({ href, children, isPrimary = false, onClick, iconName }: NavButtonProps) {
+export function NavButton({ href, children, isPrimary = false, inverted = false, size = 'default', onClick, iconName, isActive = false }: NavButtonProps) {
   const buttonRef = useRef<HTMLAnchorElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState(isActive);
+  const prevIsActiveRef = useRef(isActive);
 
   const Icon = iconName ? iconComponentMap[iconName] : null;
+
+  // Inverted: white bg + black text at rest → black fill + white text on hover
+  const restColor = inverted ? '#000000' : isPrimary ? '#a14dfd' : '#ffffff';
+  const hoverColor = inverted ? '#ffffff' : '#000000';
+
+  // Animate exit when this button loses active state (page changed away)
+  useEffect(() => {
+    if (prevIsActiveRef.current && !isActive) {
+      const fill = fillRef.current;
+      const textSpan = buttonRef.current?.querySelector('span');
+      gsap.to(fill, { scaleX: 0, duration: 0.35, ease: 'power2.inOut' });
+      if (textSpan) gsap.to(textSpan, { color: restColor, duration: 0.35, ease: 'power2.inOut' });
+      setIsHovered(false);
+    }
+    prevIsActiveRef.current = isActive;
+  }, [isActive, restColor]);
 
   useEffect(() => {
     if (!buttonRef.current || !fillRef.current) return;
@@ -54,134 +75,78 @@ export function NavButton({ href, children, isPrimary = false, onClick, iconName
     const fill = fillRef.current;
     const textSpan = button.querySelector('span');
 
-    const handleMouseEnter = (e: MouseEvent) => {
-      setIsHovered(true);
+    // Initialise to active (hovered) state immediately when this is the current page
+    if (isActive) {
+      gsap.set(fill, { scaleX: 1 });
+      if (textSpan) gsap.set(textSpan, { color: hoverColor });
+    }
 
+    const handleMouseEnter = (e: MouseEvent) => {
+      if (isActive) return; // active item ignores hover entirely
+      setIsHovered(true);
       if (!fill) return;
 
       const rect = button.getBoundingClientRect();
       const x = (e.clientX || e.pageX) - rect.left;
-      const direction = x < rect.width / 2 ? 'left' : 'right';
+      const origin = x < rect.width / 2 ? '0 50%' : '100% 50%';
 
       gsap.killTweensOf([fill, textSpan]);
-
-      if (direction === 'left') {
-        gsap.fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '0 50%' },
-          { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      } else {
-        gsap.fromTo(
-          fill,
-          { scaleX: 0, transformOrigin: '100% 50%' },
-          { scaleX: 1, duration: 0.3, ease: 'power2.out' }
-        );
-      }
-
-      // Animate text color to black on hover
-      if (textSpan) {
-        gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
-      }
+      gsap.fromTo(fill, { scaleX: 0, transformOrigin: origin }, { scaleX: 1, duration: 0.3, ease: 'power2.out' });
+      if (textSpan) gsap.to(textSpan, { color: hoverColor, duration: 0.3, ease: 'power2.out' });
     };
 
     const handleMouseLeave = (e: MouseEvent) => {
+      if (isActive) return; // stay in active state
       setIsHovered(false);
-
       if (!fill) return;
 
-      // Detect exit direction based on mouse position when leaving
       const rect = button.getBoundingClientRect();
       const x = (e.clientX || e.pageX) - rect.left;
-      const exitDirection = x < rect.width / 2 ? 'left' : 'right';
+      const origin = x < rect.width / 2 ? '0 50%' : '100% 50%';
 
-      // Animate fill out in the exit direction
-      if (exitDirection === 'left') {
-        gsap.to(fill, {
-          scaleX: 0,
-          transformOrigin: '0 50%',
-          duration: 0.3,
-          ease: 'power2.out'
-        });
-      } else {
-        gsap.to(fill, {
-          scaleX: 0,
-          transformOrigin: '100% 50%',
-          duration: 0.3,
-          ease: 'power2.out'
-        });
-      }
-
-      // Animate text color back to initial state
-      if (textSpan) {
-        const targetColor = isPrimary ? '#a14dfd' : '#ffffff';
-        gsap.to(textSpan, { color: targetColor, duration: 0.3, ease: 'power2.out' });
-      }
+      gsap.to(fill, { scaleX: 0, transformOrigin: origin, duration: 0.3, ease: 'power2.out' });
+      if (textSpan) gsap.to(textSpan, { color: restColor, duration: 0.3, ease: 'power2.out' });
     };
 
     button.addEventListener('mouseenter', handleMouseEnter);
     button.addEventListener('mouseleave', handleMouseLeave);
-
     return () => {
       button.removeEventListener('mouseenter', handleMouseEnter);
       button.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [isPrimary]);
+  }, [isPrimary, inverted, restColor, hoverColor, isActive]);
 
-  if (isPrimary) {
-    return (
-      <motion.a
-        ref={buttonRef}
-        href={href}
-        onClick={onClick}
-        layout
-        transition={{ layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
-        className="relative inline-block px-6 py-2 font-medium text-purple-400 bg-black border border-gray-600 rounded-lg overflow-hidden"
-        data-btn-hover
-      >
-        <div
-          ref={fillRef}
-          className="absolute inset-0 bg-white pointer-events-none"
-          style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
-        />
-        <span className="relative flex items-center gap-2" style={{ zIndex: 10 }}>
-          {Icon && (
-            <motion.span
-              variants={iconVariants}
-              initial="hidden"
-              animate={isHovered ? "visible" : "hidden"}
-              className="flex items-center"
-            >
-              {React.createElement(Icon, { size: 18, strokeWidth: 2 })}
-            </motion.span>
-          )}
-          {children}
-        </span>
-      </motion.a>
-    );
-  }
+  const padding = size === 'lg' ? 'px-4 py-3 text-base' : inverted || !isPrimary ? 'px-4 py-2' : 'px-6 py-2';
+
+  const baseClass = inverted
+    ? `relative inline-block ${padding} font-medium text-black bg-white border border-white/20 rounded-lg overflow-hidden`
+    : isPrimary
+      ? `relative inline-block ${padding} font-medium text-purple-400 bg-black border border-gray-600 rounded-lg overflow-hidden`
+      : `relative inline-block ${padding} font-medium text-white bg-black border border-gray-600 rounded-lg overflow-hidden`;
+
+  const fillClass = inverted
+    ? 'absolute inset-0 bg-black pointer-events-none'
+    : 'absolute inset-0 bg-white pointer-events-none';
 
   return (
-    <motion.a
+    <a
       ref={buttonRef}
       href={href}
       onClick={onClick}
-      layout
-      transition={{ layout: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
-      className="relative inline-block px-4 py-2 font-medium text-white bg-black border border-gray-600 rounded-lg overflow-hidden"
+      className={baseClass}
       data-btn-hover
     >
       <div
         ref={fillRef}
-        className="absolute inset-0 bg-white pointer-events-none"
+        className={fillClass}
         style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
       />
-      <span className="relative flex items-center gap-2" style={{ zIndex: 10 }}>
+      <span className="relative flex items-center gap-2" style={{ zIndex: 10, color: restColor }}>
         {Icon && (
           <motion.span
             variants={iconVariants}
             initial="hidden"
-            animate={isHovered ? "visible" : "hidden"}
+            animate={isHovered || isActive ? 'visible' : 'hidden'}
             className="flex items-center"
           >
             {React.createElement(Icon, { size: 18, strokeWidth: 2 })}
@@ -189,6 +154,6 @@ export function NavButton({ href, children, isPrimary = false, onClick, iconName
         )}
         {children}
       </span>
-    </motion.a>
+    </a>
   );
 }

@@ -1,12 +1,18 @@
+import { getServicesProjects } from '@/lib/services/getServicesProjects';
+import { FooterCTA } from '@/components/layout/FooterCTA';
+import { ServicesLayout } from './layout-client';
+
 export const metadata = {
-  title: 'Services - FNA.WTF',
-  description: 'Our services',
+  title: 'Services — FNA.WTF',
+  description: 'How we work. Three phases, one direction: yours.',
 };
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const projects = await getServicesProjects();
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <h1 className="text-4xl font-bold">Services page placeholder</h1>
+    <div className="min-h-screen">
+      <ServicesLayout projects={projects} />
+      <FooterCTA />
     </div>
   );
 }

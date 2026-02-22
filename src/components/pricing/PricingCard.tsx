@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
+import { getCalApi } from '@calcom/embed-react';
 import gsap from 'gsap';
 import {
   Hammer, Rocket, TrendingUp, Lightbulb, Video, Sparkles,
@@ -33,6 +34,20 @@ interface PricingCardProps {
 export function PricingCard({ tier }: PricingCardProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const fillRef = useRef<HTMLDivElement>(null);
+  const calBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (tier.id !== 'scale') return;
+    (async () => {
+      const cal = await getCalApi({ namespace: 'introduction' });
+      cal('ui', {
+        cssVarsPerTheme: { light: { 'cal-brand': '#9752f4' }, dark: { 'cal-brand': '#9752f4' } },
+        theme: 'dark',
+        hideEventTypeDetails: true,
+        layout: 'month_view',
+      });
+    })();
+  }, [tier.id]);
 
   // Track when card is visible to trigger animation
   const { ref: visibilityRef, isVisible } = useIntersectionObserver({
@@ -101,10 +116,10 @@ export function PricingCard({ tier }: PricingCardProps) {
     <RevealItem>
       <div
         ref={setRefs}
-        className="relative p-8 border border-border rounded-lg cursor-pointer overflow-hidden hover:border-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] bg-background"
+        className="relative p-8 border border-border rounded-lg cursor-pointer overflow-hidden hover:border-purple-500 hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] bg-zinc-900"
         onClick={() => {
           if (tier.id === 'scale') {
-            window.location.href = 'mailto:hello@fna.wtf';
+            calBtnRef.current?.click();
           } else {
             // Set the tab parameter and scroll to calculator
             const url = new URL(window.location.href);
@@ -123,6 +138,17 @@ export function PricingCard({ tier }: PricingCardProps) {
           className="absolute inset-0 bg-purple-950 pointer-events-none"
           style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
         />
+        {tier.id === 'scale' && (
+          <button
+            ref={calBtnRef}
+            data-cal-namespace="introduction"
+            data-cal-link="fnawtf/introduction"
+            data-cal-config={JSON.stringify({ layout: 'month_view', theme: 'dark', useSlotsViewOnSmallScreen: true })}
+            className="sr-only"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+        )}
 
         <div className="relative" style={{ zIndex: 10 }} data-content>
           <Icon

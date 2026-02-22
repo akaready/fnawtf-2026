@@ -79,18 +79,16 @@ function FounderCard({ founder }: { founder: Founder }) {
 function BTSGrid() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {btsShots.map((shot, i) => (
-        <Reveal key={shot.src} delay={i * 0.1} distance="1.5em">
-          <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-muted">
-            <Image
-              src={shot.src}
-              alt={shot.alt}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 33vw"
-            />
-          </div>
-        </Reveal>
+      {btsShots.map((shot) => (
+        <div key={shot.src} className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-muted">
+          <Image
+            src={shot.src}
+            alt={shot.alt}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 33vw"
+          />
+        </div>
       ))}
     </div>
   );
@@ -100,6 +98,19 @@ export function TeamSection() {
   return (
     <section className="py-16 md:py-24">
       <div className="px-6 md:px-16 lg:px-24 max-w-5xl mx-auto">
+        {/* Section header */}
+        <Reveal distance="2em">
+          <div className="mb-12 md:mb-16 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-center text-foreground">
+              Meet the Founders
+            </h2>
+            <p className="text-center text-muted-foreground max-w-xl mx-auto">
+              We&apos;re two creatives, tinkerers, builders, and makers with complementary skillsets
+              (and a vast network of talented allies we tap in when needed).
+            </p>
+          </div>
+        </Reveal>
+
         {/* Founder cards */}
         <RevealGroup stagger={150} distance="2em" className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20">
           {founders.map((founder) => (

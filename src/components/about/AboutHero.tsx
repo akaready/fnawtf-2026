@@ -1,62 +1,70 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Reveal } from '@/components/animations/Reveal';
+import { useEffect } from 'react';
+import { useAnimate, stagger } from 'framer-motion';
+import { PageHero } from '@/components/layout/PageHero';
 
-const words = ['Positioning.', 'Perspective.', 'Personality.'];
+const WORDS = ['Positioning.', 'Perspective.', 'Personality.'];
+const EASE = [0.22, 1, 0.36, 1] as const;
+const COLOR_ACCENT = '#a14dfd';
+const COLOR_WHITE = '#ffffff';
 
 export function AboutHero() {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [scope, animate] = useAnimate();
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % words.length);
-    }, 2000);
-    return () => clearInterval(id);
-  }, []);
+    let cancelled = false;
+    const pause = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
+
+    const run = async () => {
+      while (!cancelled) {
+        for (let i = 0; i < WORDS.length; i++) {
+          if (cancelled) break;
+          await animate(
+            `[data-word="${i}"] [data-letter]`,
+            { color: COLOR_ACCENT },
+            { delay: stagger(0.06), duration: 0.45, ease: 'easeInOut' }
+          );
+          if (cancelled) break;
+          await pause(600);
+          if (cancelled) break;
+          await animate(
+            `[data-word="${i}"] [data-letter]`,
+            { color: COLOR_WHITE },
+            { delay: stagger(0.06), duration: 0.55, ease: 'easeInOut' }
+          );
+          if (cancelled) break;
+          if (i < WORDS.length - 1) await pause(0);
+        }
+        if (cancelled) break;
+        await pause(3000);
+      }
+    };
+
+    run();
+    return () => { cancelled = true; };
+  }, [animate]);
+
+  const title = (
+    <>
+      {WORDS.map((word, wi) => (
+        <span key={word} data-word={wi} style={{ display: 'block' }}>
+          {word.split('').map((char, ci) => (
+            <span key={ci} data-letter style={{ display: 'inline' }}>
+              {char}
+            </span>
+          ))}
+        </span>
+      ))}
+    </>
+  );
 
   return (
-    <section className="bg-muted px-6 py-24 md:py-32 overflow-hidden">
-      <div className="max-w-7xl mx-auto flex flex-col items-center">
-        {/* Stacked display words — centered block with increasing offset */}
-        <div className="mb-16 md:mb-20">
-          {words.map((word, i) => (
-            <Reveal key={word} delay={i * 0.12} distance="1.5em">
-              <div
-                style={{ paddingLeft: `${i * 5}%` }}
-                className="leading-none"
-              >
-                <span
-                  className={[
-                    'relative inline-block font-bold tracking-tight rounded-sm',
-                    'text-[clamp(3rem,10vw,8rem)]',
-                    'transition-colors duration-150',
-                    activeIndex === i ? 'text-accent' : 'text-foreground',
-                  ].join(' ')}
-                  style={
-                    activeIndex === i
-                      ? { textShadow: '0 0 80px rgba(161,77,253,0.35), 0 0 30px rgba(161,77,253,0.2)' }
-                      : { textShadow: 'none' }
-                  }
-                >
-                  {word}
-                </span>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-
-        {/* Sub-copy */}
-        <Reveal delay={0.45} distance="1em">
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed text-center max-w-2xl">
-            <span className="text-foreground">
-              We help brands become the brand they long to be.
-            </span>{' '}
-            We&apos;re two founders, creatives, tinkerers, builders, makers, and more with
-            complementary skillsets and a vast network of talented allies we tap in when needed.
-          </p>
-        </Reveal>
-      </div>
-    </section>
+    <PageHero
+      label="About"
+      title={title}
+      titleRef={scope}
+      subCopy="We help brands become the brand they long to be."
+    />
   );
 }

@@ -48,10 +48,10 @@ export async function FeaturedWork() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-16 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
-            Featured Work
+            Recent Projects
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Explore our latest projects showcasing innovative storytelling and creative excellence.
+            Soon to feature your brand.
           </p>
         </div>
 

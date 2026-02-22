@@ -32,7 +32,7 @@ export async function ClientLogos() {
             Trusted by Founders
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            We partner with visionary founders and ambitious teams to bring their stories to life through compelling visual content.
+            We partner with ambitious teams to bring their unique stories to life.
           </p>
         </div>
 

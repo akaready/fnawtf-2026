@@ -1,7 +1,3 @@
-'use client';
-
-import { Reveal } from '@/components/animations/Reveal';
-
 const paragraphs = [
   <>
     Nearly a decade ago, Ol&apos; Richie was in a tight spot. His D.P. dropped out just a week
@@ -24,20 +20,16 @@ export function OurStory() {
   return (
     <section className="px-6 pt-0 pb-24 md:pb-32">
       <div className="max-w-2xl mx-auto">
-        <Reveal distance="1.5em" threshold={0.1}>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-3">
-            Our Story
-          </h2>
-          <span className="block text-accent text-3xl leading-none select-none mb-6">￣</span>
-        </Reveal>
+        <h2 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-3">
+          Our Story
+        </h2>
+        <span className="block text-accent text-3xl leading-none select-none mb-6">￣</span>
 
         <div className="flex flex-col gap-8">
           {paragraphs.map((para, i) => (
-            <Reveal key={i} delay={i * 0.12} distance="1.5em" threshold={0.1}>
-              <p className="text-base md:text-lg text-foreground/80 leading-relaxed">
-                {para}
-              </p>
-            </Reveal>
+            <p key={i} className="text-base md:text-lg text-foreground/80 leading-relaxed">
+              {para}
+            </p>
           ))}
         </div>
       </div>

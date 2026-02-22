@@ -11,8 +11,8 @@ export const pricingTiers: PricingTier[] = [
     name: 'Build',
     tagline:
       'The prep phase: branding, voice, and narrative work before production',
-    price: '$5,000+',
-    priceNumber: 5000,
+    price: '$3,500+',
+    priceNumber: 3500,
     ctaText: 'Start a Project',
     ctaHref: '/contact',
     highlighted: false,
@@ -29,8 +29,8 @@ export const pricingTiers: PricingTier[] = [
     name: 'Launch',
     tagline:
       'Full production: shoot day, post-production, and delivery',
-    price: '$10,000+',
-    priceNumber: 10000,
+    price: '$7,000+',
+    priceNumber: 7000,
     ctaText: 'Start a Project',
     ctaHref: '/contact',
     highlighted: true,
@@ -47,7 +47,7 @@ export const pricingTiers: PricingTier[] = [
     name: 'Scale',
     tagline:
       'Ongoing content partnership tailored to your growth',
-    price: 'Contact Us',
+    price: 'Contact',
     ctaText: 'Contact Sales',
     ctaHref: '/contact',
     highlighted: false,
@@ -358,15 +358,15 @@ export const fundraisingIncluded: AddOn[] = [
   { id: 'fundraising-branded-motion-graphics', name: '\u21B3 Branded motion graphics', price: 0, priceDisplay: 'Included', tier: 'fundraising', included: true, fundraisingFreebie: true },
   { id: 'fundraising-portrait', name: '\u21B3 4K portrait still', price: 0, priceDisplay: 'Included', tier: 'fundraising', included: true, fundraisingFreebie: true },
   // Green — website
-  { id: 'fundraising-pitch-page', name: 'https://YourCompanyName.Pitch website build-out', price: 0, priceDisplay: 'Included', tier: 'fundraising', included: true, fundraisingFreebie: true },
+  { id: 'fundraising-pitch-page', name: 'https://yourCompanyName.Pitch.Page website build-out', price: 0, priceDisplay: 'Included', tier: 'fundraising', included: true, fundraisingFreebie: true },
 ];
 
 export const fundraisingAddOns: AddOn[] = [
-  { id: 'fundraising-broll', name: 'B-roll footage of your product', price: 5000, priceDisplay: '$5,000', tier: 'fundraising' },
-  { id: 'fundraising-scripted-videos', name: "Add'l scripted videos (1x)", price: 5000, priceDisplay: '$5,000', tier: 'fundraising' },
-  { id: 'fundraising-faqs', name: "Add'l unscripted FAQs (10x)", price: 5000, priceDisplay: '$5,000', tier: 'fundraising' },
-  { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 5000, priceDisplay: '$5,000', tier: 'fundraising' },
-  { id: 'fundraising-rush', name: '72-hour rush fee', price: 5000, priceDisplay: '$5,000', tier: 'fundraising' },
+  { id: 'fundraising-broll', name: 'B-roll footage of your product', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-scripted-videos', name: "Add'l scripted videos (1x)", price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-faqs', name: "Add'l unscripted FAQs (10x)", price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-rush', name: '72-hour rush fee', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   {
     id: 'fundraising-additional-speakers',
     name: 'Additional speakers',
@@ -376,5 +376,5 @@ export const fundraisingAddOns: AddOn[] = [
     tier: 'fundraising',
     quantity: { min: 1, max: 10, default: 1, unit: 'speakers' },
   },
-  { id: 'fundraising-additional-post', name: 'Additional week of post', price: 5000, priceDisplay: '$5,000', tier: 'fundraising' },
+  { id: 'fundraising-additional-post', name: 'Additional week of post', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
 ];

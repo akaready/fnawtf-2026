@@ -116,10 +116,10 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
         {/* Title */}
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-foreground">
-            Their Words, Not Ours
+            In Their Own Words
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Nice things our friends have said about us.
+            Nice things our clients have shared with us.
           </p>
         </div>
 

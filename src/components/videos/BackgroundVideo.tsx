@@ -73,10 +73,10 @@ export function BackgroundVideo({
     video.addEventListener('canplay', handleCanPlay, { once: true });
 
     // If FnaLoader is active (not yet complete), wait for its reveal event before playing.
-    // Otherwise (non-homepage contexts, or loader already done), play on canplay as normal.
+    // Otherwise (non-homepage contexts, loader already done, or loader skipped), play on canplay.
     const loaderEl = document.querySelector('[data-fna-loader-init]') as HTMLElement | null;
     const loaderIsActive = !!loaderEl && loaderEl.style.display !== 'none';
-    if (loaderIsActive) {
+    if (loaderIsActive && !sessionStorage.getItem('fna_seen')) {
       window.addEventListener('fna-reveal-start', handleRevealStart, { once: true });
     } else {
       revealStarted = true;

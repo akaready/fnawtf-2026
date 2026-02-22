@@ -155,7 +155,7 @@ export function ServicesCards({ cards = defaultCards }: ServicesCardsProps) {
             How We Work
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Our three-phase approach ensures your vision comes to life with clarity, impact, and sustainable growth.
+            Three engagements. Tiered pricing. Custom quotes.
           </p>
         </div>
 

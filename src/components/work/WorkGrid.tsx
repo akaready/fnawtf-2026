@@ -2,7 +2,6 @@
 
 import { FeaturedProject } from '@/types/project';
 import { FeaturedWorkCard } from '@/components/homepage/FeaturedWorkCard';
-import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
 
 interface WorkGridProps {
   projects: FeaturedProject[];
@@ -23,21 +22,17 @@ export function WorkGrid({ projects }: WorkGridProps) {
   }
 
   return (
-    <RevealGroup
-      className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-      stagger={150}
-    >
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {projects.map((project) => {
         const colSpanClass = project.fullWidth ? 'lg:col-span-2' : '';
         return (
-          <RevealItem key={project.id}>
-            <FeaturedWorkCard
-              project={project}
-              className={colSpanClass}
-            />
-          </RevealItem>
+          <FeaturedWorkCard
+            key={project.id}
+            project={project}
+            className={colSpanClass}
+          />
         );
       })}
-    </RevealGroup>
+    </div>
   );
 }
