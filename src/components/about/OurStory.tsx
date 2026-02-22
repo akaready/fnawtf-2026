@@ -4,8 +4,8 @@ import { Reveal } from '@/components/animations/Reveal';
 
 const paragraphs = [
   <>
-    Ol&apos; Richie was in a tight spot. His D.P. dropped out just two weeks before the shoot.
-    He sent a fateful email through his network, asking for recommendations. That email found its
+    Nearly a decade ago, Ol&apos; Richie was in a tight spot. His D.P. dropped out just a week
+    before a shoot. He sent a fateful email to his network asking for help. That email found its
     way to Ready. Ready recommended himself.
   </>,
   <>

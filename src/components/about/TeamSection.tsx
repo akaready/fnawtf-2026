@@ -1,12 +1,13 @@
 'use client';
 
+import Image from 'next/image';
 import { Reveal, RevealGroup } from '@/components/animations/Reveal';
 
 interface Founder {
   name: string;
   role: string;
   bio: string[];
-  photoLabel: string;
+  photo: string;
 }
 
 const founders: Founder[] = [
@@ -17,25 +18,34 @@ const founders: Founder[] = [
       "Christened \"Ol' Richie\" via sprinkles on a birthday cake. It stuck. Multiple SXSW film festival alum. Spent three years as VP of Marketing at a crowdfunded hardware start-up.",
       'Hails from Texas. Austin, mostly. Boots, brisket, and breakfast tacos.',
     ],
-    photoLabel: "Photo — Ol' Richie",
+    photo: '/images/about/FNA-richie-v01-RAR.jpg',
   },
   {
     name: 'Ready',
     role: 'Co-Founder • Creative Director',
     bio: [
-      "New York City blood. Los Angeles graduate. San Francisco style. Gets his moment of zen when he hears, \"action!\"",
-      "Two decades painting with light, dancing with lens, and sculpting with story. Find him in the back-country when he's not behind camera.",
+      "New York City blood. Los Angeles graduate. San Francisco style. Gets a moment of zen when he hears, \"action!\" Two decades painting with light, dancing with lens, and sculpting with story. Find him in the back-country when not behind camera.",
     ],
-    photoLabel: 'Photo — Ready',
+    photo: '/images/about/FNA-ready-v01-RAR.jpg',
   },
 ];
 
-function ImagePlaceholder({ label }: { label: string }) {
+const btsShots = [
+  { src: '/images/about/bts-01.webp', alt: 'Behind the scenes' },
+  { src: '/images/about/bts-03.webp', alt: 'Behind the scenes' },
+  { src: '/images/about/bts-02.webp', alt: 'Behind the scenes' },
+];
+
+function FounderPhoto({ photo, name }: { photo: string; name: string }) {
   return (
-    <div className="w-48 h-48 rounded-full overflow-hidden bg-muted border border-border flex items-center justify-center mx-auto">
-      <span className="text-muted-foreground/40 text-xs font-mono tracking-widest uppercase text-center px-4">
-        {label}
-      </span>
+    <div className="w-64 h-64 rounded-full overflow-hidden bg-muted border border-border mx-auto relative">
+      <Image
+        src={photo}
+        alt={name}
+        fill
+        className="object-cover"
+        sizes="256px"
+      />
     </div>
   );
 }
@@ -43,7 +53,7 @@ function ImagePlaceholder({ label }: { label: string }) {
 function FounderCard({ founder }: { founder: Founder }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <ImagePlaceholder label={founder.photoLabel} />
+      <FounderPhoto photo={founder.photo} name={founder.name} />
 
       <div className="mt-6">
         <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-0.5">
@@ -67,17 +77,18 @@ function FounderCard({ founder }: { founder: Founder }) {
 }
 
 function BTSGrid() {
-  const shots = ['BTS — On Set', 'BTS — Behind Camera', 'BTS — The Work'];
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-20 md:mt-28">
-      {shots.map((label, i) => (
-        <Reveal key={label} delay={i * 0.1} distance="1.5em">
-          <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-muted border border-border">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-muted-foreground/40 text-sm font-mono tracking-widest uppercase">
-                {label}
-              </span>
-            </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {btsShots.map((shot, i) => (
+        <Reveal key={shot.src} delay={i * 0.1} distance="1.5em">
+          <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-muted">
+            <Image
+              src={shot.src}
+              alt={shot.alt}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
           </div>
         </Reveal>
       ))}
@@ -87,16 +98,18 @@ function BTSGrid() {
 
 export function TeamSection() {
   return (
-    <section className="px-6 md:px-16 lg:px-24 py-16 md:py-24">
-      <div className="max-w-5xl mx-auto">
+    <section className="py-16 md:py-24">
+      <div className="px-6 md:px-16 lg:px-24 max-w-5xl mx-auto">
         {/* Founder cards */}
         <RevealGroup stagger={150} distance="2em" className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20">
           {founders.map((founder) => (
             <FounderCard key={founder.name} founder={founder} />
           ))}
         </RevealGroup>
+      </div>
 
-        {/* BTS gallery */}
+      {/* BTS gallery — full width */}
+      <div className="px-4 mt-20 md:mt-28">
         <BTSGrid />
       </div>
     </section>
