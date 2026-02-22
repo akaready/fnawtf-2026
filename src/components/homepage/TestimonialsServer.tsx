@@ -4,7 +4,12 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { Database } from '@/types/database.types';
 import { TestimonialsSection } from './Testimonials';
+
+type TestimonialRow = Pick<Database['public']['Tables']['testimonials']['Row'],
+  'id' | 'quote' | 'person_name' | 'person_title' | 'display_title' | 'company'
+> & { projects: { clients: { logo_url: string | null } | null } | null };
 
 export async function TestimonialsServer() {
   const supabase = await createClient();
@@ -13,8 +18,8 @@ export async function TestimonialsServer() {
     .select('id, quote, person_name, person_title, display_title, company, projects(clients(logo_url))')
     .order('created_at', { ascending: false });
 
-  const testimonials = (data ?? []).map((t) => {
-    const proj = t.projects as { clients: { logo_url: string | null } | null } | null;
+  const testimonials = ((data ?? []) as TestimonialRow[]).map((t) => {
+    const proj = t.projects;
     return {
       id: t.id,
       quote: `"${t.quote}"`,
