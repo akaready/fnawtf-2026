@@ -36,6 +36,8 @@ export function BackgroundVideo({
 
     let active = true;
     let currentPlayPromise: Promise<void> | null = null;
+    let canPlayReady = false;
+    let revealStarted = false;
 
     // Helper to safely play video with proper promise handling
     const safePlay = async () => {
@@ -60,12 +62,25 @@ export function BackgroundVideo({
       }
     };
 
-    // Use canplay event for more reliable playback timing
-    const handleCanPlay = () => {
-      safePlay();
+    // Play only when both video is buffered AND the reveal has started
+    const tryPlay = () => {
+      if (canPlayReady && revealStarted) safePlay();
     };
 
+    const handleCanPlay = () => { canPlayReady = true; tryPlay(); };
+    const handleRevealStart = () => { revealStarted = true; tryPlay(); };
+
     video.addEventListener('canplay', handleCanPlay, { once: true });
+
+    // If FnaLoader is active (not yet complete), wait for its reveal event before playing.
+    // Otherwise (non-homepage contexts, or loader already done), play on canplay as normal.
+    const loaderEl = document.querySelector('[data-fna-loader-init]') as HTMLElement | null;
+    const loaderIsActive = !!loaderEl && loaderEl.style.display !== 'none';
+    if (loaderIsActive) {
+      window.addEventListener('fna-reveal-start', handleRevealStart, { once: true });
+    } else {
+      revealStarted = true;
+    }
 
     // Detect if URL is HLS playlist or direct video file
     const isHLS = videoSrc.includes('.m3u8');
@@ -83,7 +98,7 @@ export function BackgroundVideo({
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Video will play when canplay event fires
+        // Video will play when both canplay and fna-reveal-start have fired
       });
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -100,6 +115,7 @@ export function BackgroundVideo({
       return () => {
         active = false;
         video.removeEventListener('canplay', handleCanPlay);
+        window.removeEventListener('fna-reveal-start', handleRevealStart);
         const destroy = () => hls.destroy();
         if (currentPlayPromise) {
           currentPlayPromise.then(destroy).catch(destroy);
@@ -118,6 +134,7 @@ export function BackgroundVideo({
     return () => {
       active = false;
       video.removeEventListener('canplay', handleCanPlay);
+      window.removeEventListener('fna-reveal-start', handleRevealStart);
     };
   }, [videoSrc]);
 

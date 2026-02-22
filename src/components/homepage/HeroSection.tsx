@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { BackgroundVideo } from '@/components/videos/BackgroundVideo';
@@ -28,43 +28,55 @@ export function HeroSection({
 }: HeroSectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
+  const headlineWordsRef = useRef<(HTMLSpanElement | null)[]>([]);
   const subheadlineRef = useRef<HTMLParagraphElement>(null);
   const locationsRef = useRef<HTMLParagraphElement>(null);
   const prefersReducedMotion = useReducedMotion();
+  // null = not yet triggered; number = animation delay in seconds
+  const [animationDelay, setAnimationDelay] = useState<number | null>(null);
 
+  // Effect 1: trigger animation right after loader finishes.
+  // Falls back to immediate start if no active loader is found.
   useEffect(() => {
+    const loaderEl = document.querySelector('[data-fna-loader-init]') as HTMLElement | null;
+    const loaderIsActive = !!loaderEl && loaderEl.style.display !== 'none';
+
+    if (!loaderIsActive) {
+      setAnimationDelay(0);
+      return;
+    }
+
+    const handle = () => setAnimationDelay(0);
+    window.addEventListener('fna-loader-complete', handle, { once: true });
+    return () => window.removeEventListener('fna-loader-complete', handle);
+  }, []);
+
+  // Effect 2: run the animation once animationDelay is set.
+  // Word spans are rendered in JSX (React owns the DOM structure);
+  // GSAP only animates their styles — no innerHTML manipulation needed.
+  useEffect(() => {
+    if (animationDelay === null) return;
     if (!containerRef.current || !headlineRef.current || !subheadlineRef.current || !locationsRef.current) return;
 
+    // Make the h1 container visible (starts opacity-0 in JSX to prevent SSR flash)
+    headlineRef.current.style.opacity = '1';
+
     if (prefersReducedMotion) {
-      // Show content immediately without animation
-      gsap.set([headlineRef.current, subheadlineRef.current], { opacity: 1, y: 0 });
+      const wordSpans = headlineWordsRef.current.filter(Boolean) as HTMLSpanElement[];
+      gsap.set([...wordSpans, subheadlineRef.current], { opacity: 1, y: 0 });
       const locationSpans = locationsRef.current.querySelectorAll('span');
       gsap.set(locationSpans, { opacity: 1, y: 0 });
       return;
     }
 
-    const timeline = gsap.timeline({ delay: 1 });
+    const wordSpans = headlineWordsRef.current.filter(Boolean) as HTMLSpanElement[];
+    const locationSpans = locationsRef.current.querySelectorAll('span');
 
-    // Split text into words for stagger effect
-    const headlineWords = headline.split(' ');
-    const headlineSpans = headlineWords.map((word) => {
-      const span = document.createElement('span');
-      span.textContent = word;
-      span.style.display = 'inline-block';
-      span.style.opacity = '0';
-      span.style.transform = 'translateY(20px)';
-      span.style.marginRight = '0.25em';
-      return span;
-    });
-
-    if (headlineRef.current) {
-      headlineRef.current.innerHTML = '';
-      headlineSpans.forEach((span) => headlineRef.current?.appendChild(span));
-    }
+    const timeline = gsap.timeline({ delay: animationDelay });
 
     // Animate headline words
     timeline.fromTo(
-      headlineSpans,
+      wordSpans,
       { opacity: 0, y: 20 },
       { opacity: 1, y: 0, duration: 0.6, stagger: 0.1 },
       0
@@ -79,7 +91,6 @@ export function HeroSection({
     );
 
     // Animate locations with stagger
-    const locationSpans = locationsRef.current.querySelectorAll('span');
     if (locationSpans.length > 0) {
       timeline.fromTo(
         locationSpans,
@@ -89,16 +100,16 @@ export function HeroSection({
           y: 0,
           duration: 0.4,
           stagger: 0.08,
-          ease: 'power2.out'
+          ease: 'power2.out',
         },
-        0.6  // Start 0.6s into timeline (after subheadline begins)
+        0.6
       );
     }
 
-    return () => {
-      timeline.kill();
-    };
-  }, []);
+    return () => { timeline.kill(); };
+  }, [animationDelay, prefersReducedMotion]);
+
+  const headlineWords = headline.split(' ');
 
   return (
     <section
@@ -118,26 +129,36 @@ export function HeroSection({
       {/* Content - positioned lower with bottom padding for marquee */}
       <div className="relative z-10 flex-1 flex items-center justify-center pb-32 pt-[30vh]">
         <div className="max-w-4xl mx-auto px-6 text-center space-y-6">
-        <h1
-          ref={headlineRef}
-          className="font-display text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight"
-        >
-          {headline}
-        </h1>
+          {/* opacity-0 on h1 prevents SSR flash; Effect 2 sets style.opacity=1 before animating */}
+          <h1
+            ref={headlineRef}
+            className="font-display text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight opacity-0"
+          >
+            {headlineWords.map((word, i) => (
+              <span
+                key={i}
+                ref={(el) => { headlineWordsRef.current[i] = el; }}
+                className="inline-block opacity-0"
+                style={{ marginRight: '0.25em' }}
+              >
+                {word}
+              </span>
+            ))}
+          </h1>
 
-        <p
-          ref={subheadlineRef}
-          className="font-body text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed opacity-0"
-        >
-          {subheadline}
-        </p>
+          <p
+            ref={subheadlineRef}
+            className="font-body text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed opacity-0"
+          >
+            {subheadline}
+          </p>
 
           <p
             ref={locationsRef}
             className="text-sm md:text-base text-muted-foreground pt-8"
           >
             {locations.map((location, index) => (
-              <span key={location} style={{ opacity: 0 }}>
+              <span key={location} className="opacity-0">
                 {location}
                 {index < locations.length - 1 && ' • '}
               </span>

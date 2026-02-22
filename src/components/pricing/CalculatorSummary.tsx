@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import gsap from 'gsap';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Save } from 'lucide-react';
 import { getCalApi } from '@calcom/embed-react';
 import { AddOn } from '@/types/pricing';
+import { QuoteModal } from './QuoteModal';
+import type { QuoteData } from '@/lib/pdf/types';
 
 interface CalculatorSummaryProps {
   selectedAddOns: Map<string, number>;
@@ -376,8 +378,8 @@ function GetStartedButton() {
   );
 }
 
-function SaveQuoteButton() {
-  const buttonRef = useRef<HTMLAnchorElement>(null);
+function SaveQuoteButton({ onSave }: { onSave: () => void }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -429,12 +431,12 @@ function SaveQuoteButton() {
 
   return (
     <div className="flex-1">
-      <motion.a
+      <motion.button
         ref={buttonRef}
-        href="#"
+        onClick={onSave}
         whileHover={{ scale: 1.02 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="relative block w-full px-4 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden"
+        className="relative w-full px-4 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden"
       >
         <div
           ref={fillRef}
@@ -452,7 +454,7 @@ function SaveQuoteButton() {
           </motion.span>
           Save Quote
         </span>
-      </motion.a>
+      </motion.button>
     </div>
   );
 }
@@ -478,6 +480,7 @@ export function CalculatorSummary({
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
   const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(0);
+  const [showModal, setShowModal] = useState(false);
 
   const buildAddOns = allAddOns.filter((a) => a.tier === 'build');
   const launchAddOnsFiltered = allAddOns.filter((a) => a.tier === 'launch');
@@ -742,10 +745,104 @@ export function CalculatorSummary({
         )}
 
         <div className="flex gap-3 mt-6">
-          <SaveQuoteButton />
+          <SaveQuoteButton onSave={() => setShowModal(true)} />
           <GetStartedButton />
         </div>
       </div>
+
+      {/* Quote PDF modal */}
+      <AnimatePresence>
+        {showModal && (
+          <QuoteModal
+            key="quote-modal"
+            quoteData={buildQuoteData({
+              buildActive, launchActive, fundraisingEnabled,
+              buildBase, launchBase, fundraisingBase,
+              buildResult, launchResult, fundraisingResult,
+              overhead, overheadWaived: !hasAnyAddOns,
+              deferredFee, deferPayment,
+              crowdfundingEnabled, crowdfundingTierIndex,
+              crowdfundingDiscount,
+              crowdfundingTierDiscounts,
+              friendlyDiscount, friendlyDiscountPercent,
+              showFriendlyDiscount,
+              total, downPercent, downAmount,
+            })}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+// ── Quote data builder ────────────────────────────────────────────────────
+
+function buildQuoteData(p: {
+  buildActive: boolean;
+  launchActive: boolean;
+  fundraisingEnabled: boolean;
+  buildBase: number;
+  launchBase: number;
+  fundraisingBase: number;
+  buildResult: { items: { name: string; price: number }[] } | null;
+  launchResult: { items: { name: string; price: number }[] } | null;
+  fundraisingResult: { items: { name: string; price: number }[] } | null;
+  overhead: number;
+  overheadWaived: boolean;
+  deferredFee: number;
+  deferPayment: boolean;
+  crowdfundingEnabled: boolean;
+  crowdfundingTierIndex: number;
+  crowdfundingDiscount: number;
+  crowdfundingTierDiscounts: number[];
+  friendlyDiscount: number;
+  friendlyDiscountPercent: number;
+  showFriendlyDiscount: boolean;
+  total: number;
+  downPercent: number;
+  downAmount: number;
+}): QuoteData {
+  const tier = p.fundraisingEnabled
+    ? 'Fundraising'
+    : p.buildActive && p.launchActive
+    ? 'Build + Launch'
+    : p.buildActive
+    ? 'Build'
+    : 'Launch';
+
+  const date = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return {
+    date,
+    tier,
+    buildItems: p.buildResult?.items ?? [],
+    launchItems: (p.launchResult?.items ?? []).filter((i) => !i.name.includes('Production Days')),
+    fundraisingItems: p.fundraisingResult?.items ?? [],
+    buildBase: p.buildBase,
+    launchBase: p.launchBase,
+    fundraisingBase: p.fundraisingBase,
+    overhead: p.overhead,
+    overheadWaived: p.overheadWaived,
+    deferredFee: p.deferredFee,
+    crowdfundingDiscount: p.crowdfundingDiscount,
+    crowdfundingPercent: p.crowdfundingEnabled
+      ? p.crowdfundingTierDiscounts[p.crowdfundingTierIndex]
+      : 0,
+    friendlyDiscount: p.showFriendlyDiscount ? p.friendlyDiscount : 0,
+    friendlyDiscountPercent: p.showFriendlyDiscount ? p.friendlyDiscountPercent : 0,
+    total: p.total,
+    downPercent: p.downPercent * 100,
+    downAmount: p.downAmount,
+    specialProgram: p.crowdfundingEnabled
+      ? 'crowdfunding'
+      : p.fundraisingEnabled
+      ? 'fundraising'
+      : null,
+    deferPayment: p.deferPayment,
+  };
 }

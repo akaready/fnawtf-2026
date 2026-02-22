@@ -5,6 +5,7 @@ import { ServicesCards } from '@/components/homepage/ServicesCards';
 import { ReelPlayer } from '@/components/homepage/ReelPlayer';
 import { FeaturedWork } from '@/components/homepage/FeaturedWork';
 import { ClientLogos } from '@/components/homepage/ClientLogos';
+import { TestimonialsServer } from '@/components/homepage/TestimonialsServer';
 import { FooterCTA } from '@/components/layout/FooterCTA';
 import { getBunnyVideoUrl, getBunnyVideoThumbnail, getBunnyVideoMp4Url } from '@/lib/bunny/client';
 
@@ -50,6 +51,9 @@ export default function Home() {
 
       {/* Client Logos */}
       <ClientLogos />
+
+      {/* Testimonials */}
+      <TestimonialsServer />
 
       {/* CTA Section */}
       <FooterCTA />

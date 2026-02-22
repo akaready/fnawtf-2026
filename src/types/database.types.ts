@@ -24,8 +24,14 @@ export type Database = {
           talent_count: number | null;
           location_count: number | null;
           thumbnail_url: string | null;
+          preview_gif_url: string | null;
+          assets_delivered: string[] | null;
+          category: string | null;
           featured: boolean;
           published: boolean;
+          placeholder: boolean;
+          full_width: boolean;
+          client_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -39,6 +45,7 @@ export type Database = {
           company: string | null;
           email: string;
           notes: string | null;
+          logo_url: string | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at'>;
@@ -76,6 +83,32 @@ export type Database = {
         };
         Insert: Omit<Database['public']['Tables']['tags']['Row'], 'id'>;
         Update: Partial<Database['public']['Tables']['tags']['Row']>;
+      };
+      testimonials: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          quote: string;
+          person_name: string | null;
+          person_title: string | null;
+          display_title: string | null;
+          company: string | null;
+          profile_picture_url: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['testimonials']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['testimonials']['Row']>;
+      };
+      project_bts_images: {
+        Row: {
+          id: string;
+          project_id: string;
+          image_url: string;
+          caption: string | null;
+          sort_order: number;
+        };
+        Insert: Omit<Database['public']['Tables']['project_bts_images']['Row'], 'id'>;
+        Update: Partial<Database['public']['Tables']['project_bts_images']['Row']>;
       };
     };
     Views: {};

@@ -294,6 +294,7 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
             outer.style.willChange = 'auto';
             outer.style.pointerEvents = 'none';
             setIsComplete(true);
+            window.dispatchEvent(new CustomEvent('fna-loader-complete'));
             onComplete?.();
           },
         });
@@ -342,6 +343,9 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
           '--reveal-r': maxRadius,
           duration: 3,
           ease: 'back.out(0.8)',
+          onStart: () => {
+            window.dispatchEvent(new CustomEvent('fna-reveal-start'));
+          },
         }, '<');
       }
     });

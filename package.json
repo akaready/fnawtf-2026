@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "@react-pdf/renderer": "^4.3.2",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.38.0",
     "axios": "^1.6.2",
@@ -33,6 +35,7 @@
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
 }

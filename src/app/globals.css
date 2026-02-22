@@ -124,6 +124,34 @@ a:hover {
   }
 }
 
+@keyframes testimonialScrollUp {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes testimonialScrollDown {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.testimonial-scroll-up {
+  animation: testimonialScrollUp linear infinite;
+  will-change: transform;
+}
+
+.testimonial-scroll-down {
+  animation: testimonialScrollDown linear infinite;
+  will-change: transform;
+}
+
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,

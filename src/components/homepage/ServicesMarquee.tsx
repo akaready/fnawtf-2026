@@ -15,8 +15,6 @@ const defaultItems = [
   'pitch videos',
   'launch pages',
   'copywriting',
-  'ai integrations',
-  'automations',
 ];
 
 /**

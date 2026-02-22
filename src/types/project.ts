@@ -22,6 +22,8 @@ export interface FeaturedProject {
   crew_count?: number;
   talent_count?: number;
   location_count?: number;
+  placeholder?: boolean;
+  full_width?: boolean;
   created_at: string;
   updated_at: string;
   fullWidth?: boolean;

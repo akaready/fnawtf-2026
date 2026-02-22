@@ -24,8 +24,6 @@ export function useGsap(
       if (typeof cleanup === 'function') {
         cleanup();
       }
-      // Kill all tweens and scroll triggers
-      gsap.killTweensOf('*');
       if (typeof window !== 'undefined') {
         ScrollTrigger.getAll().forEach(trigger => trigger.kill());
       }

@@ -1,1 +1,65 @@
-{"mcpServers":{"cal":{"command":"npx","args":["@calcom/cal-mcp@latest"],"env":{"CAL_API_KEY":"cal_live_df7e83eb05ae47d1d9771f38f39d9562"},"alwaysAllow":["getEventTypes"]},"gsap-master":{"command":"npx","args":["bruzethegreat-gsap-master-mcp-server@latest"]},"shadcn":{"command":"npx","args":["shadcn@latest","mcp"]},"motion":{"command":"npx","args":["-y","motion-ai"]},"lucide-icons":{"command":"npx","args":["lucide-icons-mcp","--stdio"]},"reactbits":{"command":"npx","args":["reactbits-dev-mcp-server"],"env":{"GITHUB_TOKEN":"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"},"alwaysAllow":["search_components","list_categories"]},"supabase":{"command":"npx","args":["-y","@supabase/mcp-server-supabase@0.5.5","--access-token","sbp_c9e10a2162f71d566a5614456f028ec525762f2a"]}}}
+{
+	"mcpServers": {
+		"cal": {
+			"command": "npx",
+			"args": [
+				"@calcom/cal-mcp@latest"
+			],
+			"env": {
+				"CAL_API_KEY": "cal_live_df7e83eb05ae47d1d9771f38f39d9562"
+			},
+			"alwaysAllow": [
+				"getEventTypes"
+			]
+		},
+		"gsap-master": {
+			"command": "npx",
+			"args": [
+				"bruzethegreat-gsap-master-mcp-server@latest"
+			]
+		},
+		"shadcn": {
+			"command": "npx",
+			"args": [
+				"shadcn@latest",
+				"mcp"
+			]
+		},
+		"motion": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"motion-ai"
+			]
+		},
+		"lucide-icons": {
+			"command": "npx",
+			"args": [
+				"lucide-icons-mcp",
+				"--stdio"
+			]
+		},
+		"reactbits": {
+			"command": "npx",
+			"args": [
+				"reactbits-dev-mcp-server"
+			],
+			"env": {
+				"GITHUB_TOKEN": "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"
+			},
+			"alwaysAllow": [
+				"search_components",
+				"list_categories"
+			]
+		},
+		"supabase": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@supabase/mcp-server-supabase@0.5.5",
+				"--access-token",
+				"sbp_546df7fc009b0b836151e555991f803030a6b806"
+			]
+		}
+	}
+}

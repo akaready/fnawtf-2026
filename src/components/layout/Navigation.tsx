@@ -49,38 +49,34 @@ export function Navigation({ currentPage }: NavigationProps) {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
-  // Scroll listener effect
+  // Trigger nav animation after mask reveal completes (with a small delay)
   useEffect(() => {
-    // Skip animation on non-home pages, mobile, if already animated, or if reduced motion preferred
     const isHomePage = currentPage_ === '/';
     if (!isDesktop || hasAnimated || prefersReducedMotion || !isHomePage) {
       // Ensure nav is visible immediately if conditions not met
       if (navRef.current) {
         navRef.current.style.transform = 'translateY(0)';
       }
-      // Skip animation on non-home pages
       if (!isHomePage && !hasAnimated) {
         setHasAnimated(true);
       }
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
+    let delayId: NodeJS.Timeout;
 
-    const handleScroll = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (window.scrollY > 50 && !hasAnimated) {
-          setShouldAnimate(true);
-          setHasAnimated(true);
-        }
-      }, 10); // 10ms debounce for performance
+    const handleLoaderComplete = () => {
+      // Delay nav entrance so hero text animates in first
+      delayId = setTimeout(() => {
+        setShouldAnimate(true);
+        setHasAnimated(true);
+      }, 500);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('fna-loader-complete', handleLoaderComplete);
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timeoutId);
+      window.removeEventListener('fna-loader-complete', handleLoaderComplete);
+      clearTimeout(delayId);
     };
   }, [isDesktop, hasAnimated, prefersReducedMotion, currentPage_]);
 
