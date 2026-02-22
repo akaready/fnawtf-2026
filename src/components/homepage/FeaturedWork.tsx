@@ -4,23 +4,31 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { Database } from '@/types/database.types';
 import { FeaturedWorkCard } from './FeaturedWorkCard';
 import { FeaturedProject } from '@/types/project';
 import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
+
+type ProjectRow = Pick<Database['public']['Tables']['projects']['Row'],
+  'id' | 'title' | 'subtitle' | 'slug' | 'description' | 'thumbnail_url' | 'category' | 'type' |
+  'published' | 'full_width' | 'created_at' | 'updated_at' | 'client_name'
+>;
 
 export async function FeaturedWork() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('projects')
-    .select('id, title, subtitle, slug, thumbnail_url, category, type, published, full_width, created_at, updated_at, client_name')
+    .select('id, title, subtitle, slug, description, thumbnail_url, category, type, published, full_width, created_at, updated_at, client_name')
     .eq('published', true)
     .order('created_at', { ascending: false })
     .limit(12);
 
-  const projects: FeaturedProject[] = (data ?? []).map((p) => ({
+  const projects: FeaturedProject[] = ((data ?? []) as ProjectRow[]).map((p) => ({
     ...p,
     featured: false,
     fullWidth: p.full_width,
+    thumbnail_url: p.thumbnail_url ?? undefined,
+    category: p.category ?? undefined,
   }));
 
   if (!projects || projects.length === 0) {
