@@ -67,7 +67,7 @@ export function AdminShell({ children }: Props) {
                   href={href}
                   data-btn-hover
                   title={collapsed ? label : undefined}
-                  className={`flex items-center gap-2.5 h-10 px-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
+                  className={`flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
                     active
                       ? 'bg-white/8 text-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
@@ -87,7 +87,7 @@ export function AdminShell({ children }: Props) {
             <span
               key={href}
               title={collapsed ? `${label} (Coming Soon)` : undefined}
-              className="flex items-center gap-2.5 h-10 px-[7px] rounded-lg text-sm whitespace-nowrap cursor-not-allowed opacity-30"
+              className="flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap cursor-not-allowed opacity-30"
             >
               <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
               <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
@@ -102,7 +102,7 @@ export function AdminShell({ children }: Props) {
             onClick={handleSignOut}
             disabled={signingOut}
             title={collapsed ? 'Sign Out' : undefined}
-            className="flex items-center gap-2.5 h-10 px-[7px] rounded-lg text-sm whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors w-full"
+            className="flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors w-full"
           >
             <LogOut size={15} strokeWidth={1.75} className="flex-shrink-0" />
             <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{signingOut ? 'Signing out…' : 'Sign Out'}</span>
