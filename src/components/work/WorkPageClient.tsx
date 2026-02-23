@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { FeaturedProject } from '@/types/project';
-import { ProjectFilters, SortOption } from '@/types/filters';
+import { ProjectFilters, WorkPageSearchParams } from '@/types/filters';
 import { WorkFilters } from './WorkFilters';
 import { WorkGrid } from './WorkGrid';
 import { filterProjects } from '@/lib/utils/filterProjects';
-import { sortProjects } from '@/lib/utils/sortProjects';
 import { filtersToSearchParams, searchParamsToFilters } from '@/lib/utils/urlFilters';
 
 interface WorkPageClientProps {
@@ -17,56 +15,59 @@ interface WorkPageClientProps {
     premiumAddons: string[];
     cameraTechniques: string[];
     categories: string[];
+    deliverables: string[];
+    productionDays: string[];
+    crewSizes: string[];
+    talentCounts: string[];
+    locationCounts: string[];
   };
+  initialSearchParams: WorkPageSearchParams;
 }
 
 export function WorkPageClient({
   initialProjects,
   availableTags,
+  initialSearchParams,
 }: WorkPageClientProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
   const [filters, setFilters] = useState<ProjectFilters>(() =>
-    searchParamsToFilters({
-      tags: searchParams?.get('tags') || undefined,
-      addons: searchParams?.get('addons') || undefined,
-      techniques: searchParams?.get('techniques') || undefined,
-      categories: searchParams?.get('categories') || undefined,
-      sort: (searchParams?.get('sort') as SortOption) || undefined,
-    })
+    searchParamsToFilters(initialSearchParams)
   );
+  const [search, setSearch] = useState('');
 
-  const [sortOption, setSortOption] = useState<SortOption>(
-    (searchParams?.get('sort') as SortOption) || 'newest'
-  );
-
-  // Update URL when filters change
+  // Sync filters to URL without triggering a Next.js navigation/server re-render
   useEffect(() => {
-    const params = filtersToSearchParams(filters, sortOption);
+    const params = filtersToSearchParams(filters);
     const queryString = params.toString();
     const newUrl = queryString ? `/work?${queryString}` : '/work';
-    router.replace(newUrl, { scroll: false });
-  }, [filters, sortOption, router]);
+    window.history.replaceState(null, '', newUrl);
+  }, [filters]);
 
-  // Filter and sort projects
-  const filteredAndSortedProjects = useMemo(() => {
-    const filtered = filterProjects(initialProjects, filters);
-    return sortProjects(filtered, sortOption);
-  }, [initialProjects, filters, sortOption]);
+  const filteredProjects = useMemo(() => {
+    let result = initialProjects;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(p =>
+        p.title.toLowerCase().includes(q) ||
+        p.client_name.toLowerCase().includes(q) ||
+        p.slug.toLowerCase().includes(q) ||
+        (p.category ?? '').toLowerCase().includes(q)
+      );
+    }
+    return filterProjects(result, filters);
+  }, [initialProjects, search, filters]);
 
   return (
     <>
       <WorkFilters
         filters={filters}
-        sortOption={sortOption}
+        search={search}
         onFiltersChange={setFilters}
-        onSortChange={setSortOption}
+        onSearchChange={setSearch}
         availableTags={availableTags}
       />
 
-      <div className="max-w-7xl mx-auto py-12 px-6">
-        <WorkGrid projects={filteredAndSortedProjects} />
+      <div className="max-w-screen-2xl mx-auto py-8 px-6">
+        <WorkGrid projects={filteredProjects} />
       </div>
     </>
   );

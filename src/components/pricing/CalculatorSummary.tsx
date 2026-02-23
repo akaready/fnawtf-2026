@@ -8,6 +8,7 @@ import { getCalApi } from '@calcom/embed-react';
 import { AddOn } from '@/types/pricing';
 import { QuoteModal } from './QuoteModal';
 import type { QuoteData } from '@/lib/pdf/types';
+import type { LeadData } from '@/lib/pricing/leadCookie';
 
 interface CalculatorSummaryProps {
   selectedAddOns: Map<string, number>;
@@ -25,6 +26,8 @@ interface CalculatorSummaryProps {
   photoCount: number;
   tierSelections?: Map<string, 'basic' | 'premium'>;
   locationDays?: Map<string, number[]>;
+  prefillData?: LeadData;
+  onInteraction?: () => boolean; // returns true if gate was triggered (bail out)
 }
 
 function formatPrice(amount: number): string {
@@ -362,7 +365,7 @@ function GetStartedButton() {
           className="absolute inset-0 bg-black pointer-events-none"
           style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
         />
-        <span className="relative flex items-center justify-center gap-2" style={{ zIndex: 10 }}>
+        <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
           <motion.span
             variants={iconVariants}
             initial="hidden"
@@ -443,7 +446,7 @@ function SaveQuoteButton({ onSave }: { onSave: () => void }) {
           className="absolute inset-0 bg-black pointer-events-none"
           style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
         />
-        <span className="relative flex items-center justify-center gap-2" style={{ zIndex: 10 }}>
+        <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
           <motion.span
             variants={iconVariants}
             initial="hidden"
@@ -477,6 +480,8 @@ export function CalculatorSummary({
   photoCount,
   tierSelections,
   locationDays,
+  prefillData,
+  onInteraction,
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
   const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(0);
@@ -688,11 +693,11 @@ export function CalculatorSummary({
           <div className="mt-3 space-y-3">
             <DeferredPaymentCheckbox
               deferPayment={deferPayment}
-              onToggle={() => setDeferPayment(!deferPayment)}
+              onToggle={() => { if (onInteraction?.()) return; setDeferPayment(!deferPayment); }}
             />
             <CrowdfundingSlider
               tierIndex={crowdfundingTierIndex}
-              onTierChange={onCrowdfundingTierChange}
+              onTierChange={(i) => { if (onInteraction?.()) return; onCrowdfundingTierChange(i); }}
             />
           </div>
         )}
@@ -710,7 +715,7 @@ export function CalculatorSummary({
               max={20}
               step={1}
               value={friendlyDiscountPercent}
-              onChange={(e) => setFriendlyDiscountPercent(Number(e.target.value))}
+              onChange={(e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
               className={`w-full h-2 bg-border rounded-lg appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
@@ -736,7 +741,7 @@ export function CalculatorSummary({
           </div>
         )}
 
-        <div className="flex gap-3 mt-6">
+        <div className="flex flex-col xl:flex-row gap-3 mt-6">
           <SaveQuoteButton onSave={() => setShowModal(true)} />
           <GetStartedButton />
         </div>
@@ -760,6 +765,7 @@ export function CalculatorSummary({
               showFriendlyDiscount,
               total, downPercent, downAmount,
             })}
+            prefillData={prefillData}
             onClose={() => setShowModal(false)}
           />
         )}

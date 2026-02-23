@@ -5,9 +5,12 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { Lock, X, LogIn } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { logClientLoginAttempt } from '@/lib/portal/logClientLoginAttempt';
 
-type State = 'idle' | 'submitting' | 'done';
+const ADMIN_EMAILS = ['ready@fna.wtf', 'ol.richie@fna.wtf'];
+
+type State = 'idle' | 'submitting' | 'done' | 'error';
 
 // ── Icon reveal animation ─────────────────────────────────────────────────
 
@@ -96,7 +99,7 @@ function SubmitButton({ submitting }: { submitting: boolean }) {
 
 function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [state, setState] = useState<State>('idle');
-  const [name, setName] = useState('');
+  const [authError, setAuthError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -118,9 +121,27 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
     e.preventDefault();
     if (state !== 'idle') return;
     setState('submitting');
-    await logClientLoginAttempt(name.trim(), email.trim(), password);
-    setState('done');
-  }, [state, name, email, password]);
+    setAuthError('');
+
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (ADMIN_EMAILS.includes(trimmedEmail)) {
+      // Admin path — sign in with Supabase Auth and hard-redirect to /admin
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
+      if (error) {
+        setAuthError('Invalid credentials.');
+        setState('idle');
+      } else {
+        window.location.href = '/admin/projects';
+        onClose();
+      }
+    } else {
+      // Client path — existing lead capture flow
+      await logClientLoginAttempt('', trimmedEmail, password);
+      setState('done');
+    }
+  }, [state, email, password, onClose]);
 
   const inputClass =
     'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
@@ -192,18 +213,6 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-muted-foreground mb-1.5">Your name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Art Vandelay"
-                    required
-                    disabled={state === 'submitting'}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
                   <label className="block text-sm text-muted-foreground mb-1.5">Email address</label>
                   <input
                     type="email"
@@ -227,6 +236,10 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
                     className={inputClass}
                   />
                 </div>
+
+                {authError && (
+                  <p className="text-sm text-red-400/80">{authError}</p>
+                )}
 
                 <SubmitButton submitting={state === 'submitting'} />
 

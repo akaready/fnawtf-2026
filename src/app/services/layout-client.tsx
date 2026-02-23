@@ -19,7 +19,7 @@ function PhaseSection({ phase, projects, index }: { phase: typeof PHASES[number]
   return (
     <section ref={sectionRef} className="relative py-32 border-b border-white/5 px-6 lg:px-16">
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 items-start ${isEven ? '' : 'lg:[direction:rtl]'}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 items-start lg:items-stretch ${isEven ? '' : 'lg:[direction:rtl]'}`}>
           {/* Content — ghost number anchors right edge to this column */}
           <div className={`relative overflow-visible ${isEven ? '' : 'lg:[direction:ltr]'}`}>
             {/* Ghost number: right-aligned to this column, overflows left */}
@@ -61,7 +61,7 @@ function PhaseSection({ phase, projects, index }: { phase: typeof PHASES[number]
               {phase.description}
             </p>
 
-            <ServicesTags tags={phase.tags} variant="pill" className="mb-8" />
+            <ServicesTags tags={phase.tags} variant="pill" className="mb-8" linkParam="addons" />
 
             <div className="flex items-center gap-4 flex-wrap">
               <div className="mr-2">
@@ -147,7 +147,7 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
             className="font-display font-bold text-white mb-8 leading-[0.88] whitespace-nowrap"
             style={{ fontSize: 'clamp(3rem, 8vw, 9rem)' }}
           >
-            How We Work
+            What We Do
           </h1>
           <p className="text-xl text-white/50 max-w-lg mx-auto leading-relaxed">
             Every engagement is built around where you are and where you&apos;re going.

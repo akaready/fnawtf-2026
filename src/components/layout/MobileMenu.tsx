@@ -157,14 +157,16 @@ export function MobileMenu({ currentPage }: MobileMenuProps) {
           ))}
         </nav>
 
-        <div ref={ctaRef} style={{ opacity: 0 }}>
-          <CalBookingButton
-            buttonText="Let's Talk"
-            namespace="introduction"
-            calLink="fnawtf/introduction"
-            isPrimary
-          />
-        </div>
+        {!pathname.startsWith('/admin') && (
+          <div ref={ctaRef} style={{ opacity: 0 }}>
+            <CalBookingButton
+              buttonText="Let's Talk"
+              namespace="introduction"
+              calLink="fnawtf/introduction"
+              isPrimary
+            />
+          </div>
+        )}
       </div>
     </div>
   );

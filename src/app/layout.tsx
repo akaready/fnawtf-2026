@@ -4,9 +4,7 @@ import { Navigation } from '@/components/layout/Navigation';
 import { Footer } from '@/components/layout/Footer';
 import { VideoDimmingOverlay } from '@/components/layout/VideoDimmingOverlay';
 import { VideoPlayerProvider } from '@/contexts/VideoPlayerContext';
-import { ParallaxProvider } from '@/components/animations/ParallaxProvider';
-import { ScrollProgressRight } from '@/components/animations/ScrollProgressRight';
-import { PageTransition } from '@/components/animations/PageTransition';
+import { SiteLayoutWrapper } from '@/components/layout/SiteLayoutWrapper';
 
 export const metadata: Metadata = {
   title: 'FNA.WTF',
@@ -23,19 +21,18 @@ export default function RootLayout({
       <head />
       <body className="bg-background text-foreground">
         <VideoPlayerProvider>
-          <PageTransition>
-            <ScrollProgressRight />
-            <Navigation />
-            <VideoDimmingOverlay />
-
-            <ParallaxProvider>
-              <div id="page-content" className="min-h-screen">
-                {children}
-              </div>
-            </ParallaxProvider>
-
-            <Footer />
-          </PageTransition>
+          <SiteLayoutWrapper
+            nav={
+              <>
+                <Navigation />
+                <VideoDimmingOverlay />
+              </>
+            }
+            navOnly={<Navigation />}
+            footer={<Footer />}
+          >
+            {children}
+          </SiteLayoutWrapper>
         </VideoPlayerProvider>
       </body>
     </html>

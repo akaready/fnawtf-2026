@@ -1,11 +1,10 @@
-import { ProjectFilters, SortOption, WorkPageSearchParams } from '@/types/filters';
+import { ProjectFilters, WorkPageSearchParams } from '@/types/filters';
 
 /**
  * Convert filter state to URL search parameters
  */
 export function filtersToSearchParams(
-  filters: ProjectFilters,
-  sort: SortOption
+  filters: ProjectFilters
 ): URLSearchParams {
   const params = new URLSearchParams();
 
@@ -21,10 +20,21 @@ export function filtersToSearchParams(
   if (filters.categories.length > 0) {
     params.set('categories', filters.categories.join(','));
   }
-  if (sort !== 'newest') {
-    params.set('sort', sort);
+  if (filters.deliverables.length > 0) {
+    params.set('deliverables', filters.deliverables.join(','));
   }
-
+  if (filters.productionDays.length > 0) {
+    params.set('days', filters.productionDays.join(','));
+  }
+  if (filters.crewSizes.length > 0) {
+    params.set('crew', filters.crewSizes.join(','));
+  }
+  if (filters.talentCounts.length > 0) {
+    params.set('talent', filters.talentCounts.join(','));
+  }
+  if (filters.locationCounts.length > 0) {
+    params.set('locations', filters.locationCounts.join(','));
+  }
   return params;
 }
 
@@ -43,9 +53,12 @@ export function searchParamsToFilters(
     categories: searchParams.categories
       ? searchParams.categories.split(',')
       : [],
-    productionDaysRange: null,
-    crewCountRange: null,
-    talentCountRange: null,
-    locationCountRange: null,
+    deliverables: searchParams.deliverables
+      ? searchParams.deliverables.split(',')
+      : [],
+    productionDays: searchParams.days ? searchParams.days.split(',') : [],
+    crewSizes: searchParams.crew ? searchParams.crew.split(',') : [],
+    talentCounts: searchParams.talent ? searchParams.talent.split(',') : [],
+    locationCounts: searchParams.locations ? searchParams.locations.split(',') : [],
   };
 }

@@ -30,6 +30,8 @@ export interface ContactInfo {
   name: string;
   company: string;
   email: string;
+  timeline?: string;
+  timelineDate?: string;
 }
 
 export const PLACEHOLDER_CONTACT: ContactInfo = {

@@ -22,8 +22,13 @@ export interface FeaturedProject {
   crew_count?: number;
   talent_count?: number;
   location_count?: number;
-  placeholder?: boolean;
   full_width?: boolean;
+  hidden_from_work?: boolean;
+  home_order?: number;
+  work_order?: number;
+  assets_delivered?: string[];
+  flagship_video_id?: string;
+  thumbnail_time?: number;
   created_at: string;
   updated_at: string;
   fullWidth?: boolean;
@@ -34,8 +39,11 @@ export interface ProjectVideo {
   project_id: string;
   bunny_video_id: string;
   title: string;
-  video_type: 'flagship' | 'cutdown' | 'broadcast' | 'bts';
+  video_type: 'flagship' | 'cutdown' | 'bts' | 'pitch';
   sort_order: number;
+  password_protected: boolean;
+  viewer_password: string | null;
+  aspect_ratio: '16:9' | '9:16' | '1:1' | '4:3' | '21:9';
 }
 
 export interface ProjectCredit {
@@ -51,4 +59,12 @@ export interface ProjectTag {
   name: string;
   category: 'style' | 'technique' | 'addon';
   color?: string;
+}
+
+export interface ProjectBTSImage {
+  id: string;
+  project_id: string;
+  image_url: string;
+  caption: string | null;
+  sort_order: number;
 }

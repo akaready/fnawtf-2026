@@ -6,13 +6,15 @@ import { motion, LayoutGroup } from 'framer-motion';
 import {
   Hammer, Rocket, Megaphone, ChevronDown, LucideIcon,
 } from 'lucide-react';
-import { Reveal } from '@/components/animations/Reveal';
 import {
   buildAddOns, launchAddOns,
   fundraisingIncluded, fundraisingAddOns,
 } from '@/app/pricing/pricing-data';
 import { AddOn } from '@/types/pricing';
 import { CalculatorSummary } from './CalculatorSummary';
+import { LeadCaptureModal } from './LeadCaptureModal';
+import { getLeadCookie } from '@/lib/pricing/leadCookie';
+import type { LeadData } from '@/lib/pricing/leadCookie';
 
 // ── Tab types ────────────────────────────────────────────────────────────
 type TabId = 'build' | 'launch' | 'build-launch' | 'fundraising';
@@ -813,6 +815,62 @@ export function AddOnCalculator() {
     () => new Map()
   );
 
+  // Lead gate state — persist count in sessionStorage so navigating away remembers
+  const GATE_KEY = 'fna_gate_count';
+  const interactionCount = useRef(0);
+  const [showGate, setShowGate] = useState(false);
+  const [gateCleared, setGateCleared] = useState(false);
+  const [leadData, setLeadData] = useState<LeadData | null>(null);
+
+  // Check for existing cookie on mount — skip gate if already captured
+  // Also restore interaction count from sessionStorage
+  useEffect(() => {
+    const cookie = getLeadCookie();
+    if (cookie) {
+      setLeadData(cookie);
+      setGateCleared(true);
+      return;
+    }
+    const stored = sessionStorage.getItem(GATE_KEY);
+    if (stored) {
+      const count = parseInt(stored, 10);
+      if (!isNaN(count)) {
+        interactionCount.current = count;
+        // If they left while the gate was showing, show it again immediately
+        if (count >= 10) {
+          setShowGate(true);
+        }
+      }
+    }
+  }, []);
+
+  const persistCount = (count: number) => {
+    interactionCount.current = count;
+    sessionStorage.setItem(GATE_KEY, String(count));
+  };
+
+  const handleGateComplete = useCallback((data: LeadData) => {
+    setLeadData(data);
+    setGateCleared(true);
+    setShowGate(false);
+    sessionStorage.removeItem(GATE_KEY);
+  }, []);
+
+  const handleGateDismiss = useCallback(() => {
+    persistCount(9); // next interaction immediately re-triggers gate
+    setShowGate(false);
+  }, []);
+
+  // Returns true if the gate was triggered (caller should bail out)
+  const checkGate = useCallback((): boolean => {
+    persistCount(interactionCount.current + 1);
+    if (interactionCount.current >= 10 && !gateCleared) {
+      setShowGate(true);
+      return true;
+    }
+    return false;
+  }, [gateCleared]);
+
   // Tab state
   const [activeTab, setActiveTab] = useState<TabId>('build');
   const prevTabRef = useRef<TabId>('build');
@@ -849,6 +907,8 @@ export function AddOnCalculator() {
     // Prevent toggling off Production Days
     if (id === 'launch-production-days') return;
 
+    if (checkGate()) return;
+
     setSelectedAddOns((prev) => {
       const next = new Map(prev);
       if (next.has(id)) {
@@ -862,23 +922,25 @@ export function AddOnCalculator() {
       }
       return next;
     });
-  }, []);
+  }, [checkGate]);
 
   const handleQuantityChange = useCallback((id: string, qty: number) => {
+    if (checkGate()) return;
     setSelectedAddOns((prev) => {
       const next = new Map(prev);
       next.set(id, qty);
       return next;
     });
-  }, []);
+  }, [checkGate]);
 
   const handleSliderChange = useCallback((id: string, val: number) => {
+    if (checkGate()) return;
     setSliderValues((prev) => {
       const next = new Map(prev);
       next.set(id, val);
       return next;
     });
-  }, []);
+  }, [checkGate]);
 
   const handleLocationDayToggle = useCallback((key: string, day: number) => {
     setLocationDays((prev) => {
@@ -918,6 +980,7 @@ export function AddOnCalculator() {
   }, []);
 
   const handleCrowdfundingToggle = useCallback(() => {
+    if (checkGate()) return;
     setCrowdfundingEnabled((prev) => {
       const next = !prev;
       // Mutual exclusivity: turning on crowdfunding turns off fundraising
@@ -939,7 +1002,7 @@ export function AddOnCalculator() {
       }
       return next;
     });
-  }, [fundraisingEnabled]);
+  }, [fundraisingEnabled, checkGate]);
 
   const handleFundraisingToggle = useCallback(() => {
     setFundraisingEnabled((prev) => {
@@ -1022,16 +1085,18 @@ export function AddOnCalculator() {
   const allAddOns = [...buildAddOns, ...launchAddOns, ...fundraisingAddOns];
 
   return (
-    <section id="calculator" className="py-20 px-6 bg-background scroll-mt-24">
-      <div className="max-w-7xl mx-auto">
-        <Reveal distance="2em">
+    <section id="calculator" className="relative py-20 px-6 bg-background scroll-mt-24">
+      {/* Lead capture gate — blurs content after 5 interactions */}
+      {showGate && <LeadCaptureModal onComplete={handleGateComplete} onDismiss={handleGateDismiss} />}
+      <div className={`max-w-7xl mx-auto${showGate ? ' pointer-events-none select-none' : ''}`}>
+        <div>
           <h2 className="text-3xl md:text-4xl font-bold mb-3 text-center text-white font-display">
             Create a Custom Quote
           </h2>
           <p className="text-center text-white/50 mb-12 max-w-xl mx-auto">
             Customize from our engagement offerings to build your ideal package.
           </p>
-        </Reveal>
+        </div>
 
         {/* Tab selector */}
         <div className="flex justify-center mb-8">
@@ -1153,6 +1218,8 @@ export function AddOnCalculator() {
               photoCount={photoCount}
               tierSelections={tierSelections}
               locationDays={locationDays}
+              prefillData={leadData ?? undefined}
+              onInteraction={checkGate}
             />
           </div>
         </div>

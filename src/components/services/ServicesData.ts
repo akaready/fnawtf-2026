@@ -11,6 +11,10 @@ export interface ServiceProject {
   slug: string;
   thumbnail_url?: string;
   category?: string;
+  flagship_video_id?: string;
+  flagship_protected?: boolean;
+  flagship_password?: string | null;
+  thumbnail_time?: number;
 }
 
 export interface ServicesProjectData {
@@ -60,7 +64,7 @@ export const PHASES: PhaseData[] = [
     title: 'Launch',
     tagline: 'Shoot day. Post. Delivery.',
     description:
-      'Full production, from initial concept to final cut. A dedicated team from start to finish, and all the deliverables that matter to build a complete campaign. Campaign hero, the social cutdowns, stills, all complete with branded motion graphics. Built to convert.',
+      'Full production, from initial concept to final cut. A dedicated team from start to finish, and all the deliverables that matter to build a complete campaign. Flagship video, the social cutdowns and stills. All complete with branded motion graphics. Designed to convert.',
     tags: [
       'Storyboarding',
       'Casting',
@@ -80,7 +84,7 @@ export const PHASES: PhaseData[] = [
     title: 'Scale',
     tagline: 'Ongoing creative partnership.',
     description:
-      'Not a retainer, a relationship. We embed with your brand, build a content rhythm, and grow with you. Volume pricing, multi-day and multi-asset productions, priority scheduling, platform optimizations and AI automations. For brands looking to grow.',
+      'Not a retainer, a relationship. We already know the ethos, now we deepen the creative collaboration. Brand, content and marketing strategy. Execution that becomes regularly scheduled programming (ad and asset refreshes). Volume pricing, platform optimizations, and AI automations.',
     tags: [
       'Content Strategy',
       'Ongoing Engagement',
@@ -99,7 +103,7 @@ export const CROWDFUNDING = {
   title: 'Crowdfunding',
   tagline: 'Risk-aligned pricing for campaigns.',
   description:
-    'We believe in our work as a tool to amplify your campaign. We can discount our rates in exchange for a small percentage of what you raise. The bigger the share, the bigger the discount. Everyone wins when you do.',
+    'We\'ve run campaigns ourselves and understand cash flow concerns. We offer risk-aligned terms that defer up to 60% of costs until post-campaign, and discounts in exchange for a small percentage of your raise. When you win, we win together.',
   tiers: [
     { discount: 10, percentage: 2.5, label: 'for 2.5% of your raise' },
     { discount: 20, percentage: 5.0, label: 'for 5% of your raise' },
@@ -112,7 +116,7 @@ export const FUNDRAISING = {
   title: 'Fundraising',
   tagline: 'Investor-grade video, deferred payment.',
   description:
-    'For founders raising capital. Includes a private website featuring a scripted pitch video, your deck, and your calendar link. Designed to share with investors. We take 20% down and let you pay the rest after you raise.',
+    'For founders raising capital we offer a conversational pitch video package that introduces you and your company to investors. Includes a private website with your scripted video, deck, and calendar link. Only 20% down, with the balance due after you raise.',
   startingAt: '$15,000',
   minimumDown: '$3,000 (20%)',
   paymentTerm: '180 days or after your raise',
@@ -120,8 +124,8 @@ export const FUNDRAISING = {
     'Scripting and Q&A support',
     '1-day interview production',
     'One speaker, prompter, lighting',
-    'Editorial, Color, Sound Mix',
+    'Editorial, color, sound mix',
     'Branded motion graphics',
-    '~~https://~~==yourCompanyName.Pitch.Page==',
+    '~~https://~~==YourCompanyName.Pitch.Page==',
   ],
 };

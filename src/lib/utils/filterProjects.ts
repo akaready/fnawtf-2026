@@ -1,13 +1,23 @@
 import { FeaturedProject } from '@/types/project';
 import { ProjectFilters } from '@/types/filters';
 
+/** Matches a project's numeric field against a filter value.
+ *  Values ending in "+" (e.g. "3+") match anything >= that number.
+ *  Plain values (e.g. "2") match exactly.
+ */
+function matchNumeric(projectValue: number | null | undefined, filterValue: string): boolean {
+  if (projectValue == null) return false;
+  if (filterValue.endsWith('+')) return projectValue >= parseInt(filterValue);
+  return projectValue === Number(filterValue);
+}
+
 /**
  * Filter projects based on selected criteria
  *
  * Logic:
  * - Within categories: OR (e.g., "Commercial" OR "Founder Story")
  * - Across categories: AND (e.g., (Commercial OR Founder Story) AND (Teleprompter))
- * - Range filters: Inclusive range matching
+ * - Production scope: exact or bucketed match ("3+" = 3 or more)
  */
 export function filterProjects(
   projects: FeaturedProject[],
@@ -44,52 +54,32 @@ export function filterProjects(
       if (!hasCategory) return false;
     }
 
-    // Production days range filter
-    if (filters.productionDaysRange) {
-      const [min, max] = filters.productionDaysRange;
-      if (
-        !project.production_days ||
-        project.production_days < min ||
-        project.production_days > max
-      ) {
-        return false;
-      }
+    // Deliverables filter (OR within category)
+    if (filters.deliverables.length > 0) {
+      const hasDeliverable = filters.deliverables.some((d) =>
+        (project.assets_delivered as string[] | undefined)?.includes(d)
+      );
+      if (!hasDeliverable) return false;
     }
 
-    // Crew count range filter
-    if (filters.crewCountRange) {
-      const [min, max] = filters.crewCountRange;
-      if (
-        !project.crew_count ||
-        project.crew_count < min ||
-        project.crew_count > max
-      ) {
-        return false;
-      }
+    // Production days filter (OR — supports "3+" bucketing)
+    if (filters.productionDays.length > 0) {
+      if (!filters.productionDays.some((d) => matchNumeric(project.production_days, d))) return false;
     }
 
-    // Talent count range filter
-    if (filters.talentCountRange) {
-      const [min, max] = filters.talentCountRange;
-      if (
-        !project.talent_count ||
-        project.talent_count < min ||
-        project.talent_count > max
-      ) {
-        return false;
-      }
+    // Crew size filter (OR — supports "4+" bucketing)
+    if (filters.crewSizes.length > 0) {
+      if (!filters.crewSizes.some((d) => matchNumeric(project.crew_count, d))) return false;
     }
 
-    // Location count range filter
-    if (filters.locationCountRange) {
-      const [min, max] = filters.locationCountRange;
-      if (
-        !project.location_count ||
-        project.location_count < min ||
-        project.location_count > max
-      ) {
-        return false;
-      }
+    // Talent count filter (OR — supports "4+" bucketing)
+    if (filters.talentCounts.length > 0) {
+      if (!filters.talentCounts.some((d) => matchNumeric(project.talent_count, d))) return false;
+    }
+
+    // Location count filter (OR — supports "4+" bucketing)
+    if (filters.locationCounts.length > 0) {
+      if (!filters.locationCounts.some((d) => matchNumeric(project.location_count, d))) return false;
     }
 
     return true;

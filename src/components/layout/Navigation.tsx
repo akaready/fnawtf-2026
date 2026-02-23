@@ -184,8 +184,8 @@ export function Navigation({ currentPage }: NavigationProps) {
                 iconName={link.iconName}
                 isActive={
                   pendingHref !== null
-                    ? pendingHref === link.href          // pending: only destination is active
-                    : currentPage_ === link.href         // idle: current page is active
+                    ? pendingHref === link.href
+                    : currentPage_ === link.href
                 }
               >
                 {link.label}
@@ -194,19 +194,21 @@ export function Navigation({ currentPage }: NavigationProps) {
           ))}
         </div>
 
-        {/* Desktop CTA */}
-        <div
-          ref={ctaRef}
-          className="hidden md:flex md:items-center"
-          style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
-        >
-          <CalBookingButton
-            buttonText="Let's Talk"
-            namespace="introduction"
-            calLink="fnawtf/introduction"
-            isPrimary
-          />
-        </div>
+        {/* Desktop CTA — skip Cal embed on admin routes (its global script interferes with inputs) */}
+        {!pathname.startsWith('/admin') && (
+          <div
+            ref={ctaRef}
+            className="hidden md:flex md:items-center"
+            style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
+          >
+            <CalBookingButton
+              buttonText="Let's Talk"
+              namespace="introduction"
+              calLink="fnawtf/introduction"
+              isPrimary
+            />
+          </div>
+        )}
 
         {/* Mobile Menu */}
         <MobileMenu currentPage={currentPage} />

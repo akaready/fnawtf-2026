@@ -5,6 +5,10 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ServiceProject } from './ServicesData';
 import { NavButton } from '@/components/layout/NavButton';
+import { ReelPlayer } from '@/components/homepage/ReelPlayer';
+import { VideoPasswordGate } from '@/components/work/VideoPasswordGate';
+import { getBunnyVideoMp4Url, getBunnyVideoThumbnail } from '@/lib/bunny/client';
+import { useVideoPlayer } from '@/contexts/VideoPlayerContext';
 
 // ─── Shared Lightbox ─────────────────────────────────────────────────────────
 
@@ -14,6 +18,8 @@ interface LightboxProps {
 }
 
 function Lightbox({ project, onClose }: LightboxProps) {
+  const { setIsVideoPlaying, setPauseVideo } = useVideoPlayer();
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
@@ -21,8 +27,11 @@ function Lightbox({ project, onClose }: LightboxProps) {
     return () => {
       document.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
+      // Reset video player context so the global dimming overlay clears
+      setIsVideoPlaying(false);
+      setPauseVideo(null);
     };
-  }, [onClose]);
+  }, [onClose, setIsVideoPlaying, setPauseVideo]);
 
   return createPortal(
     <div
@@ -33,12 +42,26 @@ function Lightbox({ project, onClose }: LightboxProps) {
         className="relative max-w-3xl w-full bg-[#0a0a0a] rounded-xl overflow-hidden border border-white/10"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Image */}
-        <div className="aspect-video bg-[#111] relative">
-          {project.thumbnail_url ? (
-            <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
+        {/* Video / Image */}
+        <div className="bg-[#111] relative">
+          {project.flagship_video_id && project.flagship_protected ? (
+            <VideoPasswordGate
+              videoSrc={getBunnyVideoMp4Url(project.flagship_video_id, '720p')}
+              placeholderSrc={project.thumbnail_url || getBunnyVideoThumbnail(project.flagship_video_id)}
+              password={project.flagship_password ?? ''}
+            />
+          ) : project.flagship_video_id ? (
+            <ReelPlayer
+              videoSrc={getBunnyVideoMp4Url(project.flagship_video_id, '720p')}
+              placeholderSrc={project.thumbnail_url || getBunnyVideoThumbnail(project.flagship_video_id)}
+              defaultMuted={false}
+            />
+          ) : project.thumbnail_url ? (
+            <div className="aspect-video">
+              <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
+            </div>
           ) : (
-            <div className="w-full h-full bg-[#0d0d0d] flex items-center justify-center">
+            <div className="aspect-video bg-[#0d0d0d] flex items-center justify-center">
               <span className="text-white/20 text-sm font-mono">No preview</span>
             </div>
           )}
@@ -83,9 +106,66 @@ interface GridCardProps {
 }
 
 function GridCard({ project, onSelect, aspectClass = 'aspect-[2.4/1]' }: GridCardProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+  const startTimeRef = useRef<number>(project.thumbnail_time ?? 0);
+  const metaLoadedRef = useRef(false);
+
+  const videoSrc = project.flagship_video_id
+    ? getBunnyVideoMp4Url(project.flagship_video_id, '360p') + (project.thumbnail_time ? `#t=${project.thumbnail_time}` : '')
+    : null;
+
+  const handleMetadata = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    metaLoadedRef.current = true;
+    startTimeRef.current = project.thumbnail_time ?? video.duration / 2;
+    video.currentTime = startTimeRef.current;
+  }, [project.thumbnail_time]);
+
+  const handleHover = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (metaLoadedRef.current) {
+      video.currentTime = startTimeRef.current;
+      const p = video.play();
+      if (p) {
+        playPromiseRef.current = p;
+        p.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
+      }
+    } else {
+      // Metadata not loaded yet — wait for it, then seek and play
+      const onReady = () => {
+        metaLoadedRef.current = true;
+        startTimeRef.current = project.thumbnail_time ?? video.duration / 2;
+        video.currentTime = startTimeRef.current;
+        const p = video.play();
+        if (p) {
+          playPromiseRef.current = p;
+          p.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
+        }
+      };
+      video.addEventListener('loadedmetadata', onReady, { once: true });
+      video.load();
+    }
+  }, [project.thumbnail_time]);
+
+  const handleUnhover = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const doPause = () => { video.pause(); video.currentTime = startTimeRef.current; };
+    if (playPromiseRef.current) {
+      playPromiseRef.current.then(doPause).catch(() => {});
+    } else {
+      doPause();
+    }
+  }, []);
+
   return (
     <button
       onClick={() => onSelect(project)}
+      onMouseEnter={handleHover}
+      onMouseLeave={handleUnhover}
       className={`relative w-full ${aspectClass} rounded-lg overflow-hidden bg-[#0d0d0d] cursor-pointer group outline-none`}
     >
       {project.thumbnail_url && (
@@ -93,6 +173,18 @@ function GridCard({ project, onSelect, aspectClass = 'aspect-[2.4/1]' }: GridCar
       )}
       {!project.thumbnail_url && (
         <div className="absolute inset-0 bg-white/[0.03]" />
+      )}
+      {videoSrc && (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          src={videoSrc}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={handleMetadata}
+        />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-4 py-3">
@@ -120,20 +212,20 @@ export function ServicesProjectGrid({ projects, className = '', subGridVariant =
   const [featured, ...rest] = projects;
 
   const subAspect =
-    subGridVariant === 'square' ? 'aspect-square' :
+    subGridVariant === 'square' ? 'aspect-square lg:aspect-auto lg:h-full' :
     subGridVariant === 'portrait' ? 'aspect-[9/16]' :
     'aspect-video';
 
   const subCount = subGridVariant === 'landscape' ? 2 : 3;
-  const subCols = subGridVariant === 'landscape' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3';
-  const featuredAspectClass = featuredAspect === 'video' ? 'aspect-video' : 'aspect-[2.4/1]';
+  const subCols = subGridVariant === 'landscape' ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-3';
+  const featuredAspectClass = featuredAspect === 'video' ? 'aspect-video lg:flex-[2] lg:aspect-auto' : 'aspect-[2.4/1]';
 
   return (
     <>
-      <div className={`flex flex-col gap-[18px] ${className}`}>
+      <div className={`flex flex-col gap-[18px] lg:h-full ${className}`}>
         <GridCard project={featured} onSelect={setSelected} aspectClass={featuredAspectClass} />
         {rest.length > 0 && (
-          <div className={`grid ${subCols} gap-[18px]`}>
+          <div className={`grid ${subCols} gap-[18px] lg:flex-1`}>
             {rest.slice(0, subCount).map((p) => (
               <GridCard key={p.id} project={p} onSelect={setSelected} aspectClass={subAspect} />
             ))}
@@ -156,20 +248,51 @@ interface ReelCardProps {
 function ReelCard({ project, onClick }: ReelCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
+  const startTimeRef = useRef<number>(project.thumbnail_time ?? 0);
+  const metaLoadedRef = useRef(false);
+
+  const videoSrc = project.flagship_video_id
+    ? getBunnyVideoMp4Url(project.flagship_video_id, '360p') + (project.thumbnail_time ? `#t=${project.thumbnail_time}` : '')
+    : null;
+
+  const handleMetadata = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    metaLoadedRef.current = true;
+    startTimeRef.current = project.thumbnail_time ?? video.duration / 2;
+    video.currentTime = startTimeRef.current;
+  }, [project.thumbnail_time]);
 
   const handleEnter = useCallback(() => {
-    if (!videoRef.current) return;
-    const p = videoRef.current.play();
-    if (p) {
-      playPromiseRef.current = p;
-      p.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
+    const video = videoRef.current;
+    if (!video) return;
+    if (metaLoadedRef.current) {
+      video.currentTime = startTimeRef.current;
+      const p = video.play();
+      if (p) {
+        playPromiseRef.current = p;
+        p.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
+      }
+    } else {
+      const onReady = () => {
+        metaLoadedRef.current = true;
+        startTimeRef.current = project.thumbnail_time ?? video.duration / 2;
+        video.currentTime = startTimeRef.current;
+        const p = video.play();
+        if (p) {
+          playPromiseRef.current = p;
+          p.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
+        }
+      };
+      video.addEventListener('loadedmetadata', onReady, { once: true });
+      video.load();
     }
-  }, []);
+  }, [project.thumbnail_time]);
 
   const handleLeave = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    const doPause = () => { video.pause(); video.currentTime = 0; };
+    const doPause = () => { video.pause(); video.currentTime = startTimeRef.current; };
     if (playPromiseRef.current) {
       playPromiseRef.current.then(doPause).catch(() => {});
     } else {
@@ -189,6 +312,18 @@ function ReelCard({ project, onClick }: ReelCardProps) {
       )}
       {!project.thumbnail_url && (
         <div className="absolute inset-0 bg-white/[0.03]" />
+      )}
+      {videoSrc && (
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          src={videoSrc}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={handleMetadata}
+        />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-4 py-3">

@@ -155,7 +155,7 @@ export function ServicesCards({ cards = defaultCards }: ServicesCardsProps) {
             How We Work
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Three engagements. Tiered pricing. Custom quotes.
+            Three phases. Tiered pricing. Pick one, two, or all three.
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 import { Mail } from 'lucide-react';
 import { Logo } from './Logo';
 import { ClientLoginButton } from './ClientLoginButton';
+import { AdminDashboardLink } from './AdminDashboardLink';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -63,6 +64,7 @@ export function Footer() {
                   hi@fna.wtf
                 </a>
                 <ClientLoginButton />
+                <AdminDashboardLink />
               </div>
             </div>
           </div>

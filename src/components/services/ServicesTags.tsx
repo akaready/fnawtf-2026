@@ -1,25 +1,38 @@
 'use client';
 
+import Link from 'next/link';
+
 interface ServicesTagsProps {
   tags: string[];
   variant?: 'pill' | 'bracket' | 'glowing' | 'typographic' | 'kinetic';
   className?: string;
+  linkParam?: string;
 }
 
-export function ServicesTags({ tags, variant = 'pill', className = '' }: ServicesTagsProps) {
+export function ServicesTags({ tags, variant = 'pill', className = '', linkParam }: ServicesTagsProps) {
   if (!tags?.length) return null;
 
   if (variant === 'pill') {
     return (
       <div className={`flex flex-wrap gap-2 ${className}`}>
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="px-3 py-1 text-xs font-medium border border-white/20 rounded-full text-white/60 tracking-wide"
-          >
-            {tag}
-          </span>
-        ))}
+        {tags.map((tag) =>
+          linkParam ? (
+            <Link
+              key={tag}
+              href={`/work?${linkParam}=${encodeURIComponent(tag)}`}
+              className="px-3 py-1 text-xs font-medium border border-white/20 rounded-full text-white/60 tracking-wide hover:border-white/50 hover:text-white active:border-accent active:text-accent active:bg-accent/10 transition-colors"
+            >
+              {tag}
+            </Link>
+          ) : (
+            <span
+              key={tag}
+              className="px-3 py-1 text-xs font-medium border border-white/20 rounded-full text-white/60 tracking-wide"
+            >
+              {tag}
+            </span>
+          )
+        )}
       </div>
     );
   }

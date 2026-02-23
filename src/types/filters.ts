@@ -7,18 +7,21 @@ export interface ProjectFilters {
   premiumAddons: string[];
   cameraTechniques: string[];
   categories: string[];
-  productionDaysRange: [number, number] | null;
-  crewCountRange: [number, number] | null;
-  talentCountRange: [number, number] | null;
-  locationCountRange: [number, number] | null;
+  deliverables: string[];
+  productionDays: string[];
+  crewSizes: string[];
+  talentCounts: string[];
+  locationCounts: string[];
 }
-
-export type SortOption = 'newest' | 'oldest' | 'title-asc' | 'title-desc';
 
 export interface WorkPageSearchParams {
   tags?: string;
   addons?: string;
   techniques?: string;
   categories?: string;
-  sort?: SortOption;
+  deliverables?: string;
+  days?: string;
+  crew?: string;
+  talent?: string;
+  locations?: string;
 }

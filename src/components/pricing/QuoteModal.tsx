@@ -4,18 +4,31 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
-import { X, Download } from 'lucide-react';
+import { X, Download, ChevronDown } from 'lucide-react';
+import { DayPicker } from 'react-day-picker';
 import type { QuoteData, ContactInfo } from '@/lib/pdf/types';
 import { PLACEHOLDER_CONTACT } from '@/lib/pdf/types';
 import { logQuoteLead } from '@/lib/pdf/logQuoteLead';
+import { setLeadCookie } from '@/lib/pricing/leadCookie';
+import { logPricingLead } from '@/lib/pricing/logPricingLead';
+import type { LeadData } from '@/lib/pricing/leadCookie';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
 type Phase = 'waiting' | 'paused' | 'generating' | 'ready' | 'error';
 
+const TIMELINE_OPTIONS = [
+  { value: 'asap',     label: 'We need this yesterday!' },
+  { value: 'soon',     label: 'Sooner the better, within the next 6 weeks!' },
+  { value: 'later',    label: "We've got some time, at least two months." },
+  { value: 'specific', label: 'Specific date...' },
+  { value: 'unsure',   label: 'Unsure.' },
+] as const;
+
 interface QuoteModalProps {
   quoteData: QuoteData;
   onClose: () => void;
+  prefillData?: LeadData;
 }
 
 // ── Icon reveal animation (matches SaveQuoteButton / GetStartedButton) ────
@@ -123,11 +136,19 @@ function DownloadButton({
 
 // ── Main modal ────────────────────────────────────────────────────────────
 
-export function QuoteModal({ quoteData, onClose }: QuoteModalProps) {
-  const [phase, setPhase] = useState<Phase>('waiting');
-  const [name, setName] = useState('');
-  const [company, setCompany] = useState('');
-  const [email, setEmail] = useState('');
+export function QuoteModal({ quoteData, onClose, prefillData }: QuoteModalProps) {
+  const [phase, setPhase] = useState<Phase>(prefillData ? 'paused' : 'waiting');
+  const [name, setName] = useState(prefillData?.name ?? '');
+  const [company, setCompany] = useState(prefillData?.company ?? '');
+  const [email, setEmail] = useState(prefillData?.email ?? '');
+  const [timeline, setTimeline] = useState(prefillData?.timeline ?? '');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
+    if (prefillData?.timelineDate) {
+      const d = new Date(prefillData.timelineDate);
+      return isNaN(d.getTime()) ? undefined : d;
+    }
+    return undefined;
+  });
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -174,8 +195,17 @@ export function QuoteModal({ quoteData, onClose }: QuoteModalProps) {
     [quoteData],
   );
 
-  // 5-second waiting countdown on mount
+  // Progress bar on mount — skip countdown if prefillData already present
   useEffect(() => {
+    if (prefillData) {
+      // Already have info: bar starts full and green immediately
+      progressObj.current.value = 100;
+      hasTyped.current = true;
+      if (progressBarRef.current) progressBarRef.current.style.width = '100%';
+      return;
+    }
+
+    // No prefill: 5-second countdown then auto-generate with placeholder
     progressObj.current.value = 0;
     if (progressBarRef.current) progressBarRef.current.style.width = '0%';
 
@@ -212,13 +242,35 @@ export function QuoteModal({ quoteData, onClose }: QuoteModalProps) {
   const handleManualGenerate = useCallback(() => {
     if (phase !== 'paused') return;
     setPhase('generating');
+
+    const timelineDate = timeline === 'specific' && selectedDate
+      ? selectedDate.toISOString().split('T')[0]
+      : undefined;
+
     const contact: ContactInfo = {
       name: name.trim() || PLACEHOLDER_CONTACT.name,
       company: company.trim() || PLACEHOLDER_CONTACT.company,
       email: email.trim() || PLACEHOLDER_CONTACT.email,
+      timeline: timeline || undefined,
+      timelineDate,
     };
+
+    // Track changes from the initial gate submission
+    const emailChanged = prefillData && email.trim().toLowerCase() !== prefillData.email;
+    const nameChanged = prefillData && name.trim() !== prefillData.name;
+    if (prefillData && (emailChanged || nameChanged || !prefillData.timeline)) {
+      const updatedLead: LeadData = {
+        name: contact.name,
+        email: contact.email,
+        timeline: timeline || prefillData.timeline || 'unsure',
+        timelineDate,
+      };
+      logPricingLead(updatedLead, 'save_quote');
+      setLeadCookie(updatedLead);
+    }
+
     startGeneration(contact, 'manual');
-  }, [phase, name, company, email, startGeneration]);
+  }, [phase, name, company, email, timeline, selectedDate, prefillData, startGeneration]);
 
   // Download when ready
   const handleDownload = useCallback(() => {
@@ -250,29 +302,35 @@ export function QuoteModal({ quoteData, onClose }: QuoteModalProps) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const statusLabel = {
-    waiting: 'Waiting for info...',
-    paused: 'Add your info and click Generate & Download',
-    generating: 'Generating PDF...',
-    ready: 'Ready to download!',
-    error: 'Something went wrong.',
-  }[phase];
+  const statusLabel = phase === 'paused' && prefillData
+    ? 'Ready — click Generate & Download PDF'
+    : {
+        waiting: 'Waiting for info...',
+        paused: 'Add your info and click Generate & Download',
+        generating: 'Generating PDF...',
+        ready: 'Ready to download!',
+        error: 'Something went wrong.',
+      }[phase];
 
-  const statusColor = {
-    waiting: 'text-muted-foreground',
-    paused: 'text-muted-foreground',
-    generating: 'text-accent',
-    ready: 'text-green-500',
-    error: 'text-red-400',
-  }[phase];
+  const statusColor = phase === 'paused' && prefillData
+    ? 'text-green-500'
+    : {
+        waiting: 'text-muted-foreground',
+        paused: 'text-muted-foreground',
+        generating: 'text-accent',
+        ready: 'text-green-500',
+        error: 'text-red-400',
+      }[phase];
 
-  const barColor = {
-    waiting: 'bg-accent/60',
-    paused: 'bg-accent/60',
-    generating: 'bg-accent',
-    ready: 'bg-green-500',
-    error: 'bg-red-500',
-  }[phase];
+  const barColor = phase === 'paused' && prefillData
+    ? 'bg-green-500'
+    : {
+        waiting: 'bg-accent/60',
+        paused: 'bg-accent/60',
+        generating: 'bg-accent',
+        ready: 'bg-green-500',
+        error: 'bg-red-500',
+      }[phase];
 
   const content = (
     <AnimatePresence>
@@ -374,6 +432,70 @@ export function QuoteModal({ quoteData, onClose }: QuoteModalProps) {
                 className="w-full px-3 py-2.5 bg-muted/30 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               />
             </div>
+
+            {/* Timeline */}
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1.5">
+                Timeline
+              </label>
+              <div className="relative">
+                <select
+                  value={timeline}
+                  onChange={(e) => { setTimeline(e.target.value); handleInput(); }}
+                  disabled={phase === 'generating' || phase === 'ready'}
+                  className={`w-full px-3 py-2.5 bg-muted/30 border border-border rounded-lg text-sm appearance-none pr-8 cursor-pointer focus:outline-none focus:border-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    !timeline ? 'text-muted-foreground/40' : 'text-foreground'
+                  }`}
+                >
+                  <option value="" disabled className="bg-surface text-muted-foreground">Select timeline</option>
+                  {TIMELINE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value} className="bg-surface text-foreground">
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={14}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+              </div>
+            </div>
+
+            {/* Date picker — when 'specific' timeline */}
+            {timeline === 'specific' && (
+              <div className="rounded-lg border border-border overflow-hidden">
+                <DayPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(d) => { setSelectedDate(d); handleInput(); }}
+                  disabled={{ before: new Date() }}
+                  classNames={{
+                    root: 'p-3 bg-muted/20 w-full',
+                    months: 'w-full',
+                    month: 'w-full',
+                    month_caption: 'flex justify-center items-center mb-2',
+                    caption_label: 'text-sm font-semibold text-foreground',
+                    nav: 'flex items-center gap-1',
+                    button_previous: 'p-1 rounded hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-colors',
+                    button_next: 'p-1 rounded hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-colors',
+                    month_grid: 'w-full border-collapse',
+                    weekdays: 'flex',
+                    weekday: 'flex-1 text-center text-xs text-muted-foreground/60 py-1',
+                    week: 'flex',
+                    day: 'flex-1',
+                    day_button: 'w-full aspect-square flex items-center justify-center text-xs rounded-md hover:bg-muted/40 text-foreground transition-colors disabled:opacity-20 disabled:cursor-not-allowed',
+                    selected: '[&>button]:bg-accent [&>button]:text-white [&>button]:hover:bg-accent',
+                    today: '[&>button]:font-bold [&>button]:text-accent',
+                    outside: '[&>button]:opacity-30',
+                  }}
+                />
+                {selectedDate && (
+                  <p className="text-xs text-muted-foreground pb-2 text-center">
+                    {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Download button */}

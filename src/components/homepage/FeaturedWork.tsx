@@ -11,25 +11,31 @@ import { RevealGroup, RevealItem } from '@/components/animations/Reveal';
 
 type ProjectRow = Pick<Database['public']['Tables']['projects']['Row'],
   'id' | 'title' | 'subtitle' | 'slug' | 'description' | 'thumbnail_url' | 'category' | 'type' |
-  'published' | 'full_width' | 'created_at' | 'updated_at' | 'client_name'
->;
+  'published' | 'featured' | 'full_width' | 'home_order' | 'created_at' | 'updated_at' | 'client_name'
+> & { thumbnail_time?: number | null };
 
 export async function FeaturedWork() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('projects')
-    .select('id, title, subtitle, slug, description, thumbnail_url, category, type, published, full_width, created_at, updated_at, client_name')
+    .select('id, title, subtitle, slug, description, thumbnail_url, thumbnail_time, category, type, published, featured, full_width, home_order, created_at, updated_at, client_name, project_videos(bunny_video_id, video_type, sort_order)')
     .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(12);
+    .eq('featured', true)
+    .order('home_order', { ascending: true })
+;
 
-  const projects: FeaturedProject[] = ((data ?? []) as ProjectRow[]).map((p) => ({
-    ...p,
-    featured: false,
-    fullWidth: p.full_width,
-    thumbnail_url: p.thumbnail_url ?? undefined,
-    category: p.category ?? undefined,
-  }));
+  const projects: FeaturedProject[] = ((data ?? []) as (ProjectRow & { project_videos: Array<{ bunny_video_id: string; video_type: string; sort_order: number }> })[]).map((p) => {
+    const videos = p.project_videos || [];
+    const flagship = videos.find((v) => v.video_type === 'flagship') ?? videos.sort((a, b) => a.sort_order - b.sort_order)[0];
+    return {
+      ...p,
+      fullWidth: p.full_width,
+      thumbnail_url: p.thumbnail_url ?? undefined,
+      category: p.category ?? undefined,
+      flagship_video_id: flagship?.bunny_video_id,
+      thumbnail_time: p.thumbnail_time ?? undefined,
+    };
+  });
 
   if (!projects || projects.length === 0) {
     return (
@@ -51,7 +57,7 @@ export async function FeaturedWork() {
             Recent Projects
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Soon to feature your brand.
+            Samples we've picked to impress you.
           </p>
         </div>
 

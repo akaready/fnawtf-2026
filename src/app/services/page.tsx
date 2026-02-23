@@ -4,7 +4,7 @@ import { ServicesLayout } from './layout-client';
 
 export const metadata = {
   title: 'Services — FNA.WTF',
-  description: 'How we work. Three phases, one direction: yours.',
+  description: 'What we do. Three phases, one direction: yours.',
 };
 
 export default async function ServicesPage() {

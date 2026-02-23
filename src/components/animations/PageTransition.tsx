@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -20,54 +20,48 @@ function createPanel(styles: Partial<CSSStyleDeclaration>): HTMLDivElement {
   return panel;
 }
 
-// Active transition — diagonal skewed sweep, covers viewport below the nav bar
-function runDiagonal(navigate: () => void, onComplete: () => void) {
-  const navEl = document.querySelector('nav') as HTMLElement | null;
-  const navHeight = navEl ? navEl.offsetHeight : 0;
+function playPanelExit(panel: HTMLDivElement, onComplete: () => void) {
+  // Set y: -50 right before exit — panel still covers screen at this point,
+  // so it's invisible. Guarantees a fresh starting value on the real content
+  // regardless of what happened during any hold period.
+  const content = document.querySelector('#page-content');
+  if (content) gsap.set(content, { y: -50 });
 
-  const panel = createPanel({
-    top: `${navHeight}px`,
-    bottom: '-10vh',
-    backgroundColor: 'var(--accent)',
-    transformOrigin: 'center center',
-    zIndex: '9999',
-  });
   gsap.timeline()
-    .fromTo(panel, { yPercent: -120, skewY: -8 }, { yPercent: 0, skewY: 0, duration: 0.6, ease: 'power3.inOut' })
-    .call(() => {
-      // Instant scroll reset while panel covers screen — invisible to user.
-      // 'instant' bypasses scroll-smooth on html; router.push({ scroll: false })
-      // prevents Next.js from doing its own animated reset afterward.
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      // Hide content while panel covers the screen — new page will render into it hidden
-      const content = document.querySelector('#page-content');
-      if (content) gsap.set(content, { y: -50 });
-      navigate();
-    })
     .to(panel, { yPercent: 120, skewY: 8, duration: 0.55, ease: 'power3.in', onComplete: () => panel.remove() })
-    // Overlap content reveal with the last 0.3s of the panel exit
     .to('#page-content', { y: 0, duration: 0.55, ease: 'power3.out', clearProps: 'transform', onComplete }, '-=0.3');
 }
-
-// Stashed — simple black fade, keep for future use
-// function runFade(navigate: () => void, onComplete: () => void) {
-//   const panel = createPanel({ top: '0', bottom: '0', backgroundColor: 'var(--background)', opacity: '0' });
-//   gsap.timeline({ onComplete })
-//     .to(panel, { opacity: 1, duration: 0.35, ease: 'power2.inOut' })
-//     .call(navigate)
-//     .to(panel, { opacity: 0, duration: 0.35, ease: 'power2.inOut', delay: 0.1, onComplete: () => panel.remove() });
-// }
 
 /**
  * PageTransition — diagonal skewed purple sweep on all page navigations.
  *
- * Uses capture-phase click interception + e.preventDefault() to stop
- * Next.js from navigating immediately. router.push() is called at the
- * midpoint (when the panel fully covers the screen), so the new page
- * renders behind the panel before the reveal plays.
+ * The panel always holds at full coverage after navigate() is called and only
+ * exits once usePathname() confirms the new route has committed to the DOM.
+ * For fast client-cached routes this is near-instant; for server components
+ * with data fetching (e.g. /work, /work/[slug]) the panel correctly waits.
  */
 export function PageTransition({ children }: PageTransitionProps) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Holds the panel + resume callback while waiting for a slow server route
+  const pendingRef = useRef<{
+    panel: HTMLDivElement;
+    destPathname: string;
+    onComplete: () => void;
+    timeout: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  // When pathname changes to the expected destination, release the panel
+  useEffect(() => {
+    if (!pendingRef.current) return;
+    if (pathname !== pendingRef.current.destPathname) return;
+
+    clearTimeout(pendingRef.current.timeout);
+    const { panel, onComplete } = pendingRef.current;
+    pendingRef.current = null;
+    playPanelExit(panel, onComplete);
+  }, [pathname]);
 
   useEffect(() => {
     let isAnimating = false;
@@ -91,9 +85,10 @@ export function PageTransition({ children }: PageTransitionProps) {
 
       const destPathname = url.pathname;
 
+      // Admin routes don't use page transitions — let browser navigate normally
+      if (destPathname.startsWith('/admin')) return;
+
       // Same page — GSAP scroll to top with custom easing.
-      // Disable scroll-smooth on html while GSAP runs, otherwise the browser
-      // tries to smooth each individual scrollTo call, fighting GSAP every frame.
       if (destPathname === window.location.pathname) {
         e.preventDefault();
         const start = window.scrollY;
@@ -110,13 +105,10 @@ export function PageTransition({ children }: PageTransitionProps) {
 
       if (isAnimating) return;
 
-      // Stop Next.js Link's own click handler from navigating immediately.
-      // We call router.push() manually at the animation midpoint instead.
       e.preventDefault();
       e.stopPropagation();
       isAnimating = true;
 
-      // Signal Navigation so it can immediately update pending active state
       window.dispatchEvent(new CustomEvent('fna-nav-start', { detail: { href: destPathname } }));
 
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -126,13 +118,37 @@ export function PageTransition({ children }: PageTransitionProps) {
         return;
       }
 
-      runDiagonal(
-        () => router.push(destPathname, { scroll: false }),
-        () => { isAnimating = false; }
-      );
+      const navEl = document.querySelector('nav') as HTMLElement | null;
+      const navHeight = navEl ? navEl.offsetHeight : 0;
+
+      const panel = createPanel({
+        top: `${navHeight}px`,
+        bottom: '-10vh',
+        backgroundColor: 'var(--accent)',
+        transformOrigin: 'center center',
+        zIndex: '9999',
+      });
+
+      const onComplete = () => { isAnimating = false; };
+
+      gsap.timeline()
+        .fromTo(panel, { yPercent: -120, skewY: -8 }, { yPercent: 0, skewY: 0, duration: 0.6, ease: 'power3.inOut' })
+        .call(() => {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          router.push(destPathname, { scroll: false });
+
+          // Always hold — release when usePathname confirms the new route
+          const timeout = setTimeout(() => {
+            if (pendingRef.current) {
+              pendingRef.current = null;
+              playPanelExit(panel, onComplete);
+            }
+          }, 5000); // safety cap
+
+          pendingRef.current = { panel, destPathname, onComplete, timeout };
+        });
     };
 
-    // Capture phase — fires before Next.js Link's bubble-phase handler
     document.addEventListener('click', handleNavClick, true);
     return () => document.removeEventListener('click', handleNavClick, true);
   }, [router]);

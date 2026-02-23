@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { FeaturedProject } from '@/types/project';
+import { getBunnyVideoMp4Url } from '@/lib/bunny/client';
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 
 interface FeaturedWorkCardProps {
@@ -12,46 +13,61 @@ interface FeaturedWorkCardProps {
 }
 
 /**
- * FeaturedWorkCard - Individual portfolio item with hover reveal details
- * Layout: GIF/image with gradient and white text revealing on hover
- * Implements: resources/play-video-on-hover-lazy.md
+ * FeaturedWorkCard - Individual portfolio item with hover video preview
+ * Streams 360p MP4 on hover via range requests (only downloads what's needed)
  */
 export function FeaturedWorkCard({ project, index: _index = 0, className }: FeaturedWorkCardProps) {
   const { ref: cardRef, isVisible } = useIntersectionObserver({ once: false });
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
 
-  // Determine aspect ratio class - mobile-first responsive sizing
-  // Hero items: 1:1 on mobile, 2.4:1 on desktop
-  // Regular items: 2.4:1 on mobile, fixed height on desktop
   const aspectClass = project.fullWidth
     ? 'aspect-[1/1] md:aspect-[2.4/1]'
     : 'aspect-[2.4/1] md:aspect-auto md:h-96 md:h-80';
 
-  // Video handlers
-  const handleHover = () => {
-    if (videoRef.current && isVisible) {
-      const promise = videoRef.current.play();
-      if (promise) {
-        playPromiseRef.current = promise;
-        promise.then(() => { playPromiseRef.current = null; }).catch(() => { playPromiseRef.current = null; });
-      }
-    }
-  };
+  const videoSrc = project.flagship_video_id
+    ? getBunnyVideoMp4Url(project.flagship_video_id, '360p')
+    : null;
 
-  const handleUnhover = () => {
+  // Use admin-set thumbnail time, fall back to video midpoint
+  const startTimeRef = useRef<number>(0);
+
+  const handleMetadata = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    startTimeRef.current = project.thumbnail_time ?? video.duration / 2;
+    video.currentTime = startTimeRef.current;
+  }, [project.thumbnail_time]);
+
+  const handleHover = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !isVisible) return;
+    // Seek to midpoint (matching thumbnail) before playing
+    if (video.readyState >= 1) {
+      video.currentTime = startTimeRef.current;
+    }
+    const promise = video.play();
+    if (promise) {
+      playPromiseRef.current = promise;
+      promise
+        .then(() => { playPromiseRef.current = null; })
+        .catch(() => { playPromiseRef.current = null; });
+    }
+  }, [isVisible]);
+
+  const handleUnhover = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     const doPause = () => {
       video.pause();
-      video.currentTime = 0;
+      video.currentTime = startTimeRef.current;
     };
     if (playPromiseRef.current) {
       playPromiseRef.current.then(doPause).catch(() => {});
     } else {
       doPause();
     }
-  };
+  }, []);
 
   return (
     <Link href={`/work/${project.slug}`} className={className}>
@@ -60,9 +76,8 @@ export function FeaturedWorkCard({ project, index: _index = 0, className }: Feat
         className={`group relative cursor-pointer rounded-lg overflow-hidden bg-black ${aspectClass}`}
         onMouseEnter={handleHover}
         onMouseLeave={handleUnhover}
-        data-video-on-hover="not-active"
       >
-        {/* Background Image/GIF */}
+        {/* Background Thumbnail */}
         {project.thumbnail_url && (
           <img
             src={project.thumbnail_url}
@@ -71,18 +86,18 @@ export function FeaturedWorkCard({ project, index: _index = 0, className }: Feat
           />
         )}
 
-        {/* Hover Video (Lazy Loaded) */}
-        {isVisible && (
+        {/* Hover Video Preview - 360p MP4 streamed via range requests */}
+        {videoSrc && isVisible && (
           <video
             ref={videoRef}
             className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            src={videoSrc}
             muted
             loop
             playsInline
-            data-video-src={project.id}
-          >
-            {/* Video will play on hover once video sources are configured */}
-          </video>
+            preload="metadata"
+            onLoadedMetadata={handleMetadata}
+          />
         )}
 
         {/* Gradient Overlay - Dark at bottom, transparent at top */}

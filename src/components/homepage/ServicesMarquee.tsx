@@ -15,7 +15,18 @@ const defaultItems = [
   'pitch videos',
   'launch pages',
   'copywriting',
+  'words and images',
+  'design and development',
+  'generally good advice'
 ];
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 /**
  * ServicesMarquee - Infinite horizontal scroll with services
@@ -28,6 +39,11 @@ export function ServicesMarquee({
   const setRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const [animationDuration, setAnimationDuration] = useState(20);
+  const [shuffledItems, setShuffledItems] = useState(items);
+
+  useEffect(() => {
+    setShuffledItems(shuffle([...items]));
+  }, [items]);
 
   useEffect(() => {
     if (!setRef.current || prefersReducedMotion) return;
@@ -38,11 +54,11 @@ export function ServicesMarquee({
       const duration = setWidth / speed;
       setAnimationDuration(duration);
     }
-  }, [speed, prefersReducedMotion, items]);
+  }, [speed, prefersReducedMotion, shuffledItems]);
 
   const renderItems = useCallback(
     () =>
-      items.map((item, index) => (
+      shuffledItems.map((item, index) => (
         <div
           key={`${item}-${index}`}
           className="flex-shrink-0 text-lg md:text-xl font-body text-foreground"
@@ -51,7 +67,7 @@ export function ServicesMarquee({
           {item}
         </div>
       )),
-    [items]
+    [shuffledItems]
   );
 
   return (
