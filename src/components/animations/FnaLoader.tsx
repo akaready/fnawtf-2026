@@ -148,10 +148,14 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
     requestAnimationFrame(() => {
       if (!active) return;
 
-      // Get center of purple SVG dot
+      // Get center of purple SVG dot (fallback to viewport center if SVG hasn't rendered)
       const dotRect = purpleDotSvg.getBoundingClientRect();
-      const cx = dotRect.left + dotRect.width / 2;
-      const cy = dotRect.top + dotRect.height / 2;
+      const cx = dotRect.width > 0
+        ? dotRect.left + dotRect.width / 2
+        : window.innerWidth / 2;
+      const cy = dotRect.height > 0
+        ? dotRect.top + dotRect.height / 2
+        : window.innerHeight / 2;
 
       const maxRadius = Math.max(
         Math.hypot(cx, cy),
@@ -288,14 +292,30 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
 
       // === REVEAL: dot→0, beat, portal ===
       function startReveal() {
-        const gradient = `radial-gradient(circle calc(var(--reveal-r, 0) * 1px) at ${cx}px ${cy}px, transparent 100%, black 100%)`;
-        outer.style.maskImage = gradient;
-        outer.style.webkitMaskImage = gradient;
-        outer.style.setProperty('--reveal-r', '0');
+        // Use a proxy object instead of CSS custom properties —
+        // Safari/WebKit can't animate CSS vars inside calc() in mask-image gradients
+        const proxy = { r: 0 };
+        const setMask = (r: number) => {
+          const g = `radial-gradient(circle ${r}px at ${cx}px ${cy}px, transparent 100%, black 100%)`;
+          outer.style.maskImage = g;
+          outer.style.webkitMaskImage = g;
+        };
+        setMask(0);
         outer.style.willChange = '-webkit-mask-image';
+
+        // Safety timeout — if reveal animation fails silently, force completion
+        const revealSafety = setTimeout(() => {
+          outer.style.willChange = 'auto';
+          outer.style.pointerEvents = 'none';
+          sessionStorage.setItem('fna_seen', '1');
+          setIsComplete(true);
+          window.dispatchEvent(new CustomEvent('fna-loader-complete'));
+          onComplete?.();
+        }, 8000);
 
         revealTl = gsap.timeline({
           onComplete: () => {
+            clearTimeout(revealSafety);
             outer.style.willChange = 'auto';
             outer.style.pointerEvents = 'none';
             sessionStorage.setItem('fna_seen', '1');
@@ -344,13 +364,16 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
           x: 30, duration: 2, ease: 'back.out(1.4)',
         }, '<');
 
-        // Portal springs open (same start as text scatter)
-        revealTl.to(outer, {
-          '--reveal-r': maxRadius,
+        // Portal springs open — animate proxy object and set mask each frame
+        revealTl.to(proxy, {
+          r: maxRadius,
           duration: 3,
           ease: 'back.out(0.8)',
           onStart: () => {
             window.dispatchEvent(new CustomEvent('fna-reveal-start'));
+          },
+          onUpdate: () => {
+            setMask(proxy.r);
           },
         }, '<');
       }

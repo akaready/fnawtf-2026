@@ -1,4 +1,3 @@
-import { FnaLoader } from '@/components/animations/FnaLoader';
 import { HeroSection } from '@/components/homepage/HeroSection';
 import { ServicesMarquee } from '@/components/homepage/ServicesMarquee';
 import { ServicesCards } from '@/components/homepage/ServicesCards';
@@ -7,30 +6,28 @@ import { FeaturedWork } from '@/components/homepage/FeaturedWork';
 import { ClientLogos } from '@/components/homepage/ClientLogos';
 import { TestimonialsServer } from '@/components/homepage/TestimonialsServer';
 import { FooterCTA } from '@/components/layout/FooterCTA';
-export const metadata = {
-  title: 'FNA.WTF - Video Production & Digital Storytelling',
-  description: 'Friends n Allies is a boutique creative agency crafting visual stories for ambitious brands.',
-};
+import { getPageSeo } from '@/lib/seo';
 
-// Main project videos library (604035) — no hotlink protection
-const VIDEOS_CDN = 'vz-6b68e26c-531.b-cdn.net';
+export async function generateMetadata() {
+  return getPageSeo('/', {
+    title: 'FNA.WTF - Video Production & Digital Storytelling',
+    description: 'Friends n Allies is a boutique creative agency crafting visual stories for ambitious brands.',
+  });
+}
 
 export default function Home() {
-  // Hero background video (HLS) — proxied through /cdn/reels/ to bypass Bunny hotlink protection
-  const heroVideoId = '0540ef55-62e5-466f-b1f6-acef297a614d';
-  const heroVideoSrc = `/cdn/reels/${heroVideoId}/playlist.m3u8`;
-  const heroVideoPoster = `/cdn/reels/${heroVideoId}/thumbnail.jpg`;
+  // Hero background video (MP4) — landing loop in main videos library
+  const heroVideoId = 'bf866299-8371-456f-b0a0-9a66687a59cb';
+  const heroVideoSrc = `/cdn/videos/${heroVideoId}/play_720p.mp4`;
+  const heroVideoPoster = `/cdn/videos/${heroVideoId}/thumbnail.jpg`;
 
-  // Reel player video (MP4) — VIDEOS CDN has no hotlink protection, direct URL is fine
-  const reelVideoId = '8a666997-7b51-4e37-a019-8dedd010e6ef';
-  const reelVideoSrc = `https://${VIDEOS_CDN}/${reelVideoId}/play_1080p.mp4`;
-  const reelVideoPoster = `https://${VIDEOS_CDN}/${reelVideoId}/thumbnail.jpg`;
+  // Reel player video (MP4) — main videos library
+  const reelVideoId = 'bf090ca4-69bf-49e6-b0f8-ce6e0dd44995';
+  const reelVideoSrc = `/cdn/videos/${reelVideoId}/play_1080p.mp4`;
+  const reelVideoPoster = `/cdn/videos/${reelVideoId}/thumbnail.jpg`;
 
   return (
     <main className="bg-background text-foreground min-h-screen">
-      {/* Loading Animation */}
-      <FnaLoader />
-
       {/* Hero Section */}
       <HeroSection
         headline="We craft visual stories for ambitious brands."
@@ -49,7 +46,7 @@ export default function Home() {
               Watch Our Reel
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Give us just 70 seconds (try not to smile).
+              Just 70 seconds (try not to smile).
             </p>
           </div>
           <ReelPlayer videoSrc={reelVideoSrc} placeholderSrc={reelVideoPoster} />

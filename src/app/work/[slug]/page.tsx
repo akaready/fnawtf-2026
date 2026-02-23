@@ -49,14 +49,15 @@ export default async function WorkDetailPage({ params }: PageProps) {
 
   const { data: rawTestimonials } = await supabase
     .from('testimonials')
-    .select('person_name, person_title, display_title')
+    .select('quote, person_name, person_title, display_title')
     .eq('project_id', project.id)
     .limit(1);
 
   const videos: ProjectVideo[] = rawVideos ?? [];
   const credits: ProjectCredit[] = rawCredits ?? [];
   const btsImages: ProjectBTSImage[] = rawBtsImages ?? [];
-  const quoteAttribution = rawTestimonials?.[0] ?? null;
+  const testimonial = rawTestimonials?.[0] as { quote: string; person_name: string | null; person_title: string | null; display_title: string | null } | undefined;
+  const quoteAttribution = testimonial ?? null;
 
   return (
     <>

@@ -194,21 +194,21 @@ export function Navigation({ currentPage }: NavigationProps) {
           ))}
         </div>
 
-        {/* Desktop CTA — skip Cal embed on admin routes (its global script interferes with inputs) */}
-        {!pathname.startsWith('/admin') && (
-          <div
-            ref={ctaRef}
-            className="hidden md:flex md:items-center"
-            style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
-          >
+        {/* Desktop CTA — always render container for layout, skip Cal embed on admin routes */}
+        <div
+          ref={ctaRef}
+          className="hidden md:flex md:items-center"
+          style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
+        >
+          {!pathname.startsWith('/admin') && (
             <CalBookingButton
               buttonText="Let's Talk"
               namespace="introduction"
               calLink="fnawtf/introduction"
               isPrimary
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Mobile Menu */}
         <MobileMenu currentPage={currentPage} />

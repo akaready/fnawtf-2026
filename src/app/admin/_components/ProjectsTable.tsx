@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Edit2, Trash2, Eye, EyeOff, CheckSquare, Square, Minus,
   Search, ChevronDown, ChevronUp, SlidersHorizontal, X,
-  Star, StarOff, Film, Palette, ArrowUpDown, Filter, Layers, Plus,
-  ChevronRight, GripVertical, Home, Briefcase,
+  Star, StarOff, ArrowUpDown, Filter, Layers, Plus,
+  ChevronRight, GripVertical, Home, Briefcase, Columns,
 } from 'lucide-react';
 import {
   batchSetPublished, batchUpdateProjects, batchDeleteProjects,
@@ -65,25 +65,26 @@ interface ColDef {
   toggleLabels?: [string, string];
   toggleColors?: [string, string];
   mono?: boolean;
+  group?: string;
+  maxWidth?: number;
 }
 
 const COLUMN_DEFS: ColDef[] = [
   { key: 'thumbnail', label: 'Thumb', sortable: false, defaultVisible: true, type: 'thumbnail' },
   { key: 'title', label: 'Title', sortable: true, defaultVisible: true, type: 'text' },
-  { key: 'subtitle', label: 'Subtitle', sortable: true, defaultVisible: false, type: 'text' },
+  { key: 'subtitle', label: 'Subtitle', sortable: true, defaultVisible: false, type: 'text', maxWidth: 250 },
   { key: 'slug', label: 'Slug', sortable: true, defaultVisible: false, type: 'text', mono: true },
   { key: 'client_name', label: 'Client', sortable: true, defaultVisible: true, type: 'text' },
-  { key: 'description', label: 'Description', sortable: false, defaultVisible: false, type: 'text' },
-  { key: 'client_quote', label: 'Quote', sortable: false, defaultVisible: false, type: 'text' },
+  { key: 'description', label: 'Description', sortable: false, defaultVisible: false, type: 'text', maxWidth: 300 },
+  { key: 'client_quote', label: 'Quote', sortable: false, defaultVisible: false, type: 'text', maxWidth: 250 },
   { key: 'type', label: 'Type', sortable: true, defaultVisible: true, type: 'select', options: [{ value: 'video', label: 'Video' }, { value: 'design', label: 'Design' }] },
   { key: 'category', label: 'Category', sortable: true, defaultVisible: false, type: 'text' },
-  { key: 'published', label: 'Status', sortable: true, defaultVisible: true, type: 'toggle', toggleLabels: ['Published', 'Draft'], toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-muted-foreground/50'] },
   { key: 'featured', label: 'Homepage', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Homepage', '—'], toggleColors: ['bg-amber-500/10 text-amber-400', 'bg-white/5 text-muted-foreground/30'] },
   { key: 'full_width', label: 'Full Width', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-purple-500/10 text-purple-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'hidden_from_work', label: 'Hide Work', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Hidden', '—'], toggleColors: ['bg-red-500/10 text-red-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'home_order', label: 'Home #', sortable: true, defaultVisible: true, type: 'number' },
-  { key: 'work_order', label: 'Work #', sortable: true, defaultVisible: true, type: 'number' },
-  { key: 'style_tags', label: 'Style Tags', sortable: false, defaultVisible: false, type: 'tags' },
+  { key: 'hidden_from_work', label: 'Hide on /work', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Hidden', '—'], toggleColors: ['bg-red-500/10 text-red-400', 'bg-white/5 text-muted-foreground/30'] },
+  { key: 'home_order', label: 'Home #', sortable: true, defaultVisible: true, type: 'number', group: 'Page Sort' },
+  { key: 'work_order', label: 'Work #', sortable: true, defaultVisible: true, type: 'number', group: 'Page Sort' },
+  { key: 'style_tags', label: 'Style', sortable: false, defaultVisible: false, type: 'tags' },
   { key: 'premium_addons', label: 'Add-ons', sortable: false, defaultVisible: false, type: 'tags' },
   { key: 'camera_techniques', label: 'Techniques', sortable: false, defaultVisible: false, type: 'tags' },
   { key: 'assets_delivered', label: 'Assets', sortable: false, defaultVisible: false, type: 'tags' },
@@ -97,11 +98,11 @@ const COLUMN_DEFS: ColDef[] = [
   { key: 'featured_services_crowdfunding', label: 'Svc: Crowd', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
   { key: 'featured_services_fundraising', label: 'Svc: Fund', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
   { key: 'thumbnail_url', label: 'Thumb URL', sortable: false, defaultVisible: false, type: 'text', mono: true },
-  { key: 'preview_gif_url', label: 'GIF URL', sortable: false, defaultVisible: false, type: 'text', mono: true },
   { key: 'client_id', label: 'Client ID', sortable: false, defaultVisible: false, type: 'text', mono: true },
   { key: 'updated_by', label: 'Updated By', sortable: false, defaultVisible: false, type: 'text', mono: true },
   { key: 'created_at', label: 'Created', sortable: true, defaultVisible: false, type: 'date' },
   { key: 'updated_at', label: 'Updated', sortable: true, defaultVisible: true, type: 'date' },
+  { key: 'published', label: 'Published', sortable: true, defaultVisible: true, type: 'toggle', toggleLabels: ['Published', 'Draft'], toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-muted-foreground/50'], group: 'Status' },
 ];
 
 type ColumnKey = string;
@@ -163,7 +164,7 @@ function EditableTextCell({
     return (
       <span
         onDoubleClick={() => setEditing(true)}
-        className={`cursor-text hover:bg-white/5 rounded px-1 -mx-1 py-0.5 transition-colors inline-block max-w-[200px] truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
+        className={`cursor-text hover:bg-white/5 rounded px-1 -mx-1 py-0.5 transition-colors inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
         title={value || 'Double-click to edit'}
       >
         {value || <span className="text-muted-foreground/30 italic">—</span>}
@@ -332,24 +333,131 @@ function SelectCell({
   );
 }
 
-/* ── Tags display cell ──────────────────────────────────────────────────── */
+/* ── Editable Tags cell with autocomplete ──────────────────────────────── */
 
-function TagsCell({ tags }: { tags: string[] | null }) {
-  if (!tags || tags.length === 0) return <span className="text-muted-foreground/30 text-xs">—</span>;
+function EditableTagsCell({
+  tags,
+  projectId,
+  field,
+  suggestions,
+}: {
+  tags: string[] | null;
+  projectId: string;
+  field: string;
+  suggestions?: string[];
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState<string[]>(tags ?? []);
+  const [input, setInput] = useState('');
+  const [hlIndex, setHlIndex] = useState(-1);
+  const [, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!suggestions || !input.trim()) return [];
+    const q = input.toLowerCase();
+    return suggestions.filter((s) => s.toLowerCase().includes(q) && !value.includes(s)).slice(0, 8);
+  }, [suggestions, input, value]);
+
+  const addTag = useCallback((tag: string) => {
+    const t = tag.trim();
+    if (!t || value.includes(t)) return;
+    const next = [...value, t];
+    setValue(next);
+    setInput('');
+    setHlIndex(-1);
+    startTransition(async () => {
+      await updateProject(projectId, { [field]: next });
+    });
+  }, [value, projectId, field]);
+
+  const removeTag = useCallback((tag: string) => {
+    const next = value.filter((t) => t !== tag);
+    setValue(next);
+    startTransition(async () => {
+      await updateProject(projectId, { [field]: next });
+    });
+  }, [value, projectId, field]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHlIndex((i) => Math.min(i + 1, filtered.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHlIndex((i) => Math.max(i - 1, 0)); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (hlIndex >= 0 && filtered[hlIndex]) addTag(filtered[hlIndex]);
+      else if (input.trim()) addTag(input);
+    } else if (e.key === 'Backspace' && !input && value.length > 0) {
+      removeTag(value[value.length - 1]);
+    } else if (e.key === 'Escape') {
+      setEditing(false);
+    }
+  };
+
+  // Click outside to close
+  useEffect(() => {
+    if (!editing) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setEditing(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [editing]);
+
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  if (!editing) {
+    return (
+      <div onClick={() => setEditing(true)} className="cursor-pointer min-h-[24px] flex flex-wrap gap-1 w-full">
+        {(!tags || tags.length === 0) ? (
+          <span className="text-muted-foreground/30 text-xs">—</span>
+        ) : tags.map((t) => (
+          <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/70 whitespace-nowrap">{t}</span>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap gap-1 max-w-[200px]">
-      {tags.map((t) => (
-        <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/70 whitespace-nowrap">
-          {t}
-        </span>
-      ))}
+    <div ref={containerRef} className="relative min-w-[180px]">
+      <div className="flex flex-wrap gap-1 items-center border border-border/60 rounded-lg bg-black/60 px-2 py-1">
+        {value.map((t) => (
+          <span key={t} className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-foreground/80">
+            {t}
+            <button onClick={() => removeTag(t)} className="ml-0.5 text-muted-foreground/50 hover:text-foreground">×</button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setHlIndex(-1); }}
+          onKeyDown={handleKeyDown}
+          placeholder="Add…"
+          className="flex-1 min-w-[50px] bg-transparent text-xs text-foreground placeholder:text-muted-foreground/30 outline-none"
+        />
+      </div>
+      {filtered.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-[#111] border border-border/40 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+          {filtered.map((s, i) => (
+            <button
+              key={s}
+              onMouseDown={(e) => { e.preventDefault(); addTag(s); }}
+              className={`block w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                i === hlIndex ? 'bg-white/10 text-foreground' : 'text-muted-foreground hover:bg-white/5'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ── Render a cell based on column def ──────────────────────────────────── */
 
-function renderCell(col: ColDef, project: ProjectRow) {
+function renderCell(col: ColDef, project: ProjectRow, tagSuggestions?: Record<string, string[]>) {
   const val = (project as unknown as Record<string, unknown>)[col.key];
 
   switch (col.type) {
@@ -406,7 +514,14 @@ function renderCell(col: ColDef, project: ProjectRow) {
       );
 
     case 'tags':
-      return <TagsCell tags={val as string[] | null} />;
+      return (
+        <EditableTagsCell
+          tags={val as string[] | null}
+          projectId={project.id}
+          field={col.key}
+          suggestions={tagSuggestions?.[col.key]}
+        />
+      );
 
     case 'date':
       return (
@@ -766,20 +881,30 @@ function FieldsPanel({
     return COLUMN_DEFS.filter((c) => c.label.toLowerCase().includes(q) || c.key.toLowerCase().includes(q));
   }, [fieldSearch]);
 
-  // Group columns by type for organized display
+  // Group columns: custom group first, then by type
   const groups: { label: string; cols: ColDef[] }[] = useMemo(() => {
-    const textCols = filteredCols.filter((c) => c.type === 'text' || c.type === 'thumbnail');
-    const toggleCols = filteredCols.filter((c) => c.type === 'toggle');
-    const numberCols = filteredCols.filter((c) => c.type === 'number');
-    const tagCols = filteredCols.filter((c) => c.type === 'tags');
-    const otherCols = filteredCols.filter((c) => c.type === 'select' || c.type === 'date');
+    const customGrouped = new Map<string, ColDef[]>();
+    const ungrouped = { text: [] as ColDef[], toggle: [] as ColDef[], number: [] as ColDef[], tags: [] as ColDef[], other: [] as ColDef[] };
+
+    for (const c of filteredCols) {
+      if (c.group) {
+        const list = customGrouped.get(c.group) ?? [];
+        list.push(c);
+        customGrouped.set(c.group, list);
+      } else if (c.type === 'text' || c.type === 'thumbnail') ungrouped.text.push(c);
+      else if (c.type === 'toggle') ungrouped.toggle.push(c);
+      else if (c.type === 'number') ungrouped.number.push(c);
+      else if (c.type === 'tags') ungrouped.tags.push(c);
+      else ungrouped.other.push(c);
+    }
 
     const result: { label: string; cols: ColDef[] }[] = [];
-    if (textCols.length) result.push({ label: 'Text', cols: textCols });
-    if (toggleCols.length) result.push({ label: 'Toggles', cols: toggleCols });
-    if (numberCols.length) result.push({ label: 'Numbers', cols: numberCols });
-    if (tagCols.length) result.push({ label: 'Tags', cols: tagCols });
-    if (otherCols.length) result.push({ label: 'Other', cols: otherCols });
+    if (ungrouped.text.length) result.push({ label: 'Text', cols: ungrouped.text });
+    if (ungrouped.toggle.length) result.push({ label: 'Toggles', cols: ungrouped.toggle });
+    if (ungrouped.number.length) result.push({ label: 'Scope', cols: ungrouped.number });
+    if (ungrouped.tags.length) result.push({ label: 'Tags', cols: ungrouped.tags });
+    for (const [label, cols] of customGrouped) result.push({ label, cols });
+    if (ungrouped.other.length) result.push({ label: 'Other', cols: ungrouped.other });
     return result;
   }, [filteredCols]);
 
@@ -913,11 +1038,14 @@ interface PersistedTableState {
   groupField: string | null;
   collapsedGroups: string[];
   visibleCols: string[];
+  colWidths: Record<string, number>;
+  colOrder: string[];
+  freezeCount: number;
 }
 
 function loadTableState(): Partial<PersistedTableState> | null {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as Partial<PersistedTableState>;
   } catch {
@@ -927,13 +1055,13 @@ function loadTableState(): Partial<PersistedTableState> | null {
 
 function saveTableState(state: PersistedTableState) {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch { /* quota exceeded — ignore */ }
 }
 
 /* ── Main table ─────────────────────────────────────────────────────────── */
 
-export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
+export function ProjectsTable({ projects, tagSuggestions, exportRef }: { projects: ProjectRow[]; tagSuggestions?: Record<string, string[]>; exportRef?: React.MutableRefObject<(() => void) | null> }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -949,6 +1077,9 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
   const [visibleCols, setVisibleCols] = useState<Set<ColumnKey>>(defaultVisibleCols);
   const [openPanel, setOpenPanel] = useState<'sort' | 'filter' | 'group' | 'fields' | null>(null);
   const [orderMode, setOrderMode] = useState<'home_order' | 'work_order'>('home_order');
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const [colOrder, setColOrder] = useState<string[]>(() => COLUMN_DEFS.map((c) => c.key));
+  const [freezeCount, setFreezeCount] = useState(0);
   const [hydrated, setHydrated] = useState(false);
 
   // Restore view state from sessionStorage after hydration
@@ -961,6 +1092,15 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
       if (saved.groupField !== undefined) setGroupField(saved.groupField);
       if (saved.collapsedGroups) setCollapsedGroups(new Set(saved.collapsedGroups));
       if (saved.visibleCols && saved.visibleCols.length > 0) setVisibleCols(new Set(saved.visibleCols));
+      if (saved.colWidths) setColWidths(saved.colWidths);
+      if (saved.freezeCount != null) setFreezeCount(saved.freezeCount);
+      if (saved.colOrder && saved.colOrder.length > 0) {
+        // Merge: use saved order but append any new columns not in saved state
+        const allKeys = COLUMN_DEFS.map((c) => c.key);
+        const savedSet = new Set(saved.colOrder);
+        const merged = [...saved.colOrder.filter((k) => allKeys.includes(k)), ...allKeys.filter((k) => !savedSet.has(k))];
+        setColOrder(merged);
+      }
     }
     setHydrated(true);
   }, []);
@@ -975,14 +1115,147 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
       groupField,
       collapsedGroups: Array.from(collapsedGroups),
       visibleCols: Array.from(visibleCols),
+      colWidths,
+      colOrder,
+      freezeCount,
     });
-  }, [hydrated, search, sorts, filters, groupField, collapsedGroups, visibleCols]);
+  }, [hydrated, search, sorts, filters, groupField, collapsedGroups, visibleCols, colWidths, colOrder, freezeCount]);
 
   const togglePanel = useCallback((panel: typeof openPanel) => {
     setOpenPanel((prev) => (prev === panel ? null : panel));
   }, []);
 
   const closePanel = useCallback(() => setOpenPanel(null), []);
+
+  /* ── Ordered visible columns ────────────────────────────────────── */
+
+  const orderedVisibleCols = useMemo(() => {
+    const colMap = new Map(COLUMN_DEFS.map((c) => [c.key, c]));
+    return colOrder.filter((k) => visibleCols.has(k) && colMap.has(k)).map((k) => colMap.get(k)!);
+  }, [colOrder, visibleCols]);
+
+  /* ── Freeze column offsets ────────────────────────────────────────── */
+
+  // The first 2 columns (grip + checkbox) are always frozen.
+  // freezeCount = how many data columns after those are also frozen.
+  // All widths are measured from the DOM to avoid gaps.
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [measuredHeaderWidths, setMeasuredHeaderWidths] = useState<number[]>([]);
+
+  // Measure ALL header column widths from the DOM after render
+  const prevMeasuredRef = useRef<string>('');
+  useEffect(() => {
+    if (!tableRef.current) return;
+    const headerRow = tableRef.current.querySelector('thead tr');
+    if (!headerRow) return;
+    const ths = Array.from(headerRow.querySelectorAll('th'));
+    const widths = ths.map((th) => Math.round(th.getBoundingClientRect().width));
+    const key = JSON.stringify(widths);
+    if (key !== prevMeasuredRef.current) {
+      prevMeasuredRef.current = key;
+      setMeasuredHeaderWidths(widths);
+    }
+  });
+
+  // Get width for a data column (by key)
+  const getColWidth = useCallback((key: string) => {
+    if (colWidths[key]) return colWidths[key];
+    // Find index in orderedVisibleCols, then offset by 2 (grip + checkbox)
+    const idx = orderedVisibleCols.findIndex((c) => c.key === key);
+    if (idx >= 0 && measuredHeaderWidths[idx + 2]) return measuredHeaderWidths[idx + 2];
+    return 120;
+  }, [colWidths, orderedVisibleCols, measuredHeaderWidths]);
+
+  // gripWidth and checkboxWidth from measured DOM (fallback to reasonable defaults)
+  const gripWidth = measuredHeaderWidths[0] ?? 34;
+  const checkboxWidth = measuredHeaderWidths[1] ?? 47;
+
+  const frozenOffsets = useMemo(() => {
+    const offsets: number[] = [];
+    let left = 0;
+    // Fixed columns first
+    offsets.push(left); left += gripWidth;
+    offsets.push(left); left += checkboxWidth;
+    // Then frozen data columns
+    for (let i = 0; i < freezeCount && i < orderedVisibleCols.length; i++) {
+      offsets.push(left);
+      left += getColWidth(orderedVisibleCols[i].key);
+    }
+    return offsets;
+  }, [freezeCount, orderedVisibleCols, getColWidth, gripWidth, checkboxWidth]);
+
+  const freezeLineLeft = useMemo(() => {
+    if (frozenOffsets.length === 0) return 0;
+    const lastOffset = frozenOffsets[frozenOffsets.length - 1];
+    if (freezeCount > 0 && orderedVisibleCols[freezeCount - 1]) {
+      return lastOffset + getColWidth(orderedVisibleCols[freezeCount - 1].key);
+    }
+    return lastOffset + checkboxWidth;
+  }, [frozenOffsets, freezeCount, orderedVisibleCols, getColWidth, checkboxWidth]);
+
+  /* ── Column drag-and-drop ───────────────────────────────────────── */
+
+  const dragColRef = useRef<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
+
+  const handleColDragStart = useCallback((e: React.DragEvent, key: string) => {
+    dragColRef.current = key;
+    e.dataTransfer.effectAllowed = 'move';
+    (e.currentTarget as HTMLElement).style.opacity = '0.4';
+  }, []);
+
+  const handleColDragEnd = useCallback((e: React.DragEvent) => {
+    (e.currentTarget as HTMLElement).style.opacity = '1';
+    dragColRef.current = null;
+    setDragOverColKey(null);
+  }, []);
+
+  const handleColDragOver = useCallback((e: React.DragEvent, key: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColKey(key);
+  }, []);
+
+  const handleColDrop = useCallback((e: React.DragEvent, targetKey: string) => {
+    e.preventDefault();
+    setDragOverColKey(null);
+    const sourceKey = dragColRef.current;
+    if (!sourceKey || sourceKey === targetKey) return;
+
+    // Capture actual rendered widths of both columns before reorder
+    // so they keep their size when moved
+    const tableEl = tableRef.current;
+    if (tableEl) {
+      const headerRow = tableEl.querySelector('thead tr');
+      if (headerRow) {
+        const ths = Array.from(headerRow.querySelectorAll('th'));
+        // First 2 ths are grip + checkbox, data cols start at index 2
+        setColWidths((prev) => {
+          const next = { ...prev };
+          for (let i = 2; i < ths.length - 1; i++) { // -1 to skip actions column
+            const colIdx = i - 2;
+            if (colIdx < orderedVisibleCols.length) {
+              const key = orderedVisibleCols[colIdx].key;
+              if (!next[key]) {
+                next[key] = ths[i].getBoundingClientRect().width;
+              }
+            }
+          }
+          return next;
+        });
+      }
+    }
+
+    setColOrder((prev) => {
+      const next = [...prev];
+      const fromIdx = next.indexOf(sourceKey);
+      const toIdx = next.indexOf(targetKey);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, sourceKey);
+      return next;
+    });
+  }, [orderedVisibleCols]);
 
   /* ── Drag-and-drop state ────────────────────────────────────────── */
 
@@ -1066,12 +1339,14 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    if (!dragRowId.current) return; // ignore column drags
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverId(id);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent, targetId: string) => {
+    if (!dragRowId.current) return; // ignore column drags
     e.preventDefault();
     setDragOverId(null);
     const sourceId = dragRowId.current;
@@ -1106,6 +1381,8 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
   };
 
   const handleSort = (key: string) => {
+    // Skip if we just finished a column resize drag
+    if (resizingRef.current) return;
     // Column header click: set as single sort
     setSorts((prev) => {
       if (prev.length === 1 && prev[0].key === key) {
@@ -1155,6 +1432,33 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
     });
   };
 
+  const handleExportCsv = useCallback(() => {
+    const header = orderedVisibleCols.map((c) => c.label);
+    const rows = filtered.map((p) => {
+      return orderedVisibleCols.map((col) => {
+        const val = (p as unknown as Record<string, unknown>)[col.key];
+        if (val == null) return '';
+        if (Array.isArray(val)) return val.join('; ');
+        if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+        if (col.type === 'date') return new Date(val as string).toLocaleDateString();
+        return String(val);
+      });
+    });
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `projects-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filtered, orderedVisibleCols]);
+
+  // Expose export function to parent via ref
+  useEffect(() => {
+    if (exportRef) exportRef.current = handleExportCsv;
+  }, [exportRef, handleExportCsv]);
+
   const handleDeleteOne = (id: string) => {
     startTransition(async () => {
       await deleteProject(id);
@@ -1173,8 +1477,90 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
     );
   };
 
+  /* ── Column resize handler ────────────────────────────────────── */
+
+  const resizingRef = useRef(false);
+
+  const handleColResize = useCallback((colKey: string, nextColKey: string | null, startX: number, startWidth: number, nextStartWidth: number) => {
+    let didMove = false;
+    const onMouseMove = (e: MouseEvent) => {
+      didMove = true;
+      resizingRef.current = true;
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(40, startWidth + delta);
+      setColWidths((prev) => {
+        const next = { ...prev, [colKey]: newWidth };
+        if (nextColKey) {
+          next[nextColKey] = Math.max(40, nextStartWidth - delta);
+        }
+        return next;
+      });
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      // Suppress the click event that fires after mouseup on the th
+      if (didMove) {
+        setTimeout(() => { resizingRef.current = false; }, 0);
+      }
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
+
+  const stickyStyle = (offsetIdx: number, isHeader?: boolean): React.CSSProperties | undefined => {
+    if (offsetIdx < frozenOffsets.length) {
+      return {
+        position: 'sticky',
+        left: frozenOffsets[offsetIdx],
+        zIndex: 20,
+        backgroundColor: isHeader ? '#191919' : '#0d0d0d',
+      };
+    }
+    return undefined;
+  };
+
+  /* ── Freeze line drag handler ──────────────────────────────────── */
+
+  const handleFreezeDrag = useCallback((_startX: number) => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!tableRef.current) return;
+      const tableRect = tableRef.current.getBoundingClientRect();
+      const scrollLeft = tableRef.current.scrollLeft;
+      const relativeX = e.clientX - tableRect.left + scrollLeft;
+
+      // Calculate which column boundary is closest
+      // Start after the fixed cols (grip + checkbox)
+      let cumLeft = gripWidth + checkboxWidth;
+      let bestCount = 0;
+      for (let i = 0; i < orderedVisibleCols.length; i++) {
+        const colW = getColWidth(orderedVisibleCols[i].key);
+        const colMid = cumLeft + colW / 2;
+        if (relativeX > colMid) {
+          bestCount = i + 1;
+        }
+        cumLeft += colW;
+      }
+      setFreezeCount(bestCount);
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [orderedVisibleCols, getColWidth, gripWidth, checkboxWidth]);
+
   const thClass =
-    'text-left px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground/60 font-medium select-none whitespace-nowrap';
+    'text-left px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground/60 font-medium select-none whitespace-nowrap relative overflow-hidden';
   const thSortClass = `${thClass} cursor-pointer group hover:text-muted-foreground transition-colors`;
 
   const visibleColCount = 3 + visibleCols.size;
@@ -1190,7 +1576,7 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
         selected.has(project.id) ? 'bg-white/[0.03]' : ''
       } ${dragOverId === project.id ? 'border-t-2 border-t-accent' : ''}`}
     >
-      <td className="w-8 px-1 py-3">
+      <td className="w-8 px-1 py-3" style={stickyStyle(0)}>
         <div
           draggable
           onDragStart={(e) => handleDragStart(e, project.id)}
@@ -1200,29 +1586,39 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
           <GripVertical size={14} />
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3" style={stickyStyle(1)}>
         <button onClick={() => toggleOne(project.id)} className="text-muted-foreground hover:text-foreground transition-colors">
           {selected.has(project.id) ? <CheckSquare size={15} className="text-accent" /> : <Square size={15} />}
         </button>
       </td>
-      {COLUMN_DEFS.map((col) =>
-        visibleCols.has(col.key) ? (
-          <td key={col.key} className={col.type === 'thumbnail' ? 'px-2 py-3' : 'px-4 py-3'}>
-            {renderCell(col, project)}
+      {orderedVisibleCols.map((col, idx) => {
+        const isFrozen = idx < freezeCount;
+        const frozenStyle = isFrozen ? stickyStyle(2 + idx) : undefined;
+        const widthStyle = colWidths[col.key]
+          ? { width: colWidths[col.key], minWidth: colWidths[col.key], maxWidth: colWidths[col.key] }
+          : col.maxWidth ? { maxWidth: col.maxWidth } : undefined;
+        const mergedStyle = { ...widthStyle, ...frozenStyle };
+        return (
+          <td
+            key={col.key}
+            className={`${col.type === 'thumbnail' ? 'px-2 py-3' : 'px-4 py-3'} overflow-hidden`}
+            style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
+          >
+            {renderCell(col, project, tagSuggestions)}
           </td>
-        ) : null
-      )}
+        );
+      })}
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 justify-end">
           <Link
             href={`/admin/projects/${project.id}`}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground bg-white/5 hover:bg-white/10 transition-colors"
           >
             <Edit2 size={13} />
           </Link>
           <button
             onClick={() => setConfirmDelete(project.id)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400/60 bg-red-500/5 hover:text-red-400 hover:bg-red-500/15 transition-colors"
           >
             <Trash2 size={13} />
           </button>
@@ -1237,13 +1633,13 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects…"
-            className="w-full pl-9 pr-3 py-1.5 bg-white/[0.03] border border-border/40 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full pl-9 pr-3 py-1.5 bg-[#111] border border-border/60 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30 transition-colors"
           />
           {search && (
             <button
@@ -1315,13 +1711,13 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
         </div>
 
         {/* Order mode toggle */}
-        <div className="flex items-center border border-border/40 rounded-lg overflow-hidden">
+        <div className="flex items-center border border-yellow-500/40 rounded-lg overflow-hidden">
           <button
             onClick={() => setOrderMode('home_order')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
               orderMode === 'home_order'
-                ? 'bg-yellow-500/20 text-yellow-400 border-r border-yellow-500/50'
-                : 'text-muted-foreground hover:text-foreground border-r border-border/40'
+                ? 'bg-yellow-500/20 text-yellow-400'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Home size={14} strokeWidth={1.75} />
@@ -1339,6 +1735,19 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
             Work
           </button>
         </div>
+
+        <button
+          onClick={() => setColWidths({})}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors whitespace-nowrap ${
+            Object.keys(colWidths).length > 0
+              ? 'border-accent/40 text-accent bg-accent/5'
+              : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-white/20'
+          }`}
+          title="Reset all column widths to auto-fit"
+        >
+          <Columns size={14} strokeWidth={1.75} />
+          Auto-fit
+        </button>
 
         {(search || filters.length > 0) && (
           <span className="text-xs text-muted-foreground/40 ml-1">
@@ -1363,13 +1772,6 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
           </button>
           <button onClick={() => handleBatchUpdate({ featured: false })} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
             <StarOff size={13} /> Remove
-          </button>
-          <div className="w-px h-5 bg-border/40 mx-1" />
-          <button onClick={() => handleBatchUpdate({ type: 'video' })} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
-            <Film size={13} /> Video
-          </button>
-          <button onClick={() => handleBatchUpdate({ type: 'design' })} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
-            <Palette size={13} /> Design
           </button>
           <div className="w-px h-5 bg-border/40 mx-1" />
           <button onClick={() => setConfirmDelete('batch')} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-40">
@@ -1408,27 +1810,100 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
       )}
 
       {/* Table */}
-      <div className="border border-border/40 rounded-xl overflow-x-auto">
+      <div className="relative">
+        {/* Purple freeze line — positioned outside scroll wrapper so it doesn't scroll */}
+        <div
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFreezeDrag(e.clientX); }}
+          className="absolute top-0 bottom-0 z-30 cursor-col-resize group/freeze"
+          style={{ left: freezeLineLeft - 6, width: 13 }}
+        >
+          <div className="absolute top-0 bottom-0 left-[6px] w-px bg-purple-500/60 group-hover/freeze:bg-purple-400 transition-colors" />
+          <div className="absolute top-[4px] left-[2px] w-[9px] h-[34px] rounded bg-purple-500 group-hover/freeze:bg-purple-400 transition-colors" />
+        </div>
+        <div ref={tableRef} className={`rounded-xl overflow-x-auto admin-scrollbar border ${selected.size > 0 ? 'border-white/20' : 'border-border/40'} transition-colors`}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border/40 bg-white/[0.02]">
-              <th className="w-8 px-1 py-3" />
-              <th className="w-10 px-4 py-3">
-                <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground transition-colors">
+            <tr className="border-b border-border/40 bg-white/[0.06]">
+              <th className="w-8 px-1 py-3" style={stickyStyle(0, true)} />
+              <th className="w-10 px-4 py-3 align-middle" style={stickyStyle(1, true)}>
+                <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
                   {allSelected ? <CheckSquare size={15} /> : someSelected ? <Minus size={15} /> : <Square size={15} />}
                 </button>
               </th>
-              {COLUMN_DEFS.map((col) =>
-                visibleCols.has(col.key) ? (
-                  col.sortable ? (
-                    <th key={col.key} className={thSortClass} onClick={() => handleSort(col.key)}>
-                      <span className="inline-flex items-center">{col.label} <SortIcon col={col.key} /></span>
-                    </th>
-                  ) : (
-                    <th key={col.key} className={thClass}>{col.label}</th>
-                  )
-                ) : null
-              )}
+              {orderedVisibleCols.map((col, idx) => {
+                const nextCol = idx < orderedVisibleCols.length - 1 ? orderedVisibleCols[idx + 1] : null;
+                const resizeHandle = (
+                  <span
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      const th = e.currentTarget.closest('th')!;
+                      const nextTh = th.nextElementSibling as HTMLElement | null;
+                      handleColResize(
+                        col.key,
+                        nextCol?.key ?? null,
+                        e.clientX,
+                        th.getBoundingClientRect().width,
+                        nextTh ? nextTh.getBoundingClientRect().width : 0,
+                      );
+                    }}
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-white/20 transition-colors z-10"
+                  />
+                );
+                const style = colWidths[col.key]
+                  ? { width: colWidths[col.key], minWidth: colWidths[col.key] }
+                  : col.maxWidth ? { maxWidth: col.maxWidth } : undefined;
+                const isDragOver = dragOverColKey === col.key;
+
+                // Drop target on the th, but only the grip icon is draggable
+                const dropProps = {
+                  onDragOver: (e: React.DragEvent) => handleColDragOver(e, col.key),
+                  onDrop: (e: React.DragEvent) => handleColDrop(e, col.key),
+                };
+
+                const gripHandle = (
+                  <span
+                    draggable
+                    onDragStart={(e) => { e.stopPropagation(); handleColDragStart(e, col.key); }}
+                    onDragEnd={handleColDragEnd}
+                    className="opacity-0 group-hover:opacity-30 cursor-grab flex-shrink-0 -ml-1"
+                  >
+                    <GripVertical size={10} />
+                  </span>
+                );
+
+                const isFrozen = idx < freezeCount;
+                const frozenStyle = isFrozen ? stickyStyle(2 + idx, true) : undefined;
+                const mergedStyle = { ...style, ...frozenStyle };
+
+                return col.sortable ? (
+                  <th
+                    key={col.key}
+                    className={`${thSortClass} ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
+                    style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
+                    onClick={() => handleSort(col.key)}
+                    {...dropProps}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {gripHandle}
+                      {col.label} <SortIcon col={col.key} />
+                    </span>
+                    {resizeHandle}
+                  </th>
+                ) : (
+                  <th
+                    key={col.key}
+                    className={`${thClass} group ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
+                    style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
+                    {...dropProps}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {gripHandle}
+                      {col.label}
+                    </span>
+                    {resizeHandle}
+                  </th>
+                );
+              })}
               <th className="w-20 px-4 py-3" />
             </tr>
           </thead>
@@ -1475,6 +1950,7 @@ export function ProjectsTable({ projects }: { projects: ProjectRow[] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

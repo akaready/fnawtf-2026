@@ -162,6 +162,171 @@ export async function saveProjectBTSImages(
   }
 }
 
+// ── SEO Settings ─────────────────────────────────────────────────────────
+
+export type SeoRow = {
+  id: string;
+  page_slug: string;
+  meta_title: string | null;
+  meta_description: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image_url: string | null;
+  canonical_url: string | null;
+  no_index: boolean;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+export async function getSeoSettings(): Promise<SeoRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('seo_settings')
+    .select('*')
+    .order('page_slug');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as SeoRow[];
+}
+
+export async function updateSeoSetting(id: string, data: Partial<Omit<SeoRow, 'id' | 'updated_at' | 'updated_by'>>) {
+  const { supabase, userId } = await requireAuth();
+  const { error } = await supabase
+    .from('seo_settings')
+    .update({ ...data, updated_by: userId, updated_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/seo');
+  // Revalidate all public pages so metadata refreshes
+  revalidatePath('/', 'layout');
+}
+
+// ── Testimonials ─────────────────────────────────────────────────────────
+
+export type TestimonialRow = {
+  id: string;
+  project_id: string | null;
+  client_id: string | null;
+  quote: string;
+  person_name: string | null;
+  person_title: string | null;
+  display_title: string | null;
+  company: string | null;
+  profile_picture_url: string | null;
+  display_order: number;
+  created_at: string;
+  project?: { title: string } | null;
+  client?: { name: string; logo_url: string | null } | null;
+};
+
+export async function getTestimonials(): Promise<TestimonialRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('testimonials')
+    .select('*, project:projects(title), client:clients(name, logo_url)')
+    .order('display_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as TestimonialRow[];
+}
+
+export async function createTestimonial(data: {
+  quote: string;
+  person_name?: string | null;
+  person_title?: string | null;
+  display_title?: string | null;
+  company?: string | null;
+  profile_picture_url?: string | null;
+  project_id?: string | null;
+  client_id?: string | null;
+  display_order?: number;
+}): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('testimonials')
+    .insert(data as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/testimonials');
+  revalidatePath('/');
+  return (row as { id: string }).id;
+}
+
+export async function updateTestimonial(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('testimonials')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/testimonials');
+  revalidatePath('/');
+}
+
+export async function deleteTestimonial(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('testimonials').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/testimonials');
+  revalidatePath('/');
+}
+
+// ── Clients ──────────────────────────────────────────────────────────────
+
+export type ClientRow = {
+  id: string;
+  name: string;
+  company: string | null;
+  email: string;
+  notes: string | null;
+  logo_url: string | null;
+  created_at: string;
+};
+
+export async function getClients(): Promise<ClientRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('clients')
+    .select('*')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ClientRow[];
+}
+
+export async function createClientRecord(data: {
+  name: string;
+  company?: string | null;
+  email: string;
+  notes?: string | null;
+  logo_url?: string | null;
+}): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('clients')
+    .insert(data as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/clients');
+  return (row as { id: string }).id;
+}
+
+export async function updateClientRecord(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('clients')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/clients');
+}
+
+export async function deleteClientRecord(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('clients').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/clients');
+}
+
 // ── Tag Suggestions ──────────────────────────────────────────────────────
 
 export async function getTagSuggestions(): Promise<{

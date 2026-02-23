@@ -17,9 +17,9 @@ function PhaseSection({ phase, projects, index }: { phase: typeof PHASES[number]
   const isActive = useInView(sectionRef, { once: false, margin: '0px 0px -70% 0px' });
 
   return (
-    <section ref={sectionRef} className="relative py-32 border-b border-white/5 px-6 lg:px-16">
+    <section ref={sectionRef} className="relative py-16 lg:py-32 border-b border-white/5 px-6 lg:px-16">
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 items-start lg:items-stretch ${isEven ? '' : 'lg:[direction:rtl]'}`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start lg:items-stretch ${isEven ? '' : 'lg:[direction:rtl]'}`}>
           {/* Content — ghost number anchors right edge to this column */}
           <div className={`relative overflow-visible ${isEven ? '' : 'lg:[direction:ltr]'}`}>
             {/* Ghost number: right-aligned to this column, overflows left */}
@@ -150,7 +150,7 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
             What We Do
           </h1>
           <p className="text-xl text-white/50 max-w-lg mx-auto leading-relaxed">
-            Every engagement is built around where you are and where you&apos;re going.
+            Engagements built for where you are and where you&apos;re going.
             Three phases. One direction: yours.
           </p>
         </div>
@@ -167,7 +167,7 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
       ))}
 
       {/* ── Additional Services ───────────────────── */}
-      <section ref={additionalRef} className="pt-20 pb-32 px-6 lg:px-16">
+      <section ref={additionalRef} className="pt-12 pb-16 lg:pt-20 lg:pb-32 px-6 lg:px-16">
         <div className="max-w-7xl mx-auto">
           <motion.p
             className="text-xs tracking-[0.4em] uppercase font-mono mb-6"
@@ -178,7 +178,7 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
           </motion.p>
 
           <motion.h2
-            className="font-display font-bold mb-16 leading-[0.9]"
+            className="font-display font-bold mb-8 lg:mb-16 leading-[0.9]"
             style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)' }}
             animate={{ color: isAdditionalActive ? '#a14dfd' : '#ffffff' }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -186,9 +186,9 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
             Flexible Engagements
           </motion.h2>
 
-          <div className="space-y-16">
+          <div className="space-y-10 lg:space-y-16">
             {/* Crowdfunding */}
-            <div ref={crowdfundingRef} className="grid grid-cols-1 lg:grid-cols-3 gap-10 border-t border-white/10 pt-10">
+            <div ref={crowdfundingRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10 border-t border-white/10 pt-6 lg:pt-10">
               {/* Col 1: Title + tagline */}
               <div>
                 <motion.h3
@@ -225,7 +225,7 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
             </div>
 
             {/* Fundraising */}
-            <div ref={fundraisingRef} className="grid grid-cols-1 lg:grid-cols-3 gap-10 border-t border-white/10 pt-10">
+            <div ref={fundraisingRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10 border-t border-white/10 pt-6 lg:pt-10">
               {/* Col 1: Title + tagline */}
               <div>
                 <motion.h3

@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 import { ChipInput } from './ChipInput';
-import { updateProject, createProject } from '../actions';
-import type { TagSuggestions } from './ProjectForm';
+import { updateProject, createProject, updateTestimonial } from '../actions';
+import type { TagSuggestions, TestimonialOption } from './ProjectForm';
 
 type ProjectRow = Record<string, unknown> & {
   id: string;
@@ -15,6 +15,7 @@ type ProjectRow = Record<string, unknown> & {
   description: string;
   client_name: string;
   client_quote: string | null;
+  client_id: string | null;
   type: 'video' | 'design';
   category: string | null;
   thumbnail_url: string | null;
@@ -41,6 +42,7 @@ type ProjectRow = Record<string, unknown> & {
 interface Props {
   project: ProjectRow | null;
   tagSuggestions?: TagSuggestions;
+  testimonials?: TestimonialOption[];
 }
 
 const inputClass =
@@ -100,11 +102,15 @@ function slugify(text: string) {
     .trim();
 }
 
-export function MetadataTab({ project, tagSuggestions }: Props) {
+export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Find the testimonial currently linked to this project
+  const initialTestimonialId = testimonials?.find((t) => t.project_id === project?.id)?.id ?? '';
+  const [linkedTestimonialId, setLinkedTestimonialId] = useState(initialTestimonialId);
 
   const [form, setForm] = useState({
     title: project?.title ?? '',
@@ -112,7 +118,6 @@ export function MetadataTab({ project, tagSuggestions }: Props) {
     slug: project?.slug ?? '',
     description: project?.description ?? '',
     client_name: project?.client_name ?? '',
-    client_quote: project?.client_quote ?? '',
     type: (project?.type ?? 'video') as 'video' | 'design',
     category: project?.category ?? '',
     thumbnail_url: project?.thumbnail_url ?? '',
@@ -151,7 +156,6 @@ export function MetadataTab({ project, tagSuggestions }: Props) {
           talent_count: form.talent_count === '' ? null : Number(form.talent_count),
           location_count: form.location_count === '' ? null : Number(form.location_count),
           category: form.category || null,
-          client_quote: form.client_quote || null,
           preview_gif_url: form.preview_gif_url || null,
           thumbnail_url: form.thumbnail_url || null,
           style_tags: form.style_tags.length ? form.style_tags : null,
@@ -162,10 +166,25 @@ export function MetadataTab({ project, tagSuggestions }: Props) {
 
         if (project) {
           await updateProject(project.id, data);
+
+          // Update testimonial link: unlink previous, link new
+          if (initialTestimonialId && initialTestimonialId !== linkedTestimonialId) {
+            await updateTestimonial(initialTestimonialId, { project_id: null });
+          }
+          if (linkedTestimonialId && linkedTestimonialId !== initialTestimonialId) {
+            await updateTestimonial(linkedTestimonialId, { project_id: project.id });
+          }
+
           setStatus('saved');
           setTimeout(() => setStatus('idle'), 2500);
         } else {
           const newId = await createProject(data);
+
+          // Link testimonial to new project
+          if (linkedTestimonialId) {
+            await updateTestimonial(linkedTestimonialId, { project_id: newId });
+          }
+
           router.push(`/admin/projects/${newId}`);
         }
       } catch (err) {
@@ -275,14 +294,49 @@ export function MetadataTab({ project, tagSuggestions }: Props) {
           />
         </Field>
         <Field>
-          <Label>Client Quote</Label>
-          <textarea
-            value={form.client_quote}
-            onChange={(e) => set('client_quote', e.target.value)}
-            placeholder="&ldquo;Quote from client…&rdquo;"
-            rows={2}
-            className={textareaClass}
-          />
+          <Label>Testimonial</Label>
+          {testimonials && testimonials.length > 0 ? (
+            <div className="space-y-2">
+              <div className="relative">
+                <select
+                  value={linkedTestimonialId}
+                  onChange={(e) => setLinkedTestimonialId(e.target.value)}
+                  className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+                >
+                  <option value="">No testimonial linked</option>
+                  {testimonials
+                    .filter((t) => {
+                      // Show testimonials already linked to this project
+                      if (t.project_id === project?.id) return true;
+                      // Hide testimonials linked to other projects
+                      if (t.project_id) return false;
+                      // Filter by client match if the project has a client_id
+                      if (project?.client_id && t.client_id) return t.client_id === project.client_id;
+                      // Show unlinked testimonials
+                      return true;
+                    })
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.person_name ? `${t.person_name}: ` : ''}&ldquo;{t.quote.slice(0, 60)}{t.quote.length > 60 ? '…' : ''}&rdquo;
+                      </option>
+                    ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+              </div>
+              {linkedTestimonialId && (
+                <p className="text-xs text-muted-foreground/50 italic">
+                  &ldquo;{testimonials.find((t) => t.id === linkedTestimonialId)?.quote.slice(0, 120)}…&rdquo;
+                </p>
+              )}
+              <p className="text-[10px] text-muted-foreground/40">
+                Manage testimonials in the <a href="/admin/testimonials" className="underline hover:text-foreground">Testimonials</a> section.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground/40">
+              No testimonials available. <a href="/admin/testimonials" className="underline hover:text-foreground">Create one</a> first.
+            </p>
+          )}
         </Field>
       </section>
 
@@ -291,29 +345,17 @@ export function MetadataTab({ project, tagSuggestions }: Props) {
         <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
           Media
         </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <Label>Thumbnail URL</Label>
-            <input
-              type="url"
-              value={form.thumbnail_url}
-              onChange={(e) => set('thumbnail_url', e.target.value)}
-              placeholder="https://…"
-              className={inputClass}
-            />
-            <p className="text-[10px] text-muted-foreground/50 mt-1">Or use the Thumbnail tab to pick a frame from video</p>
-          </Field>
-          <Field>
-            <Label>Preview GIF URL</Label>
-            <input
-              type="url"
-              value={form.preview_gif_url}
-              onChange={(e) => set('preview_gif_url', e.target.value)}
-              placeholder="https://…"
-              className={inputClass}
-            />
-          </Field>
-        </div>
+        <Field>
+          <Label>Thumbnail URL</Label>
+          <input
+            type="url"
+            value={form.thumbnail_url}
+            onChange={(e) => set('thumbnail_url', e.target.value)}
+            placeholder="https://…"
+            className={inputClass}
+          />
+          <p className="text-[10px] text-muted-foreground/50 mt-1">Or use the Thumbnail tab to pick a frame from video</p>
+        </Field>
         {form.thumbnail_url && (
           <div className="w-40 h-24 rounded-lg overflow-hidden border border-border/40">
             <img src={form.thumbnail_url} alt="Thumbnail preview" className="w-full h-full object-cover" />

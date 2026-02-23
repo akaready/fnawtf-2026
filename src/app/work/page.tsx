@@ -4,11 +4,14 @@ import { WorkPageClient } from '@/components/work/WorkPageClient';
 import { PageHero } from '@/components/layout/PageHero';
 import { FooterCTA } from '@/components/layout/FooterCTA';
 import { WorkPageSearchParams } from '@/types/filters';
+import { getPageSeo } from '@/lib/seo';
 
-export const metadata = {
-  title: 'Work - FNA.WTF',
-  description: 'Video production portfolio - Browse our featured projects',
-};
+export async function generateMetadata() {
+  return getPageSeo('/work', {
+    title: 'Work - FNA.WTF',
+    description: 'Video production portfolio - Browse our featured projects',
+  });
+}
 
 function extractUniqueTags(projects: FeaturedProject[]) {
   const styleTags = new Set<string>();

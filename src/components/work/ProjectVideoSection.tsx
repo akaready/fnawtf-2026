@@ -8,6 +8,7 @@ import type { ProjectVideo } from '@/types/project';
 
 interface ProjectVideoSectionProps {
   videos: ProjectVideo[];
+  projectThumbnailUrl?: string | null;
 }
 
 /** Convert DB ratio ('9:16') to CSS aspect-ratio value ('9/16') */
@@ -38,7 +39,7 @@ function cutdownCols(count: number, ratio: string): number {
   return 2; // 2 or 4 → 2×2
 }
 
-export function ProjectVideoSection({ videos }: ProjectVideoSectionProps) {
+export function ProjectVideoSection({ videos, projectThumbnailUrl }: ProjectVideoSectionProps) {
   const flagship = videos.find((v) => v.video_type === 'flagship');
   const cutdowns = videos.filter((v) => v.video_type === 'cutdown');
   const isEmpty = !flagship && cutdowns.length === 0;
@@ -54,14 +55,14 @@ export function ProjectVideoSection({ videos }: ProjectVideoSectionProps) {
           <EmptyPlaceholder />
         ) : (
           <>
-            {flagship && <VideoPlayer video={flagship} />}
+            {flagship && <VideoPlayer video={flagship} thumbnailOverride={projectThumbnailUrl} />}
 
             {cutdowns.length > 0 && (
               isPortraitSingle ? (
                 // Single portrait: center at a natural portrait width
                 <div className={`flex justify-center${flagship ? ' mt-4' : ''}`}>
                   <div className="w-full max-w-[280px]">
-                    <VideoPlayer video={cutdowns[0]} />
+                    <VideoPlayer video={cutdowns[0]} thumbnailOverride={projectThumbnailUrl} />
                   </div>
                 </div>
               ) : (
@@ -76,7 +77,7 @@ export function ProjectVideoSection({ videos }: ProjectVideoSectionProps) {
                           {video.title || videoTypeLabel(video.video_type)}
                         </p>
                       )}
-                      <VideoPlayer video={video} />
+                      <VideoPlayer video={video} thumbnailOverride={projectThumbnailUrl} />
                     </div>
                   ))}
                 </div>
@@ -101,8 +102,9 @@ function EmptyPlaceholder() {
   );
 }
 
-function VideoPlayer({ video }: { video: ProjectVideo }) {
+function VideoPlayer({ video, thumbnailOverride }: { video: ProjectVideo; thumbnailOverride?: string | null }) {
   const aspectRatio = toCssRatio(video.aspect_ratio ?? '16:9');
+  const placeholder = thumbnailOverride || getBunnyVideoThumbnail(video.bunny_video_id);
 
   // Pitch and password_protected videos are always gated (with or without a password set)
   const needsGate = video.video_type === 'pitch' || video.password_protected;
@@ -110,7 +112,7 @@ function VideoPlayer({ video }: { video: ProjectVideo }) {
     return (
       <VideoPasswordGate
         videoSrc={getBunnyVideoMp4Url(video.bunny_video_id)}
-        placeholderSrc={getBunnyVideoThumbnail(video.bunny_video_id)}
+        placeholderSrc={placeholder}
         password={video.viewer_password ?? ''}
         aspectRatio={aspectRatio}
       />
@@ -119,7 +121,7 @@ function VideoPlayer({ video }: { video: ProjectVideo }) {
   return (
     <ReelPlayer
       videoSrc={getBunnyVideoMp4Url(video.bunny_video_id)}
-      placeholderSrc={getBunnyVideoThumbnail(video.bunny_video_id)}
+      placeholderSrc={placeholder}
       defaultMuted={false}
       aspectRatio={aspectRatio}
     />

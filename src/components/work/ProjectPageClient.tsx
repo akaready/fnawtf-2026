@@ -15,6 +15,7 @@ interface ProjectData {
   description: string;
   client_name: string;
   client_quote?: string | null;
+  thumbnail_url?: string | null;
   assets_delivered?: string[] | null;
   style_tags?: string[] | null;
   premium_addons?: string[] | null;
@@ -26,6 +27,7 @@ interface ProjectData {
 }
 
 interface QuoteAttribution {
+  quote: string;
   person_name: string | null;
   person_title: string | null;
   display_title: string | null;
@@ -54,11 +56,11 @@ export function ProjectPageClient({
         subtitle={project.subtitle}
       />
 
-      <ProjectVideoSection videos={videos} />
+      <ProjectVideoSection videos={videos} projectThumbnailUrl={project.thumbnail_url} />
 
-      {project.client_quote && (
+      {(quoteAttribution?.quote || project.client_quote) && (
         <ProjectQuote
-          quote={project.client_quote}
+          quote={quoteAttribution?.quote ?? project.client_quote!}
           personName={quoteAttribution?.person_name ?? project.client_name}
           personTitle={quoteAttribution?.display_title ?? quoteAttribution?.person_title}
         />

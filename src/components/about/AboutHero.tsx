@@ -63,7 +63,7 @@ export function AboutHero() {
       label="About"
       title={title}
       titleRef={scope}
-      subCopy="We help brands become the brand they long to be."
+      subCopy="We help brands become the brands they oh so long to be."
     />
   );
 }

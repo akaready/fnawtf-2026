@@ -22,11 +22,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      // Proxy Bunny CDN requests through Next.js to avoid hotlink protection on localhost
-      {
-        source: '/cdn/reels/:path*',
-        destination: 'https://vz-8955c328-692.b-cdn.net/:path*',
-      },
+      // Proxy Bunny CDN requests through Next.js to bypass hotlink protection
       {
         source: '/cdn/videos/:path*',
         destination: 'https://vz-6b68e26c-531.b-cdn.net/:path*',

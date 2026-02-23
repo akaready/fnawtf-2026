@@ -78,6 +78,9 @@ export function useDirectionalFill<
 
     if (!container || !fill) return;
 
+    // Hint the browser to promote fill to its own compositing layer
+    fill.style.willChange = 'transform';
+
     const handleMouseEnter = (e: MouseEvent) => {
       if (isHoveredRef.current) return;
       isHoveredRef.current = true;

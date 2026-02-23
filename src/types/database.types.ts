@@ -101,12 +101,14 @@ export type Database = {
         Row: {
           id: string;
           project_id: string | null;
+          client_id: string | null;
           quote: string;
           person_name: string | null;
           person_title: string | null;
           display_title: string | null;
           company: string | null;
           profile_picture_url: string | null;
+          display_order: number;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['testimonials']['Row'], 'id' | 'created_at'>;
@@ -122,6 +124,23 @@ export type Database = {
         };
         Insert: Omit<Database['public']['Tables']['project_bts_images']['Row'], 'id'>;
         Update: Partial<Database['public']['Tables']['project_bts_images']['Row']>;
+      };
+      seo_settings: {
+        Row: {
+          id: string;
+          page_slug: string;
+          meta_title: string | null;
+          meta_description: string | null;
+          og_title: string | null;
+          og_description: string | null;
+          og_image_url: string | null;
+          canonical_url: string | null;
+          no_index: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: Omit<Database['public']['Tables']['seo_settings']['Row'], 'id' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['seo_settings']['Row']>;
       };
     };
     Views: {};

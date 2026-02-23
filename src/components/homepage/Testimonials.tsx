@@ -119,7 +119,7 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
             In Their Own Words
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Nice things our clients have shared with us.
+            Nice things our clients have shared.
           </p>
         </div>
 

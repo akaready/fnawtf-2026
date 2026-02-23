@@ -43,6 +43,27 @@ html::-webkit-scrollbar {
   display: none; /* Chrome/Safari */
 }
 
+/* Admin area: restore visible scrollbars */
+.admin-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.admin-scrollbar::-webkit-scrollbar {
+  display: block;
+  height: 6px;
+  width: 6px;
+}
+.admin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 body {
   @apply bg-background text-foreground;
   font-family: var(--font-body);
@@ -109,6 +130,15 @@ a:hover {
 /* Nav buttons manage their own hover color via GSAP — never go purple */
 a[data-btn-hover]:hover {
   color: inherit;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */
+@media screen and (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* Selection */

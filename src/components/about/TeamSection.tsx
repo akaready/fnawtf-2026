@@ -105,8 +105,8 @@ export function TeamSection() {
               Meet the Founders
             </h2>
             <p className="text-center text-muted-foreground max-w-xl mx-auto">
-              We&apos;re two creatives, tinkerers, builders, and makers with complementary skillsets
-              (and a vast network of talented allies we tap in when needed).
+              We&apos;re two creatives, tinkerers, dreamers, and makers with complementary skillsets
+              (and a vast network of talented allies).
             </p>
           </div>
         </Reveal>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
 
 /**
  * Props for the BackgroundVideo component
@@ -14,7 +13,7 @@ interface BackgroundVideoProps {
 }
 
 /**
- * Background video component with HLS.js support for Bunny CDN streaming.
+ * Background video component for Bunny CDN MP4 streaming.
  * Optimized for background use - autoplay, muted, loop, no controls.
  */
 export function BackgroundVideo({
@@ -27,7 +26,7 @@ export function BackgroundVideo({
   const [error, setError] = useState<string | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
 
-  // Initialize video playback - HLS.js or native
+  // Initialize video playback
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !videoSrc) return;
@@ -55,7 +54,6 @@ export function BackgroundVideo({
         currentPlayPromise = null;
       } catch (err: any) {
         currentPlayPromise = null;
-        // Silently ignore AbortError and NotAllowedError (autoplay policy)
         if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
           console.warn('Background video playback error:', err);
         }
@@ -82,58 +80,28 @@ export function BackgroundVideo({
       revealStarted = true;
     }
 
-    // Detect if URL is HLS playlist or direct video file
-    const isHLS = videoSrc.includes('.m3u8');
+    // Set the video source
+    video.src = videoSrc;
 
-    if (isHLS && Hls.isSupported()) {
-      // Use HLS.js for .m3u8 playlists
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false, // Background video doesn't need low latency
-        maxLoadingDelay: 4,
-        startLevel: 2, // Start with medium quality for background
-      });
-
-      hls.loadSource(videoSrc);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Video will play when both canplay and fna-reveal-start have fired
-      });
-
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          console.error('HLS fatal error:', {
-            type: data.type,
-            details: data.details,
-            url: videoSrc,
-          });
-          setError(data.details);
-        }
-      });
-
-      return () => {
-        active = false;
-        video.removeEventListener('canplay', handleCanPlay);
-        window.removeEventListener('fna-reveal-start', handleRevealStart);
-        const destroy = () => hls.destroy();
-        if (currentPlayPromise) {
-          currentPlayPromise.then(destroy).catch(destroy);
-        } else {
-          destroy();
-        }
-      };
-    } else if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
-      video.src = videoSrc;
-    } else {
-      // Direct video file (MP4, WebM, etc.)
-      video.src = videoSrc;
+    // Safety: if the browser already has enough data (cached video), canplay may
+    // have fired synchronously or before our listener. Check readyState as fallback.
+    // readyState >= 3 (HAVE_FUTURE_DATA) means enough data to play.
+    if (video.readyState >= 3) {
+      handleCanPlay();
     }
+
+    // Handle load errors for direct MP4 files
+    const handleError = () => {
+      if (!active) return;
+      console.warn('Background video load error:', video.error?.message, videoSrc);
+      setError(video.error?.message ?? 'Video failed to load');
+    };
+    video.addEventListener('error', handleError);
 
     return () => {
       active = false;
       video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('error', handleError);
       window.removeEventListener('fna-reveal-start', handleRevealStart);
     };
   }, [videoSrc]);

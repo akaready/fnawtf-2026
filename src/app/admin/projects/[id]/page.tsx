@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ProjectForm } from '../../_components/ProjectForm';
-import { getTagSuggestions } from '../../actions';
+import { getTagSuggestions, getTestimonials } from '../../actions';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -22,12 +22,21 @@ export default async function EditProjectPage({ params }: PageProps) {
 
   if (!project) notFound();
 
-  const [{ data: videos }, { data: credits }, { data: btsImages }, tagSuggestions] = await Promise.all([
+  const [{ data: videos }, { data: credits }, { data: btsImages }, tagSuggestions, allTestimonials] = await Promise.all([
     supabase.from('project_videos').select('*').eq('project_id', id).order('sort_order'),
     supabase.from('project_credits').select('*').eq('project_id', id).order('sort_order'),
     supabase.from('project_bts_images').select('*').eq('project_id', id).order('sort_order'),
     getTagSuggestions(),
+    getTestimonials(),
   ]);
+
+  const testimonials = allTestimonials.map((t) => ({
+    id: t.id,
+    quote: t.quote,
+    person_name: t.person_name,
+    project_id: t.project_id,
+    client_id: t.client_id ?? null,
+  }));
 
   return (
     <div className="p-8 max-w-4xl">
@@ -49,6 +58,7 @@ export default async function EditProjectPage({ params }: PageProps) {
         credits={credits ?? []}
         btsImages={btsImages ?? []}
         tagSuggestions={tagSuggestions}
+        testimonials={testimonials}
       />
     </div>
   );

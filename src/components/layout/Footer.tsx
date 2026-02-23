@@ -15,8 +15,7 @@ export function Footer() {
             <Logo width={150} height={58} className="text-white" />
             <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
               Friends 'n Allies is a boutique agency that crafts visual stories for ambitious brands.
-              We help build brands, launch products, and scale startups through video production,
-              design, and digital strategy.
+              We help build brands, launch products, and scale startups. Strategy. Design. Execution.
             </p>
           </div>
           {/* Two-col on mobile, dissolve into parent grid on desktop */}

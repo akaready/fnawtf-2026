@@ -3,7 +3,7 @@
 import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutGrid, LogOut, ChevronRight, PanelLeftClose, PanelLeftOpen, FileText, Search, MessageSquare, Building2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -25,7 +25,14 @@ export function AdminShell({ children, userEmail }: Props) {
   };
 
   const navItems = [
+    { href: '/admin/seo', label: 'SEO', icon: Search },
+    { href: '/admin/clients', label: 'Clients', icon: Building2 },
     { href: '/admin/projects', label: 'Projects', icon: LayoutGrid },
+    { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
+  ];
+
+  const bottomItems = [
+    { href: '/admin/proposals', label: 'Proposals', icon: FileText, disabled: true as const },
   ];
 
   return (
@@ -37,14 +44,13 @@ export function AdminShell({ children, userEmail }: Props) {
         } flex-shrink-0 flex flex-col border-r border-border/40 bg-[#0a0a0a] sticky top-[73px] h-[calc(100vh-73px)] self-start transition-[width] duration-200 overflow-hidden`}
       >
         {/* Header: collapse toggle */}
-        <div className={`flex items-center border-b border-border/40 ${collapsed ? 'justify-center pt-5 pb-4 px-2' : 'px-3 pt-5 pb-4 justify-between'}`}>
+        <div className={`flex items-center border-b border-border/40 ${collapsed ? 'justify-center pt-10 pb-4 px-2' : 'px-3 pt-10 pb-4 justify-between'}`}>
           {!collapsed && (
-            <Link
-              href="/admin/projects"
-              className="font-display text-sm font-bold tracking-tight text-foreground truncate pl-2"
+            <p
+              className="font-display text-base font-bold tracking-tight text-foreground truncate pl-2"
             >
-              FNA Admin
-            </Link>
+              Admin Portal
+            </p>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -78,6 +84,22 @@ export function AdminShell({ children, userEmail }: Props) {
               </Link>
             );
           })}
+
+          {/* Divider + bottom items */}
+          <div className={`my-2 border-t border-border/20 ${collapsed ? 'mx-2' : 'mx-3'}`} />
+          {bottomItems.map(({ href, label, icon: Icon }) => (
+            <span
+              key={href}
+              title={collapsed ? `${label} (Coming Soon)` : undefined}
+              className={`flex items-center rounded-lg text-sm cursor-not-allowed opacity-30 ${
+                collapsed ? 'justify-center w-10 h-10 mx-auto' : 'gap-2.5 px-3 py-2'
+              }`}
+            >
+              <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
+              {!collapsed && label}
+              {!collapsed && <span className="ml-auto text-[10px] text-muted-foreground">Soon</span>}
+            </span>
+          ))}
         </nav>
 
         {/* User / sign out */}

@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { PageTransition } from '@/components/animations/PageTransition';
 import { ParallaxProvider } from '@/components/animations/ParallaxProvider';
 import { ScrollProgressRight } from '@/components/animations/ScrollProgressRight';
+import { FnaLoader } from '@/components/animations/FnaLoader';
 
 interface Props {
   children: React.ReactNode;
@@ -31,6 +32,7 @@ export function SiteLayoutWrapper({ children, nav, navOnly, footer }: Props) {
 
   return (
     <PageTransition>
+      {pathname === '/' && <FnaLoader />}
       <ScrollProgressRight />
       {nav}
       <ParallaxProvider>

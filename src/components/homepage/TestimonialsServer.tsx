@@ -9,24 +9,28 @@ import { TestimonialsSection } from './Testimonials';
 
 type TestimonialRow = Pick<Database['public']['Tables']['testimonials']['Row'],
   'id' | 'quote' | 'person_name' | 'person_title' | 'display_title' | 'company'
-> & { projects: { clients: { logo_url: string | null } | null } | null };
+> & {
+  client: { logo_url: string | null } | null;
+  projects: { clients: { logo_url: string | null } | null } | null;
+};
 
 export async function TestimonialsServer() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('testimonials')
-    .select('id, quote, person_name, person_title, display_title, company, projects(clients(logo_url))')
-    .order('created_at', { ascending: false });
+    .select('id, quote, person_name, person_title, display_title, company, client:clients(logo_url), projects(clients(logo_url))')
+    .order('display_order', { ascending: true });
 
   const testimonials = ((data ?? []) as TestimonialRow[]).map((t) => {
-    const proj = t.projects;
+    // Prefer direct client relation logo, fall back to project->client logo
+    const logoUrl = t.client?.logo_url ?? t.projects?.clients?.logo_url ?? '';
     return {
       id: t.id,
       quote: `"${t.quote}"`,
       name: t.person_name ?? 'Anonymous',
       title: t.display_title ?? t.person_title ?? '',
       company: t.company ?? '',
-      logoUrl: proj?.clients?.logo_url ?? '',
+      logoUrl,
     };
   });
 

@@ -20,19 +20,19 @@ interface ServicesCardsProps {
 const defaultCards: ServiceCard[] = [
   {
     title: 'Build',
-    description: 'Foundation services to establish your brand identity and visual language.',
+    description: 'Establish a brand identity and visual language that sets you apart from the start.',
     href: '/services#build',
     icon: Hammer,
   },
   {
     title: 'Launch',
-    description: 'Launch services to bring your product or campaign to market with impact.',
+    description: 'Go live with confidence and bring your product to market with purpose and polish.',
     href: '/services#launch',
     icon: Rocket,
   },
   {
     title: 'Scale',
-    description: 'Growth services to expand your reach and amplify your message.',
+    description: 'Multiply your message with creative services that keeps pace with your growth.',
     href: '/services#scale',
     icon: TrendingUp,
   },
@@ -155,7 +155,7 @@ export function ServicesCards({ cards = defaultCards }: ServicesCardsProps) {
             How We Work
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Three phases. Tiered pricing. Pick one, two, or all three.
+            Three phases. Pick one, two, or all three.
           </p>
         </div>
 
