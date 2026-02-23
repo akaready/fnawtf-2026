@@ -18,7 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <head />
+      <head>
+        {/* Critical CSS for FnaLoader — must paint before external stylesheets load */}
+        <style>{`[data-fna-loader-init]{position:fixed;inset:0;z-index:9999}[data-fna-loader-init]>div:first-child{position:absolute;inset:0;background:#000}`}</style>
+      </head>
       <body className="bg-background text-foreground">
         <VideoPlayerProvider>
           <SiteLayoutWrapper

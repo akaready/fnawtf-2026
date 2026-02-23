@@ -9,25 +9,20 @@ import { FnaLoader } from '@/components/animations/FnaLoader';
 interface Props {
   children: React.ReactNode;
   nav: React.ReactNode;
-  navOnly: React.ReactNode;
+  navOnly?: React.ReactNode;
   footer: React.ReactNode;
 }
 
 /**
  * Wraps site pages with Navigation, Footer, PageTransition, and Parallax.
- * Admin routes (/admin/**) get bare Navigation only — no overlay, no animations.
+ * Admin routes (/admin/**) skip the navbar entirely — AdminShell has its own sidebar.
  */
-export function SiteLayoutWrapper({ children, nav, navOnly, footer }: Props) {
+export function SiteLayoutWrapper({ children, nav, footer }: Props) {
   const pathname = usePathname();
 
-  // Admin routes: nav bar only (no video overlay, no Cal embed side-effects)
+  // Admin routes: no navbar — AdminShell has its own sidebar with logo
   if (pathname.startsWith('/admin')) {
-    return (
-      <>
-        {navOnly}
-        {children}
-      </>
-    );
+    return <>{children}</>;
   }
 
   return (

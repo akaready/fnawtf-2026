@@ -292,16 +292,13 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
 
       // === REVEAL: dot→0, beat, portal ===
       function startReveal() {
-        // Use a proxy object instead of CSS custom properties —
-        // Safari/WebKit can't animate CSS vars inside calc() in mask-image gradients
+        // Proxy + setMask for desktop portal reveal (mask-image based)
         const proxy = { r: 0 };
         const setMask = (r: number) => {
           const g = `radial-gradient(circle ${r}px at ${cx}px ${cy}px, transparent 100%, black 100%)`;
           outer.style.maskImage = g;
           outer.style.webkitMaskImage = g;
         };
-        setMask(0);
-        outer.style.willChange = '-webkit-mask-image';
 
         // Safety timeout — if reveal animation fails silently, force completion
         const revealSafety = setTimeout(() => {
@@ -356,26 +353,47 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
         // Brief beat at zero
         revealTl.to({}, { duration: 0.08 });
 
+        const isMobile = window.innerWidth < 768;
+        const scatterDuration = isMobile ? 1 : 2;
+
         // Letters spring/scatter outward as portal expands
         revealTl.to([...purpleLeftGroup, ...whiteLeftGroup], {
-          x: -30, duration: 2, ease: 'back.out(1.4)',
+          x: -30, duration: scatterDuration, ease: 'back.out(1.4)',
         }, '>');
         revealTl.to([...purpleRightGroup, ...whiteRightGroup], {
-          x: 30, duration: 2, ease: 'back.out(1.4)',
+          x: 30, duration: scatterDuration, ease: 'back.out(1.4)',
         }, '<');
 
-        // Portal springs open — animate proxy object and set mask each frame
-        revealTl.to(proxy, {
-          r: maxRadius,
-          duration: 3,
-          ease: 'back.out(0.8)',
-          onStart: () => {
-            window.dispatchEvent(new CustomEvent('fna-reveal-start'));
-          },
-          onUpdate: () => {
-            setMask(proxy.r);
-          },
-        }, '<');
+        if (isMobile) {
+          // Mobile: GPU-accelerated scale-down reveal (transform is composited, no repaints)
+          outer.style.transformOrigin = `${cx}px ${cy}px`;
+          outer.style.borderRadius = '50%';
+          outer.style.willChange = 'transform';
+
+          revealTl.to(outer, {
+            scale: 0,
+            duration: 1.2,
+            ease: 'power3.inOut',
+            onStart: () => {
+              window.dispatchEvent(new CustomEvent('fna-reveal-start'));
+            },
+          }, '<');
+        } else {
+          // Desktop: mask-image portal — animate proxy object and set mask each frame
+          outer.style.willChange = '-webkit-mask-image';
+
+          revealTl.to(proxy, {
+            r: maxRadius,
+            duration: 3,
+            ease: 'back.out(0.8)',
+            onStart: () => {
+              window.dispatchEvent(new CustomEvent('fna-reveal-start'));
+            },
+            onUpdate: () => {
+              setMask(proxy.r);
+            },
+          }, '<');
+        }
       }
     });
 

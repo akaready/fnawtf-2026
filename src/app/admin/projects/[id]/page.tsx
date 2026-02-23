@@ -39,8 +39,8 @@ export default async function EditProjectPage({ params }: PageProps) {
   }));
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="mb-6">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-white/[0.12]">
         <p className="text-xs text-muted-foreground/50 uppercase tracking-wider mb-1">
           <Link href="/admin/projects" className="hover:text-muted-foreground transition-colors">
             Projects
@@ -51,15 +51,16 @@ export default async function EditProjectPage({ params }: PageProps) {
         <h1 className="font-display text-2xl font-bold text-foreground">{(project as Record<string, unknown>).title as string}</h1>
         <p className="text-sm text-muted-foreground mt-1">{(project as Record<string, unknown>).slug as string}</p>
       </div>
-
-      <ProjectForm
-        project={project as Parameters<typeof ProjectForm>[0]['project']}
-        videos={videos ?? []}
-        credits={credits ?? []}
-        btsImages={btsImages ?? []}
-        tagSuggestions={tagSuggestions}
-        testimonials={testimonials}
-      />
+      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8 max-w-4xl">
+        <ProjectForm
+          project={project as Parameters<typeof ProjectForm>[0]['project']}
+          videos={videos ?? []}
+          credits={credits ?? []}
+          btsImages={btsImages ?? []}
+          tagSuggestions={tagSuggestions}
+          testimonials={testimonials}
+        />
+      </div>
     </div>
   );
 }

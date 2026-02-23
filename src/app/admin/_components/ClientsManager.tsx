@@ -173,8 +173,17 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
   }, [filteredClients, projects, localTestimonials]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 justify-end">
+    <div className="flex flex-col h-full">
+      {/* Header — never scrolls */}
+      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-white/[0.12]">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {clients.length} total — Manage client records and logos.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
           <input
@@ -201,8 +210,12 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
           <Plus size={16} />
           Add Client
         </button>
+          </div>
+        </div>
       </div>
 
+      {/* Scrollable cards area */}
+      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filteredClients.map((c) => {
           const clientProjects = projects.filter((p) => p.client_id === c.id);
@@ -225,24 +238,15 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
                   : 'border border-border/40 bg-[#111]'
               }`}
             >
-              {/* Name + Notes + Logo */}
-              <div className="flex items-start gap-5">
-                <div className="flex-1 space-y-3">
-                  <input
-                    type="text"
-                    value={c.name}
-                    onChange={(e) => handleChange(c.id, 'name', e.target.value)}
-                    placeholder="Client name"
-                    className="w-full bg-transparent text-base font-medium text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
-                  />
-                  <textarea
-                    value={c.notes ?? ''}
-                    onChange={(e) => handleChange(c.id, 'notes', e.target.value || null)}
-                    placeholder="Notes…"
-                    rows={2}
-                    className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
-                  />
-                </div>
+              {/* Name + Logo row */}
+              <div className="flex items-center gap-4">
+                <input
+                  type="text"
+                  value={c.name}
+                  onChange={(e) => handleChange(c.id, 'name', e.target.value)}
+                  placeholder="Client name"
+                  className="flex-1 bg-transparent text-base font-medium text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
+                />
                 <LogoDropzone
                   logoUrl={c.logo_url}
                   uploading={uploadingId === c.id}
@@ -250,16 +254,25 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
                 />
               </div>
 
-              {/* Connected projects */}
+              {/* Notes — full width underneath */}
+              <textarea
+                value={c.notes ?? ''}
+                onChange={(e) => handleChange(c.id, 'notes', e.target.value || null)}
+                placeholder="Notes…"
+                rows={2}
+                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+              />
+
+              {/* Connected projects — full width */}
               {clientProjects.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground/40 font-medium">Projects</p>
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="space-y-1.5">
                     {clientProjects.map((p) => (
                       <Link
                         key={p.id}
                         href={`/admin/projects/${p.id}`}
-                        className="flex items-center gap-2.5 rounded-lg bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors group"
+                        className="flex items-center gap-2.5 rounded-lg bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors group w-full"
                       >
                         {p.thumbnail_url ? (
                           <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
@@ -268,7 +281,7 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
                             <Film size={14} className="text-muted-foreground/30" />
                           </div>
                         )}
-                        <span className="text-sm text-muted-foreground group-hover:text-foreground truncate max-w-[160px]">
+                        <span className="text-sm text-muted-foreground group-hover:text-foreground truncate">
                           {p.title}
                         </span>
                       </Link>
@@ -359,20 +372,19 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
                 <span className="text-xs text-muted-foreground/40">
                   {new Date(c.created_at).toLocaleDateString()}
                 </span>
-                <div className="flex items-center gap-3">
-                  {hasLinks ? (
-                    <span className="text-[11px] text-muted-foreground/30 italic" title="Unlink all projects and testimonials before deleting">
-                      Unlink to delete
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDeleteId(c.id)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => !hasLinks && setConfirmDeleteId(c.id)}
+                    disabled={hasLinks}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                      hasLinks
+                        ? 'text-muted-foreground/20 cursor-not-allowed'
+                        : 'text-red-400/60 hover:text-red-400 hover:bg-red-500/10'
+                    }`}
+                    title={hasLinks ? 'Unlink projects and testimonials to delete' : 'Delete client'}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                   <button
                     onClick={() => handleSave(c)}
                     disabled={saving}
@@ -399,6 +411,7 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
           No clients yet. Click &quot;Add Client&quot; to create one.
         </div>
       )}
+      </div>
 
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">

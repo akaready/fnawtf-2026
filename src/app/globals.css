@@ -50,18 +50,26 @@ html::-webkit-scrollbar {
 }
 .admin-scrollbar::-webkit-scrollbar {
   display: block;
-  height: 6px;
-  width: 6px;
+  height: 8px;
+  width: 12px;
 }
 .admin-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+  margin-top: 42px; /* push scrollbar track below sticky header row */
 }
 .admin-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 .admin-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.admin-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 body {

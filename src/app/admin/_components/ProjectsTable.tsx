@@ -1061,7 +1061,7 @@ function saveTableState(state: PersistedTableState) {
 
 /* ── Main table ─────────────────────────────────────────────────────────── */
 
-export function ProjectsTable({ projects, tagSuggestions, exportRef }: { projects: ProjectRow[]; tagSuggestions?: Record<string, string[]>; exportRef?: React.MutableRefObject<(() => void) | null> }) {
+export function ProjectsTable({ projects, tagSuggestions, exportRef, search: searchProp, onSearchChange }: { projects: ProjectRow[]; tagSuggestions?: Record<string, string[]>; exportRef?: React.MutableRefObject<(() => void) | null>; search?: string; onSearchChange?: (v: string) => void }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -1069,7 +1069,9 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
 
   const defaultVisibleCols = useMemo(() => new Set(COLUMN_DEFS.filter((c) => c.defaultVisible).map((c) => c.key)), []);
 
-  const [search, setSearch] = useState('');
+  const [searchInternal, setSearchInternal] = useState('');
+  const search = searchProp ?? searchInternal;
+  const setSearch = onSearchChange ?? setSearchInternal;
   const [sorts, setSorts] = useState<SortRule[]>([{ key: 'updated_at', dir: 'desc' }]);
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [groupField, setGroupField] = useState<string | null>(null);
@@ -1512,16 +1514,32 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
     document.addEventListener('mouseup', onMouseUp);
   }, []);
 
+  // Base style for all sticky header cells
+  const thStickyBase: React.CSSProperties = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 20,
+    backgroundColor: '#141414',
+    borderBottom: '1px solid #1f1f1f',
+  };
+
   const stickyStyle = (offsetIdx: number, isHeader?: boolean): React.CSSProperties | undefined => {
     if (offsetIdx < frozenOffsets.length) {
+      if (isHeader) {
+        return {
+          ...thStickyBase,
+          left: frozenOffsets[offsetIdx],
+          zIndex: 30,
+        };
+      }
       return {
         position: 'sticky',
         left: frozenOffsets[offsetIdx],
         zIndex: 20,
-        backgroundColor: isHeader ? '#191919' : '#0d0d0d',
+        backgroundColor: '#0d0d0d',
       };
     }
-    return undefined;
+    return isHeader ? thStickyBase : undefined;
   };
 
   /* ── Freeze line drag handler ──────────────────────────────────── */
@@ -1586,8 +1604,8 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
           <GripVertical size={14} />
         </div>
       </td>
-      <td className="px-4 py-3" style={stickyStyle(1)}>
-        <button onClick={() => toggleOne(project.id)} className="text-muted-foreground hover:text-foreground transition-colors">
+      <td className="px-4 py-3 align-middle" style={stickyStyle(1)}>
+        <button onClick={() => toggleOne(project.id)} className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
           {selected.has(project.id) ? <CheckSquare size={15} className="text-accent" /> : <Square size={15} />}
         </button>
       </td>
@@ -1628,29 +1646,9 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
   );
 
   return (
-    <div className="relative">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects…"
-            className="w-full pl-9 pr-3 py-1.5 bg-[#111] border border-border/60 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30 transition-colors"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-
+    <div className="flex flex-col h-full">
+      {/* Toolbar — never scrolls */}
+      <div className="flex-shrink-0 py-3 flex items-center gap-2 flex-wrap border-b border-white/[0.12]">
         {/* Toolbar buttons */}
         <div className="relative">
           <ToolbarButton
@@ -1809,21 +1807,24 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
         </div>
       )}
 
-      {/* Table */}
-      <div className="relative">
+      {/* Table — scrollable area fills remaining height */}
+      <div className="flex-1 min-h-0 relative mt-3">
         {/* Purple freeze line — positioned outside scroll wrapper so it doesn't scroll */}
         <div
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFreezeDrag(e.clientX); }}
-          className="absolute top-0 bottom-0 z-30 cursor-col-resize group/freeze"
+          className="absolute top-0 bottom-0 z-40 cursor-col-resize group/freeze"
           style={{ left: freezeLineLeft - 6, width: 13 }}
         >
           <div className="absolute top-0 bottom-0 left-[6px] w-px bg-purple-500/60 group-hover/freeze:bg-purple-400 transition-colors" />
           <div className="absolute top-[4px] left-[2px] w-[9px] h-[34px] rounded bg-purple-500 group-hover/freeze:bg-purple-400 transition-colors" />
         </div>
-        <div ref={tableRef} className={`rounded-xl overflow-x-auto admin-scrollbar border ${selected.size > 0 ? 'border-white/20' : 'border-border/40'} transition-colors`}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border/40 bg-white/[0.06]">
+<div className="relative h-full">
+        {/* 1px border to the left of the scrollbar */}
+        <div className="absolute top-0 bottom-0 right-[12px] w-px bg-[#1f1f1f] z-30 pointer-events-none" />
+        <div ref={tableRef} className={`h-full overflow-auto admin-scrollbar rounded-xl border ${selected.size > 0 ? 'border-[#333]' : 'border-[#1f1f1f]'} transition-colors`}>
+        <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
+          <thead className="bg-[#141414]">
+            <tr>
               <th className="w-8 px-1 py-3" style={stickyStyle(0, true)} />
               <th className="w-10 px-4 py-3 align-middle" style={stickyStyle(1, true)}>
                 <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
@@ -1871,8 +1872,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
                   </span>
                 );
 
-                const isFrozen = idx < freezeCount;
-                const frozenStyle = isFrozen ? stickyStyle(2 + idx, true) : undefined;
+                const frozenStyle = stickyStyle(2 + idx, true);
                 const mergedStyle = { ...style, ...frozenStyle };
 
                 return col.sortable ? (
@@ -1904,7 +1904,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
                   </th>
                 );
               })}
-              <th className="w-20 px-4 py-3" />
+              <th className="w-20 px-4 py-3" style={thStickyBase} />
             </tr>
           </thead>
           <tbody>
@@ -1950,6 +1950,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef }: { project
             )}
           </tbody>
         </table>
+        </div>
         </div>
       </div>
     </div>

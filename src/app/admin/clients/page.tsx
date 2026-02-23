@@ -16,14 +16,7 @@ export default async function ClientsPage() {
   ]);
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {clients.length} total — Manage client records and logos.
-        </p>
-      </div>
-      <ClientsManager
+    <ClientsManager
         initialClients={clients}
         projects={(projects ?? []).map((p) => {
           const r = p as Record<string, unknown>;
@@ -43,6 +36,5 @@ export default async function ClientsPage() {
           client_id: t.client_id ?? null,
         }))}
       />
-    </div>
   );
 }

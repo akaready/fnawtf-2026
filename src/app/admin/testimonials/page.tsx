@@ -18,21 +18,13 @@ export default async function TestimonialsPage() {
     .order('title');
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Testimonials</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {testimonials.length} total — Manage client quotes displayed on the site.
-        </p>
-      </div>
-      <TestimonialsManager
-        initialTestimonials={testimonials}
-        clients={clients.map((c) => ({ id: c.id, name: c.name, logo_url: c.logo_url }))}
-        projects={(projects ?? []).map((p) => {
-          const r = p as Record<string, unknown>;
-          return { id: r.id as string, title: r.title as string, client_id: (r.client_id as string) ?? null };
-        })}
-      />
-    </div>
+    <TestimonialsManager
+      initialTestimonials={testimonials}
+      clients={clients.map((c) => ({ id: c.id, name: c.name, logo_url: c.logo_url }))}
+      projects={(projects ?? []).map((p) => {
+        const r = p as Record<string, unknown>;
+        return { id: r.id as string, title: r.title as string, client_id: (r.client_id as string) ?? null };
+      })}
+    />
   );
 }

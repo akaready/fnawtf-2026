@@ -1,21 +1,23 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import React, { ReactNode, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, PanelLeftClose, PanelLeftOpen, FileText, Search, MessageSquare, Building2 } from 'lucide-react';
+import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, Building2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { NavLogo } from '@/components/layout/NavLogo';
 
 interface Props {
   children: ReactNode;
   userEmail: string;
 }
 
-export function AdminShell({ children, userEmail }: Props) {
+export function AdminShell({ children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
+  const logoRef = useRef<HTMLAnchorElement>(null);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -36,93 +38,80 @@ export function AdminShell({ children, userEmail }: Props) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-black text-foreground pt-[73px]">
+    <div className="flex h-screen bg-black text-foreground overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${
           collapsed ? 'w-14' : 'w-52'
-        } flex-shrink-0 flex flex-col border-r border-border/40 bg-[#0a0a0a] sticky top-[73px] h-[calc(100vh-73px)] self-start transition-[width] duration-200 overflow-hidden`}
+        } flex-shrink-0 flex flex-col border-r border-white/[0.12] bg-[#0a0a0a] h-full transition-[width] duration-200 overflow-hidden hover:bg-[#0e0e0e] cursor-pointer`}
+        onClick={(e) => {
+          // Don't toggle if clicking a link, button, or the logo
+          const target = e.target as HTMLElement;
+          if (target.closest('a') || target.closest('button')) return;
+          setCollapsed(!collapsed);
+        }}
       >
-        {/* Header: collapse toggle */}
-        <div className={`flex items-center border-b border-border/40 ${collapsed ? 'justify-center pt-10 pb-4 px-2' : 'px-3 pt-10 pb-4 justify-between'}`}>
-          {!collapsed && (
-            <p
-              className="font-display text-base font-bold tracking-tight text-foreground truncate pl-2"
-            >
-              Admin Portal
-            </p>
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          </button>
+        {/* Logo */}
+        <div className="flex items-center justify-center py-8 px-2">
+          <NavLogo ref={logoRef} style={{ transform: collapsed ? 'scale(0.6)' : 'scale(1.25)', transformOrigin: 'center', margin: '-4px', transition: 'transform 200ms ease' }} />
         </div>
 
-        {/* Nav */}
-        <nav className={`flex-1 py-3 space-y-0.5 ${collapsed ? 'px-2' : 'px-3'}`}>
-          {navItems.map(({ href, label, icon: Icon }) => {
+        {/* Nav — always same padding; sidebar overflow-hidden clips text when collapsed */}
+        <nav className="flex-1 py-3 space-y-1 px-2">
+          {navItems.map(({ href, label, icon: Icon }, i) => {
             const active = pathname.startsWith(href);
             return (
-              <Link
-                key={href}
-                href={href}
-                title={collapsed ? label : undefined}
-                className={`flex items-center rounded-lg text-sm transition-colors ${
-                  collapsed ? 'justify-center w-10 h-10 mx-auto' : 'gap-2.5 px-3 py-2'
-                } ${
-                  active
-                    ? 'bg-white/8 text-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                }`}
-              >
-                <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
-                {!collapsed && label}
-                {!collapsed && active && <ChevronRight size={12} className="ml-auto opacity-40" />}
-              </Link>
+              <React.Fragment key={href}>
+                {i === 1 && <div className="my-3 border-t border-white/[0.08] w-full" />}
+                <Link
+                  href={href}
+                  data-btn-hover
+                  title={collapsed ? label : undefined}
+                  className={`flex items-center gap-2.5 h-10 px-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-white/8 text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                  }`}
+                >
+                  <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
+                  <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
+                  {active && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
+                </Link>
+              </React.Fragment>
             );
           })}
 
           {/* Divider + bottom items */}
-          <div className={`my-2 border-t border-border/20 ${collapsed ? 'mx-2' : 'mx-3'}`} />
+          <div className="my-3 border-t border-white/[0.08] w-full" />
           {bottomItems.map(({ href, label, icon: Icon }) => (
             <span
               key={href}
               title={collapsed ? `${label} (Coming Soon)` : undefined}
-              className={`flex items-center rounded-lg text-sm cursor-not-allowed opacity-30 ${
-                collapsed ? 'justify-center w-10 h-10 mx-auto' : 'gap-2.5 px-3 py-2'
-              }`}
+              className="flex items-center gap-2.5 h-10 px-[7px] rounded-lg text-sm whitespace-nowrap cursor-not-allowed opacity-30"
             >
               <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
-              {!collapsed && label}
-              {!collapsed && <span className="ml-auto text-[10px] text-muted-foreground">Soon</span>}
+              <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
+              <span className={`ml-auto text-[10px] text-muted-foreground transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>Soon</span>
             </span>
           ))}
         </nav>
 
         {/* User / sign out */}
-        <div className={`border-t border-border/40 space-y-1 ${collapsed ? 'px-2 py-3' : 'px-3 py-4'}`}>
-          {!collapsed && (
-            <p className="px-3 text-[11px] text-muted-foreground/50 truncate">{userEmail}</p>
-          )}
+        <div className="border-t border-white/[0.12] space-y-1 px-2 py-3">
           <button
             onClick={handleSignOut}
             disabled={signingOut}
             title={collapsed ? 'Sign Out' : undefined}
-            className={`flex items-center rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors ${
-              collapsed ? 'justify-center w-10 h-10 mx-auto' : 'w-full gap-2.5 px-3 py-2'
-            }`}
+            className="flex items-center gap-2.5 h-10 px-[7px] rounded-lg text-sm whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors w-full"
           >
             <LogOut size={15} strokeWidth={1.75} className="flex-shrink-0" />
-            {!collapsed && (signingOut ? 'Signing out…' : 'Sign Out')}
+            <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{signingOut ? 'Signing out…' : 'Sign Out'}</span>
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 min-w-0">{children}</main>
+      {/* Main content — flex container; each page manages its own scroll */}
+      <main className="flex-1 min-w-0 h-full flex flex-col">{children}</main>
     </div>
   );
 }
