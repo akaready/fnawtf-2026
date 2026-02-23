@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { motion, useScroll, useTransform, useInView } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { ServicesTags } from '@/components/services/ServicesTags';
 import { ProjectReel, ServicesProjectGrid } from '@/components/services/ProjectReel';
 import { PHASES, CROWDFUNDING, FUNDRAISING, ServicesProjectData } from '@/components/services/ServicesData';
@@ -10,20 +10,6 @@ import { CalBookingButton } from '@/components/cal/CalBookingButton';
 
 type ServiceProj = { id: string; title: string; subtitle?: string; slug: string; thumbnail_url?: string; category?: string };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function VerticalSpine() {
-  const { scrollYProgress } = useScroll();
-  const scaleY = useTransform(scrollYProgress, [0, 1], [0, 1]);
-
-  return (
-    <div className="absolute left-8 top-0 bottom-0 w-px bg-white/5 hidden lg:block" style={{ willChange: 'transform', contain: 'strict' }}>
-      <motion.div
-        className="w-full bg-[#a14dfd] origin-top"
-        style={{ scaleY, height: '100%' }}
-      />
-    </div>
-  );
-}
 
 function PhaseSection({ phase, projects, index }: { phase: typeof PHASES[number]; projects: ServiceProj[]; index: number }) {
   const isEven = index % 2 === 0;
