@@ -1818,7 +1818,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
         {/* Purple freeze line — positioned outside scroll wrapper so it doesn't scroll */}
         <div
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFreezeDrag(e.clientX); }}
-          className="absolute top-0 bottom-0 z-20 cursor-col-resize group/freeze"
+          className="absolute top-0 bottom-0 z-[35] cursor-col-resize group/freeze"
           style={{ left: freezeLineLeft - 6, width: 13 }}
         >
           <div className="absolute top-0 bottom-0 left-[6px] w-px bg-purple-500/60 group-hover/freeze:bg-purple-400 transition-colors" />
