@@ -33,11 +33,17 @@ export function HeroSection({
   const locationsRef = useRef<HTMLParagraphElement>(null);
   const prefersReducedMotion = useReducedMotion();
   // null = not yet triggered; number = animation delay in seconds
-  const [animationDelay, setAnimationDelay] = useState<number | null>(null);
+  // null = not yet triggered; number = animate after this delay; 'skip' = show instantly
+  const [animationDelay, setAnimationDelay] = useState<number | 'skip' | null>(null);
 
   // Effect 1: trigger animation right after loader finishes.
   // Falls back to immediate start if no active loader is found.
   useEffect(() => {
+    if (sessionStorage.getItem('fna_seen')) {
+      setAnimationDelay('skip');
+      return;
+    }
+
     const loaderEl = document.querySelector('[data-fna-loader-init]') as HTMLElement | null;
     const loaderIsActive = !!loaderEl && loaderEl.style.display !== 'none';
 
@@ -60,6 +66,14 @@ export function HeroSection({
 
     // Make the h1 container visible (starts opacity-0 in JSX to prevent SSR flash)
     headlineRef.current.style.opacity = '1';
+
+    // Skip mode: show all content instantly (repeat visit, no animation needed)
+    if (animationDelay === 'skip') {
+      const wordSpans = headlineWordsRef.current.filter(Boolean) as HTMLSpanElement[];
+      gsap.set([...wordSpans, subheadlineRef.current], { opacity: 1, y: 0 });
+      gsap.set(locationsRef.current.querySelectorAll('span'), { opacity: 1, y: 0 });
+      return;
+    }
 
     if (prefersReducedMotion) {
       const wordSpans = headlineWordsRef.current.filter(Boolean) as HTMLSpanElement[];

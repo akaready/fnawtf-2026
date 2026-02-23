@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import gsap from 'gsap';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, LayoutGroup } from 'framer-motion';
 import {
   Hammer, Rocket, Megaphone, ChevronDown, LucideIcon,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'build', label: 'Build' },
   { id: 'launch', label: 'Launch' },
   { id: 'build-launch', label: 'Build + Launch' },
+  { id: 'fundraising', label: 'Fundraising' },
 ];
 
 // ── Collapsible Section ─────────────────────────────────────────────────
@@ -101,10 +102,12 @@ function IncludedRow({ addOn, quantity, onQuantityChange }: { addOn: AddOn; quan
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">{addOn.name}</span>
-        {addOn.description && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">{addOn.description}</span>
-        )}
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium text-muted-foreground">{addOn.name}</span>
+          {addOn.description && (
+            <span className="text-xs text-muted-foreground">{addOn.description}</span>
+          )}
+        </div>
       </div>
       {hasQuantity ? (
         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -181,7 +184,7 @@ function SliderRow({
             )}
           </div>
         </div>
-        <span className="text-sm font-medium text-foreground whitespace-nowrap">{addOn.name}</span>
+        <span className="text-sm font-medium text-foreground">{addOn.name}</span>
         {enabled && (
           <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
             <span className="text-xs text-muted-foreground">${slider.min.toLocaleString()}</span>
@@ -266,7 +269,7 @@ function MultiSliderRow({
             )}
           </div>
         </div>
-        <span className="text-sm font-medium text-foreground whitespace-nowrap flex-1">{addOn.name}</span>
+        <span className="text-sm font-medium text-foreground flex-1">{addOn.name}</span>
         <div className="flex items-center gap-3 flex-shrink-0">
           {enabled && (
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -465,15 +468,17 @@ function AddOnRow({
             </svg>
           )}
         </div>
-        <span className="text-sm font-medium text-foreground whitespace-nowrap">
-          {addOn.name}
-          {selected && perDayDisplay && (
-            <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium text-foreground">
+            {addOn.name}
+            {selected && perDayDisplay && (
+              <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
+            )}
+          </span>
+          {addOn.description && (
+            <span className="text-xs text-muted-foreground">{addOn.description}</span>
           )}
-        </span>
-        {addOn.description && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">{addOn.description}</span>
-        )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
@@ -543,7 +548,7 @@ function TierToggleRow({
             )}
           </div>
         </div>
-        <span className="text-sm font-medium text-foreground whitespace-nowrap">
+        <span className="text-sm font-medium text-foreground">
           {addOn.name}
           {selected && perDayDisplay && (
             <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
@@ -964,6 +969,15 @@ export function AddOnCalculator() {
   // Handle tab selection
   const handleTabChange = useCallback((tab: TabId) => {
     setActiveTab(tab);
+    // Switching away from fundraising — turn it off and clean up
+    if (tab !== 'fundraising') {
+      setFundraisingEnabled(false);
+      setSelectedAddOns((m) => {
+        const nm = new Map(m);
+        for (const addOn of fundraisingAddOns) nm.delete(addOn.id);
+        return nm;
+      });
+    }
     if (tab === 'build') {
       setExpandedSections(new Set(['build']));
     } else if (tab === 'launch') {
@@ -1011,10 +1025,10 @@ export function AddOnCalculator() {
     <section id="calculator" className="py-20 px-6 bg-background scroll-mt-24">
       <div className="max-w-7xl mx-auto">
         <Reveal distance="2em">
-          <h2 className="text-3xl md:text-4xl font-bold mb-3 text-center text-foreground">
+          <h2 className="text-3xl md:text-4xl font-bold mb-3 text-center text-white font-display">
             Create a Custom Quote
           </h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
+          <p className="text-center text-white/50 mb-12 max-w-xl mx-auto">
             Customize from our engagement offerings to build your ideal package.
           </p>
         </Reveal>
@@ -1022,57 +1036,32 @@ export function AddOnCalculator() {
         {/* Tab selector */}
         <div className="flex justify-center mb-8">
           <LayoutGroup>
-            <AnimatePresence mode="wait">
-              {fundraisingEnabled ? (
-                <motion.div
-                  key="fundraising-tabs"
-                  initial={{ opacity: 0, x: 40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 40 }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                  className="inline-flex rounded-lg border border-border bg-muted/30 p-1"
+            <div className="grid grid-cols-2 sm:inline-flex w-full sm:w-auto rounded-lg border border-border bg-muted/30 p-1">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() =>
+                    tab.id === 'fundraising'
+                      ? handleFundraisingToggle()
+                      : handleTabChange(tab.id)
+                  }
+                  className={`relative whitespace-nowrap px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    activeTab === tab.id
+                      ? 'text-white'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
                 >
-                  <button className="relative px-4 py-2 rounded-md text-sm font-medium text-white">
+                  {activeTab === tab.id && (
                     <motion.div
                       layoutId="active-tab"
                       className="absolute inset-0 bg-purple-600 rounded-md shadow-[0_0_12px_rgba(168,85,247,0.3)]"
                       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     />
-                    <span className="relative z-10">Fundraising</span>
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="standard-tabs"
-                  initial={{ opacity: 0, x: -40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -40 }}
-                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                  className="inline-flex rounded-lg border border-border bg-muted/30 p-1"
-                >
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      className={`relative px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                        activeTab === tab.id
-                          ? 'text-white'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {activeTab === tab.id && (
-                        <motion.div
-                          layoutId="active-tab"
-                          className="absolute inset-0 bg-purple-600 rounded-md shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                        />
-                      )}
-                      <span className="relative z-10">{tab.label}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  )}
+                  <span className="relative z-10">{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </LayoutGroup>
         </div>
 

@@ -11,7 +11,7 @@ export const metadata = {
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen pt-24 bg-background">
+    <div className="min-h-screen bg-background">
       <PricingHero />
       <PricingCards />
       <AddOnCalculator />

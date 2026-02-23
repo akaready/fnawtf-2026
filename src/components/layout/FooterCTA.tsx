@@ -3,7 +3,14 @@ import { CalBookingButton } from '@/components/cal/CalBookingButton';
 
 export async function FooterCTA() {
   return (
-    <section className="py-16 px-6 border-t border-border bg-muted/30">
+    <section
+      className="py-16 px-6 border-t border-border"
+      style={{
+        backgroundColor: 'var(--surface-elevated)',
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
+        backgroundSize: '32px 32px',
+      }}
+    >
       <div className="max-w-7xl mx-auto text-center space-y-6">
         <div>
           <h2 className="text-3xl md:text-4xl font-display mb-4">

@@ -171,11 +171,11 @@ export function ReelPlayer({
       <div className="max-w-6xl mx-auto px-6">
         {/* Section Title */}
         <div className="text-center mb-8">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-            Our Reel
+          <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-foreground">
+            Watch Our Reel
           </h2>
-          <p className="mt-2 text-muted-foreground">
-            A glimpse into our recent work
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            You'll sure be glad you did.
           </p>
         </div>
 

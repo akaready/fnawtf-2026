@@ -68,7 +68,7 @@ interface RevealProps {
 export function RevealGroup({
   children,
   stagger = 100,
-  distance = '2em',
+  distance = '6em',
   duration = 0.8,
   delay = 0,
   threshold = 0.2,
@@ -173,7 +173,7 @@ export function RevealItem({
  */
 export function Reveal({
   children,
-  distance = '2em',
+  distance = '6em',
   duration = 0.8,
   delay = 0,
   threshold = 0.2,

@@ -29,7 +29,9 @@ export default function RootLayout({
             <VideoDimmingOverlay />
 
             <ParallaxProvider>
-              {children}
+              <div id="page-content" className="min-h-screen">
+                {children}
+              </div>
             </ParallaxProvider>
 
             <Footer />

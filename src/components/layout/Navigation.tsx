@@ -27,8 +27,27 @@ export function Navigation({ currentPage }: NavigationProps) {
   const pathname = usePathname();
   const currentPage_ = currentPage ?? pathname;
 
-  // Animation state
-  const [hasAnimated, setHasAnimated] = useState(false);
+  // Track clicked-but-not-yet-navigated href so the destination button
+  // shows active immediately and the old one exits immediately on click
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleNavStart = (e: Event) => {
+      setPendingHref((e as CustomEvent<{ href: string }>).detail.href);
+    };
+    window.addEventListener('fna-nav-start', handleNavStart);
+    return () => window.removeEventListener('fna-nav-start', handleNavStart);
+  }, []);
+
+  // Clear pending once the pathname actually updates
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
+
+  // Animation state — skip if user has already seen the loader this session
+  const [hasAnimated, setHasAnimated] = useState(() =>
+    typeof window !== 'undefined' && !!sessionStorage.getItem('fna_seen')
+  );
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
@@ -53,8 +72,10 @@ export function Navigation({ currentPage }: NavigationProps) {
   useEffect(() => {
     const isHomePage = currentPage_ === '/';
     if (!isDesktop || hasAnimated || prefersReducedMotion || !isHomePage) {
-      // Ensure nav is visible immediately if conditions not met
-      if (navRef.current) {
+      // Only reset the transform when the nav might be hidden (first visit).
+      // Skip this on every-navigation re-runs (hasAnimated already true) to
+      // avoid conflicting with GSAP's applied transform mid-transition.
+      if (!hasAnimated && navRef.current) {
         navRef.current.style.transform = 'translateY(0)';
       }
       if (!isHomePage && !hasAnimated) {
@@ -133,7 +154,7 @@ export function Navigation({ currentPage }: NavigationProps) {
   return (
     <nav
       ref={navRef}
-      className="fixed top-0 z-40 w-full px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md"
+      className="fixed top-0 z-[10000] w-full px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md"
       style={
         isDesktop && !hasAnimated
           ? { transform: 'translateY(-100%)' }
@@ -155,9 +176,18 @@ export function Navigation({ currentPage }: NavigationProps) {
               ref={(el) => {
                 navItemsRef.current[index] = el;
               }}
+              className="flex items-center"
               style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
             >
-              <NavButton href={link.href} iconName={link.iconName}>
+              <NavButton
+                href={link.href}
+                iconName={link.iconName}
+                isActive={
+                  pendingHref !== null
+                    ? pendingHref === link.href          // pending: only destination is active
+                    : currentPage_ === link.href         // idle: current page is active
+                }
+              >
                 {link.label}
               </NavButton>
             </div>
@@ -167,7 +197,7 @@ export function Navigation({ currentPage }: NavigationProps) {
         {/* Desktop CTA */}
         <div
           ref={ctaRef}
-          className="hidden md:block"
+          className="hidden md:flex md:items-center"
           style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
         >
           <CalBookingButton

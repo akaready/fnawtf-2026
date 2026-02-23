@@ -26,7 +26,7 @@ export default function Home() {
   const reelVideoPoster = getBunnyVideoThumbnail(reelVideoId);
 
   return (
-    <main className="bg-background text-foreground">
+    <main className="bg-background text-foreground min-h-screen">
       {/* Loading Animation */}
       <FnaLoader />
 

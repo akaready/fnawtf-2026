@@ -145,7 +145,7 @@ function ProgramCheckbox({
         )}
       </div>
       <div>
-        <span className="text-sm font-semibold text-foreground block">{label}</span>
+        <span className="text-base font-semibold text-foreground block">{label}</span>
         <span className="text-xs text-muted-foreground">{description}</span>
       </div>
     </button>
@@ -236,7 +236,7 @@ function DeferredPaymentCheckbox({
         )}
       </div>
       <div>
-        <span className="text-sm font-semibold text-foreground block">
+        <span className="text-base font-semibold text-foreground block">
           Pay after the campaign
         </span>
         <span className="text-xs text-muted-foreground">
@@ -472,7 +472,7 @@ export function CalculatorSummary({
   crowdfundingTierIndex,
   onCrowdfundingTierChange,
   fundraisingEnabled,
-  onFundraisingToggle,
+  onFundraisingToggle: _onFundraisingToggle,
   totalDays,
   photoCount,
   tierSelections,
@@ -670,22 +670,14 @@ export function CalculatorSummary({
               onToggle={onCrowdfundingToggle}
             />
           )}
-          {!crowdfundingEnabled && (
-            <ProgramCheckbox
-              label="Private Equity Fundraising"
-              description="20% down, pay when you raise."
-              enabled={fundraisingEnabled}
-              onToggle={onFundraisingToggle}
-            />
-          )}
         </div>
 
-        {/* Fundraising terms (below checkbox when enabled) */}
+        {/* Fundraising terms */}
         {fundraisingEnabled && (
-          <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-border text-xs text-muted-foreground space-y-2">
-            <p className="text-sm font-semibold text-foreground">Pay up front, or after you raise.</p>
-            <p>Minimum 20% due at signing, the rest due on delivery.<br />Or, pay the rest after you raise.</p>
-            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+          <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-border space-y-2">
+            <p className="text-base font-semibold text-foreground">Pay up front, or after you raise.</p>
+            <p className="text-sm text-muted-foreground">Minimum 20% due at signing, the rest due on delivery. Or, pay the rest after you raise.</p>
+            <p className="text-xs text-muted-foreground/70 leading-relaxed">
               <span className="font-semibold">Any amount unpaid at the time of delivery pre-raise is billed at 2x post-raise to help cover our risk.</span> Travel outside Silicon Valley billed at 2x (flights, hotel, rental car, per diem). Travel fees due on final delivery regardless of fee structure. A maximum fee of 50% of the total will be due after 1 year if no funds have yet been raised.
             </p>
           </div>

@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { FeaturedProject } from '@/types/project';
 import { WorkPageClient } from '@/components/work/WorkPageClient';
-import { Reveal } from '@/components/animations/Reveal';
+import { PageHero } from '@/components/layout/PageHero';
+import { FooterCTA } from '@/components/layout/FooterCTA';
 
 export const metadata = {
   title: 'Work - FNA.WTF',
@@ -46,21 +47,14 @@ export default async function WorkPage() {
   const availableTags = extractUniqueTags(allProjects);
 
   return (
-    <div className="min-h-screen bg-background pt-24">
-      <section className="py-16 md:py-24 px-6">
-        <Reveal distance="2em">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-4 text-foreground">
-              Featured Work
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground">
-              Explore our portfolio of creative projects and innovative storytelling.
-            </p>
-          </div>
-        </Reveal>
-      </section>
-
+    <div className="min-h-screen bg-background">
+      <PageHero
+        label="Work"
+        title="Recent Projects"
+        subCopy="You're in good company. Explore and enjoy our portfolio."
+      />
       <WorkPageClient initialProjects={allProjects} availableTags={availableTags} />
+      <FooterCTA />
     </div>
   );
 }

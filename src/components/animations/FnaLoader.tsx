@@ -132,6 +132,11 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
       whiteRightGroup.push(span);
     });
 
+    if (sessionStorage.getItem('fna_seen')) {
+      setIsComplete(true);
+      return;
+    }
+
     if (prefersReducedMotion) {
       setIsComplete(true);
       onComplete?.();
@@ -293,6 +298,7 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
           onComplete: () => {
             outer.style.willChange = 'auto';
             outer.style.pointerEvents = 'none';
+            sessionStorage.setItem('fna_seen', '1');
             setIsComplete(true);
             window.dispatchEvent(new CustomEvent('fna-loader-complete'));
             onComplete?.();

@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ProjectFilters, SortOption } from '@/types/filters';
 import { ChevronDown, X, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+
+const dropdownAnim = {
+  initial: { opacity: 0, y: -6, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const } },
+  exit:    { opacity: 0, y: -6, scale: 0.98, transition: { duration: 0.12, ease: 'easeIn' } },
+};
 
 interface WorkFiltersProps {
   filters: ProjectFilters;
@@ -83,30 +90,35 @@ function FilterDropdown({
         />
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-[#070707] border border-border rounded-xl shadow-2xl z-50 p-3 w-[340px]">
-          <div className="flex flex-wrap gap-2 items-start">
-            {options.map((option) => {
-              const isActive = selected.includes(option);
-              return (
-                <button
-                  key={option}
-                  onClick={() => onToggle(option)}
-                  className={`
-                    px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-150
-                    ${isActive
-                      ? 'bg-accent text-accent-foreground shadow-md'
-                      : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
-                    }
-                  `}
-                >
-                  {option}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            {...dropdownAnim}
+            className="absolute top-full left-0 mt-2 bg-[#070707] border border-border rounded-xl shadow-2xl z-50 p-3 w-[340px]"
+          >
+            <div className="flex flex-wrap gap-2 items-start">
+              {options.map((option) => {
+                const isActive = selected.includes(option);
+                return (
+                  <button
+                    key={option}
+                    onClick={() => onToggle(option)}
+                    className={`
+                      px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-150
+                      ${isActive
+                        ? 'bg-accent text-accent-foreground shadow-md'
+                        : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                      }
+                    `}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -152,28 +164,33 @@ function SortDropdown({ sortOption, openId, onOpen, onSortChange }: SortDropdown
         />
       </button>
 
-      {isOpen && (
-        <div className="absolute top-full right-0 mt-2 bg-[#070707] border border-border rounded-xl shadow-2xl z-50 py-1 min-w-[180px]">
-          {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => {
-                onSortChange(key);
-                onOpen(null);
-              }}
-              className={`
-                w-full text-left px-4 py-2.5 text-sm transition-colors duration-150
-                ${sortOption === key
-                  ? 'text-accent font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
-                }
-              `}
-            >
-              {SORT_LABELS[key]}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            {...dropdownAnim}
+            className="absolute top-full right-0 mt-2 bg-[#070707] border border-border rounded-xl shadow-2xl z-50 py-1 min-w-[180px]"
+          >
+            {(Object.keys(SORT_LABELS) as SortOption[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  onSortChange(key);
+                  onOpen(null);
+                }}
+                className={`
+                  w-full text-left px-4 py-2.5 text-sm transition-colors duration-150
+                  ${sortOption === key
+                    ? 'text-accent font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                  }
+                `}
+              >
+                {SORT_LABELS[key]}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -219,10 +236,10 @@ export function WorkFilters({
     filters.categories.length;
 
   return (
-    <div className="bg-muted/30 border-y border-border sticky top-0 z-40 backdrop-blur-lg">
+    <div className="bg-muted/30 border-b border-border sticky top-0 z-[30] backdrop-blur-lg">
       <div className="max-w-7xl mx-auto px-6">
         <div className="py-4 flex items-center gap-3 flex-wrap">
-          {/* Filter icon anchor */}
+          {/* Filter icon */}
           <SlidersHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
 
           {/* Filter dropdowns */}
