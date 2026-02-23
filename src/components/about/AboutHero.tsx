@@ -5,7 +5,6 @@ import { useAnimate, stagger } from 'framer-motion';
 import { PageHero } from '@/components/layout/PageHero';
 
 const WORDS = ['Positioning.', 'Perspective.', 'Personality.'];
-const EASE = [0.22, 1, 0.36, 1] as const;
 const COLOR_ACCENT = '#a14dfd';
 const COLOR_WHITE = '#ffffff';
 

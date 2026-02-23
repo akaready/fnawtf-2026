@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import gsap from 'gsap';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, LayoutGroup } from 'framer-motion';
 import {
   Hammer, Rocket, Megaphone, ChevronDown, LucideIcon,
 } from 'lucide-react';

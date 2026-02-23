@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useAnimate, stagger } from 'framer-motion';
 import { PageHero } from '@/components/layout/PageHero';
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 const COLOR_ACCENT = '#a14dfd';
 const COLOR_WHITE = '#ffffff';
 
@@ -19,20 +19,24 @@ export function PricingHero() {
     const run = async () => {
       let first = true;
       while (!cancelled) {
-        await animate(
-          '[data-letter]',
-          { color: COLOR_ACCENT },
-          { delay: stagger(0.07, { startDelay: first ? 0.45 : 0 }), duration: 0.5, ease: EASE }
-        );
-        if (cancelled) break;
-        await animate(
-          '[data-letter]',
-          { color: COLOR_WHITE },
-          { delay: stagger(0.07), duration: 0.5, ease: EASE }
-        );
-        if (cancelled) break;
-        await pause(3000);
-        first = false;
+        try {
+          await animate(
+            '[data-letter]',
+            { color: COLOR_ACCENT },
+            { delay: stagger(0.07, { startDelay: first ? 0.45 : 0 }), duration: 0.5, ease: EASE }
+          );
+          if (cancelled) break;
+          await animate(
+            '[data-letter]',
+            { color: COLOR_WHITE },
+            { delay: stagger(0.07), duration: 0.5, ease: EASE }
+          );
+          if (cancelled) break;
+          await pause(3000);
+          first = false;
+        } catch {
+          break;
+        }
       }
     };
 

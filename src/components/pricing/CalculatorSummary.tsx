@@ -472,7 +472,7 @@ export function CalculatorSummary({
   crowdfundingTierIndex,
   onCrowdfundingTierChange,
   fundraisingEnabled,
-  onFundraisingToggle,
+  onFundraisingToggle: _onFundraisingToggle,
   totalDays,
   photoCount,
   tierSelections,
