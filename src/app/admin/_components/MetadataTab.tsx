@@ -287,10 +287,17 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
           <Label>Description</Label>
           <textarea
             value={form.description}
-            onChange={(e) => set('description', e.target.value)}
+            onChange={(e) => {
+              set('description', e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            ref={(el) => {
+              if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+            }}
             placeholder="Project description…"
-            rows={4}
-            className={textareaClass}
+            rows={3}
+            className={`${textareaClass} overflow-hidden`}
           />
         </Field>
         <Field>

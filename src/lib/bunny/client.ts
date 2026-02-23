@@ -1,25 +1,24 @@
 /**
  * Bunny CDN video URL generator
- *
- * All client-facing URLs use the /cdn/videos/ proxy path defined in next.config.ts
- * to bypass Bunny hotlink protection in both dev and production.
- * The proxy rewrites to the actual CDN hostname at the edge.
+ * Direct CDN URLs for production video playback.
  */
 
+const CDN_HOSTNAME = 'vz-6b68e26c-531.b-cdn.net';
+
 export function getBunnyVideoUrl(videoId: string): string {
-  return `/cdn/videos/${videoId}/playlist.m3u8`;
+  return `https://${CDN_HOSTNAME}/${videoId}/playlist.m3u8`;
 }
 
 export function getBunnyVideoThumbnail(videoId: string): string {
-  return `/cdn/videos/${videoId}/thumbnail.jpg`;
+  return `https://${CDN_HOSTNAME}/${videoId}/thumbnail.jpg`;
 }
 
 export function getBunnyVideoPreview(videoId: string): string {
-  return `/cdn/videos/${videoId}/preview.webp`;
+  return `https://${CDN_HOSTNAME}/${videoId}/preview.webp`;
 }
 
 export function getBunnyVideoMp4Url(videoId: string, quality: '720p' | '1080p' | '360p' = '720p'): string {
-  return `/cdn/videos/${videoId}/play_${quality}.mp4`;
+  return `https://${CDN_HOSTNAME}/${videoId}/play_${quality}.mp4`;
 }
 
 /**

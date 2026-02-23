@@ -17,7 +17,7 @@ export default async function NewProjectPage() {
         </p>
         <h1 className="font-display text-2xl font-bold text-foreground">New Project</h1>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8 max-w-4xl">
+      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         <ProjectForm project={null} videos={[]} credits={[]} btsImages={[]} tagSuggestions={tagSuggestions} />
       </div>
     </div>

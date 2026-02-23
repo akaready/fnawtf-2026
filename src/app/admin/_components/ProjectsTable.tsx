@@ -462,12 +462,16 @@ function renderCell(col: ColDef, project: ProjectRow, tagSuggestions?: Record<st
 
   switch (col.type) {
     case 'thumbnail':
-      return project.thumbnail_url ? (
-        <div className="w-9 h-6 rounded overflow-hidden bg-white/5 flex-shrink-0">
-          <img src={project.thumbnail_url} alt="" className="w-full h-full object-cover" />
-        </div>
-      ) : (
-        <div className="w-9 h-6 rounded bg-white/5 flex-shrink-0" />
+      return (
+        <Link href={`/admin/projects/${project.id}`} className="block">
+          {project.thumbnail_url ? (
+            <div className="w-9 h-6 rounded overflow-hidden bg-white/5 flex-shrink-0 hover:ring-1 hover:ring-white/30 transition-shadow">
+              <img src={project.thumbnail_url} alt="" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-9 h-6 rounded bg-white/5 flex-shrink-0 hover:ring-1 hover:ring-white/30 transition-shadow" />
+          )}
+        </Link>
       );
 
     case 'text':
@@ -1530,6 +1534,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           ...thStickyBase,
           left: frozenOffsets[offsetIdx],
           zIndex: 30,
+          willChange: 'transform',
         };
       }
       return {
@@ -1537,6 +1542,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
         left: frozenOffsets[offsetIdx],
         zIndex: 20,
         backgroundColor: '#0d0d0d',
+        willChange: 'transform',
       };
     }
     return isHeader ? thStickyBase : undefined;
@@ -1812,7 +1818,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
         {/* Purple freeze line — positioned outside scroll wrapper so it doesn't scroll */}
         <div
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFreezeDrag(e.clientX); }}
-          className="absolute top-0 bottom-0 z-40 cursor-col-resize group/freeze"
+          className="absolute top-0 bottom-0 z-20 cursor-col-resize group/freeze"
           style={{ left: freezeLineLeft - 6, width: 13 }}
         >
           <div className="absolute top-0 bottom-0 left-[6px] w-px bg-purple-500/60 group-hover/freeze:bg-purple-400 transition-colors" />

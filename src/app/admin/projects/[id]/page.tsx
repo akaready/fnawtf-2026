@@ -51,7 +51,7 @@ export default async function EditProjectPage({ params }: PageProps) {
         <h1 className="font-display text-2xl font-bold text-foreground">{(project as Record<string, unknown>).title as string}</h1>
         <p className="text-sm text-muted-foreground mt-1">{(project as Record<string, unknown>).slug as string}</p>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8 max-w-4xl">
+      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         <ProjectForm
           project={project as Parameters<typeof ProjectForm>[0]['project']}
           videos={videos ?? []}
