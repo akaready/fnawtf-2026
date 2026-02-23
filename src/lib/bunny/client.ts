@@ -7,7 +7,7 @@ export function getBunnyVideoUrl(videoId: string): string {
   const cdnHostname =
     process.env.NEXT_PUBLIC_BUNNY_CDN_HOSTNAME ||
     process.env.BUNNY_CDN_HOSTNAME ||
-    'vz-8955c328-692.b-cdn.net';
+    'vz-6b68e26c-531.b-cdn.net';
   return `https://${cdnHostname}/${videoId}/playlist.m3u8`;
 }
 
@@ -19,7 +19,7 @@ export function getBunnyVideoThumbnail(videoId: string): string {
   const cdnHostname =
     process.env.NEXT_PUBLIC_BUNNY_CDN_HOSTNAME ||
     process.env.BUNNY_CDN_HOSTNAME ||
-    'vz-8955c328-692.b-cdn.net';
+    'vz-6b68e26c-531.b-cdn.net';
   return `https://${cdnHostname}/${videoId}/thumbnail.jpg`;
 }
 
@@ -31,7 +31,7 @@ export function getBunnyVideoPreview(videoId: string): string {
   const cdnHostname =
     process.env.NEXT_PUBLIC_BUNNY_CDN_HOSTNAME ||
     process.env.BUNNY_CDN_HOSTNAME ||
-    'vz-8955c328-692.b-cdn.net';
+    'vz-6b68e26c-531.b-cdn.net';
   return `https://${cdnHostname}/${videoId}/preview.webp`;
 }
 
@@ -43,7 +43,7 @@ export function getBunnyVideoMp4Url(videoId: string, quality: '720p' | '1080p' |
   const cdnHostname =
     process.env.NEXT_PUBLIC_BUNNY_CDN_HOSTNAME ||
     process.env.BUNNY_CDN_HOSTNAME ||
-    'vz-8955c328-692.b-cdn.net';
+    'vz-6b68e26c-531.b-cdn.net';
   return `https://${cdnHostname}/${videoId}/play_${quality}.mp4`;
 }
 

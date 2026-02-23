@@ -12,18 +12,16 @@ export const metadata = {
   description: 'Friends n Allies is a boutique creative agency crafting visual stories for ambitious brands.',
 };
 
-// Hero background still uses Reels library (600543) — HLS with hotlink protection
-const REELS_CDN = 'vz-8955c328-692.b-cdn.net';
 // Main project videos library (604035) — no hotlink protection
 const VIDEOS_CDN = 'vz-6b68e26c-531.b-cdn.net';
 
 export default function Home() {
-  // Hero background video (HLS) — Reels library
+  // Hero background video (HLS) — proxied through /cdn/reels/ to bypass Bunny hotlink protection
   const heroVideoId = '0540ef55-62e5-466f-b1f6-acef297a614d';
-  const heroVideoSrc = `https://${REELS_CDN}/${heroVideoId}/playlist.m3u8`;
-  const heroVideoPoster = `https://${REELS_CDN}/${heroVideoId}/thumbnail.jpg`;
+  const heroVideoSrc = `/cdn/reels/${heroVideoId}/playlist.m3u8`;
+  const heroVideoPoster = `/cdn/reels/${heroVideoId}/thumbnail.jpg`;
 
-  // Reel player video (MP4) — copied to main library for reliable thumbnails
+  // Reel player video (MP4) — VIDEOS CDN has no hotlink protection, direct URL is fine
   const reelVideoId = '8a666997-7b51-4e37-a019-8dedd010e6ef';
   const reelVideoSrc = `https://${VIDEOS_CDN}/${reelVideoId}/play_1080p.mp4`;
   const reelVideoPoster = `https://${VIDEOS_CDN}/${reelVideoId}/thumbnail.jpg`;
