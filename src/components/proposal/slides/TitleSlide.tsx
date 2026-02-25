@@ -52,14 +52,14 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
       gsap.set(eyebrow, { opacity: 0, y: 20 });
       gsap.set(words, { y: '115%' });
       if (subtitle) gsap.set(subtitle, { opacity: 0, y: 24 });
-      if (button) gsap.set(button, { opacity: 0, y: 24, scale: 0.95 });
+      if (button) gsap.set(button, { opacity: 0, y: 32 });
       if (instructions) gsap.set(instructions, { opacity: 0, y: 12 });
 
       const tl = gsap.timeline({ delay: 0.3 });
       tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' })
         .to(words, { y: '0%', duration: 1.3, ease: 'expo.out', stagger: 0.07 }, '-=0.3')
         .to(subtitle, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5')
-        .to(button, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'back.out' }, '-=0.3')
+        .to(button, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3')
         .to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.4');
     }, innerRef);
 
