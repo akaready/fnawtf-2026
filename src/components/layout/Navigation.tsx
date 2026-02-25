@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import gsap from 'gsap';
 import { NavLogo } from './NavLogo';
@@ -53,9 +53,14 @@ export function Navigation({ currentPage }: NavigationProps) {
   const prefersReducedMotion = useReducedMotion();
 
   // Proposal exit: nav should start hidden and animate in on reveal event
-  const [proposalExiting, setProposalExiting] = useState(() =>
-    typeof window !== 'undefined' && !!sessionStorage.getItem('fna_proposal_exit')
-  );
+  const [proposalExiting, setProposalExiting] = useState(false);
+
+  // Check sessionStorage synchronously before paint to avoid nav flash
+  useLayoutEffect(() => {
+    if (sessionStorage.getItem('fna_proposal_exit')) {
+      setProposalExiting(true);
+    }
+  }, []);
 
   // DOM refs for animation targets
   const navRef = useRef<HTMLElement>(null);
