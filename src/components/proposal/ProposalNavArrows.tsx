@@ -20,9 +20,29 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
   const animatedRef = useRef(false);
 
   useEffect(() => {
-    const els = [leftRef.current, rightRef.current].filter(Boolean) as HTMLElement[];
-    gsap.set(els, { opacity: 0, scale: 0.8 });
-    gsap.to(els, { opacity: 1, scale: 1, duration: 0.9, ease: 'back.out', delay: 1.5, stagger: 0.1 });
+    // Slide in left button from left side
+    if (leftRef.current) {
+      gsap.set(leftRef.current, { opacity: 0, x: -150 });
+      gsap.to(leftRef.current, {
+        opacity: 1,
+        x: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+        delay: 1.5,
+      });
+    }
+
+    // Slide in right button from right side with stagger
+    if (rightRef.current) {
+      gsap.set(rightRef.current, { opacity: 0, x: 150 });
+      gsap.to(rightRef.current, {
+        opacity: 1,
+        x: 0,
+        duration: 0.8,
+        ease: 'power3.out',
+        delay: 1.7,
+      });
+    }
 
     if (isFirst && !animatedRef.current && rightRef.current && chevronRef.current) {
       animatedRef.current = true;
