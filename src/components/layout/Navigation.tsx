@@ -55,12 +55,12 @@ export function Navigation({ currentPage }: NavigationProps) {
   // Proposal exit: nav should start hidden and animate in on reveal event
   const [proposalExiting, setProposalExiting] = useState(false);
 
-  // Check sessionStorage synchronously before paint to avoid nav flash
+  // Check sessionStorage synchronously before paint on every route change
   useLayoutEffect(() => {
     if (sessionStorage.getItem('fna_proposal_exit')) {
       setProposalExiting(true);
     }
-  }, []);
+  }, [pathname]);
 
   // DOM refs for animation targets
   const navRef = useRef<HTMLElement>(null);
@@ -191,7 +191,7 @@ export function Navigation({ currentPage }: NavigationProps) {
       ref={navRef}
       className="fixed top-0 z-[10000] w-full px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md"
       style={
-        pathname.startsWith('/p/') || proposalExiting
+        proposalExiting
           ? { transform: 'translateY(-100%)' }
           : isDesktop && !hasAnimated
             ? { transform: 'translateY(-100%)' }
