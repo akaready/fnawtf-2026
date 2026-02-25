@@ -1,5 +1,13 @@
 import type { Metadata } from 'next';
+import { Permanent_Marker } from 'next/font/google';
 import './globals.css';
+
+const permanentMarker = Permanent_Marker({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-permanent-marker',
+  display: 'swap',
+});
 import { Navigation } from '@/components/layout/Navigation';
 import { Footer } from '@/components/layout/Footer';
 import { VideoDimmingOverlay } from '@/components/layout/VideoDimmingOverlay';
@@ -17,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className={`dark ${permanentMarker.variable}`} suppressHydrationWarning>
       <head>
         {/* Critical CSS for FnaLoader — must paint before external stylesheets load */}
         <style>{`[data-fna-loader-init]{position:fixed;inset:0;z-index:9999}[data-fna-loader-init]>div:first-child{position:absolute;inset:0;background:#000}`}</style>

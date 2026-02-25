@@ -3,6 +3,8 @@
 import { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
+import { Mail } from 'lucide-react';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import type { ProposalRow } from '@/types/proposal';
 
 interface Props {
@@ -35,7 +37,23 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
+  const emailBtnRef = useRef<HTMLAnchorElement>(null);
+  const emailFillRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isEmailHovered, setIsEmailHovered] = useState(false);
+
+  useDirectionalFill(emailBtnRef, emailFillRef, {
+    onFillStart: () => {
+      setIsEmailHovered(true);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    },
+    onFillEnd: () => {
+      setIsEmailHovered(false);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    },
+  });
 
   const titleWords = proposal.title.split(' ');
 
@@ -50,12 +68,14 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
       const words = el.querySelectorAll('[data-word]');
       const subtitle = el.querySelector('[data-subtitle]') as HTMLElement | null;
       const button = el.querySelector('[data-button]') as HTMLElement | null;
+      const email = el.querySelector('[data-email]') as HTMLElement | null;
       const instructions = el.querySelector('[data-instructions]') as HTMLElement | null;
 
       gsap.set(eyebrow, { opacity: 0, y: 20 });
       gsap.set(words, { y: '115%' });
       if (subtitle) gsap.set(subtitle, { opacity: 0, y: 24 });
       if (button) gsap.set(button, { opacity: 0, y: 32 });
+      if (email) gsap.set(email, { opacity: 0, y: 20 });
       if (instructions) gsap.set(instructions, { opacity: 0, y: 12 });
 
       const tl = gsap.timeline({ delay: 0.3 });
@@ -69,7 +89,8 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         .to(words, { y: '0%', duration: 1.3, ease: 'expo.out', stagger: 0.07 }, '-=0.3')
         .to(subtitle, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5')
         .to(button, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3')
-        .to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.4');
+        .to(email, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, '-=0.3')
+        .to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3');
     }, section);
 
     return () => ctx.revert();
@@ -213,6 +234,32 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
               </motion.span>
             </span>
           </motion.button>
+        </div>
+
+        {/* Email Button */}
+        <div data-email className="w-full max-w-[12rem] mb-8" style={{ opacity: 0 }}>
+          <a
+            ref={emailBtnRef}
+            href="mailto:hi@fna.wtf"
+            className="relative w-full px-6 py-3 font-medium text-white bg-black border border-white rounded-lg overflow-hidden flex items-center justify-center"
+          >
+            <div
+              ref={emailFillRef}
+              className="absolute inset-0 bg-white pointer-events-none"
+              style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+            />
+            <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
+              <motion.span
+                variants={iconVariants}
+                initial="hidden"
+                animate={isEmailHovered ? "visible" : "hidden"}
+                className="flex items-center"
+              >
+                <Mail size={16} strokeWidth={1.5} />
+              </motion.span>
+              hi@fna.wtf
+            </span>
+          </a>
         </div>
 
         {/* Instructions */}

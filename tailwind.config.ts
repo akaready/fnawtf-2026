@@ -45,6 +45,7 @@ const config: Config = {
         display: ['var(--font-space-grotesk)', 'sans-serif'],
         body: ['var(--font-manrope)', 'sans-serif'],
         mono: ['var(--font-space-mono)', 'monospace'],
+        marker: ['var(--font-permanent-marker)', 'cursive'],
       },
       typography: {
         DEFAULT: {

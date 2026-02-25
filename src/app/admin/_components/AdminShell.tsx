@@ -35,8 +35,8 @@ export function AdminShell({ children }: Props) {
 
   const bottomItems = [
     { href: '/admin/contacts', label: 'Contacts', icon: Users },
-    { href: '/admin/content', label: 'Content', icon: BookOpen },
-    { href: '/admin/proposals', label: 'Proposals', icon: FileText },
+    { href: '/admin/content', label: 'Content', icon: BookOpen, hidden: true },
+    { href: '/admin/proposals', label: 'Proposals', icon: FileText, hidden: true },
   ];
 
   return (
@@ -85,7 +85,7 @@ export function AdminShell({ children }: Props) {
 
           {/* Divider + bottom items */}
           <div className="my-3 border-t border-white/[0.08] w-full" />
-          {bottomItems.map(({ href, label, icon: Icon }) => {
+          {bottomItems.filter(item => !item.hidden).map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
               <Link

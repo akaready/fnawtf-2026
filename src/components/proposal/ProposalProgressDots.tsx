@@ -2,7 +2,18 @@
 
 import { useEffect, useState, useRef } from 'react';
 import gsap from 'gsap';
-import { LogOut } from 'lucide-react';
+import {
+  LogOut,
+  Home,
+  Hand,
+  ClipboardList,
+  GitBranch,
+  Calendar,
+  Play,
+  DollarSign,
+  Phone,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface Props {
   slideCount: number;
@@ -19,7 +30,9 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const dotRefs = useRef<(HTMLDivElement | null)[]>([]);
   const exitRef = useRef<HTMLDivElement | null>(null);
-  const hasBounced = useRef(false);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const separatorRef = useRef<HTMLDivElement | null>(null);
+  const hasRevealed = useRef(false);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -47,38 +60,36 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
     });
   };
 
-  // Bounce dot 2 on first load (3s on, 3s off pattern)
+  // Staggered reveal from below on mount
   useEffect(() => {
-    if (activeIndex !== 0 || hasBounced.current) return;
-    const timer = setTimeout(() => {
-      const target = dotRefs.current[1];
-      if (!target) return;
-      hasBounced.current = true;
+    if (hasRevealed.current) return;
+    hasRevealed.current = true;
 
-      const tl = gsap.timeline({ repeat: -1 });
-      // Bounce for ~3 seconds (4 cycles × 0.8s per cycle)
-      tl.to(target, {
-        y: -8,
-        duration: 0.4,
-        ease: 'power2.out',
-        yoyo: true,
-        repeat: 3,
-      }, 0);
-      // Pause for 3 seconds
-      tl.to(target, {}, '+=3');
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [activeIndex]);
+    const bar = barRef.current;
+    const items = [
+      ...dotRefs.current.filter(Boolean),
+      separatorRef.current,
+      exitRef.current,
+    ].filter(Boolean);
 
-  // Stop bouncing when leaving slide 0
-  useEffect(() => {
-    if (activeIndex === 0) return;
-    const target = dotRefs.current[1];
-    if (target) {
-      gsap.killTweensOf(target);
-      gsap.set(target, { y: 0 });
+    // Hide everything initially
+    if (bar) gsap.set(bar, { y: 40, opacity: 0 });
+    gsap.set(items, { y: 12, opacity: 0 });
+
+    const tl = gsap.timeline({ delay: 3.5 });
+    // Bar slides up first
+    if (bar) {
+      tl.to(bar, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
     }
-  }, [activeIndex]);
+    // Then icons stagger in
+    tl.to(items, {
+      y: 0,
+      opacity: 1,
+      duration: 0.35,
+      ease: 'power3.out',
+      stagger: 0.06,
+    }, '-=0.15');
+  }, [slideCount]);
 
   // Compute tooltip position — always use first dot's top as the Y anchor so all tooltips align
   useEffect(() => {
@@ -96,6 +107,24 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
       setTooltipPos(null);
     }
   }, [hoveredIndex, exitHovered]);
+
+  // Map slide names to Lucide icons — projects keep dots
+  const SLIDE_ICON_MAP: Record<string, LucideIcon> = {
+    Title: Home,
+    Welcome: Hand,
+    Process: ClipboardList,
+    Approach: GitBranch,
+    Timeline: Calendar,
+    Samples: Play,
+    Investment: DollarSign,
+    'Next Steps': Phone,
+  };
+
+  const getIcon = (i: number): LucideIcon | null => {
+    const name = slideNames[i];
+    if (!name) return null;
+    return SLIDE_ICON_MAP[name] ?? null; // null = project slide → render dot
+  };
 
   if (slideCount <= 1) return null;
 
@@ -123,38 +152,81 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
       )}
 
       {/* Dots bar */}
-      <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[200] hidden lg:flex flex-row items-center">
+      <div ref={barRef} className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[200] hidden sm:flex flex-row items-center">
         <div className="flex flex-row items-center gap-3 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 backdrop-blur-lg">
-          {Array.from({ length: slideCount }).map((_, i) => (
-            <div
-              key={i}
-              ref={(el) => { dotRefs.current[i] = el; }}
-              className="relative flex items-center justify-center w-[30px]"
-              onMouseEnter={() => {
-                setHoveredIndex(i);
-                if (i === 1) {
-                  gsap.killTweensOf(dotRefs.current[1]);
-                  gsap.set(dotRefs.current[1], { y: 0 });
-                }
-              }}
-              onMouseLeave={() => setHoveredIndex(null)}
-            >
-              <button
-                onClick={() => scrollTo(i)}
-                aria-label={`Go to slide ${i + 1}`}
-                className="flex items-center justify-center py-1"
+          {Array.from({ length: slideCount }).map((_, i) => {
+            const Icon = getIcon(i);
+            const isActive = i === activeIndex;
+            const isHovered = hoveredIndex === i;
+
+            const dockScale = isHovered ? 1.2 : 1;
+
+            return (
+              <div
+                key={i}
+                ref={(el) => { dotRefs.current[i] = el; }}
+                className="relative flex items-center justify-center w-[30px]"
+                onMouseEnter={() => setHoveredIndex(i)}
+                onMouseLeave={() => setHoveredIndex(null)}
               >
-                <span
-                  className="block rounded-full transition-all duration-200"
-                  style={{
-                    width: i === activeIndex ? 30 : hoveredIndex === i ? 18 : 9,
-                    height: 9,
-                    backgroundColor: i === activeIndex ? 'rgba(255,255,255,0.7)' : hoveredIndex === i ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.2)',
-                  }}
-                />
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => scrollTo(i)}
+                  aria-label={`Go to ${slideNames[i] ?? `slide ${i + 1}`}`}
+                  className="flex items-center justify-center"
+                >
+                  {Icon ? (
+                    <span
+                      className="flex items-center justify-center rounded-lg px-2 py-1.5 transition-all duration-200"
+                      style={{
+                        color: isActive
+                          ? 'rgba(255,255,255,0.9)'
+                          : isHovered
+                            ? 'rgba(255,255,255,0.6)'
+                            : 'rgba(255,255,255,0.25)',
+                        backgroundColor: isActive
+                          ? 'rgba(255,255,255,0.06)'
+                          : isHovered
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'transparent',
+                        transform: `scale(${dockScale})`,
+                      }}
+                    >
+                      <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                    </span>
+                  ) : (
+                    /* Project slides keep the dot style */
+                    <span
+                      className="flex items-center justify-center rounded-lg px-2 py-1.5 transition-all duration-200 w-[34px] h-[30px]"
+                      style={{
+                        backgroundColor: isActive
+                          ? 'rgba(255,255,255,0.06)'
+                          : isHovered
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'transparent',
+                        transform: `scale(${dockScale})`,
+                      }}
+                    >
+                      <span
+                        className="block rounded-full transition-all duration-200"
+                        style={{
+                          width: 9,
+                          height: 9,
+                          backgroundColor: isActive
+                            ? 'rgba(255,255,255,0.7)'
+                            : isHovered
+                              ? 'rgba(255,255,255,0.45)'
+                              : 'rgba(255,255,255,0.2)',
+                        }}
+                      />
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Separator */}
+          <div ref={separatorRef} className="w-px h-5 bg-white/10 mx-1" />
 
           {/* Exit button — same wrapper sizing as dots so tooltip aligns */}
           <div
@@ -166,9 +238,9 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
             <button
               onClick={onExit}
               aria-label="Exit proposal"
-              className="flex items-center justify-center px-3 py-2 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors duration-200"
+              className="flex items-center justify-center px-2 py-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-all duration-200"
             >
-              <LogOut size={14} strokeWidth={1.5} />
+              <LogOut size={20} strokeWidth={1.5} />
             </button>
           </div>
         </div>
