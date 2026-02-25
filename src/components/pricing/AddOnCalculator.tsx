@@ -1441,6 +1441,7 @@ export function AddOnCalculator() {
               locationDays={locationDays}
               prefillData={leadData ?? undefined}
               onInteraction={checkGate}
+              crowdfundingApproved
             />
           </div>
         </div>
