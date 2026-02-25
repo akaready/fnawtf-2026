@@ -55,7 +55,7 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
       if (!target) return;
       hasBounced.current = true;
       gsap.to(target, {
-        y: -18,
+        y: -8,
         duration: 0.4,
         ease: 'power2.out',
         yoyo: true,
@@ -63,6 +63,16 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
       });
     }, 3000);
     return () => clearTimeout(timer);
+  }, [activeIndex]);
+
+  // Stop bouncing when leaving slide 0
+  useEffect(() => {
+    if (activeIndex === 0) return;
+    const target = dotRefs.current[1];
+    if (target) {
+      gsap.killTweensOf(target);
+      gsap.set(target, { y: 0 });
+    }
   }, [activeIndex]);
 
   // Compute tooltip position — always use first dot's top as the Y anchor so all tooltips align
@@ -115,7 +125,13 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
               key={i}
               ref={(el) => { dotRefs.current[i] = el; }}
               className="relative flex items-center justify-center w-[30px]"
-              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseEnter={() => {
+                setHoveredIndex(i);
+                if (i === 1) {
+                  gsap.killTweensOf(dotRefs.current[1]);
+                  gsap.set(dotRefs.current[1], { y: 0 });
+                }
+              }}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               <button

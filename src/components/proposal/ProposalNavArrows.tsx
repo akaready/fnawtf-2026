@@ -16,18 +16,33 @@ interface Props {
 export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirst, isLast, onExit }: Props) {
   const leftRef  = useRef<HTMLButtonElement>(null);
   const rightRef = useRef<HTMLButtonElement>(null);
-  const sheenRef = useRef<HTMLSpanElement>(null);
+  const chevronRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     const els = [leftRef.current, rightRef.current].filter(Boolean) as HTMLElement[];
     gsap.set(els, { opacity: 0 });
     gsap.to(els, { opacity: 1, duration: 1, ease: 'power2.out', delay: 1.5, stagger: 0.1 });
 
-    if (isFirst && sheenRef.current) {
-      gsap.fromTo(sheenRef.current,
-        { x: '-150%' },
-        { x: '150%', duration: 0.55, ease: 'power2.inOut', delay: 2.8 }
-      );
+    if (isFirst && rightRef.current && chevronRef.current) {
+      // Chevron subtle wiggle animation
+      gsap.to(chevronRef.current, {
+        x: 2,
+        duration: 0.6,
+        ease: 'sine.inOut',
+        yoyo: true,
+        repeat: -1,
+        delay: 2.8,
+      });
+
+      // Soft white glow pulse on button outline (external)
+      gsap.to(rightRef.current, {
+        boxShadow: '0 0 12px rgba(255,255,255,0.4), 0 0 0 1px rgba(255,255,255,0.09)',
+        duration: 3,
+        ease: 'sine.inOut',
+        yoyo: true,
+        repeat: -1,
+        delay: 2.8,
+      });
     }
   }, [isFirst]);
 
@@ -57,19 +72,6 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
         className={`${baseClass} right-5`}
         style={{ opacity: (isLast || canGoNext) ? undefined : 0.15, pointerEvents: (isLast || canGoNext) ? 'auto' : 'none' }}
       >
-        {!isLast && (
-          <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
-            <span
-              ref={sheenRef}
-              aria-hidden
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.25) 50%, transparent 65%)',
-                transform: 'translateX(-150%)',
-              }}
-            />
-          </div>
-        )}
         {isLast ? (
           <>
             <LogOut size={20} strokeWidth={1.5} />
@@ -77,7 +79,7 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
           </>
         ) : (
           <>
-            <ChevronRight size={20} strokeWidth={1.5} />
+            <ChevronRight ref={chevronRef} size={20} strokeWidth={1.5} />
             <span className={labelClass}>NEXT</span>
           </>
         )}
