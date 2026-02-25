@@ -178,7 +178,7 @@ export function ProjectSlide({ video, contactCompany, slideRef }: Props) {
             description={description ?? ''}
           />
 
-          <div className="pointer-events-none select-none">
+          <div className="pointer-events-none select-none [&_.max-w-4xl]:max-w-none">
             <ProjectMetaGrid
               styleTags={tags}
               premiumAddons={premium_addons}
