@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { motion, LayoutGroup } from 'framer-motion';
 import {
-  Hammer, Rocket, Megaphone, ChevronDown, LucideIcon,
+  Hammer, Rocket, Megaphone, ChevronDown, LucideIcon, X,
 } from 'lucide-react';
 import {
   buildAddOns, launchAddOns,
@@ -28,7 +28,7 @@ const TABS: { id: TabId; label: string }[] = [
 
 // ── Collapsible Section ─────────────────────────────────────────────────
 
-function CollapsibleSection({
+export function CollapsibleSection({
   icon: Icon,
   title,
   isOpen,
@@ -94,7 +94,7 @@ function CollapsibleSection({
 
 // ── Row Components ──────────────────────────────────────────────────────
 
-function IncludedRow({ addOn, quantity, onQuantityChange }: { addOn: AddOn; quantity?: number; onQuantityChange?: (id: string, qty: number) => void }) {
+function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: AddOn; quantity?: number; onQuantityChange?: (id: string, qty: number) => void; isLocked?: boolean }) {
   const hasQuantity = addOn.quantity && quantity !== undefined && onQuantityChange;
   return (
     <div className="w-full flex items-center justify-between p-4 border border-border/50 rounded-lg bg-[#020202] text-left">
@@ -114,13 +114,13 @@ function IncludedRow({ addOn, quantity, onQuantityChange }: { addOn: AddOn; quan
       {hasQuantity ? (
         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={(e) => { e.stopPropagation(); if (quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); }}
-            className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+            onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); }}
+            className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-purple-500'}`}
           >-</button>
-          <span className="text-sm text-foreground w-4 text-center">{quantity}</span>
+          <span className={`text-sm w-4 text-center ${isLocked ? 'text-muted-foreground/40' : 'text-foreground'}`}>{quantity}</span>
           <button
-            onClick={(e) => { e.stopPropagation(); if (quantity < addOn.quantity!.max) onQuantityChange(addOn.id, quantity + 1); }}
-            className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+            onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) onQuantityChange(addOn.id, quantity + 1); }}
+            className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-purple-500'}`}
           >+</button>
         </div>
       ) : (
@@ -152,42 +152,72 @@ function SliderRow({
   enabled,
   onToggle,
   onValueChange,
+  isLocked,
+  isCompare,
+  isRecommended,
 }: {
   addOn: AddOn;
   value: number;
   enabled: boolean;
   onToggle: (id: string) => void;
   onValueChange: (id: string, val: number) => void;
+  isLocked?: boolean;
+  isCompare?: boolean;
+  isRecommended?: boolean;
 }) {
   const slider = addOn.slider!;
+
+  const lockedNotIncluded = isLocked && !enabled;
+  const compareAdded = isCompare && !isLocked && enabled && !isRecommended;
+  const compareRemoved = isCompare && !isLocked && !enabled && isRecommended;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(addOn.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
-      className={`w-full p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
-        enabled
-          ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-          : 'border-border bg-[#020202] hover:border-purple-500/50'
+      onClick={isLocked ? undefined : () => onToggle(addOn.id)}
+      onKeyDown={isLocked ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
+      className={`w-full p-4 border rounded-lg transition-all duration-200 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+        lockedNotIncluded
+          ? 'border-border/50 bg-[#020202]'
+          : isLocked
+            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            : compareAdded
+              ? 'border-cyan-600 bg-cyan-950/20'
+              : compareRemoved
+                ? 'border-red-900/60 bg-[#020202]'
+                : enabled
+                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                  : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          <div
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
-              enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
-            }`}
-          >
-            {enabled && (
-              <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </div>
+          {lockedNotIncluded ? (
+            <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center">
+              <X className="w-3 h-3 text-background" strokeWidth={3} />
+            </div>
+          ) : compareRemoved ? (
+            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+          ) : (
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
+                isLocked
+                  ? 'border-purple-400 bg-purple-400'
+                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+              }`}
+            >
+              {(enabled || isLocked) && (
+                <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          )}
         </div>
-        <span className="text-sm font-medium text-foreground">{addOn.name}</span>
-        {enabled && (
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'}`}>{addOn.name}</span>
+        {enabled && !isLocked && (
           <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
             <span className="text-xs text-muted-foreground">${slider.min.toLocaleString()}</span>
             <input
@@ -197,15 +227,18 @@ function SliderRow({
               step={slider.step}
               value={value}
               onChange={(e) => onValueChange(addOn.id, Number(e.target.value))}
-              className="flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
+              className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                ${compareAdded
+                  ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
+                  : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                }`}
             />
             <span className="text-xs text-muted-foreground">${slider.max.toLocaleString()}</span>
           </div>
         )}
-        <span className="text-sm font-semibold text-accent whitespace-nowrap ml-auto">
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {enabled ? `$${value.toLocaleString('en-US')}${addOn.perDay ? '/day' : ''}` : addOn.priceDisplay}
         </span>
       </div>
@@ -224,6 +257,9 @@ function MultiSliderRow({
   onCountChange,
   onValueChange,
   onDayToggle,
+  isLocked,
+  isCompare,
+  isRecommended,
 }: {
   addOn: AddOn;
   enabled: boolean;
@@ -235,6 +271,9 @@ function MultiSliderRow({
   onCountChange: (id: string, count: number) => void;
   onValueChange: (id: string, val: number) => void;
   onDayToggle: (key: string, day: number) => void;
+  isLocked?: boolean;
+  isCompare?: boolean;
+  isRecommended?: boolean;
 }) {
   const slider = addOn.slider!;
   const maxCount = addOn.multiSlider!;
@@ -244,36 +283,59 @@ function MultiSliderRow({
     sliderValues.get(`${addOn.id}:${i}`) ?? slider.default
   ).reduce((sum, v) => sum + v, 0);
 
+  const lockedNotIncluded = isLocked && !enabled;
+  const compareAdded = isCompare && !isLocked && enabled && !isRecommended;
+  const compareRemoved = isCompare && !isLocked && !enabled && isRecommended;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(addOn.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
-      className={`w-full p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
-        enabled
-          ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-          : 'border-border bg-[#020202] hover:border-purple-500/50'
+      onClick={isLocked ? undefined : () => onToggle(addOn.id)}
+      onKeyDown={isLocked ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
+      className={`w-full p-4 border rounded-lg transition-all duration-200 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+        lockedNotIncluded
+          ? 'border-border/50 bg-[#020202]'
+          : isLocked
+            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            : compareAdded
+              ? 'border-cyan-600 bg-cyan-950/20'
+              : compareRemoved
+                ? 'border-red-900/60 bg-[#020202]'
+                : enabled
+                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                  : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
       {/* Header row */}
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          <div
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
-              enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
-            }`}
-          >
-            {enabled && (
-              <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </div>
+          {lockedNotIncluded ? (
+            <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center">
+              <X className="w-3 h-3 text-background" strokeWidth={3} />
+            </div>
+          ) : compareRemoved ? (
+            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+          ) : (
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
+                isLocked
+                  ? 'border-purple-400 bg-purple-400'
+                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+              }`}
+            >
+              {(enabled || isLocked) && (
+                <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          )}
         </div>
-        <span className="text-sm font-medium text-foreground flex-1">{addOn.name}</span>
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'} flex-1`}>{addOn.name}</span>
         <div className="flex items-center gap-3 flex-shrink-0">
-          {enabled && (
+          {enabled && !isLocked && (
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={(e) => { e.stopPropagation(); if (count > 1) onCountChange(addOn.id, count - 1); }}
@@ -286,14 +348,14 @@ function MultiSliderRow({
               >+</button>
             </div>
           )}
-          <span className="text-sm font-semibold text-accent whitespace-nowrap">
+          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
             {enabled ? `$${perDayTotal.toLocaleString('en-US')}/day` : addOn.priceDisplay}
           </span>
         </div>
       </div>
 
       {/* Individual location sliders */}
-      {enabled && (
+      {enabled && !isLocked && (
         <div className="mt-3 space-y-3 pl-9" onClick={(e) => e.stopPropagation()}>
           {Array.from({ length: count }, (_, i) => {
             const key = `${addOn.id}:${i}`;
@@ -311,10 +373,13 @@ function MultiSliderRow({
                     step={slider.step}
                     value={val}
                     onChange={(e) => onValueChange(key, Number(e.target.value))}
-                    className="flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
+                    className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:cursor-pointer
-                      [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                      ${compareAdded
+                        ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
+                        : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                      }`}
                   />
                   <span className="text-xs font-medium text-foreground w-16 text-right">${val.toLocaleString()}/day</span>
                 </div>
@@ -355,6 +420,9 @@ function PhotoSliderRow({
   onToggle,
   onPhotoCountChange,
   totalDays,
+  isLocked,
+  isCompare,
+  isRecommended,
 }: {
   addOn: AddOn;
   photoCount: number;
@@ -362,6 +430,9 @@ function PhotoSliderRow({
   onToggle: (id: string) => void;
   onPhotoCountChange: (count: number) => void;
   totalDays: number;
+  isLocked?: boolean;
+  isCompare?: boolean;
+  isRecommended?: boolean;
 }) {
   const ps = addOn.photoSlider!;
   const extraPhotos = Math.max(0, photoCount - ps.included);
@@ -369,37 +440,60 @@ function PhotoSliderRow({
   const baseCost = addOn.price * totalDays;
   const totalCost = baseCost + extraCost;
 
+  const lockedNotIncluded = isLocked && !enabled;
+  const compareAdded = isCompare && !isLocked && enabled && !isRecommended;
+  const compareRemoved = isCompare && !isLocked && !enabled && isRecommended;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(addOn.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
-      className={`w-full p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
-        enabled
-          ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-          : 'border-border bg-[#020202] hover:border-purple-500/50'
+      onClick={isLocked ? undefined : () => onToggle(addOn.id)}
+      onKeyDown={isLocked ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
+      className={`w-full p-4 border rounded-lg transition-all duration-200 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+        lockedNotIncluded
+          ? 'border-border/50 bg-[#020202]'
+          : isLocked
+            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            : compareAdded
+              ? 'border-cyan-600 bg-cyan-950/20'
+              : compareRemoved
+                ? 'border-red-900/60 bg-[#020202]'
+                : enabled
+                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                  : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          <div
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
-              enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
-            }`}
-          >
-            {enabled && (
-              <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </div>
+          {lockedNotIncluded ? (
+            <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center">
+              <X className="w-3 h-3 text-background" strokeWidth={3} />
+            </div>
+          ) : compareRemoved ? (
+            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+          ) : (
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
+                isLocked
+                  ? 'border-purple-400 bg-purple-400'
+                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+              }`}
+            >
+              {(enabled || isLocked) && (
+                <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          )}
         </div>
-        <span className="text-sm font-medium text-foreground whitespace-nowrap">{addOn.name}</span>
-        {!enabled && (
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'} whitespace-nowrap`}>{addOn.name}</span>
+        {!enabled && !isLocked && (
           <span className="text-xs text-muted-foreground whitespace-nowrap">Includes {ps.included} photos, add&apos;l at ${ps.extraPrice}/ea</span>
         )}
-        {enabled && (
+        {enabled && !isLocked && (
           <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
             <span className="text-xs text-muted-foreground">{ps.included}</span>
             <input
@@ -409,15 +503,18 @@ function PhotoSliderRow({
               step={5}
               value={photoCount}
               onChange={(e) => onPhotoCountChange(Number(e.target.value))}
-              className="flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
+              className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                ${compareAdded
+                  ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
+                  : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                }`}
             />
             <span className="text-xs text-muted-foreground">{ps.max}</span>
           </div>
         )}
-        <span className="text-sm font-semibold text-accent whitespace-nowrap ml-auto">
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {enabled
             ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
             : addOn.priceDisplay}
@@ -434,6 +531,9 @@ function AddOnRow({
   onToggle,
   onQuantityChange,
   totalDays,
+  isLocked,
+  isCompare,
+  isRecommended,
 }: {
   addOn: AddOn;
   selected: boolean;
@@ -441,63 +541,89 @@ function AddOnRow({
   onToggle: (id: string) => void;
   onQuantityChange: (id: string, qty: number) => void;
   totalDays: number;
+  isLocked?: boolean;
+  isCompare?: boolean;
+  isRecommended?: boolean;
 }) {
   const perDayDisplay = addOn.perDay && totalDays > 1
     ? ` (x${totalDays} days)`
     : '';
 
+  const lockedNotIncluded = isLocked && !selected;
+  const compareAdded = isCompare && !isLocked && selected && !isRecommended;
+  const compareRemoved = isCompare && !isLocked && !selected && isRecommended;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(addOn.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
-      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-all duration-200 text-left cursor-pointer ${
-        selected
-          ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-          : 'border-border bg-[#020202] hover:border-purple-500/50'
+      onClick={isLocked ? undefined : () => onToggle(addOn.id)}
+      onKeyDown={isLocked ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
+      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-all duration-200 text-left ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+        lockedNotIncluded
+          ? 'border-border/50 bg-[#020202]'
+          : isLocked
+            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            : compareAdded
+              ? 'border-cyan-600 bg-cyan-950/20'
+              : compareRemoved
+                ? 'border-red-900/60 bg-[#020202]'
+                : selected
+                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                  : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div
-          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
-            selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
-          }`}
-        >
-          {selected && (
-            <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </div>
+        {lockedNotIncluded ? (
+          <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center flex-shrink-0">
+            <X className="w-3 h-3 text-background" strokeWidth={3} />
+          </div>
+        ) : compareRemoved ? (
+          <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center flex-shrink-0" />
+        ) : (
+          <div
+            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+              isLocked
+                ? 'border-purple-400 bg-purple-400'
+                : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                : selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+            }`}
+          >
+            {(selected || isLocked) && (
+              <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        )}
         <div className="flex flex-col min-w-0">
-          <span className="text-sm font-medium text-foreground">
+          <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'}`}>
             {addOn.name}
             {selected && perDayDisplay && (
               <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
             )}
           </span>
           {addOn.description && (
-            <span className="text-xs text-muted-foreground">{addOn.description}</span>
+            <span className={`text-xs ${lockedNotIncluded ? 'text-white/10' : 'text-muted-foreground'}`}>{addOn.description}</span>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
         {addOn.quantity && (
-          <div className={`flex items-center gap-2 ${selected ? 'visible' : 'invisible'}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`flex items-center gap-2 ${selected && !isLocked ? 'visible' : 'invisible'}`} onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={(e) => { e.stopPropagation(); if (quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); }}
+              onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); }}
               className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
             >-</button>
             <span className="text-sm text-foreground w-4 text-center">{quantity}</span>
             <button
-              onClick={(e) => { e.stopPropagation(); if (quantity < addOn.quantity!.max) onQuantityChange(addOn.id, quantity + 1); }}
+              onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) onQuantityChange(addOn.id, quantity + 1); }}
               className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
             >+</button>
           </div>
         )}
-        <span className="text-sm font-semibold text-accent whitespace-nowrap">{addOn.priceDisplay}</span>
+        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
       </div>
     </div>
   );
@@ -512,6 +638,9 @@ function TierToggleRow({
   onToggle,
   onTierChange,
   totalDays,
+  isLocked,
+  isCompare,
+  isRecommended,
 }: {
   addOn: AddOn;
   selected: boolean;
@@ -519,49 +648,75 @@ function TierToggleRow({
   onToggle: (id: string) => void;
   onTierChange: (id: string, tier: 'basic' | 'premium') => void;
   totalDays: number;
+  isLocked?: boolean;
+  isCompare?: boolean;
+  isRecommended?: boolean;
 }) {
   const toggle = addOn.tierToggle!;
   const perDayDisplay = addOn.perDay && totalDays > 1 ? ` (x${totalDays} days)` : '';
   const activePrice = tierSelection === 'premium' ? toggle.premium.price : toggle.basic.price;
 
+  const lockedNotIncluded = isLocked && !selected;
+  const compareAdded = isCompare && !isLocked && selected && !isRecommended;
+  const compareRemoved = isCompare && !isLocked && !selected && isRecommended;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(addOn.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
-      className={`w-full p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
-        selected
-          ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-          : 'border-border bg-[#020202] hover:border-purple-500/50'
+      onClick={isLocked ? undefined : () => onToggle(addOn.id)}
+      onKeyDown={isLocked ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
+      className={`w-full p-4 border rounded-lg transition-all duration-200 ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+        lockedNotIncluded
+          ? 'border-border/50 bg-[#020202]'
+          : isLocked
+            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            : compareAdded
+              ? 'border-cyan-600 bg-cyan-950/20'
+              : compareRemoved
+                ? 'border-red-900/60 bg-[#020202]'
+                : selected
+                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+                  : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          <div
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
-              selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
-            }`}
-          >
-            {selected && (
-              <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </div>
+          {lockedNotIncluded ? (
+            <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center">
+              <X className="w-3 h-3 text-background" strokeWidth={3} />
+            </div>
+          ) : compareRemoved ? (
+            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+          ) : (
+            <div
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
+                isLocked
+                  ? 'border-purple-400 bg-purple-400'
+                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+              }`}
+            >
+              {(selected || isLocked) && (
+                <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+          )}
         </div>
-        <span className="text-sm font-medium text-foreground">
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'}`}>
           {addOn.name}
           {selected && perDayDisplay && (
             <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
           )}
         </span>
         {selected && (
-          <div className="flex items-center gap-1 ml-auto mr-2" onClick={(e) => e.stopPropagation()}>
+          <div className={`flex items-center gap-1 ml-auto mr-2 ${isLocked ? 'invisible' : ''}`} onClick={(e) => e.stopPropagation()}>
             {(['basic', 'premium'] as const).map((tier) => (
               <button
                 key={tier}
-                onClick={(e) => { e.stopPropagation(); onTierChange(addOn.id, tier); }}
+                onClick={(e) => { e.stopPropagation(); if (!isLocked) onTierChange(addOn.id, tier); }}
                 className={`px-3 py-1 rounded text-xs font-medium transition-all duration-200 ${
                   tierSelection === tier
                     ? 'bg-purple-600 text-white shadow-[0_0_8px_rgba(168,85,247,0.3)]'
@@ -573,7 +728,7 @@ function TierToggleRow({
             ))}
           </div>
         )}
-        <span className="text-sm font-semibold text-accent whitespace-nowrap ml-auto">
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {selected ? `$${activePrice.toLocaleString()}/day` : addOn.priceDisplay}
         </span>
       </div>
@@ -616,7 +771,7 @@ function CategoryHeader({
 // ── Add-On Section (renders rows for a list of add-ons) ─────────────────
 
 
-function AddOnSection({
+export function AddOnSection({
   addOns,
   selectedAddOns,
   sliderValues,
@@ -633,6 +788,9 @@ function AddOnSection({
   onTierChange,
   locationDays,
   onDayToggle,
+  isLocked,
+  isCompare,
+  recommendedAddOns,
 }: {
   addOns: AddOn[];
   selectedAddOns: Map<string, number>;
@@ -650,10 +808,17 @@ function AddOnSection({
   onTierChange?: (id: string, tier: 'basic' | 'premium') => void;
   locationDays?: Map<string, number[]>;
   onDayToggle?: (key: string, day: number) => void;
+  isLocked?: boolean;
+  isCompare?: boolean;
+  recommendedAddOns?: Set<string>;
 }) {
   const days = totalDays ?? 1;
-  const includedItems = addOns.filter((a) => a.included);
-  const toggleableItems = addOns.filter((a) => !a.included);
+
+  // Always show all items (no filtering in locked mode — greyed-out items shown instead)
+  const displayAddOns = addOns;
+
+  const includedItems = displayAddOns.filter((a) => a.included);
+  const toggleableItems = displayAddOns.filter((a) => !a.included);
 
   // Group by category if categories exist
   const categories: string[] = [];
@@ -675,6 +840,8 @@ function AddOnSection({
   const hasCategories = categories.length > 0;
 
   function renderToggleableRow(addOn: AddOn) {
+    const addonIsRecommended = recommendedAddOns?.has(addOn.id) ?? false;
+
     if (fundraisingActive && addOn.fundraisingFreebie) {
       return <FreebieRow key={addOn.id} addOn={addOn} />;
     }
@@ -689,6 +856,9 @@ function AddOnSection({
           onToggle={onToggle}
           onTierChange={onTierChange}
           totalDays={days}
+          isLocked={isLocked}
+          isCompare={isCompare}
+          isRecommended={addonIsRecommended}
         />
       );
     }
@@ -707,6 +877,9 @@ function AddOnSection({
           onCountChange={onQuantityChange}
           onValueChange={onSliderChange}
           onDayToggle={onDayToggle ?? (() => {})}
+          isLocked={isLocked}
+          isCompare={isCompare}
+          isRecommended={addonIsRecommended}
         />
       );
     }
@@ -720,6 +893,9 @@ function AddOnSection({
           enabled={selectedAddOns.has(addOn.id)}
           onToggle={onToggle}
           onValueChange={onSliderChange}
+          isLocked={isLocked}
+          isCompare={isCompare}
+          isRecommended={addonIsRecommended}
         />
       );
     }
@@ -734,6 +910,9 @@ function AddOnSection({
           onToggle={onToggle}
           onPhotoCountChange={onPhotoCountChange}
           totalDays={days}
+          isLocked={isLocked}
+          isCompare={isCompare}
+          isRecommended={addonIsRecommended}
         />
       );
     }
@@ -747,6 +926,9 @@ function AddOnSection({
         onToggle={onToggle}
         onQuantityChange={onQuantityChange}
         totalDays={days}
+        isLocked={isLocked}
+        isCompare={isCompare}
+        isRecommended={addonIsRecommended}
       />
     );
   }
@@ -759,9 +941,9 @@ function AddOnSection({
         }
         if (addOn.quantity) {
           const qty = selectedAddOns.get(addOn.id) ?? addOn.quantity.default;
-          return <IncludedRow key={addOn.id} addOn={addOn} quantity={qty} onQuantityChange={onQuantityChange} />;
+          return <IncludedRow key={addOn.id} addOn={addOn} quantity={qty} onQuantityChange={onQuantityChange} isLocked={isLocked} />;
         }
-        return <IncludedRow key={addOn.id} addOn={addOn} />;
+        return <IncludedRow key={addOn.id} addOn={addOn} isLocked={isLocked} />;
       })}
       {/* Uncategorized items first */}
       {uncategorized.map(renderToggleableRow)}

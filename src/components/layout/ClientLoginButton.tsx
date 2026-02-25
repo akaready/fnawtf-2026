@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { Lock, X, LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { logClientLoginAttempt } from '@/lib/portal/logClientLoginAttempt';
+import { loginByAccessCode } from '@/lib/portal/actions';
 
 const ADMIN_EMAILS = ['ready@fna.wtf', 'ol.richie@fna.wtf'];
 
-type State = 'idle' | 'submitting' | 'done' | 'error';
+type State = 'idle' | 'submitting';
 
 // ── Icon reveal animation ─────────────────────────────────────────────────
 
@@ -137,9 +137,15 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
         onClose();
       }
     } else {
-      // Client path — existing lead capture flow
-      await logClientLoginAttempt('', trimmedEmail, password);
-      setState('done');
+      // Client path — look up proposal by access code and redirect
+      const result = await loginByAccessCode(trimmedEmail, password);
+      if (result.success && result.slug) {
+        window.location.href = `/p/${result.slug}`;
+        onClose();
+      } else {
+        setAuthError(result.error ?? 'Invalid access code.');
+        setState('idle');
+      }
     }
   }, [state, email, password, onClose]);
 
@@ -191,27 +197,7 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
               </button>
             </div>
 
-            {state === 'done' ? (
-              <div className="text-center py-6 space-y-4">
-                <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto">
-                  <Lock size={20} className="text-accent" />
-                </div>
-                <div className="space-y-2">
-                  <p className="font-semibold text-foreground">Access Requested</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
-                    Your client portal is being set up. We&rsquo;ll reach out to {email || 'you'} once
-                    your workspace is ready.
-                  </p>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="mt-4 px-5 py-2.5 text-sm font-medium rounded-lg bg-muted/30 border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm text-muted-foreground mb-1.5">Email address</label>
                   <input
@@ -225,12 +211,13 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-muted-foreground mb-1.5">Portal password</label>
+                  <label className="block text-sm text-muted-foreground mb-1.5">Access code</label>
                   <input
-                    type="password"
+                    type="text"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Enter your access code"
+                    autoComplete="off"
                     required
                     disabled={state === 'submitting'}
                     className={inputClass}
@@ -251,7 +238,6 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
                   if you need help.
                 </p>
               </form>
-            )}
           </div>
         </motion.div>
       )}

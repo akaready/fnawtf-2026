@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Save, Check, Loader2, Upload, Film, ChevronDown, ChevronUp, Search, Download } from 'lucide-react';
+import { Plus, Trash2, Save, Check, Loader2, Upload, Film, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { AdminPageHeader } from './AdminPageHeader';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -174,45 +175,33 @@ export function ClientsManager({ initialClients, projects, testimonials: initial
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header — never scrolls */}
-      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-white/[0.12]">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {clients.length} total — Manage client records and logos.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search clients…"
-            className="w-full rounded-lg border border-border/60 bg-[#111] pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30"
-          />
-        </div>
-        <button
-          onClick={handleExportCsv}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border/40 text-sm text-muted-foreground hover:text-foreground hover:border-border/60 hover:bg-white/5 transition-colors"
-          title="Export filtered list as CSV"
-        >
-          <Download size={14} />
-          CSV
-        </button>
-        <button
-          onClick={handleCreate}
-          disabled={creating}
-          className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors"
-        >
-          <Plus size={16} />
-          Add Client
-        </button>
-          </div>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Clients"
+        subtitle={`${clients.length} total — Manage client records and logos.`}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search clients…"
+        actions={
+          <>
+            <button
+              onClick={handleExportCsv}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1f1f1f] bg-black text-sm text-muted-foreground hover:text-foreground hover:border-[#333] hover:bg-white/5 transition-colors"
+              title="Export filtered list as CSV"
+            >
+              <Download size={14} />
+              CSV
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors"
+            >
+              <Plus size={16} />
+              Add Client
+            </button>
+          </>
+        }
+      />
 
       {/* Scrollable cards area */}
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">

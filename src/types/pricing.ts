@@ -75,3 +75,18 @@ export interface FundraisingPackage {
   multiplierOnSuccess: number;
   details: string[];
 }
+
+/** Serializable calculator state for proposal quotes */
+export interface CalculatorState {
+  activeTab: 'build' | 'launch' | 'build-launch' | 'fundraising';
+  selectedAddOns: Record<string, number>;
+  sliderValues: Record<string, number>;
+  tierSelections: Record<string, 'basic' | 'premium'>;
+  locationDays: Record<string, number[]>;
+  photoCount: number;
+  crowdfundingEnabled: boolean;
+  crowdfundingTierIndex: number;
+  fundraisingEnabled: boolean;
+  deferPayment: boolean;
+  friendlyDiscountPercent: number;
+}

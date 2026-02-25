@@ -20,7 +20,7 @@ interface Props {
 
 function toCssRatio(r: string) { return r.replace(':', '/'); }
 
-export function ProjectSlide({ video, contactCompany, slideRef }: Props) {
+export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef }: Props) {
   const innerRef    = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
@@ -92,12 +92,12 @@ export function ProjectSlide({ video, contactCompany, slideRef }: Props) {
       style={{ scrollbarWidth: 'none' }}
     >
       {/* Top gradient */}
-      <div className="sticky top-0 z-20 h-28 pointer-events-none">
+      <div className="sticky top-0 z-20 pointer-events-none" style={{ height: 'var(--slide-gradient-h)' }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-transparent" />
       </div>
 
       {/* Main content */}
-      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 pb-20 -mt-16 pt-20">
+      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 pb-20" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
 
         {/* Eyebrow — project's client name */}
         {project?.client_name && (

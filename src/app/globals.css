@@ -32,6 +32,11 @@
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Manrope', sans-serif;
   --font-mono: 'Space Mono', monospace;
+
+  /* Proposal slide layout */
+  --slide-gradient-h: 6rem;       /* sticky top gradient height */
+  --slide-pt: 3.5rem;             /* content padding-top */
+  --slide-pull: 3rem;             /* negative margin to pull under gradient */
 }
 
 html {
@@ -55,6 +60,8 @@ html::-webkit-scrollbar {
 }
 .admin-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+}
+.admin-scrollbar-table::-webkit-scrollbar-track {
   margin-top: 42px; /* push scrollbar track below sticky header row */
 }
 .admin-scrollbar::-webkit-scrollbar-thumb {
@@ -204,6 +211,56 @@ a[data-btn-hover]:hover {
 .testimonial-scroll-down {
   animation: testimonialScrollDown linear infinite;
   will-change: transform;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-5px); }
+  40%       { transform: translateX(5px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+@keyframes go-live-pulse {
+  0%, 100% {
+    filter: brightness(1) saturate(1) drop-shadow(0 0 2px rgba(161, 77, 253, 0.2));
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.6) saturate(1.4) drop-shadow(0 0 16px rgba(161, 77, 253, 1));
+    transform: scale(1.05);
+  }
+}
+
+.go-live-cell {
+  animation: go-live-pulse 2.2s ease-in-out infinite;
+}
+
+/* Proposal deck — hide scrollbar cross-browser */
+.proposal-deck-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Force one-slide-at-a-time during momentum/trackpad scrolling */
+.proposal-deck-scroll > * {
+  scroll-snap-stop: always;
+}
+
+/* Tighten Cal.com embed — collapse its internal skeleton/loader spacing */
+[data-cal-box] [data-cal-namespace] {
+  margin-top: -1rem !important;
+}
+
+/* Proposal project slides — override shared component max-w so content
+   stretches to match the video player width */
+.proposal-content-stretch > * > .max-w-4xl,
+.proposal-content-stretch > * > .max-w-3xl,
+.proposal-content-stretch > * > .max-w-lg {
+  max-width: none;
 }
 
 /* Accessibility */

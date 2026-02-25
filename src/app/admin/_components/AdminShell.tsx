@@ -3,7 +3,7 @@
 import React, { ReactNode, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, Building2 } from 'lucide-react';
+import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, Building2, BookOpen, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 
@@ -34,7 +34,9 @@ export function AdminShell({ children }: Props) {
   ];
 
   const bottomItems = [
-    { href: '/admin/proposals', label: 'Proposals', icon: FileText, disabled: true as const },
+    { href: '/admin/contacts', label: 'Contacts', icon: Users },
+    { href: '/admin/content', label: 'Content', icon: BookOpen },
+    { href: '/admin/proposals', label: 'Proposals', icon: FileText },
   ];
 
   return (
@@ -83,17 +85,26 @@ export function AdminShell({ children }: Props) {
 
           {/* Divider + bottom items */}
           <div className="my-3 border-t border-white/[0.08] w-full" />
-          {bottomItems.map(({ href, label, icon: Icon }) => (
-            <span
-              key={href}
-              title={collapsed ? `${label} (Coming Soon)` : undefined}
-              className="flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap cursor-not-allowed opacity-30"
-            >
-              <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
-              <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
-              <span className={`ml-auto text-[10px] text-muted-foreground transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>Soon</span>
-            </span>
-          ))}
+          {bottomItems.map(({ href, label, icon: Icon }) => {
+            const active = pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                data-btn-hover
+                title={collapsed ? label : undefined}
+                className={`flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
+                  active
+                    ? 'bg-white/8 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                }`}
+              >
+                <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
+                <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
+                {active && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* User / sign out */}

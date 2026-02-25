@@ -24,9 +24,10 @@ interface Props {
   quotes: ProposalQuoteRow[];
   milestones: ProposalMilestoneRow[];
   viewerEmail: string;
+  viewerName: string | null;
 }
 
-export function ProposalPageClient({ proposal, sections, videos, quotes, milestones, viewerEmail: _viewerEmail }: Props) {
+export function ProposalPageClient({ proposal, sections, videos, quotes, milestones, viewerEmail, viewerName }: Props) {
   const router = useRouter();
 
   const welcomeSection = sections.find(
@@ -149,27 +150,6 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     el.scrollIntoView({ inline: 'start', block: 'nearest', behavior: 'smooth' });
   }, [slideRefs]);
 
-  // ── Wheel → horizontal scroll ─────────────────────────────
-  useEffect(() => {
-    const container = deckRef.current;
-    if (!container) return;
-    const handler = (e: WheelEvent) => {
-      let el = e.target as HTMLElement | null;
-      while (el && el !== container) {
-        const style = getComputedStyle(el);
-        const overflowY = style.overflowY;
-        if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
-          return;
-        }
-        el = el.parentElement;
-      }
-      e.preventDefault();
-      container.scrollLeft += (e.deltaY + e.deltaX) * 1.2;
-    };
-    container.addEventListener('wheel', handler, { passive: false });
-    return () => container.removeEventListener('wheel', handler);
-  }, []);
-
   // ── Keyboard arrow navigation ─────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -260,7 +240,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
           />
         )}
 
-        <NextStepsSlide proposal={proposal} slideRef={nextStepsRef} />
+        <NextStepsSlide proposal={proposal} slideRef={nextStepsRef} viewerName={viewerName} viewerEmail={viewerEmail} />
       </div>
 
       <ProposalProgressDots

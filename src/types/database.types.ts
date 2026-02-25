@@ -142,6 +142,116 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['seo_settings']['Row'], 'id' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['seo_settings']['Row']>;
       };
+      content_snippets: {
+        Row: {
+          id: string;
+          title: string;
+          body: string;
+          snippet_type: string;
+          category: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['content_snippets']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['content_snippets']['Row']>;
+      };
+      proposals: {
+        Row: {
+          id: string;
+          title: string;
+          slug: string;
+          contact_name: string;
+          contact_email: string | null;
+          contact_company: string;
+          proposal_password: string;
+          proposal_type: string;
+          subtitle: string;
+          status: string;
+          proposal_number: number;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['proposals']['Row'], 'id' | 'proposal_number' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['proposals']['Row']>;
+      };
+      proposal_sections: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          section_type: string;
+          snippet_id: string | null;
+          custom_content: string | null;
+          custom_title: string | null;
+          layout_columns: number;
+          layout_position: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['proposal_sections']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['proposal_sections']['Row']>;
+      };
+      proposal_videos: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          section_id: string;
+          project_video_id: string;
+          sort_order: number;
+        };
+        Insert: Omit<Database['public']['Tables']['proposal_videos']['Row'], 'id'>;
+        Update: Partial<Database['public']['Tables']['proposal_videos']['Row']>;
+      };
+      proposal_projects: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          section_id: string | null;
+          project_id: string;
+          sort_order: number;
+        };
+        Insert: Omit<Database['public']['Tables']['proposal_projects']['Row'], 'id'>;
+        Update: Partial<Database['public']['Tables']['proposal_projects']['Row']>;
+      };
+      proposal_quotes: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          label: string;
+          is_locked: boolean;
+          is_fna_quote: boolean;
+          quote_type: string;
+          selected_addons: Record<string, number>;
+          slider_values: Record<string, number>;
+          tier_selections: Record<string, string>;
+          location_days: Record<string, number[]>;
+          photo_count: number;
+          crowdfunding_enabled: boolean;
+          crowdfunding_tier: number;
+          fundraising_enabled: boolean;
+          defer_payment: boolean;
+          friendly_discount_pct: number;
+          total_amount: number | null;
+          down_amount: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['proposal_quotes']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['proposal_quotes']['Row']>;
+      };
+      proposal_views: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          viewer_email: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          viewed_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['proposal_views']['Row'], 'id' | 'viewed_at'>;
+        Update: Partial<Database['public']['Tables']['proposal_views']['Row']>;
+      };
     };
     Views: {};
     Functions: {};

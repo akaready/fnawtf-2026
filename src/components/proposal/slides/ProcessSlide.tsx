@@ -255,11 +255,11 @@ export function ProcessSlide({ slideRef }: Props) {
       style={{ scrollbarWidth: 'none' }}
     >
       {/* Top gradient mask */}
-      <div className="sticky top-0 z-20 h-32 pointer-events-none">
+      <div className="sticky top-0 z-20 pointer-events-none" style={{ height: 'var(--slide-gradient-h)' }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 pt-20 pb-20 -mt-16 w-full">
+      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 pb-20 w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         {/* SlideHeader */}
         <SlideHeader
           eyebrow="HOW WE WORK"

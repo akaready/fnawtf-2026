@@ -437,7 +437,7 @@ function EditableTagsCell({
         />
       </div>
       {filtered.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-[#111] border border-border/40 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-black border border-[#1f1f1f] rounded-lg shadow-xl max-h-40 overflow-y-auto admin-scrollbar">
           {filtered.map((s, i) => (
             <button
               key={s}
@@ -572,7 +572,7 @@ function ToolbarPopover({
   return (
     <div
       ref={ref}
-      className={`absolute left-0 top-full mt-2 bg-[#111] border border-border/60 rounded-xl shadow-2xl p-3 z-40 ${width ?? 'w-80'}`}
+      className={`absolute left-0 top-full mt-2 bg-black border border-[#1f1f1f] rounded-xl shadow-2xl p-3 z-40 ${width ?? 'w-80'}`}
     >
       {children}
     </div>
@@ -600,7 +600,7 @@ function ToolbarButton({
       className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors whitespace-nowrap ${
         active
           ? 'border-accent/40 text-accent bg-accent/5'
-          : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-white/20'
+          : 'border-[#1f1f1f] text-muted-foreground hover:text-foreground hover:border-white/20'
       }`}
     >
       <Icon size={14} strokeWidth={1.75} />
@@ -654,7 +654,7 @@ function SortPanel({
             <select
               value={s.key}
               onChange={(e) => updateSort(i, { key: e.target.value })}
-              className="flex-1 appearance-none bg-white/[0.03] border border-border/40 rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20"
+              className="flex-1 appearance-none bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20"
             >
               {sortableCols.map((c) => (
                 <option key={c.key} value={c.key}>{c.label}</option>
@@ -662,7 +662,7 @@ function SortPanel({
             </select>
             <button
               onClick={() => updateSort(i, { dir: s.dir === 'asc' ? 'desc' : 'asc' })}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-sm rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors whitespace-nowrap"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-sm rounded-lg border border-[#1f1f1f] text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors whitespace-nowrap"
             >
               {s.dir === 'asc' ? (
                 <><ChevronUp size={12} /> A→Z</>
@@ -750,7 +750,7 @@ function FilterPanel({
               <select
                 value={f.field}
                 onChange={(e) => updateFilter(i, { field: e.target.value })}
-                className="w-32 appearance-none bg-white/[0.03] border border-border/40 rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20 truncate"
+                className="w-32 appearance-none bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20 truncate"
               >
                 {filterableCols.map((c) => (
                   <option key={c.key} value={c.key}>{c.label}</option>
@@ -759,7 +759,7 @@ function FilterPanel({
               <select
                 value={f.operator}
                 onChange={(e) => updateFilter(i, { operator: e.target.value })}
-                className="w-36 appearance-none bg-white/[0.03] border border-border/40 rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20"
+                className="w-36 appearance-none bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20"
               >
                 {ops.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -770,7 +770,7 @@ function FilterPanel({
                   <select
                     value={f.value}
                     onChange={(e) => updateFilter(i, { value: e.target.value })}
-                    className="flex-1 appearance-none bg-white/[0.03] border border-border/40 rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20"
+                    className="flex-1 appearance-none bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-white/20"
                   >
                     <option value="">Any</option>
                     {col.options.map((o) => (
@@ -783,7 +783,7 @@ function FilterPanel({
                     value={f.value}
                     onChange={(e) => updateFilter(i, { value: e.target.value })}
                     placeholder={col.type === 'tags' ? 'tag name…' : 'value…'}
-                    className="flex-1 bg-white/[0.03] border border-border/40 rounded-lg px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
+                    className="flex-1 bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
                   />
                 )
               ) : (
@@ -922,7 +922,7 @@ function FieldsPanel({
             value={fieldSearch}
             onChange={(e) => setFieldSearch(e.target.value)}
             placeholder="Search fields…"
-            className="w-full pl-8 pr-3 py-1.5 bg-white/[0.03] border border-border/40 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
+            className="w-full pl-8 pr-3 py-1.5 bg-black border border-[#1f1f1f] rounded-lg text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
             autoFocus
           />
         </div>
@@ -935,7 +935,7 @@ function FieldsPanel({
             Hide all
           </button>
         </div>
-        <div className="max-h-96 overflow-y-auto space-y-3">
+        <div className="max-h-96 overflow-y-auto admin-scrollbar space-y-3">
           {groups.map((g) => (
             <div key={g.label}>
               <div className="text-[10px] text-muted-foreground/30 uppercase tracking-wider font-medium px-2.5 mb-1">
@@ -1535,14 +1535,15 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           left: frozenOffsets[offsetIdx],
           zIndex: 30,
           willChange: 'transform',
+          backgroundColor: '#17121e',
         };
       }
       return {
         position: 'sticky',
         left: frozenOffsets[offsetIdx],
         zIndex: 20,
-        backgroundColor: '#0d0d0d',
         willChange: 'transform',
+        backgroundColor: '#060409',
       };
     }
     return isHeader ? thStickyBase : undefined;
@@ -1597,7 +1598,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       onDragOver={(e) => handleDragOver(e, project.id)}
       onDrop={(e) => handleDrop(e, project.id)}
       className={`border-b border-border/20 last:border-0 hover:bg-white/[0.02] transition-colors ${
-        selected.has(project.id) ? 'bg-white/[0.03]' : ''
+        selected.has(project.id) ? 'bg-black' : ''
       } ${dragOverId === project.id ? 'border-t-2 border-t-accent' : ''}`}
     >
       <td className="w-8 px-1 py-3" style={stickyStyle(0)}>
@@ -1745,7 +1746,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors whitespace-nowrap ${
             Object.keys(colWidths).length > 0
               ? 'border-accent/40 text-accent bg-accent/5'
-              : 'border-border/40 text-muted-foreground hover:text-foreground hover:border-white/20'
+              : 'border-[#1f1f1f] text-muted-foreground hover:text-foreground hover:border-white/20'
           }`}
           title="Reset all column widths to auto-fit"
         >
@@ -1762,7 +1763,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
 
       {/* Batch action bar */}
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 bg-[#111] border border-border rounded-xl shadow-2xl">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 bg-black border border-[#1f1f1f] rounded-xl shadow-2xl">
           <span className="text-sm text-muted-foreground mr-2">{selected.size} selected</span>
           <button onClick={() => handleBatchPublish(true)} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
             <Eye size={13} /> Publish
@@ -1790,7 +1791,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       {/* Delete confirm modal */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" style={{ backdropFilter: 'blur(4px)' }}>
-          <div className="bg-[#111] border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+          <div className="bg-black border border-[#1f1f1f] rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
             <h3 className="font-display text-lg font-bold text-foreground mb-2">
               {confirmDelete === 'batch'
                 ? `Delete ${selected.size} project${selected.size !== 1 ? 's' : ''}?`
@@ -1827,7 +1828,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
 <div className="relative h-full">
         {/* 1px border to the left of the scrollbar */}
         <div className="absolute top-0 bottom-0 right-[12px] w-px bg-[#1f1f1f] z-30 pointer-events-none" />
-        <div ref={tableRef} className={`h-full overflow-auto admin-scrollbar rounded-xl border ${selected.size > 0 ? 'border-[#333]' : 'border-[#1f1f1f]'} transition-colors`}>
+        <div ref={tableRef} className={`h-full overflow-auto admin-scrollbar admin-scrollbar-table rounded-xl border ${selected.size > 0 ? 'border-[#333]' : 'border-[#1f1f1f]'} transition-colors`}>
         <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
           <thead className="bg-[#141414]">
             <tr>
@@ -1927,10 +1928,11 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
               Array.from(groups.entries()).map(([label, rows]) => (
                 <React.Fragment key={label}>
                   <tr
-                    className="bg-white/[0.03] border-b border-border/30 cursor-pointer hover:bg-white/[0.05] transition-colors"
+                    className="border-b border-border/30 cursor-pointer hover:bg-white/[0.05] transition-colors"
+                    style={{ backgroundColor: '#0a0a0a' }}
                     onClick={() => toggleGroup(label)}
                   >
-                    <td colSpan={visibleColCount} className="px-4 py-2">
+                    <td colSpan={visibleColCount} className="px-4 py-2" style={freezeCount > 0 ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: '#0a0a0a' } : undefined}>
                       <div className="flex items-center gap-2">
                         <ChevronRight
                           size={14}

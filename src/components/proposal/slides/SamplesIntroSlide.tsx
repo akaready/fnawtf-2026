@@ -237,16 +237,16 @@ export function SamplesIntroSlide({ videos, slideRef, onViewProject }: Props) {
       className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative bg-black overflow-y-auto"
       style={{ scrollbarWidth: 'none' }}
     >
-      <div className="sticky top-0 z-20 h-32 pointer-events-none">
+      <div className="sticky top-0 z-20 pointer-events-none" style={{ height: 'var(--slide-gradient-h)' }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-5xl mx-auto px-12 lg:px-20 pt-20 pb-20 -mt-16">
+      <div ref={innerRef} className="max-w-5xl mx-auto px-12 lg:px-20 pb-20" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         <SlideHeader
           eyebrow="samples"
           titleWords={titleWords}
           description="A curated look at recent work relevant to your vision."
-          className="mb-20"
+          className="mb-12"
         />
 
         <div className="flex flex-col gap-28">

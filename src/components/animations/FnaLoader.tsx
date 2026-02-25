@@ -148,22 +148,6 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
     requestAnimationFrame(() => {
       if (!active) return;
 
-      // Get center of purple SVG dot (fallback to viewport center if SVG hasn't rendered)
-      const dotRect = purpleDotSvg.getBoundingClientRect();
-      const cx = dotRect.width > 0
-        ? dotRect.left + dotRect.width / 2
-        : window.innerWidth / 2;
-      const cy = dotRect.height > 0
-        ? dotRect.top + dotRect.height / 2
-        : window.innerHeight / 2;
-
-      const maxRadius = Math.max(
-        Math.hypot(cx, cy),
-        Math.hypot(window.innerWidth - cx, cy),
-        Math.hypot(cx, window.innerHeight - cy),
-        Math.hypot(window.innerWidth - cx, window.innerHeight - cy),
-      );
-
       // --- Loading coordination ---
       let pageReady = false;
       let fillTl: gsap.core.Timeline | null = null;
@@ -292,6 +276,22 @@ export function FnaLoader({ onComplete }: FnaLoaderProps) {
 
       // === REVEAL: dot→0, beat, portal ===
       function startReveal() {
+        // Measure dot center now — font is loaded and letters are visible
+        const dotRect = purpleDotSvg.getBoundingClientRect();
+        const cx = dotRect.width > 0
+          ? dotRect.left + dotRect.width / 2
+          : window.innerWidth / 2;
+        const cy = dotRect.height > 0
+          ? dotRect.top + dotRect.height / 2
+          : window.innerHeight / 2;
+
+        const maxRadius = Math.max(
+          Math.hypot(cx, cy),
+          Math.hypot(window.innerWidth - cx, cy),
+          Math.hypot(cx, window.innerHeight - cy),
+          Math.hypot(window.innerWidth - cx, window.innerHeight - cy),
+        );
+
         // Proxy + setMask for desktop portal reveal (mask-image based)
         const proxy = { r: 0 };
         const setMask = (r: number) => {

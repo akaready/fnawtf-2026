@@ -141,7 +141,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
 
       <div ref={innerRef} className="relative z-10 flex flex-col items-center text-center px-8 max-w-5xl w-full">
         <p data-eyebrow className="text-sm tracking-[0.45em] uppercase text-white/25 font-mono mb-8">
-          Proposal #{proposal.proposal_number}
+          {proposal.contact_company}
         </p>
 
         {/* Clip-reveal title */}

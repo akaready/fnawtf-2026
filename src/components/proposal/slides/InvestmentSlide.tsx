@@ -85,11 +85,11 @@ export function InvestmentSlide({
       style={{ scrollbarWidth: 'none' }}
     >
       {/* Top gradient mask */}
-      <div className="sticky top-0 z-20 h-32 pointer-events-none">
+      <div className="sticky top-0 z-20 pointer-events-none" style={{ height: 'var(--slide-gradient-h)' }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="flex flex-col px-12 lg:px-20 pt-20 pb-20 -mt-16 max-w-4xl mx-auto w-full">
+      <div ref={innerRef} className="flex flex-col px-12 lg:px-20 pb-20 max-w-4xl mx-auto w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         {/* SlideHeader */}
         <SlideHeader
           eyebrow="INVESTMENT"
