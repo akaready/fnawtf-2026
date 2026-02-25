@@ -89,7 +89,7 @@ export function InvestmentSlide({
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="flex flex-col px-12 lg:px-20 pt-20 pb-40 -mt-16 max-w-4xl mx-auto w-full">
+      <div ref={innerRef} className="flex flex-col px-12 lg:px-20 pt-20 pb-20 -mt-16 max-w-4xl mx-auto w-full">
         {/* SlideHeader */}
         <SlideHeader
           eyebrow="INVESTMENT"
