@@ -198,7 +198,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
 
         {/* Instructions */}
         <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed">
-          Navigate with arrow keys, page dots at the bottom, or the buttons on the left/right.
+          Navigate with arrow keys, page dots below, or the left/right buttons.
         </p>
       </div>
     </section>
