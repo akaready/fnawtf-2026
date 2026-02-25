@@ -7,6 +7,7 @@ import { NavLogo } from './NavLogo';
 import { NavButton } from './NavButton';
 import { CalBookingButton } from '@/components/cal/CalBookingButton';
 import { MobileMenu } from './MobileMenu';
+import { ProposalNavButton } from './ProposalNavButton';
 import { useGsap } from '@/hooks/useGsap';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -51,6 +52,11 @@ export function Navigation({ currentPage }: NavigationProps) {
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
+  // Proposal exit: nav should start hidden and animate in on reveal event
+  const [proposalExiting, setProposalExiting] = useState(() =>
+    typeof window !== 'undefined' && !!sessionStorage.getItem('fna_proposal_exit')
+  );
+
   // DOM refs for animation targets
   const navRef = useRef<HTMLElement>(null);
   const logoRef = useRef<HTMLAnchorElement>(null);
@@ -67,6 +73,30 @@ export function Navigation({ currentPage }: NavigationProps) {
     window.addEventListener('resize', checkDesktop);
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
+
+  // Proposal exit: listen for reveal event and animate nav back in
+  useEffect(() => {
+    if (!proposalExiting) return;
+
+    const handleReveal = () => {
+      sessionStorage.removeItem('fna_proposal_exit');
+
+      const nav = navRef.current;
+      if (!nav) return;
+
+      const tl = gsap.timeline({
+        onComplete: () => setProposalExiting(false),
+      });
+      tl.to(nav, { y: 0, duration: 0.5, ease: 'power2.out' }, 0);
+      if (logoRef.current) tl.fromTo(logoRef.current, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 0.3);
+      const validNavItems = navItemsRef.current.filter(Boolean);
+      if (validNavItems.length > 0) tl.fromTo(validNavItems, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' }, 0.4);
+      if (ctaRef.current) tl.fromTo(ctaRef.current, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.5)' }, 0.7);
+    };
+
+    window.addEventListener('fna-nav-reveal', handleReveal);
+    return () => window.removeEventListener('fna-nav-reveal', handleReveal);
+  }, [proposalExiting]);
 
   // Trigger nav animation after mask reveal completes (with a small delay)
   useEffect(() => {
@@ -156,16 +186,18 @@ export function Navigation({ currentPage }: NavigationProps) {
       ref={navRef}
       className="fixed top-0 z-[10000] w-full px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md"
       style={
-        isDesktop && !hasAnimated
+        pathname.startsWith('/p/') || proposalExiting
           ? { transform: 'translateY(-100%)' }
-          : undefined
+          : isDesktop && !hasAnimated
+            ? { transform: 'translateY(-100%)' }
+            : undefined
       }
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <NavLogo
           ref={logoRef}
-          style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
+          style={proposalExiting || (isDesktop && !hasAnimated) ? { opacity: 0 } : undefined}
         />
 
         {/* Desktop Navigation */}
@@ -177,7 +209,7 @@ export function Navigation({ currentPage }: NavigationProps) {
                 navItemsRef.current[index] = el;
               }}
               className="flex items-center"
-              style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
+              style={proposalExiting || (isDesktop && !hasAnimated) ? { opacity: 0 } : undefined}
             >
               <NavButton
                 href={link.href}
@@ -197,9 +229,10 @@ export function Navigation({ currentPage }: NavigationProps) {
         {/* Desktop CTA — always render container for layout, skip Cal embed on admin routes */}
         <div
           ref={ctaRef}
-          className="hidden md:flex md:items-center"
-          style={isDesktop && !hasAnimated ? { opacity: 0 } : undefined}
+          className="hidden md:flex md:items-center gap-3"
+          style={proposalExiting || (isDesktop && !hasAnimated) ? { opacity: 0 } : undefined}
         >
+          <ProposalNavButton />
           {!pathname.startsWith('/admin') && (
             <CalBookingButton
               buttonText="Let's Talk"

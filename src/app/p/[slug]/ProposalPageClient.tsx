@@ -51,9 +51,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
       duration: 0.5,
       ease: 'power2.inOut',
       onComplete: () => {
-        // Hide nav before navigating (it will animate back in)
-        const navEl = document.querySelector('nav') as HTMLElement | null;
-        if (navEl) gsap.set(navEl, { y: '-100%' });
+        // Tell Navigation to start hidden on next render
+        sessionStorage.setItem('fna_proposal_exit', 'true');
 
         // Set cookie + navigate
         document.cookie = 'proposal_exited=true; path=/; max-age=2592000';
@@ -69,18 +68,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
               onComplete: () => {
                 overlay.remove();
 
-                // Phase 3: Animate nav back in (reuse entrance animation pattern)
-                if (navEl) {
-                  const logoEl = navEl.querySelector('a') as HTMLElement;
-                  const navItemEls = navEl.querySelectorAll('.hidden.md\\:flex > div');
-                  const ctaEl = navEl.querySelector('.hidden.md\\:flex.md\\:items-center') as HTMLElement;
-
-                  const tl = gsap.timeline();
-                  tl.to(navEl, { y: 0, duration: 0.5, ease: 'power2.out' }, 0);
-                  if (logoEl) tl.fromTo(logoEl, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 0.3);
-                  if (navItemEls.length > 0) tl.fromTo(navItemEls, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' }, 0.4);
-                  if (ctaEl) tl.fromTo(ctaEl, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.5)' }, 0.7);
-                }
+                // Phase 3: Tell Navigation to animate back in
+                window.dispatchEvent(new Event('fna-nav-reveal'));
               },
             });
           }, 150);
