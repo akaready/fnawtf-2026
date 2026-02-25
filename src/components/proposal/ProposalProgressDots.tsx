@@ -47,20 +47,25 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
     });
   };
 
-  // Bounce dot 2 on first load (macOS dock-style continuous bounce)
+  // Bounce dot 2 on first load (3s on, 3s off pattern)
   useEffect(() => {
     if (activeIndex !== 0 || hasBounced.current) return;
     const timer = setTimeout(() => {
       const target = dotRefs.current[1];
       if (!target) return;
       hasBounced.current = true;
-      gsap.to(target, {
+
+      const tl = gsap.timeline({ repeat: -1 });
+      // Bounce for ~3 seconds (4 cycles × 0.8s per cycle)
+      tl.to(target, {
         y: -8,
         duration: 0.4,
         ease: 'power2.out',
         yoyo: true,
-        repeat: -1,
-      });
+        repeat: 3,
+      }, 0);
+      // Pause for 3 seconds
+      tl.to(target, {}, '+=3');
     }, 3000);
     return () => clearTimeout(timer);
   }, [activeIndex]);
