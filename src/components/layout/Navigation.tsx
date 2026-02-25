@@ -92,7 +92,7 @@ export function Navigation({ currentPage }: NavigationProps) {
       const tl = gsap.timeline({
         onComplete: () => setProposalExiting(false),
       });
-      tl.to(nav, { y: 0, duration: 0.5, ease: 'power2.out' }, 0);
+      tl.fromTo(nav, { y: '-100%', opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, 0);
       if (logoRef.current) tl.fromTo(logoRef.current, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, 0.3);
       const validNavItems = navItemsRef.current.filter(Boolean);
       if (validNavItems.length > 0) tl.fromTo(validNavItems, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' }, 0.4);
