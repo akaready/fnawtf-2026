@@ -26,6 +26,25 @@ function getVisibleTabs(proposalType: ProposalType): TabId[] {
   }
 }
 
+export interface CalculatorStateSnapshot {
+  quote_type: string;
+  selected_addons: Record<string, number>;
+  slider_values: Record<string, number>;
+  tier_selections: Record<string, string>;
+  location_days: Record<string, number[]>;
+  photo_count: number;
+  crowdfunding_enabled: boolean;
+  crowdfunding_tier: number;
+  fundraising_enabled: boolean;
+}
+
+export interface ProposalCalculatorSaveHandle {
+  /** Immediately persist the current calculator state to the active quote row */
+  saveNow: () => Promise<void>;
+  /** Get the current calculator state as a plain object */
+  getState: () => CalculatorStateSnapshot;
+}
+
 interface Props {
   proposalId: string;
   proposalType: ProposalType;
@@ -36,12 +55,20 @@ interface Props {
   isLocked?: boolean;
   isCompare?: boolean;
   recommendedQuote?: ProposalQuoteRow;
+  activeQuoteId?: string;
+  saveRef?: React.MutableRefObject<ProposalCalculatorSaveHandle | null>;
+  /** Called after any successful save (auto-save or manual) with the saved state */
+  onQuoteUpdated?: (payload: CalculatorStateSnapshot) => void;
+  /** Label for the adjusted/comparison column in the summary */
+  comparisonLabel?: string;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, isCompare, recommendedQuote }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, isCompare, recommendedQuote, activeQuoteId, saveRef, onQuoteUpdated, comparisonLabel }: Props) {
   const visibleTabs = getVisibleTabs(proposalType);
 
-  const [activeTab, setActiveTab] = useState<TabId>(visibleTabs[0]);
+  const [activeTab, setActiveTab] = useState<TabId>(
+    (initialQuote?.quote_type as TabId) ?? visibleTabs[0]
+  );
   const [selectedAddOns, setSelectedAddOns] = useState<Map<string, number>>(
     initialQuote?.selected_addons
       ? new Map(Object.entries(initialQuote.selected_addons))
@@ -66,7 +93,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(initialQuote?.crowdfunding_enabled ?? false);
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(initialQuote?.crowdfunding_tier ?? 0);
   const [fundraisingEnabled, setFundraisingEnabled] = useState(initialQuote?.fundraising_enabled ?? false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([visibleTabs[0]]));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set([(initialQuote?.quote_type as TabId) ?? visibleTabs[0]])
+  );
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['ADD-ONS', 'CAST + CREW', 'RENTALS + TECHNIQUES', 'POST PRODUCTION'])
   );
@@ -107,12 +136,17 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   const recommendedPhotoCountVal = recommendedQuote?.photo_count ?? 25;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const prevIsCompare = useRef(false);
+  // Initialize to current value so the sync effect doesn't fire on mount
+  // (which would overwrite saved-quote state with FNA recommended state)
+  const prevIsCompare = useRef(isCompare ?? false);
+  const prevQuoteId = useRef<string | undefined>(initialQuote?.id);
 
-  // When switching INTO compare mode, sync all quantities from recommendedQuote so the
-  // user starts adjusting from the same configuration as recommended.
+  // When switching INTO compare mode (from locked/recommended), sync quantities
+  // from recommendedQuote so the user starts adjusting from the same config.
+  // Skip on mount (prevIsCompare starts matching isCompare) — we already loaded
+  // from initialQuote via useState initializers.
   useEffect(() => {
-    if (isCompare && !prevIsCompare.current && recommendedQuote) {
+    if (isCompare && !prevIsCompare.current && recommendedQuote && !initialQuote) {
       if (recommendedQuote.selected_addons) {
         setSelectedAddOns(new Map(Object.entries(recommendedQuote.selected_addons)));
       }
@@ -132,27 +166,85 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
       setFundraisingEnabled(recommendedQuote.fundraising_enabled ?? false);
     }
     prevIsCompare.current = isCompare ?? false;
-  }, [isCompare, recommendedQuote]);
+  }, [isCompare, recommendedQuote, initialQuote]);
+
+  // When activeQuoteId changes (user switched to a different saved quote tab),
+  // reload all calculator state from the new initialQuote — in place, no remount.
+  useEffect(() => {
+    if (!initialQuote || initialQuote.id === prevQuoteId.current) return;
+    prevQuoteId.current = initialQuote.id;
+
+    // Restore the tab the quote was saved on
+    const savedTab = (initialQuote.quote_type as TabId) ?? visibleTabs[0];
+    setActiveTab(savedTab);
+    setExpandedSections(new Set([savedTab]));
+
+    if (initialQuote.selected_addons) {
+      setSelectedAddOns(new Map(Object.entries(initialQuote.selected_addons)));
+    } else {
+      setSelectedAddOns(new Map([['launch-production-days', 1]]));
+    }
+    if (initialQuote.slider_values) {
+      setSliderValues(new Map(Object.entries(initialQuote.slider_values)));
+    } else {
+      setSliderValues(new Map());
+    }
+    if (initialQuote.tier_selections) {
+      setTierSelections(new Map(Object.entries(initialQuote.tier_selections).map(([k, v]) => [k, v as 'basic' | 'premium'])));
+    } else {
+      setTierSelections(new Map());
+    }
+    if (initialQuote.location_days) {
+      setLocationDays(new Map(Object.entries(initialQuote.location_days).map(([k, v]) => [k, v as number[]])));
+    } else {
+      setLocationDays(new Map());
+    }
+    setPhotoCount(initialQuote.photo_count ?? 25);
+    setCrowdfundingEnabled(initialQuote.crowdfunding_enabled ?? false);
+    setCrowdfundingTierIndex(initialQuote.crowdfunding_tier ?? 0);
+    setFundraisingEnabled(initialQuote.fundraising_enabled ?? false);
+  }, [initialQuote, visibleTabs]);
+
+  // Build the current state payload (shared by auto-save and manual save)
+  const buildSavePayload = useCallback(() => ({
+    quote_type: activeTab,
+    selected_addons: Object.fromEntries(selectedAddOns),
+    slider_values: Object.fromEntries(sliderValues),
+    tier_selections: Object.fromEntries(tierSelections),
+    location_days: Object.fromEntries(Array.from(locationDays.entries()).map(([k, v]) => [k, v])),
+    photo_count: photoCount,
+    crowdfunding_enabled: crowdfundingEnabled,
+    crowdfunding_tier: crowdfundingTierIndex,
+    fundraising_enabled: fundraisingEnabled,
+  }), [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled]);
+
+  // Expose imperative save handle so parent can trigger an immediate persist
+  useEffect(() => {
+    if (!saveRef) return;
+    saveRef.current = {
+      saveNow: async () => {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        const payload = buildSavePayload();
+        await updateClientQuote(proposalId, payload, activeQuoteId);
+        onQuoteUpdated?.(payload as CalculatorStateSnapshot);
+      },
+      getState: () => buildSavePayload() as CalculatorStateSnapshot,
+    };
+    return () => { if (saveRef) saveRef.current = null; };
+  }, [saveRef, proposalId, activeQuoteId, buildSavePayload, onQuoteUpdated]);
 
   useEffect(() => {
     if (!isCompare) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      updateClientQuote(proposalId, {
-        quote_type: activeTab,
-        selected_addons: Object.fromEntries(selectedAddOns),
-        slider_values: Object.fromEntries(sliderValues),
-        tier_selections: Object.fromEntries(tierSelections),
-        location_days: Object.fromEntries(Array.from(locationDays.entries()).map(([k, v]) => [k, v])),
-        photo_count: photoCount,
-        crowdfunding_enabled: crowdfundingEnabled,
-        crowdfunding_tier: crowdfundingTierIndex,
-        fundraising_enabled: fundraisingEnabled,
-      }).catch(console.error);
+      const payload = buildSavePayload();
+      updateClientQuote(proposalId, payload, activeQuoteId)
+        .then(() => onQuoteUpdated?.(payload as CalculatorStateSnapshot))
+        .catch(console.error);
     }, 1500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCompare, proposalId, activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled]);
+  }, [isCompare, proposalId, buildSavePayload, activeQuoteId, onQuoteUpdated]);
 
   // When locked, always display the FNA's recommended state — never the client's adjusted state
   const displaySelectedAddOns = isLocked && recommendedQuote?.selected_addons
@@ -447,6 +539,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               crowdfundingApproved={crowdfundingApproved}
               isReadOnly={isReadOnly}
               comparisonData={comparisonData}
+              comparisonLabel={comparisonLabel}
               isLocked={isLocked}
             />
           </div>

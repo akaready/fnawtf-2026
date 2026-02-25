@@ -134,6 +134,7 @@ export interface ProposalQuoteRow {
   down_amount: number | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
 }
 
 export interface ProposalMilestoneRow {

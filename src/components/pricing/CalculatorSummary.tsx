@@ -48,6 +48,8 @@ interface CalculatorSummaryProps {
   };
   isLocked?: boolean;
   initialFriendlyDiscountPct?: number;
+  /** Label for the adjusted/comparison column (defaults to "Adjusted") */
+  comparisonLabel?: string;
 }
 
 function formatPrice(amount: number): string {
@@ -519,6 +521,7 @@ export function CalculatorSummary({
   comparisonData,
   isLocked,
   initialFriendlyDiscountPct,
+  comparisonLabel = 'Adjusted',
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
   const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(0);
@@ -676,9 +679,9 @@ export function CalculatorSummary({
       {/* Quote card */}
       <div className="border border-green-900 rounded-lg bg-green-950/25 p-6">
         {/* Receipt header */}
-        <div className="border-b border-dashed border-border pb-3 mb-4">
-          <h3 className="font-display text-lg font-bold text-foreground text-center">
-            Quote
+        <div className="border-b border-dashed border-border py-4 mb-3 -mt-5">
+          <h3 className="font-display text-2xl font-bold text-foreground text-center">
+            {comparisonData ? 'Compare Quotes' : 'Quote'}
           </h3>
         </div>
 
@@ -688,7 +691,7 @@ export function CalculatorSummary({
             <div className="grid grid-cols-2 gap-x-4 mb-4 font-mono text-sm">
               {/* Recommended column */}
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 pb-2 border-b border-white/5">Recommended</p>
+                <p className="text-base font-bold text-white/50 uppercase tracking-wider mb-3 pb-3 border-b border-white/5">Recommended</p>
                 {buildActive && !comparisonData.fundraisingEnabled && (
                   <>
                     <div className="flex justify-between gap-1">
@@ -794,7 +797,7 @@ export function CalculatorSummary({
 
               {/* Adjusted column */}
               <div className="border-l border-white/10 pl-4 space-y-1.5">
-                <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2 pb-2 border-b border-white/5">Adjusted</p>
+                <p className="text-base font-bold text-white/50 uppercase tracking-wider mb-3 pb-3 border-b border-white/5">{comparisonLabel}</p>
                 {buildActive && !comparisonData.fundraisingEnabled && (
                   <>
                     <div className="flex justify-between gap-1">
@@ -916,29 +919,33 @@ export function CalculatorSummary({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-border/50">
-                    <span className="font-display font-bold text-foreground text-base">Recommended</span>
+                    <span className="font-display font-bold text-foreground text-base">Total</span>
                     <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
                       {formatPrice(recTotal)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-green-400">{comparisonData?.fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+                    <div>
+                      <span className="text-sm font-semibold text-green-400 block">{comparisonData?.fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+                      <p className="text-xs text-muted-foreground mt-1">Minimum payment to begin</p>
+                    </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(recDownAmount)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Minimum payment to begin</p>
                 </div>
                 <div className="border-l border-white/10 pl-4">
                   <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-border/50">
-                    <span className="font-display font-bold text-foreground text-base">Adjusted</span>
+                    <span className="font-display font-bold text-foreground text-base">Total</span>
                     <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
                       {formatPrice(total)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-green-400">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+                    <div>
+                      <span className="text-sm font-semibold text-green-400 block">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+                      <p className="text-xs text-muted-foreground mt-1">Minimum payment to begin</p>
+                    </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Minimum payment to begin</p>
                 </div>
               </div>
             </div>
@@ -1048,10 +1055,12 @@ export function CalculatorSummary({
           </div>
           {/* Payment terms row */}
           <div className="flex justify-between items-center">
-            <span className="font-semibold text-green-400">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+            <div>
+              <span className="font-semibold text-green-400 block">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+              <span className="text-sm text-muted-foreground block mt-1">Minimum payment to begin</span>
+            </div>
             <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>
           </div>
-          <span className="text-sm text-muted-foreground block mt-1">Minimum payment to begin</span>
         </div>
           </>
         )}
@@ -1159,29 +1168,32 @@ export function CalculatorSummary({
               </div>
             </div>
           ) : (
-            <div className={`mt-3 p-4 rounded-lg border transition-colors duration-200 ${isLocked ? 'cursor-not-allowed' : ''} ${
+            <div className={`relative mt-3 p-4 rounded-lg border transition-colors duration-200 ${
               friendlyDiscountPercent > 0
                 ? 'bg-green-950/30 border-green-600/40'
                 : 'bg-muted/20 border-border'
             }`}>
-              <input
-                type="range"
-                min={0}
-                max={20}
-                step={1}
-                value={friendlyDiscountPercent}
-                readOnly={!!isLocked}
-                onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
-                className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
-                  friendlyDiscountPercent > 0
-                    ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
-                    : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
-                }`}
-              />
+              {isLocked && <div className="absolute inset-0 rounded-lg z-10" style={{ cursor: 'not-allowed' }} />}
+              <div>
+                <input
+                  type="range"
+                  min={0}
+                  max={20}
+                  step={1}
+                  value={friendlyDiscountPercent}
+                  readOnly={!!isLocked}
+                  onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
+                  className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                    [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
+                    [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
+                    friendlyDiscountPercent > 0
+                      ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
+                      : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
+                  }`}
+                />
+              </div>
               <div className="flex justify-between mt-1 text-xs text-muted-foreground">
                 <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
               </div>

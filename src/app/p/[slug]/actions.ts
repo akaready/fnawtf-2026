@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { setProposalAuthCookie, verifyProposalPassword } from '@/lib/proposal/auth';
-import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow } from '@/types/proposal';
+import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow, ProposalQuoteRow } from '@/types/proposal';
 
 export async function verifyProposalAccess(slug: string, email: string, password: string, name?: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
@@ -71,6 +71,7 @@ export async function getProposalData(slug: string) {
     .from('proposal_quotes')
     .select('*')
     .eq('proposal_id', p.id)
+    .is('deleted_at', null)
     .order('created_at');
 
   const { data: milestones } = await supabase
@@ -103,17 +104,20 @@ export async function saveClientQuote(proposalId: string, quoteData: {
   friendly_discount_pct: number;
   total_amount: number | null;
   down_amount: number | null;
-}) {
+}): Promise<ProposalQuoteRow> {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('proposal_quotes')
     .insert({
       proposal_id: proposalId,
       is_fna_quote: false,
       is_locked: false,
       ...quoteData,
-    } as never);
+    } as never)
+    .select()
+    .single();
   if (error) throw new Error(error.message);
+  return data as ProposalQuoteRow;
 }
 
 export async function updateClientQuote(proposalId: string, data: {
@@ -126,13 +130,26 @@ export async function updateClientQuote(proposalId: string, data: {
   crowdfunding_enabled: boolean;
   crowdfunding_tier: number;
   fundraising_enabled: boolean;
-}) {
+}, quoteId?: string) {
   const supabase = await createClient();
+
+  if (quoteId) {
+    // Update a specific quote by ID
+    const { error } = await supabase.from('proposal_quotes').update({
+      ...data,
+      updated_at: new Date().toISOString(),
+    } as never).eq('id', quoteId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  // Fallback: find the first non-FNA, non-deleted quote for this proposal
   const { data: existing } = await supabase
     .from('proposal_quotes')
     .select('id')
     .eq('proposal_id', proposalId)
     .eq('is_fna_quote', false)
+    .is('deleted_at', null)
     .limit(1)
     .single() as { data: { id: string } | null };
 
@@ -152,6 +169,24 @@ export async function updateClientQuote(proposalId: string, data: {
     } as never);
     if (error) throw new Error(error.message);
   }
+}
+
+export async function renameClientQuote(quoteId: string, label: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('proposal_quotes')
+    .update({ label, updated_at: new Date().toISOString() } as never)
+    .eq('id', quoteId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteClientQuote(quoteId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('proposal_quotes')
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq('id', quoteId);
+  if (error) throw new Error(error.message);
 }
 
 export async function updateMilestoneDate(milestoneId: string, newStartDate: string) {
