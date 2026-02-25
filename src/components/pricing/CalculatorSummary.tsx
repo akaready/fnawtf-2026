@@ -1024,11 +1024,7 @@ export function CalculatorSummary({
           {crowdfundingEnabled && crowdfundingTierDiscounts[crowdfundingTierIndex] > 0 && (
             <div className="flex justify-between">
               <span className="text-green-600">Crowdfunding ({crowdfundingTierDiscounts[crowdfundingTierIndex]}% off)</span>
-              {isLocked ? (
-                <span className="text-white/40 text-sm">Included</span>
-              ) : (
-                <span className="text-green-600">-{formatPrice(crowdfundingDiscount)}</span>
-              )}
+              <span className="text-green-600">-{formatPrice(crowdfundingDiscount)}</span>
             </div>
           )}
 
@@ -1036,11 +1032,7 @@ export function CalculatorSummary({
           {showFriendlyDiscount && friendlyDiscountPercent > 0 && (
             <div className="flex justify-between">
               <span className="text-green-600">Friendly discount ({friendlyDiscountPercent}% off)</span>
-              {isLocked ? (
-                <span className="text-white/40 text-sm">Included</span>
-              ) : (
-                <span className="text-green-600">-{formatPrice(friendlyDiscount)}</span>
-              )}
+              <span className="text-green-600">-{formatPrice(friendlyDiscount)}</span>
             </div>
           )}
         </div>
@@ -1167,7 +1159,7 @@ export function CalculatorSummary({
               </div>
             </div>
           ) : (
-            <div className={`mt-3 p-4 rounded-lg border transition-colors duration-200 ${
+            <div className={`mt-3 p-4 rounded-lg border transition-colors duration-200 ${isLocked ? 'cursor-not-allowed' : ''} ${
               friendlyDiscountPercent > 0
                 ? 'bg-green-950/30 border-green-600/40'
                 : 'bg-muted/20 border-border'
@@ -1178,8 +1170,9 @@ export function CalculatorSummary({
                 max={20}
                 step={1}
                 value={friendlyDiscountPercent}
-                onChange={(e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
-                className={`w-full h-2 bg-border rounded-lg appearance-none cursor-pointer
+                readOnly={!!isLocked}
+                onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
+                className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
                   [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full

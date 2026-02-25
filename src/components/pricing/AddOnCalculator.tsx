@@ -155,6 +155,7 @@ function SliderRow({
   isLocked,
   isCompare,
   isRecommended,
+  recommendedValue,
 }: {
   addOn: AddOn;
   value: number;
@@ -164,12 +165,15 @@ function SliderRow({
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
+  recommendedValue?: number;
 }) {
   const slider = addOn.slider!;
 
   const lockedNotIncluded = isLocked && !enabled;
   const compareAdded = isCompare && !isLocked && enabled && !isRecommended;
   const compareRemoved = isCompare && !isLocked && !enabled && isRecommended;
+  const compareIncreased = isCompare && !isLocked && enabled && isRecommended && recommendedValue !== undefined && value > recommendedValue;
+  const compareDecreased = isCompare && !isLocked && enabled && isRecommended && recommendedValue !== undefined && value < recommendedValue;
 
   return (
     <div
@@ -182,10 +186,10 @@ function SliderRow({
           ? 'border-border/50 bg-[#020202]'
           : isLocked
             ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-            : compareAdded
+            : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
-              : compareRemoved
-                ? 'border-red-900/60 bg-[#020202]'
+              : (compareRemoved || compareDecreased)
+                ? 'border-red-600 bg-red-950/20'
                 : enabled
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -204,7 +208,8 @@ function SliderRow({
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
                   ? 'border-purple-400 bg-purple-400'
-                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
+                  : compareDecreased ? 'border-red-500 bg-red-500'
                   : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
               }`}
             >
@@ -230,15 +235,17 @@ function SliderRow({
               className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                ${compareAdded
+                ${(compareAdded || compareIncreased)
                   ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
-                  : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                  : compareDecreased
+                    ? '[&::-webkit-slider-thumb]:bg-red-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(248,113,113,0.4)]'
+                    : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                 }`}
             />
             <span className="text-xs text-muted-foreground">${slider.max.toLocaleString()}</span>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {enabled ? `$${value.toLocaleString('en-US')}${addOn.perDay ? '/day' : ''}` : addOn.priceDisplay}
         </span>
       </div>
@@ -260,6 +267,7 @@ function MultiSliderRow({
   isLocked,
   isCompare,
   isRecommended,
+  recommendedQuantity,
 }: {
   addOn: AddOn;
   enabled: boolean;
@@ -274,6 +282,7 @@ function MultiSliderRow({
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
+  recommendedQuantity?: number;
 }) {
   const slider = addOn.slider!;
   const maxCount = addOn.multiSlider!;
@@ -286,6 +295,8 @@ function MultiSliderRow({
   const lockedNotIncluded = isLocked && !enabled;
   const compareAdded = isCompare && !isLocked && enabled && !isRecommended;
   const compareRemoved = isCompare && !isLocked && !enabled && isRecommended;
+  const compareIncreased = isCompare && !isLocked && enabled && isRecommended && recommendedQuantity !== undefined && count > recommendedQuantity;
+  const compareDecreased = isCompare && !isLocked && enabled && isRecommended && recommendedQuantity !== undefined && count < recommendedQuantity;
 
   return (
     <div
@@ -298,10 +309,10 @@ function MultiSliderRow({
           ? 'border-border/50 bg-[#020202]'
           : isLocked
             ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-            : compareAdded
+            : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
-              : compareRemoved
-                ? 'border-red-900/60 bg-[#020202]'
+              : (compareRemoved || compareDecreased)
+                ? 'border-red-600 bg-red-950/20'
                 : enabled
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -321,7 +332,8 @@ function MultiSliderRow({
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
                   ? 'border-purple-400 bg-purple-400'
-                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
+                  : compareDecreased ? 'border-red-500 bg-red-500'
                   : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
               }`}
             >
@@ -348,7 +360,7 @@ function MultiSliderRow({
               >+</button>
             </div>
           )}
-          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
             {enabled ? `$${perDayTotal.toLocaleString('en-US')}/day` : addOn.priceDisplay}
           </span>
         </div>
@@ -376,9 +388,11 @@ function MultiSliderRow({
                     className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                      ${compareAdded
+                      ${(compareAdded || compareIncreased)
                         ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
-                        : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                        : compareDecreased
+                          ? '[&::-webkit-slider-thumb]:bg-red-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(248,113,113,0.4)]'
+                          : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                       }`}
                   />
                   <span className="text-xs font-medium text-foreground w-16 text-right">${val.toLocaleString()}/day</span>
@@ -394,7 +408,11 @@ function MultiSliderRow({
                           onClick={() => onDayToggle(key, day)}
                           className={`px-2 py-0.5 text-[10px] font-medium rounded-full border transition-colors duration-150 ${
                             active
-                              ? 'border-purple-400 bg-purple-400/20 text-purple-300'
+                              ? (compareAdded || compareIncreased)
+                                ? 'border-cyan-400 bg-cyan-400/20 text-cyan-300'
+                                : (compareRemoved || compareDecreased)
+                                  ? 'border-red-400/40 bg-red-400/10 text-red-300/40'
+                                  : 'border-purple-400 bg-purple-400/20 text-purple-300'
                               : 'border-border text-muted-foreground/50 hover:border-muted-foreground/50'
                           }`}
                         >
@@ -423,6 +441,7 @@ function PhotoSliderRow({
   isLocked,
   isCompare,
   isRecommended,
+  recommendedPhotoCount,
 }: {
   addOn: AddOn;
   photoCount: number;
@@ -433,6 +452,7 @@ function PhotoSliderRow({
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
+  recommendedPhotoCount?: number;
 }) {
   const ps = addOn.photoSlider!;
   const extraPhotos = Math.max(0, photoCount - ps.included);
@@ -443,6 +463,8 @@ function PhotoSliderRow({
   const lockedNotIncluded = isLocked && !enabled;
   const compareAdded = isCompare && !isLocked && enabled && !isRecommended;
   const compareRemoved = isCompare && !isLocked && !enabled && isRecommended;
+  const compareIncreased = isCompare && !isLocked && enabled && isRecommended && recommendedPhotoCount !== undefined && photoCount > recommendedPhotoCount;
+  const compareDecreased = isCompare && !isLocked && enabled && isRecommended && recommendedPhotoCount !== undefined && photoCount < recommendedPhotoCount;
 
   return (
     <div
@@ -455,10 +477,10 @@ function PhotoSliderRow({
           ? 'border-border/50 bg-[#020202]'
           : isLocked
             ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-            : compareAdded
+            : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
-              : compareRemoved
-                ? 'border-red-900/60 bg-[#020202]'
+              : (compareRemoved || compareDecreased)
+                ? 'border-red-600 bg-red-950/20'
                 : enabled
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -477,7 +499,8 @@ function PhotoSliderRow({
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
                   ? 'border-purple-400 bg-purple-400'
-                  : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                  : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
+                  : compareDecreased ? 'border-red-500 bg-red-500'
                   : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
               }`}
             >
@@ -506,15 +529,17 @@ function PhotoSliderRow({
               className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
                 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                ${compareAdded
+                ${(compareAdded || compareIncreased)
                   ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
-                  : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                  : compareDecreased
+                    ? '[&::-webkit-slider-thumb]:bg-red-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(248,113,113,0.4)]'
+                    : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                 }`}
             />
             <span className="text-xs text-muted-foreground">{ps.max}</span>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {enabled
             ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
             : addOn.priceDisplay}
@@ -534,6 +559,7 @@ function AddOnRow({
   isLocked,
   isCompare,
   isRecommended,
+  recommendedQuantity,
 }: {
   addOn: AddOn;
   selected: boolean;
@@ -544,6 +570,7 @@ function AddOnRow({
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
+  recommendedQuantity?: number;
 }) {
   const perDayDisplay = addOn.perDay && totalDays > 1
     ? ` (x${totalDays} days)`
@@ -552,6 +579,8 @@ function AddOnRow({
   const lockedNotIncluded = isLocked && !selected;
   const compareAdded = isCompare && !isLocked && selected && !isRecommended;
   const compareRemoved = isCompare && !isLocked && !selected && isRecommended;
+  const compareIncreased = isCompare && !isLocked && selected && isRecommended && recommendedQuantity !== undefined && quantity > recommendedQuantity;
+  const compareDecreased = isCompare && !isLocked && selected && isRecommended && recommendedQuantity !== undefined && quantity < recommendedQuantity;
 
   return (
     <div
@@ -564,10 +593,10 @@ function AddOnRow({
           ? 'border-border/50 bg-[#020202]'
           : isLocked
             ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-            : compareAdded
+            : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
-              : compareRemoved
-                ? 'border-red-900/60 bg-[#020202]'
+              : (compareRemoved || compareDecreased)
+                ? 'border-red-600 bg-red-950/20'
                 : selected
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -585,7 +614,8 @@ function AddOnRow({
             className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
               isLocked
                 ? 'border-purple-400 bg-purple-400'
-                : compareAdded ? 'border-cyan-500 bg-cyan-500'
+                : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
+                : compareDecreased ? 'border-red-500 bg-red-500'
                 : selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
             }`}
           >
@@ -623,7 +653,7 @@ function AddOnRow({
             >+</button>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
+        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
       </div>
     </div>
   );
@@ -791,6 +821,8 @@ export function AddOnSection({
   isLocked,
   isCompare,
   recommendedAddOns,
+  recommendedSliderValues,
+  recommendedPhotoCount,
 }: {
   addOns: AddOn[];
   selectedAddOns: Map<string, number>;
@@ -810,7 +842,9 @@ export function AddOnSection({
   onDayToggle?: (key: string, day: number) => void;
   isLocked?: boolean;
   isCompare?: boolean;
-  recommendedAddOns?: Set<string>;
+  recommendedAddOns?: Map<string, number>;
+  recommendedSliderValues?: Map<string, number>;
+  recommendedPhotoCount?: number;
 }) {
   const days = totalDays ?? 1;
 
@@ -841,6 +875,7 @@ export function AddOnSection({
 
   function renderToggleableRow(addOn: AddOn) {
     const addonIsRecommended = recommendedAddOns?.has(addOn.id) ?? false;
+    const recQty = recommendedAddOns?.get(addOn.id);
 
     if (fundraisingActive && addOn.fundraisingFreebie) {
       return <FreebieRow key={addOn.id} addOn={addOn} />;
@@ -880,6 +915,7 @@ export function AddOnSection({
           isLocked={isLocked}
           isCompare={isCompare}
           isRecommended={addonIsRecommended}
+          recommendedQuantity={recQty}
         />
       );
     }
@@ -896,6 +932,7 @@ export function AddOnSection({
           isLocked={isLocked}
           isCompare={isCompare}
           isRecommended={addonIsRecommended}
+          recommendedValue={recommendedSliderValues?.get(addOn.id)}
         />
       );
     }
@@ -913,6 +950,7 @@ export function AddOnSection({
           isLocked={isLocked}
           isCompare={isCompare}
           isRecommended={addonIsRecommended}
+          recommendedPhotoCount={recommendedPhotoCount}
         />
       );
     }
@@ -929,6 +967,7 @@ export function AddOnSection({
         isLocked={isLocked}
         isCompare={isCompare}
         isRecommended={addonIsRecommended}
+        recommendedQuantity={recQty}
       />
     );
   }

@@ -94,9 +94,17 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     setFundraisingEnabled(prefillQuote.fundraising_enabled ?? false);
   }, [prefillQuote]);
 
-  const recommendedAddOnIds = new Set(
-    recommendedQuote?.selected_addons ? Object.keys(recommendedQuote.selected_addons) : []
+  const recommendedAddOnMap = new Map<string, number>(
+    recommendedQuote?.selected_addons
+      ? Object.entries(recommendedQuote.selected_addons).map(([k, v]) => [k, v as number])
+      : []
   );
+  const recommendedSliderVals = new Map<string, number>(
+    recommendedQuote?.slider_values
+      ? Object.entries(recommendedQuote.slider_values).map(([k, v]) => [k, v as number])
+      : []
+  );
+  const recommendedPhotoCountVal = recommendedQuote?.photo_count ?? 25;
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevIsCompare = useRef(false);
@@ -349,7 +357,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   onCategoryToggle={toggleCategory}
                   isLocked={isLocked}
                   isCompare={isCompare}
-                  recommendedAddOns={recommendedAddOnIds}
+                  recommendedAddOns={recommendedAddOnMap}
+                  recommendedSliderValues={recommendedSliderVals}
+                  recommendedPhotoCount={recommendedPhotoCountVal}
                 />
               </CollapsibleSection>
             )}
@@ -380,7 +390,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   onDayToggle={handleLocationDayToggle}
                   isLocked={isLocked}
                   isCompare={isCompare}
-                  recommendedAddOns={recommendedAddOnIds}
+                  recommendedAddOns={recommendedAddOnMap}
+                  recommendedSliderValues={recommendedSliderVals}
+                  recommendedPhotoCount={recommendedPhotoCountVal}
                 />
               </CollapsibleSection>
             )}
@@ -401,7 +413,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   onSliderChange={handleSliderChange}
                   isLocked={isLocked}
                   isCompare={isCompare}
-                  recommendedAddOns={recommendedAddOnIds}
+                  recommendedAddOns={recommendedAddOnMap}
+                  recommendedSliderValues={recommendedSliderVals}
+                  recommendedPhotoCount={recommendedPhotoCountVal}
                 />
               </CollapsibleSection>
             )}
