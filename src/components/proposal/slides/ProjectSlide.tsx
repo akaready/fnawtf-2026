@@ -195,7 +195,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
           )}
 
           {(project?.credits?.length ?? 0) > 0 && (
-            <ProjectCredits credits={project!.credits!} />
+            <ProjectCredits credits={project!.credits!} compact />
           )}
         </div>
       </div>

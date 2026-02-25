@@ -79,11 +79,11 @@ export function Navigation({ currentPage }: NavigationProps) {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
-  // Proposal exit: listen for reveal event and animate nav back in
+  // Proposal exit: auto-reveal nav after PageTransition panel finishes (~0.6s)
   useEffect(() => {
     if (!proposalExiting) return;
 
-    const handleReveal = () => {
+    const timeout = setTimeout(() => {
       sessionStorage.removeItem('fna_proposal_exit');
 
       const nav = navRef.current;
@@ -97,10 +97,9 @@ export function Navigation({ currentPage }: NavigationProps) {
       const validNavItems = navItemsRef.current.filter(Boolean);
       if (validNavItems.length > 0) tl.fromTo(validNavItems, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out' }, 0.4);
       if (ctaRef.current) tl.fromTo(ctaRef.current, { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(1.5)' }, 0.7);
-    };
+    }, 600);
 
-    window.addEventListener('fna-nav-reveal', handleReveal);
-    return () => window.removeEventListener('fna-nav-reveal', handleReveal);
+    return () => clearTimeout(timeout);
   }, [proposalExiting]);
 
   // Trigger nav animation after mask reveal completes (with a small delay)

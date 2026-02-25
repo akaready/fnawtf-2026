@@ -1,8 +1,6 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import gsap from 'gsap';
 import { VideoPlayerProvider } from '@/contexts/VideoPlayerContext';
 import { TitleSlide } from '@/components/proposal/slides/TitleSlide';
 import { WelcomeSlide } from '@/components/proposal/slides/WelcomeSlide';
@@ -28,8 +26,6 @@ interface Props {
 }
 
 export function ProposalPageClient({ proposal, sections, videos, quotes, milestones, viewerEmail, viewerName }: Props) {
-  const router = useRouter();
-
   const welcomeSection = sections.find(
     (s) => s.sort_order === 0 && (s.section_type === 'text' || s.section_type === 'custom_text')
   ) ?? null;
@@ -42,42 +38,18 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
 
   // ── Exit handler ───────────────────────────────────────────
   const handleExit = useCallback(() => {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:black;opacity:0;pointer-events:none;';
-    document.body.appendChild(overlay);
+    // Tell Navigation to start hidden and animate in after remounting
+    sessionStorage.setItem('fna_proposal_exit', 'true');
 
-    // Phase 1: Fade to black
-    gsap.to(overlay, {
-      opacity: 1,
-      duration: 0.5,
-      ease: 'power2.inOut',
-      onComplete: () => {
-        // Tell Navigation to start hidden on next render
-        sessionStorage.setItem('fna_proposal_exit', 'true');
-
-        // Set cookie + navigate
-        document.cookie = 'proposal_exited=true; path=/; max-age=2592000';
-        router.push('/');
-
-        // Phase 2: Wait for home page to render, then fade overlay out
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            gsap.to(overlay, {
-              opacity: 0,
-              duration: 0.6,
-              ease: 'power2.out',
-              onComplete: () => {
-                overlay.remove();
-
-                // Phase 3: Tell Navigation to animate back in
-                window.dispatchEvent(new Event('fna-nav-reveal'));
-              },
-            });
-          }, 150);
-        });
-      },
-    });
-  }, [router]);
+    // Navigate home via synthetic link click so PageTransition plays the purple panel sweep.
+    // Nav/footer will remount automatically when SiteLayoutWrapper sees the new pathname.
+    const link = document.createElement('a');
+    link.href = '/';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, []);
 
   // ── Slide refs ─────────────────────────────────────────────
   const titleRef        = useRef<HTMLElement>(null);
@@ -159,24 +131,6 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [navigateTo, currentSlide]);
-
-  // ── Nav + footer sweep off on load ─────────────────────────
-  useEffect(() => {
-    const navEl    = document.querySelector('nav')    as HTMLElement | null;
-    const footerEl = document.querySelector('footer') as HTMLElement | null;
-
-    if (footerEl) gsap.set(footerEl, { position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 900, y: 0 });
-
-    const tl = gsap.timeline({ delay: 0.7 });
-    if (navEl)    tl.to(navEl,    { y: '-100%', duration: 1, ease: 'power3.inOut' }, 0);
-    if (footerEl) tl.to(footerEl, { y: '100%',  duration: 1, ease: 'power3.inOut' }, 0.05);
-
-    return () => {
-      tl.kill();
-      if (navEl)    gsap.set(navEl,    { clearProps: 'transform' });
-      if (footerEl) gsap.set(footerEl, { clearProps: 'all' });
-    };
-  }, []);
 
   return (
     <VideoPlayerProvider>

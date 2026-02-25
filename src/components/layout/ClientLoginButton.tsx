@@ -100,6 +100,7 @@ function SubmitButton({ submitting }: { submitting: boolean }) {
 function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [state, setState] = useState<State>('idle');
   const [authError, setAuthError] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -138,16 +139,22 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
       }
     } else {
       // Client path — look up proposal by access code and redirect
-      const result = await loginByAccessCode(trimmedEmail, password);
+      const result = await loginByAccessCode(trimmedEmail, password, name.trim() || undefined);
       if (result.success && result.slug) {
-        window.location.href = `/p/${result.slug}`;
         onClose();
+        // Navigate via synthetic link click so PageTransition plays the purple panel sweep
+        const link = document.createElement('a');
+        link.href = `/p/${result.slug}`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
       } else {
         setAuthError(result.error ?? 'Invalid access code.');
         setState('idle');
       }
     }
-  }, [state, email, password, onClose]);
+  }, [state, name, email, password, onClose]);
 
   const inputClass =
     'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
@@ -198,6 +205,19 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-muted-foreground mb-1.5">Your name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Jane Smith"
+                    autoComplete="name"
+                    required
+                    disabled={state === 'submitting'}
+                    className={inputClass}
+                  />
+                </div>
                 <div>
                   <label className="block text-sm text-muted-foreground mb-1.5">Email address</label>
                   <input

@@ -166,7 +166,7 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
             <button
               onClick={onExit}
               aria-label="Exit proposal"
-              className="flex items-center justify-center py-1 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors duration-200"
+              className="flex items-center justify-center px-3 py-2 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-colors duration-200"
             >
               <LogOut size={14} strokeWidth={1.5} />
             </button>

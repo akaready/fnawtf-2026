@@ -241,7 +241,7 @@ export function SamplesIntroSlide({ videos, slideRef, onViewProject }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-5xl mx-auto px-12 lg:px-20 pb-20" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="max-w-5xl mx-auto px-12 lg:px-20 pb-10" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         <SlideHeader
           eyebrow="samples"
           titleWords={titleWords}

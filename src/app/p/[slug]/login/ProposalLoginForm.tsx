@@ -29,7 +29,17 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
       const result = await verifyProposalAccess(slug, email.trim(), password.trim(), name.trim());
       if (!result.success) {
         setError(result.error ?? 'Unable to verify access.');
+        return;
       }
+
+      // Auth succeeded — navigate via a synthetic link click so that
+      // PageTransition intercepts it and plays the purple panel sweep.
+      const link = document.createElement('a');
+      link.href = `/p/${slug}`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     });
   };
 

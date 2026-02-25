@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { setProposalAuthCookie, verifyProposalPassword } from '@/lib/proposal/auth';
-import { redirect } from 'next/navigation';
 import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow } from '@/types/proposal';
 
 export async function verifyProposalAccess(slug: string, email: string, password: string, name?: string): Promise<{ success: boolean; error?: string }> {
@@ -40,7 +39,7 @@ export async function verifyProposalAccess(slug: string, email: string, password
       .eq('id', row.id);
   }
 
-  redirect(`/p/${slug}`);
+  return { success: true };
 }
 
 export async function getProposalData(slug: string) {

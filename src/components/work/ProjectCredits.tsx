@@ -5,9 +5,10 @@ import type { ProjectCredit } from '@/types/project';
 
 interface ProjectCreditsProps {
   credits: ProjectCredit[];
+  compact?: boolean;
 }
 
-export function ProjectCredits({ credits }: ProjectCreditsProps) {
+export function ProjectCredits({ credits, compact }: ProjectCreditsProps) {
   if (credits.length === 0) return null;
 
   const talentRoles = ['cast', 'narrator', 'vocalist'];
@@ -48,7 +49,7 @@ export function ProjectCredits({ credits }: ProjectCreditsProps) {
   }, [castMembers, updateSeparators]);
 
   return (
-    <section className="pt-10 pb-20 px-6 lg:px-16 border-b border-border">
+    <section className={`pt-10 ${compact ? 'pb-0' : 'pb-20'} px-6 lg:px-16 border-b border-border`}>
       <div className="max-w-md mx-auto text-center">
         {/* Creative Team (crew) */}
         {crew.length > 0 && (

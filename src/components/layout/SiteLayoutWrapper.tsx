@@ -25,17 +25,20 @@ export function SiteLayoutWrapper({ children, nav, footer }: Props) {
     return <>{children}</>;
   }
 
+  // Proposal deck pages: no nav/footer (they unmount behind the PageTransition panel)
+  const isProposalDeck = /^\/p\/[^/]+$/.test(pathname);
+
   return (
     <PageTransition>
       {pathname === '/' && <FnaLoader />}
       <ScrollProgressRight />
-      {nav}
+      {!isProposalDeck && nav}
       <ParallaxProvider>
         <div id="page-content" className="min-h-screen">
           {children}
         </div>
       </ParallaxProvider>
-      {footer}
+      {!isProposalDeck && footer}
     </PageTransition>
   );
 }

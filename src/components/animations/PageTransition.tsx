@@ -121,12 +121,15 @@ export function PageTransition({ children }: PageTransitionProps) {
       const navEl = document.querySelector('nav') as HTMLElement | null;
       const navHeight = navEl ? navEl.offsetHeight : 0;
 
+      // Proposal routes: cover entire viewport (nav unmounts behind the panel)
+      const isProposalTransition = destPathname.startsWith('/p/') || window.location.pathname.startsWith('/p/');
+
       const panel = createPanel({
-        top: `${navHeight}px`,
+        top: isProposalTransition ? '0' : `${navHeight}px`,
         bottom: '-10vh',
         backgroundColor: 'var(--accent)',
         transformOrigin: 'center center',
-        zIndex: '9999',
+        zIndex: isProposalTransition ? '10001' : '9999',
       });
 
       const onComplete = () => { isAnimating = false; };

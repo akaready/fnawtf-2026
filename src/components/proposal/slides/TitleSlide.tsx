@@ -31,6 +31,7 @@ const iconVariants = {
 };
 
 export function TitleSlide({ proposal, slideRef, onNext }: Props) {
+  const sectionRef = useRef<HTMLElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
@@ -39,10 +40,12 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
   const titleWords = proposal.title.split(' ');
 
   useEffect(() => {
+    const section = sectionRef.current;
     const el = innerRef.current;
-    if (!el) return;
+    if (!el || !section) return;
 
     const ctx = gsap.context(() => {
+      const bgOverlay = section.querySelector('[data-bg-overlay]') as HTMLElement;
       const eyebrow = el.querySelector('[data-eyebrow]') as HTMLElement;
       const words = el.querySelectorAll('[data-word]');
       const subtitle = el.querySelector('[data-subtitle]') as HTMLElement | null;
@@ -56,12 +59,18 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
       if (instructions) gsap.set(instructions, { opacity: 0, y: 12 });
 
       const tl = gsap.timeline({ delay: 0.3 });
-      tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' })
+
+      // Fade background in from black first
+      if (bgOverlay) {
+        tl.to(bgOverlay, { opacity: 0, duration: 0.8, ease: 'power2.out' });
+      }
+
+      tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, bgOverlay ? '-=0.3' : '>')
         .to(words, { y: '0%', duration: 1.3, ease: 'expo.out', stagger: 0.07 }, '-=0.3')
         .to(subtitle, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5')
         .to(button, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3')
         .to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.4');
-    }, innerRef);
+    }, section);
 
     return () => ctx.revert();
   }, []);
@@ -122,7 +131,10 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
 
   return (
     <section
-      ref={slideRef as React.RefObject<HTMLElement>}
+      ref={(node) => {
+        (sectionRef as React.MutableRefObject<HTMLElement | null>).current = node;
+        if (slideRef) (slideRef as React.MutableRefObject<HTMLElement | null>).current = node;
+      }}
       data-slide
       className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative flex flex-col items-center justify-center overflow-hidden pb-16"
       style={{
@@ -139,8 +151,15 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         }}
       />
 
+      {/* Black overlay — fades out to reveal background dots/gradient */}
+      <div
+        data-bg-overlay
+        className="absolute inset-0 pointer-events-none z-[1]"
+        style={{ backgroundColor: 'black' }}
+      />
+
       <div ref={innerRef} className="relative z-10 flex flex-col items-center text-center px-8 max-w-5xl w-full">
-        <p data-eyebrow className="text-sm tracking-[0.45em] uppercase text-white/25 font-mono mb-8">
+        <p data-eyebrow className="text-sm tracking-[0.45em] uppercase text-white/25 font-mono mb-8" style={{ opacity: 0 }}>
           {proposal.contact_company}
         </p>
 
@@ -155,7 +174,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
               className="inline-block overflow-hidden pb-[0.22em]"
               style={{ verticalAlign: 'top' }}
             >
-              <span data-word className="inline-block">
+              <span data-word className="inline-block" style={{ transform: 'translateY(115%)' }}>
                 {word}{i < titleWords.length - 1 ? '\u00a0' : ''}
               </span>
             </span>
@@ -163,13 +182,13 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         </h1>
 
         {proposal.subtitle && (
-          <p data-subtitle className="text-xl text-white/40 max-w-lg leading-relaxed mb-12">
+          <p data-subtitle className="text-xl text-white/40 max-w-lg leading-relaxed mb-12" style={{ opacity: 0 }}>
             {proposal.subtitle}
           </p>
         )}
 
         {/* CTA Button */}
-        <div data-button className="w-full max-w-sm mb-8">
+        <div data-button className="w-full max-w-sm mb-8" style={{ opacity: 0 }}>
           <motion.button
             ref={buttonRef}
             onClick={onNext}
@@ -197,7 +216,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         </div>
 
         {/* Instructions */}
-        <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed">
+        <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
           Navigate with arrow keys, page dots below, or the left/right buttons.
         </p>
       </div>
