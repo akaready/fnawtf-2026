@@ -103,7 +103,7 @@ export function ProjectSlide({ video, contactCompany, slideRef }: Props) {
         {project?.client_name && (
           <p
             data-eyebrow
-            className="text-xs tracking-[0.3em] uppercase font-mono text-white/30 mb-4"
+            className="text-sm tracking-[0.4em] uppercase font-mono text-white/50 mb-3"
           >
             {project.client_name}
           </p>
@@ -111,8 +111,8 @@ export function ProjectSlide({ video, contactCompany, slideRef }: Props) {
 
         {/* Title — clip-reveal */}
         <h2
-          className="font-display font-bold text-white leading-[1.0] mb-3"
-          style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)' }}
+          className="font-display font-bold text-white leading-[1.05] mb-3"
+          style={{ fontSize: 'clamp(2.2rem, 4.5vw, 4rem)' }}
         >
           {titleWords.map((word, i) => (
             <span
@@ -130,7 +130,7 @@ export function ProjectSlide({ video, contactCompany, slideRef }: Props) {
         {/* Purple accent line */}
         <div
           data-accent-line
-          className="h-[3px] w-12 rounded-full bg-[var(--accent)] mb-6"
+          className="h-0.5 w-10 rounded-full bg-[var(--accent)] mb-5"
         />
 
         {/* Subtitle */}
