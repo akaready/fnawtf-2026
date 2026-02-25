@@ -17,13 +17,15 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
   const leftRef  = useRef<HTMLButtonElement>(null);
   const rightRef = useRef<HTMLButtonElement>(null);
   const chevronRef = useRef<SVGSVGElement>(null);
+  const animatedRef = useRef(false);
 
   useEffect(() => {
     const els = [leftRef.current, rightRef.current].filter(Boolean) as HTMLElement[];
-    gsap.set(els, { opacity: 0 });
-    gsap.to(els, { opacity: 1, duration: 1, ease: 'power2.out', delay: 1.5, stagger: 0.1 });
+    gsap.set(els, { opacity: 0, scale: 0.8 });
+    gsap.to(els, { opacity: 1, scale: 1, duration: 0.9, ease: 'back.out', delay: 1.5, stagger: 0.1 });
 
-    if (isFirst && rightRef.current && chevronRef.current) {
+    if (isFirst && !animatedRef.current && rightRef.current && chevronRef.current) {
+      animatedRef.current = true;
       // Chevron subtle wiggle animation
       gsap.to(chevronRef.current, {
         x: 2,
@@ -43,11 +45,16 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
         repeat: -1,
         delay: 2.8,
       });
+    } else if (!isFirst && animatedRef.current) {
+      // Kill animations when leaving first slide
+      if (chevronRef.current) gsap.killTweensOf(chevronRef.current);
+      if (rightRef.current) gsap.killTweensOf(rightRef.current);
+      animatedRef.current = false;
     }
   }, [isFirst]);
 
   const baseClass =
-    'fixed top-1/2 -translate-y-1/2 z-[150] hidden lg:flex flex-col items-center justify-center gap-1 py-3 w-12 rounded-xl bg-white/[0.05] border border-white/[0.09] backdrop-blur-sm text-white/35 hover:text-white/80 hover:bg-white/[0.10] hover:border-white/20 transition-colors duration-200';
+    'fixed top-1/2 -translate-y-1/2 z-[150] hidden lg:flex flex-col items-center justify-center gap-1 py-3 w-12 rounded-xl bg-white/[0.03] border border-white/[0.09] backdrop-blur-2xl text-white/35 hover:text-white/80 hover:bg-white/[0.10] hover:border-white/20 transition-colors duration-200';
   const labelClass = 'text-[8px] font-mono tracking-[0.3em] uppercase';
 
   return (
@@ -58,32 +65,36 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
           onClick={onPrev}
           aria-label="Previous slide"
           className={`${baseClass} left-5`}
-          style={{ opacity: canGoPrev ? undefined : 0.15, pointerEvents: canGoPrev ? 'auto' : 'none' }}
+          style={{ pointerEvents: canGoPrev ? 'auto' : 'none' }}
+          disabled={!canGoPrev}
         >
           <ChevronLeft size={20} strokeWidth={1.5} />
           <span className={labelClass}>PREV</span>
         </button>
       )}
 
-      <button
-        ref={rightRef}
-        onClick={isLast ? onExit : onNext}
-        aria-label={isLast ? 'Exit proposal' : 'Next slide'}
-        className={`${baseClass} right-5`}
-        style={{ opacity: (isLast || canGoNext) ? undefined : 0.15, pointerEvents: (isLast || canGoNext) ? 'auto' : 'none' }}
-      >
-        {isLast ? (
-          <>
-            <LogOut size={20} strokeWidth={1.5} />
-            <span className={labelClass}>EXIT</span>
-          </>
-        ) : (
-          <>
-            <ChevronRight ref={chevronRef} size={20} strokeWidth={1.5} />
-            <span className={labelClass}>NEXT</span>
-          </>
-        )}
-      </button>
+      {!isFirst && (
+        <button
+          ref={rightRef}
+          onClick={isLast ? onExit : onNext}
+          aria-label={isLast ? 'Exit proposal' : 'Next slide'}
+          className={`${baseClass} right-5`}
+          style={{ pointerEvents: (isLast || canGoNext) ? 'auto' : 'none' }}
+          disabled={!isLast && !canGoNext}
+        >
+          {isLast ? (
+            <>
+              <LogOut size={20} strokeWidth={1.5} />
+              <span className={labelClass}>EXIT</span>
+            </>
+          ) : (
+            <>
+              <ChevronRight ref={chevronRef} size={20} strokeWidth={1.5} />
+              <span className={labelClass}>NEXT</span>
+            </>
+          )}
+        </button>
+      )}
     </>
   );
 }
