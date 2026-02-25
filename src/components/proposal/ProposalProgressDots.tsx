@@ -47,20 +47,20 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
     });
   };
 
-  // Bounce dot 2 on first load (macOS dock-style bounce)
+  // Bounce dot 2 on first load (macOS dock-style continuous bounce)
   useEffect(() => {
     if (activeIndex !== 0 || hasBounced.current) return;
     const timer = setTimeout(() => {
       const target = dotRefs.current[1];
       if (!target) return;
       hasBounced.current = true;
-      const tl = gsap.timeline();
-      tl.to(target, { y: -18, duration: 0.18, ease: 'power2.out' })
-        .to(target, { y: 0,   duration: 0.18, ease: 'power2.in' })
-        .to(target, { y: -11, duration: 0.14, ease: 'power2.out' })
-        .to(target, { y: 0,   duration: 0.14, ease: 'power2.in' })
-        .to(target, { y: -5,  duration: 0.10, ease: 'power2.out' })
-        .to(target, { y: 0,   duration: 0.10, ease: 'power2.in' });
+      gsap.to(target, {
+        y: -18,
+        duration: 0.4,
+        ease: 'power2.out',
+        yoyo: true,
+        repeat: -1,
+      });
     }, 3000);
     return () => clearTimeout(timer);
   }, [activeIndex]);

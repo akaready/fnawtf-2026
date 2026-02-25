@@ -54,19 +54,21 @@ export function ProposalNavArrows({ onPrev, onNext, canGoPrev, canGoNext, isFirs
         ref={rightRef}
         onClick={isLast ? onExit : onNext}
         aria-label={isLast ? 'Exit proposal' : 'Next slide'}
-        className={`${baseClass} right-5 ${!isLast ? 'relative overflow-hidden' : ''}`}
+        className={`${baseClass} right-5`}
         style={{ opacity: (isLast || canGoNext) ? undefined : 0.15, pointerEvents: (isLast || canGoNext) ? 'auto' : 'none' }}
       >
         {!isLast && (
-          <span
-            ref={sheenRef}
-            aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.25) 50%, transparent 65%)',
-              transform: 'translateX(-150%)',
-            }}
-          />
+          <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+            <span
+              ref={sheenRef}
+              aria-hidden
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.25) 50%, transparent 65%)',
+                transform: 'translateX(-150%)',
+              }}
+            />
+          </div>
         )}
         {isLast ? (
           <>
