@@ -107,6 +107,10 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   const deckRef = useRef<HTMLDivElement>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Track nav highlight: bright on very first slide visited, then dim permanently
+  const navVisitCountRef = useRef(0);
+  const [navHighlighted, setNavHighlighted] = useState(false);
+
   // ── Track active slide from IntersectionObserver ──────────
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -122,6 +126,17 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     return () => observers.forEach((o) => o.disconnect());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Nav highlight: bright on first slide visited, dim after ──
+  useEffect(() => {
+    if (currentSlide === 0) return;
+    navVisitCountRef.current += 1;
+    if (navVisitCountRef.current === 1) {
+      setNavHighlighted(true);
+    } else {
+      setNavHighlighted(false);
+    }
+  }, [currentSlide]);
 
   // ── Smooth scroll navigation (same as dots) ─────────────────
   const navigateTo = useCallback((target: number) => {
@@ -233,6 +248,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             quotes={quotes}
             crowdfundingApproved={proposal.crowdfunding_approved}
             slideRef={investmentRef}
+            viewerName={viewerName}
           />
         )}
 
@@ -254,6 +270,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
         canGoNext={currentSlide < slideRefs.length - 1}
         isFirst={currentSlide === 0}
         isLast={currentSlide === slideRefs.length - 1}
+        isHighlighted={navHighlighted}
         onExit={handleExit}
       />
 
