@@ -85,7 +85,7 @@ export function InvestmentSlide({
   );
 
   const activeQuote = quotes.find((q) => q.id === activeQuoteId) ?? null;
-  const isLocked = activeQuote?.id === recommendedQuote?.id;
+  const isLocked = !!activeQuote?.is_fna_quote;
 
   // New quote creation
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -179,7 +179,7 @@ export function InvestmentSlide({
   }, []);
 
   // ── Save new quote handler ──
-  const MAX_SAVED_QUOTES = 5;
+  const MAX_SAVED_QUOTES = 1;
   const handleSaveQuote = useCallback(async () => {
     if (!saveLabel.trim()) return;
     if (clientQuotes.length >= MAX_SAVED_QUOTES) return;
@@ -191,7 +191,6 @@ export function InvestmentSlide({
         label: saveLabel.trim(),
         ...currentState,
         defer_payment: false,
-        friendly_discount_pct: 0,
         total_amount: null,
         down_amount: null,
       });
@@ -266,8 +265,8 @@ export function InvestmentSlide({
         <div data-content>
           {/* ── Recommended quote card (single purple card) ── */}
           {recommendedQuote && (
-            <div className={`rounded-lg border border-purple-500/40 overflow-hidden mb-5 transition-opacity duration-300 ${
-              activeQuoteId === recommendedQuote.id ? 'opacity-100' : 'opacity-60'
+            <div className={`rounded-lg border overflow-hidden mb-4 transition-all duration-300 ${
+              activeQuoteId === recommendedQuote.id ? 'border-purple-400 opacity-100' : 'border-purple-500/50 opacity-60'
             }`}>
               <button
                 onClick={() => setActiveQuoteId(recommendedQuote.id)}
@@ -295,7 +294,7 @@ export function InvestmentSlide({
           )}
 
           {/* ── Comparison quotes section (all other FNA + client quotes) ── */}
-          <div className="flex items-center gap-3 mb-3 flex-shrink-0" style={{ minHeight: 40 }}>
+          <div className="flex items-center gap-3 mb-4 flex-shrink-0" style={{ minHeight: 40 }}>
             {comparisonQuotes.length > 0 && (
               <div className="inline-flex rounded-lg border border-cyan-700/60 overflow-hidden">
                 {comparisonQuotes.map((q, idx) => {
@@ -403,48 +402,33 @@ export function InvestmentSlide({
               </div>
             )}
 
-            {/* New Comparison Quote — right-aligned, directional fill button */}
-            <button
-              ref={newBtnRef}
-              onClick={() => clientQuotes.length < MAX_SAVED_QUOTES && setShowSaveModal(true)}
-              disabled={clientQuotes.length >= MAX_SAVED_QUOTES}
-              className={`relative ml-auto h-[36px] px-4 font-medium border rounded-lg overflow-hidden ${
-                clientQuotes.length >= MAX_SAVED_QUOTES
-                  ? 'text-white/20 bg-white/5 border-white/10 cursor-not-allowed'
-                  : 'text-black bg-white border-white'
-              }`}
-            >
-              <div
-                ref={newFillRef}
-                className="absolute inset-0 bg-black pointer-events-none"
-                style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
-              />
-              <span className="relative flex items-center justify-center gap-2 whitespace-nowrap text-sm" style={{ zIndex: 10 }}>
-                <motion.span
-                  variants={iconVariants}
-                  initial="hidden"
-                  animate={newHovered ? 'visible' : 'hidden'}
-                  className="flex items-center"
-                >
-                  <Plus size={16} strokeWidth={2} />
-                </motion.span>
-                New Comparison Quote
-              </span>
-            </button>
+            {/* Comparison Quote button — hidden once one exists */}
+            {clientQuotes.length === 0 && (
+              <button
+                ref={newBtnRef}
+                onClick={() => setShowSaveModal(true)}
+                className="relative ml-auto py-2.5 px-4 font-medium border rounded-lg overflow-hidden text-black bg-white border-white"
+              >
+                <div
+                  ref={newFillRef}
+                  className="absolute inset-0 bg-black pointer-events-none"
+                  style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+                />
+                <span className="relative flex items-center justify-center gap-2 whitespace-nowrap text-sm" style={{ zIndex: 10 }}>
+                  <motion.span
+                    variants={iconVariants}
+                    initial="hidden"
+                    animate={newHovered ? 'visible' : 'hidden'}
+                    className="flex items-center"
+                  >
+                    <Plus size={16} strokeWidth={2} />
+                  </motion.span>
+                  Comparison Quote
+                </span>
+              </button>
+            )}
           </div>
 
-          {/* Client description — directly under client row when client quote is active */}
-          {!isLocked && (
-            <div className="mb-4">
-              <textarea
-                value={editingDescription}
-                onChange={(e) => handleDescriptionChange(e.target.value)}
-                placeholder="Add a note about this quote..."
-                rows={2}
-                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white/60 placeholder:text-white/15 outline-none focus:border-cyan-500/40 transition-colors resize-none"
-              />
-            </div>
-          )}
 
           {/* Save name modal (inline popover) */}
           {showSaveModal && (
@@ -486,7 +470,7 @@ export function InvestmentSlide({
           )}
 
           {/* Calculator content */}
-          <div className={comparisonQuotes.length === 0 && !showSaveModal ? 'mt-3' : ''}>
+          <div>
             <ProposalCalculatorEmbed
               isLocked={isLocked}
               proposalId={proposalId}
@@ -498,6 +482,7 @@ export function InvestmentSlide({
               saveRef={calcSaveRef}
               onQuoteUpdated={handleQuoteUpdated}
               allQuotes={quotes.filter((q) => !q.deleted_at)}
+              onActiveQuoteChange={(id) => setActiveQuoteId(id)}
             />
           </div>
         </div>

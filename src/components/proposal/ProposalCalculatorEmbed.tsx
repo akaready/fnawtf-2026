@@ -60,9 +60,11 @@ interface Props {
   onQuoteUpdated?: (payload: CalculatorStateSnapshot) => void;
   /** All quotes for comparison dropdowns in the summary */
   allQuotes?: ProposalQuoteRow[];
+  /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
+  onActiveQuoteChange?: (quoteId: string) => void;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange }: Props) {
   const visibleTabs = getVisibleTabs(proposalType);
 
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -125,6 +127,15 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevQuoteId = useRef<string | undefined>(initialQuote?.id);
+
+  // Keep a ref to the recommended quote so toggle handlers can read it without stale closures
+  const recommendedDataRef = useRef<ProposalQuoteRow | undefined>(allQuotes?.find((q) => q.is_fna_quote));
+  useEffect(() => {
+    recommendedDataRef.current = allQuotes?.find((q) => q.is_fna_quote);
+  }, [allQuotes]);
+  // Also keep a ref to selectedAddOns for sync reads inside callbacks
+  const selectedAddOnsRef = useRef(selectedAddOns);
+  selectedAddOnsRef.current = selectedAddOns;
 
   // When activeQuoteId changes (user switched to a different quote tab),
   // reload all calculator state from the new initialQuote — in place, no remount.
@@ -233,15 +244,32 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
 
   const handleToggle = useCallback((id: string) => {
     if (id === 'launch-production-days') return;
+    const wasSelected = selectedAddOnsRef.current.has(id);
+    const rec = recommendedDataRef.current;
+
     setSelectedAddOns((prev) => {
       const next = new Map(prev);
       if (next.has(id)) {
         next.delete(id);
       } else {
-        next.set(id, 1);
+        // Match recommended qty so re-enabling a removed item goes straight to purple
+        const recQty = rec?.selected_addons?.[id];
+        next.set(id, typeof recQty === 'number' ? recQty : 1);
       }
       return next;
     });
+
+    // When enabling, sync slider value to recommended so it doesn't show as decreased/increased
+    if (!wasSelected) {
+      const recSliderVal = rec?.slider_values?.[id];
+      if (typeof recSliderVal === 'number') {
+        setSliderValues((prev) => {
+          const next = new Map(prev);
+          next.set(id, recSliderVal);
+          return next;
+        });
+      }
+    }
   }, []);
 
   const handleQuantityChange = useCallback((id: string, qty: number) => {
@@ -489,6 +517,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               allQuotes={allQuotes}
               activeQuoteId={activeQuoteId}
               onFriendlyDiscountChange={setFriendlyDiscountPct}
+              onActiveQuoteChange={onActiveQuoteChange}
             />
           </div>
         </div>

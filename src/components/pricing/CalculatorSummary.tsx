@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, Fragment } from 'react';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Save, Loader2, Check, X, Plus, ChevronDown } from 'lucide-react';
+import { Calendar, Save, Loader2, Check, X, Plus, ChevronDown, Star, User, TrendingDown } from 'lucide-react';
 import { getCalApi } from '@calcom/embed-react';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { AddOn } from '@/types/pricing';
@@ -45,6 +45,8 @@ interface CalculatorSummaryProps {
   activeQuoteId?: string;
   /** Called whenever the user moves the friendly discount slider */
   onFriendlyDiscountChange?: (pct: number) => void;
+  /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
+  onActiveQuoteChange?: (quoteId: string) => void;
 }
 
 function formatPrice(amount: number): string {
@@ -591,7 +593,7 @@ function SaveQuoteButton({ onSave, saving, saved }: { onSave: () => void; saving
 
 // ── Aligned two-column comparison renderer ──────────────────────────────
 
-function ComparisonGrid({ left, right, rightHeader }: { left: QuoteColumnData; right: QuoteColumnData; rightHeader?: React.ReactNode }) {
+function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: QuoteColumnData; right: QuoteColumnData; rightHeader?: React.ReactNode; rightDimmed?: boolean }) {
   function addedItems(a: { name: string; price: number }[], b: { name: string; price: number }[]) {
     const names = new Set(a.map(i => i.name));
     return b.filter(i => !names.has(i.name));
@@ -635,7 +637,8 @@ function ComparisonGrid({ left, right, rightHeader }: { left: QuoteColumnData; r
       {/* Left column */}
       <div className="space-y-1.5">
         <div className="mb-3 pb-2 border-b border-green-900/40">
-          <div className="w-full bg-green-900/20 border border-green-600/40 text-white font-semibold rounded-md px-3 text-sm flex items-center h-[34px]">
+          <div className="w-full bg-green-900/20 border border-green-600/40 text-white font-semibold rounded-md px-3 text-sm flex items-center gap-2 h-[34px]">
+            <Star size={14} className="fill-current flex-shrink-0" />
             {left.label}
           </div>
         </div>
@@ -697,14 +700,16 @@ function ComparisonGrid({ left, right, rightHeader }: { left: QuoteColumnData; r
       </div>
 
       {/* Right column */}
-      <div className="border-l border-green-900/50 pl-4 space-y-1.5">
+      <div className="border-l border-green-900/50 pl-4">
         <div className="mb-3 pb-2 border-b border-green-900/40">
           {rightHeader ?? (
-            <div className="w-full border border-green-600 rounded-md px-3 py-2 text-sm font-semibold text-white flex items-center">
+            <div className="w-full bg-green-900/20 border border-green-600/40 text-white font-semibold rounded-md px-3 text-sm flex items-center gap-2 h-[34px]">
+              <User size={14} className="flex-shrink-0" />
               {right.label}
             </div>
           )}
         </div>
+        <div className={`space-y-1.5 transition-opacity duration-150 ${rightDimmed ? 'opacity-30' : 'opacity-100'}`}>
         {tiers.map((tier, ti) => (
           <Fragment key={tier.label}>
             {ti > 0 && <div className="h-px bg-green-900/50 my-1" />}
@@ -766,6 +771,7 @@ function ComparisonGrid({ left, right, rightHeader }: { left: QuoteColumnData; r
             </div>
           )
         )}
+        </div>
       </div>
     </div>
   );
@@ -803,6 +809,7 @@ export function CalculatorSummary({
   allQuotes,
   activeQuoteId,
   onFriendlyDiscountChange,
+  onActiveQuoteChange,
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
   const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(initialFriendlyDiscountPct ?? 0);
@@ -817,10 +824,35 @@ export function CalculatorSummary({
     }
   }, [initialFriendlyDiscountPct, activeQuoteId]);
 
+  // ── Discount card GSAP animation ──
+  const discountContentRef = useRef<HTMLDivElement>(null);
+  const discountFirstRender = useRef(true);
+  useEffect(() => {
+    if (!discountContentRef.current) return;
+    const el = discountContentRef.current;
+    if (discountFirstRender.current) {
+      discountFirstRender.current = false;
+      el.style.height = discountsOpen ? 'auto' : '0px';
+      el.style.opacity = discountsOpen ? '1' : '0';
+      return;
+    }
+    if (discountsOpen) {
+      const h = el.scrollHeight;
+      gsap.fromTo(el, { height: 0, opacity: 0 }, { height: h, opacity: 1, duration: 0.3, ease: 'power2.out', onComplete: () => { el.style.height = 'auto'; } });
+    } else {
+      gsap.to(el, { height: 0, opacity: 0, duration: 0.3, ease: 'power2.out' });
+    }
+  }, [discountsOpen]);
+
   // ── Dropdown comparison state (proposal context only) ──
   const [showComparison, setShowComparison] = useState(false);
-  const [compareQuoteId, setCompareQuoteId] = useState<string | null>(null);
   const [compareDropdownOpen, setCompareDropdownOpen] = useState(false);
+
+  // Auto-toggle compare: show when on a non-FNA quote, hide when on the FNA recommended one
+  useEffect(() => {
+    if (!activeQuoteId || !fnaQuote) return;
+    setShowComparison(activeQuoteId !== fnaQuote.id);
+  }, [activeQuoteId]);
   const compareDropdownRef = useRef<HTMLDivElement>(null);
 
   // Compare button directional fill
@@ -841,13 +873,6 @@ export function CalculatorSummary({
     },
   });
 
-  // Clear compare dropdown if deleted
-  useEffect(() => {
-    if (compareQuoteId && allQuotes && !allQuotes.some((q) => q.id === compareQuoteId)) {
-      setCompareQuoteId(null);
-      setShowComparison(false);
-    }
-  }, [allQuotes, compareQuoteId]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -939,37 +964,85 @@ export function CalculatorSummary({
     downPercent,
   };
 
-  // ── Get column data for a given quote ID ──
-  function getColumnData(quoteId: string): QuoteColumnData | null {
-    if (quoteId === activeQuoteId) return liveColumnData;
-    if (!allQuotes) return null;
-    const quote = allQuotes.find((q) => q.id === quoteId);
-    if (!quote) return null;
-    return calcTotalFromQuote(quote, allAddOns);
-  }
+  // ── FNA (left) column — always locked to the first/recommended FNA quote ──
+  const fnaQuote = allQuotes?.find((q) => q.is_fna_quote);
+  const fnaColumnData = fnaQuote ? calcTotalFromQuote(fnaQuote, allAddOns) : null;
+  // Dropdown lists all quotes except the locked-left FNA recommended one
+  const otherQuotes = allQuotes?.filter((q) => q.id !== fnaQuote?.id) ?? [];
 
-  const isComparing = showComparison && !!compareQuoteId;
-  const compareData = compareQuoteId ? getColumnData(compareQuoteId) : null;
+  const isComparing = showComparison && !!fnaColumnData;
 
   return (
     <div>
     <div className="sticky top-[121px]">
+      {/* Collapsible Discounts section — above the quote card */}
+      {showFriendlyDiscount && (
+        <div className="mb-4 rounded-lg border border-green-900 overflow-hidden bg-green-950/25">
+          <button
+            onClick={() => setDiscountsOpen((o) => !o)}
+            className="w-full flex items-center justify-between p-5 group"
+            aria-expanded={discountsOpen}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-green-950 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-green-400" />
+              </div>
+              <h3 className="font-display text-lg font-bold text-foreground">Discounts</h3>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-green-400 group-hover:scale-110 ${discountsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div ref={discountContentRef} className="overflow-hidden">
+            <div className="relative px-5 pt-2 pb-5">
+              {isLocked && <div className="absolute inset-0 z-10" style={{ cursor: 'not-allowed' }} />}
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={friendlyDiscountPercent}
+                readOnly={!!isLocked}
+                onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; const v = Number(e.target.value); setFriendlyDiscountPercent(v); onFriendlyDiscountChange?.(v); }}
+                className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
+                  friendlyDiscountPercent > 0
+                    ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
+                    : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
+                }`}
+              />
+              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
+              </div>
+              <div className="text-center mt-2">
+                <span className={`text-lg font-bold transition-colors duration-200 ${
+                  friendlyDiscountPercent > 0 ? 'text-green-400' : 'text-muted-foreground'
+                }`}>{friendlyDiscountPercent}% friendly discount</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quote card */}
-      <div className="border border-green-900 rounded-lg bg-green-950/25 p-6">
+      <div className="border border-green-900 rounded-lg bg-green-950/25 px-6 pt-6 pb-0">
         {/* Receipt header with compare button */}
         <div className="border-b border-dashed border-green-900/60 py-4 mb-3 -mt-5 flex items-center justify-between">
           <h3 className="font-display text-2xl font-bold text-foreground">
             {isComparing ? 'Compare Quotes' : 'Quote'}
           </h3>
-          {allQuotes && allQuotes.length > 1 && !showComparison && (
+          {otherQuotes.length > 0 && fnaColumnData && !showComparison && (
             <button
               ref={compareBtnRef}
               onClick={() => {
-                const firstOther = allQuotes.find((q) => q.id !== activeQuoteId);
-                if (firstOther) {
-                  setCompareQuoteId(firstOther.id);
-                  setShowComparison(true);
+                // If currently on the FNA recommended quote, auto-switch to the first other quote
+                if (activeQuoteId === fnaQuote?.id && otherQuotes.length > 0) {
+                  onActiveQuoteChange?.(otherQuotes[0].id);
                 }
+                setShowComparison(true);
               }}
               className="relative h-[32px] px-3 font-medium border border-green-500 bg-green-500 text-black rounded-lg overflow-hidden pointer-events-auto"
             >
@@ -993,7 +1066,7 @@ export function CalculatorSummary({
           )}
           {showComparison && (
             <button
-              onClick={() => { setShowComparison(false); setCompareQuoteId(null); }}
+              onClick={() => { if (fnaQuote) onActiveQuoteChange?.(fnaQuote.id); }}
               className="flex items-center gap-1.5 text-sm font-semibold text-white/40 hover:text-white/60 transition-colors pointer-events-auto"
             >
               <X size={16} />
@@ -1002,21 +1075,44 @@ export function CalculatorSummary({
           )}
         </div>
 
-        {isComparing && compareData ? (
-          <>
-            {/* Two-column comparison — dropdown is embedded in right column header */}
-            <ComparisonGrid
-              left={liveColumnData}
-              right={compareData}
-              rightHeader={
-                allQuotes && allQuotes.filter((q) => q.id !== activeQuoteId).length > 1 ? (
+        <AnimatePresence mode="wait" initial={false}>
+        {isComparing && fnaColumnData ? (
+          <motion.div key="compare" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
+            {/* Backdrop when dropdown is open */}
+            <AnimatePresence>
+              {compareDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed inset-0 z-40"
+                  onClick={() => setCompareDropdownOpen(false)}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Two-column comparison: left=FNA (locked), right=active quote (synced with tabs) */}
+            <div className="relative">
+              <ComparisonGrid
+                left={fnaColumnData}
+                right={liveColumnData}
+                rightDimmed={compareDropdownOpen}
+                rightHeader={
+                otherQuotes.length > 0 ? (
                   <div ref={compareDropdownRef} className="relative w-full">
                     <button
                       onClick={() => setCompareDropdownOpen(!compareDropdownOpen)}
-                      className="w-full border border-green-600 text-white font-semibold rounded-md pl-3 pr-10 text-sm outline-none focus:border-green-400 transition-colors cursor-pointer h-[34px] bg-green-800 text-left flex items-center justify-between"
+                      className="w-full border border-green-600 text-white font-semibold rounded-md pl-3 pr-3 text-sm outline-none focus:border-green-400 transition-colors cursor-pointer h-[34px] bg-green-800 text-left flex items-center justify-between"
                     >
-                      <span>{allQuotes?.find((q) => q.id === compareQuoteId)?.label || 'Select quote'}</span>
-                      <ChevronDown size={16} className={`transition-transform duration-200 ${compareDropdownOpen ? 'rotate-180' : ''}`} />
+                      <span className="flex items-center gap-2">
+                        {allQuotes?.find((q) => q.id === activeQuoteId)?.is_fna_quote
+                          ? <Star size={14} className="flex-shrink-0" />
+                          : <User size={14} className="flex-shrink-0" />
+                        }
+                        {allQuotes?.find((q) => q.id === activeQuoteId)?.label ?? 'Current'}
+                      </span>
+                      <ChevronDown size={16} className={`transition-transform duration-200 flex-shrink-0 ${compareDropdownOpen ? 'rotate-180' : ''}`} />
                     </button>
                     <AnimatePresence>
                       {compareDropdownOpen && (
@@ -1025,26 +1121,30 @@ export function CalculatorSummary({
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -8 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute top-full left-0 right-0 mt-2 border border-green-600 rounded-md bg-green-900 shadow-lg z-50"
+                          className="absolute top-full left-0 right-0 mt-1 border border-green-600 rounded-md bg-green-950 shadow-lg z-50 overflow-hidden"
                         >
-                          <div className="py-1">
-                            {allQuotes?.filter((q) => q.id !== activeQuoteId).map((q) => (
-                              <button
-                                key={q.id}
-                                onClick={() => {
-                                  setCompareQuoteId(q.id);
-                                  setCompareDropdownOpen(false);
-                                }}
-                                className={`w-full px-3 py-2 text-left text-sm font-semibold transition-colors ${
-                                  compareQuoteId === q.id
-                                    ? 'bg-green-700 text-white'
-                                    : 'text-white/80 hover:bg-green-800 hover:text-white'
-                                }`}
-                              >
-                                {q.label}
-                              </button>
-                            ))}
-                          </div>
+                          {otherQuotes.map((q, idx) => (
+                            <button
+                              key={q.id}
+                              onClick={() => {
+                                onActiveQuoteChange?.(q.id);
+                                setCompareDropdownOpen(false);
+                              }}
+                              className={`w-full px-3 py-1.5 text-left text-sm font-semibold transition-colors flex items-center gap-2 ${
+                                idx === 0 ? '' : 'border-t border-green-900/50'
+                              } ${
+                                activeQuoteId === q.id
+                                  ? 'bg-green-800 text-white'
+                                  : 'text-white/70 hover:bg-green-800/50 hover:text-white'
+                              }`}
+                            >
+                              {q.is_fna_quote
+                                ? <Star size={14} className="flex-shrink-0" />
+                                : <User size={14} className="flex-shrink-0" />
+                              }
+                              {q.label}
+                            </button>
+                          ))}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -1053,46 +1153,41 @@ export function CalculatorSummary({
               }
             />
 
-            {/* Total + Payment - comparison mode with two columns */}
-            {(() => {
-              const leftTotal = liveColumnData.total;
-              const rightTotal = compareData.total;
-              return (
-                <div className="border-t border-b border-green-900 bg-green-950/30 py-4 mb-6 -mx-6 px-6">
-                  <div className="grid grid-cols-2 gap-4">
+            {/* Total + Payment - comparison mode: left=FNA, right=active */}
+            <div className="border-t border-green-900 bg-green-900/20 py-4 -mx-6 px-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex justify-between items-baseline mb-2 pb-2 border-b border-dashed border-green-900/60">
+                    <span className="font-display font-bold text-foreground text-base">Total</span>
+                    <span className="font-display text-xl font-bold text-foreground">{formatPrice(fnaColumnData.total)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <div>
-                      <div className="flex justify-between items-baseline mb-2 pb-2 border-b border-dashed border-green-900/60">
-                        <span className="font-display font-bold text-foreground text-base">Total</span>
-                        <span className="font-display text-xl font-bold text-foreground">{formatPrice(leftTotal)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-sm font-semibold text-green-400 block">{liveColumnData.isFundraising ? '20%' : '40%'} due at signing</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
-                        </div>
-                        <span className="font-display font-bold text-2xl text-green-400">{formatPrice(liveColumnData.downAmount)}</span>
-                      </div>
+                      <span className="text-sm font-semibold text-green-400 block">{fnaColumnData.isFundraising ? '20%' : '40%'} due at signing</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
                     </div>
-                    <div className="border-l border-green-900/50 pl-4">
-                      <div className="flex justify-between items-baseline mb-2 pb-2 border-b border-dashed border-green-900/60">
-                        <span className="font-display font-bold text-foreground text-base">Total</span>
-                        <span className="font-display text-xl font-bold text-foreground">{formatPrice(rightTotal)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-sm font-semibold text-green-400 block">{compareData.isFundraising ? '20%' : '40%'} due at signing</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
-                        </div>
-                        <span className="font-display font-bold text-2xl text-green-400">{formatPrice(compareData.downAmount)}</span>
-                      </div>
-                    </div>
+                    <span className="font-display font-bold text-2xl text-green-400">{formatPrice(fnaColumnData.downAmount)}</span>
                   </div>
                 </div>
-              );
-            })()}
-          </>
+                <div className="border-l border-green-900/50 pl-4">
+                  <div className="flex justify-between items-baseline mb-2 pb-2 border-b border-dashed border-green-900/60">
+                    <span className="font-display font-bold text-foreground text-base">Total</span>
+                    <span className="font-display text-xl font-bold text-foreground">{formatPrice(liveColumnData.total)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="text-sm font-semibold text-green-400 block">{liveColumnData.isFundraising ? '20%' : '40%'} due at signing</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
+                    </div>
+                    <span className="font-display font-bold text-2xl text-green-400">{formatPrice(liveColumnData.downAmount)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </motion.div>
         ) : (
-          <>
+          <motion.div key="single" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: 'easeOut' }}>
         {/* Single column — standard line items with FNA diff colors when on user quote */}
         {(() => {
           // Always compare against the recommended (first FNA) quote, unless we ARE the recommended quote
@@ -1200,7 +1295,7 @@ export function CalculatorSummary({
         })()}
 
         {/* Total + Payment */}
-        <div className={`border-t border-b border-green-900 bg-green-950/30 py-4 -mx-6 px-6 ${crowdfundingEnabled || fundraisingEnabled ? 'mb-6' : ''}`}>
+        <div className={`border-t border-green-900 bg-green-900/20 py-4 -mx-6 px-6 ${crowdfundingEnabled || fundraisingEnabled ? 'mb-6' : ''}`}>
           <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-green-900/60">
             <span className="font-display font-bold text-foreground">Total</span>
             <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
@@ -1215,24 +1310,25 @@ export function CalculatorSummary({
             <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>
           </div>
         </div>
-          </>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         {/* Special program checkboxes */}
-        <div className="space-y-3">
-          {!fundraisingEnabled && crowdfundingApproved && (
+        {!fundraisingEnabled && crowdfundingApproved && (
+          <div className="space-y-3 pb-6">
             <ProgramCheckbox
               label="Crowdfunding"
               description="Discounts and deferred payment options"
               enabled={crowdfundingEnabled}
               onToggle={onCrowdfundingToggle}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Fundraising terms */}
         {fundraisingEnabled && (
-          <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-border space-y-2">
+          <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-border space-y-2 mb-6">
             <p className="text-base font-semibold text-foreground">Pay up front, or after you raise.</p>
             <p className="text-sm text-muted-foreground">Minimum 20% due at signing, the rest due on delivery. Or, pay the rest after you raise.</p>
             <p className="text-xs text-muted-foreground/70 leading-relaxed">
@@ -1243,7 +1339,7 @@ export function CalculatorSummary({
 
         {/* Crowdfunding slider and deferred payment (below estimate when enabled) */}
         {crowdfundingEnabled && (
-          <div className="mt-3 space-y-3">
+          <div className="mt-3 space-y-3 pb-6">
             <DeferredPaymentCheckbox
               deferPayment={deferPayment}
               onToggle={() => { if (onInteraction?.()) return; setDeferPayment(!deferPayment); }}
@@ -1256,7 +1352,7 @@ export function CalculatorSummary({
         )}
 
         {!isReadOnly && !hideSaveQuote && (
-          <div className="flex flex-col xl:flex-row gap-3 mt-6">
+          <div className="flex flex-col xl:flex-row gap-3 mt-6 pb-6">
             <SaveQuoteButton
               onSave={onSave ?? (() => setShowModal(true))}
               saving={saving}
@@ -1267,57 +1363,6 @@ export function CalculatorSummary({
         )}
       </div>
 
-      {/* Collapsible Discounts section — outside the green card */}
-      {showFriendlyDiscount && (
-        <div className="mt-3 rounded-lg border border-green-900 overflow-hidden">
-          <button
-            onClick={() => setDiscountsOpen((o) => !o)}
-            className="w-full flex items-center justify-between px-5 py-3 bg-green-950/30 text-left hover:bg-green-950/50 transition-colors"
-          >
-            <span className="font-display text-sm font-semibold text-foreground">
-              Discounts
-              {friendlyDiscountPercent > 0 && (
-                <span className="ml-2 text-green-400">({friendlyDiscountPercent}% off)</span>
-              )}
-            </span>
-            <ChevronDown
-              size={16}
-              className={`text-white/40 transition-transform duration-200 ${discountsOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-          {discountsOpen && (
-            <div className="relative bg-green-950/20 px-5 pb-5 pt-3">
-              {isLocked && <div className="absolute inset-0 z-10" style={{ cursor: 'not-allowed' }} />}
-              <input
-                type="range"
-                min={0}
-                max={20}
-                step={1}
-                value={friendlyDiscountPercent}
-                readOnly={!!isLocked}
-                onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; const v = Number(e.target.value); setFriendlyDiscountPercent(v); onFriendlyDiscountChange?.(v); }}
-                className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                  [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-                  [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
-                  friendlyDiscountPercent > 0
-                    ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
-                    : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
-                }`}
-              />
-              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className={`text-lg font-bold transition-colors duration-200 ${
-                  friendlyDiscountPercent > 0 ? 'text-green-400' : 'text-muted-foreground'
-                }`}>{friendlyDiscountPercent}% friendly discount</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Quote PDF modal */}
       <AnimatePresence>
