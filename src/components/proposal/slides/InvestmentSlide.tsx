@@ -8,7 +8,7 @@ import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculato
 import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
-import { saveClientQuote, renameClientQuote, deleteClientQuote, updateClientQuoteDescription } from '@/app/p/[slug]/actions';
+import { saveClientQuote, renameClientQuote, deleteClientQuote } from '@/app/p/[slug]/actions';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
 // ── Icon reveal variants (matches site-wide pattern) ─────────────────────────
@@ -98,31 +98,6 @@ export function InvestmentSlide({
 
   // Delete confirm state
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
-
-  // Description editing (auto-save on blur / debounce)
-  const descriptionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [editingDescription, setEditingDescription] = useState(activeQuote?.description ?? '');
-
-  // Sync description text when switching tabs
-  useEffect(() => {
-    setEditingDescription(activeQuote?.description ?? '');
-  }, [activeQuoteId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleDescriptionChange = useCallback((value: string) => {
-    setEditingDescription(value);
-    if (!activeQuoteId || isLocked) return;
-    if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
-    descriptionTimeoutRef.current = setTimeout(async () => {
-      try {
-        await updateClientQuoteDescription(activeQuoteId, value);
-        setQuotes((prev) =>
-          prev.map((q) => q.id === activeQuoteId ? { ...q, description: value } : q)
-        );
-      } catch (err) {
-        console.error('Failed to update description:', err);
-      }
-    }, 1000);
-  }, [activeQuoteId, isLocked]);
 
   // Sync local quotes state after any auto-save
   const handleQuoteUpdated = useCallback((payload: CalculatorStateSnapshot) => {
