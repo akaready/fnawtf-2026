@@ -102,9 +102,9 @@ export function NextStepsSlide({ proposal, slideRef, viewerName, viewerEmail }: 
             config={{
               layout: "month_view",
               useSlotsViewOnSmallScreen: "true",
-              ...(viewerName ? { name: viewerName } : {}),
+              ...((viewerName || proposal?.contact_name) ? { name: viewerName ?? proposal?.contact_name ?? '' } : {}),
               ...(viewerEmail ? { email: viewerEmail } : {}),
-              ...(proposal?.contact_company ? { company: proposal.contact_company } : {}),
+              ...(proposal?.contact_company ? { companyName: proposal.contact_company } : {}),
             }}
           />
         </div>

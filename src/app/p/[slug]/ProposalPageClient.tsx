@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { VideoPlayerProvider } from '@/contexts/VideoPlayerContext';
 import { TitleSlide } from '@/components/proposal/slides/TitleSlide';
 import { WelcomeSlide } from '@/components/proposal/slides/WelcomeSlide';
@@ -36,6 +37,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   const hasSchedule = milestones.length > 0;
   const hasQuotes   = quotes.length > 0;
 
+  const [showExitOverlay, setShowExitOverlay] = useState(false);
+
   // ── Exit handler ───────────────────────────────────────────
   const handleExit = useCallback(() => {
     // Tell Navigation to start hidden and animate in after remounting
@@ -50,6 +53,12 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     link.click();
     link.remove();
   }, []);
+
+  // Show exit overlay briefly then navigate
+  const triggerExit = useCallback(() => {
+    setShowExitOverlay(true);
+    setTimeout(() => handleExit(), 500);
+  }, [handleExit]);
 
   // ── Slide refs ─────────────────────────────────────────────
   const titleRef        = useRef<HTMLElement>(null);
@@ -132,6 +141,37 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     return () => window.removeEventListener('keydown', handler);
   }, [navigateTo, currentSlide]);
 
+  // ── Lock to current slide on window resize ─────────────────
+  useEffect(() => {
+    const onResize = () => {
+      const el = slideRefs[currentSlide]?.current;
+      if (el) el.scrollIntoView({ inline: 'start', block: 'nearest', behavior: 'instant' });
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [currentSlide, slideRefs]);
+
+  // ── Touch swipe navigation ────────────────────────────────
+  const touchStartX = useRef(0);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const dx = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(dx) < 40) return; // dead zone — ignore tiny swipes
+    if (dx > 0) {
+      // Swipe left = advance
+      if (currentSlide === slideRefs.length - 1) triggerExit();
+      else navigateTo(currentSlide + 1);
+    } else {
+      // Swipe right = go back; exit from first slide
+      if (currentSlide === 0) triggerExit();
+      else navigateTo(currentSlide - 1);
+    }
+  }, [currentSlide, slideRefs.length, navigateTo, triggerExit]);
+
   return (
     <VideoPlayerProvider>
 
@@ -140,6 +180,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
         ref={deckRef}
         className="h-screen flex overflow-x-scroll [scroll-snap-type:x_mandatory] proposal-deck-scroll"
         style={{ scrollbarWidth: 'none' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <TitleSlide proposal={proposal} slideRef={titleRef} onNext={() => navigateTo(1)} />
 
@@ -214,6 +256,21 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
         isLast={currentSlide === slideRefs.length - 1}
         onExit={handleExit}
       />
+
+      {/* ── Exit overlay (swipe-triggered) ───────────────────── */}
+      <AnimatePresence>
+        {showExitOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[500] bg-black flex items-center justify-center pointer-events-none"
+          >
+            <p className="text-white/40 text-sm tracking-[0.3em] uppercase font-mono">Exiting…</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </VideoPlayerProvider>
   );

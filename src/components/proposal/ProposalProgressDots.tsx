@@ -32,6 +32,8 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
   const exitRef = useRef<HTMLDivElement | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
   const separatorRef = useRef<HTMLDivElement | null>(null);
+  const mobilBarRef = useRef<HTMLDivElement | null>(null);
+  const mobileDotRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const hasRevealed = useRef(false);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
     hasRevealed.current = true;
 
     const bar = barRef.current;
+    const mobileBar = mobilBarRef.current;
     const items = [
       ...dotRefs.current.filter(Boolean),
       separatorRef.current,
@@ -74,14 +77,16 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
 
     // Hide everything initially
     if (bar) gsap.set(bar, { y: 40, opacity: 0 });
+    if (mobileBar) gsap.set(mobileBar, { y: 40, opacity: 0 });
     gsap.set(items, { y: 12, opacity: 0 });
 
     const tl = gsap.timeline({ delay: 3.5 });
-    // Bar slides up first
-    if (bar) {
-      tl.to(bar, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+    // Bars slide up first
+    const barsToAnimate = [bar, mobileBar].filter(Boolean);
+    if (barsToAnimate.length) {
+      tl.to(barsToAnimate, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
     }
-    // Then icons stagger in
+    // Then icons stagger in (desktop only)
     tl.to(items, {
       y: 0,
       opacity: 1,
@@ -151,9 +156,9 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
         </div>
       )}
 
-      {/* Dots bar */}
+      {/* Desktop icon-based dots bar — hidden on mobile */}
       <div ref={barRef} className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[200] hidden sm:flex flex-row items-center">
-        <div className="flex flex-row items-center gap-3 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 backdrop-blur-lg">
+        <div className="flex flex-row items-center gap-3 bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 backdrop-blur-lg" style={{ transform: 'scale(0.9)', transformOrigin: 'center bottom' }}>
           {Array.from({ length: slideCount }).map((_, i) => {
             const Icon = getIcon(i);
             const isActive = i === activeIndex;
@@ -179,10 +184,10 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
                       className="flex items-center justify-center rounded-lg px-2 py-1.5 transition-all duration-200"
                       style={{
                         color: isActive
-                          ? 'rgba(255,255,255,0.9)'
+                          ? '#ffffff'
                           : isHovered
-                            ? 'rgba(255,255,255,0.6)'
-                            : 'rgba(255,255,255,0.25)',
+                            ? '#999999'
+                            : '#555555',
                         backgroundColor: isActive
                           ? 'rgba(255,255,255,0.06)'
                           : isHovered
@@ -212,10 +217,10 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
                           width: 9,
                           height: 9,
                           backgroundColor: isActive
-                            ? 'rgba(255,255,255,0.7)'
+                            ? '#ffffff'
                             : isHovered
-                              ? 'rgba(255,255,255,0.45)'
-                              : 'rgba(255,255,255,0.2)',
+                              ? '#999999'
+                              : '#555555',
                         }}
                       />
                     </span>
@@ -238,11 +243,42 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
             <button
               onClick={onExit}
               aria-label="Exit proposal"
-              className="flex items-center justify-center px-2 py-1.5 rounded-lg text-white/25 hover:text-white/60 hover:bg-white/[0.06] transition-all duration-200"
+              className="flex items-center justify-center px-2 py-1.5 rounded-lg hover:bg-white/[0.06] transition-all duration-200"
+              style={{ color: exitHovered ? '#999999' : '#555555' }}
             >
               <LogOut size={20} strokeWidth={1.5} />
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile plain dots bar — visible only on mobile */}
+      <div
+        ref={mobilBarRef}
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex sm:hidden flex-row items-center"
+      >
+        <div className="flex flex-row items-center gap-2 bg-white/[0.04] border border-white/[0.07] rounded-full px-3 py-2 backdrop-blur-lg">
+          {Array.from({ length: slideCount }).map((_, i) => {
+            const isActive = i === activeIndex;
+            return (
+              <button
+                key={i}
+                ref={(el) => { mobileDotRefs.current[i] = el; }}
+                onClick={() => scrollTo(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className="flex items-center justify-center p-0.5"
+              >
+                <span
+                  className="block rounded-full transition-all duration-300"
+                  style={{
+                    width: isActive ? 8 : 6,
+                    height: isActive ? 8 : 6,
+                    backgroundColor: isActive ? '#ffffff' : '#555555',
+                  }}
+                />
+              </button>
+            );
+          })}
         </div>
       </div>
     </>

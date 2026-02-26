@@ -9,16 +9,19 @@ const phases = [
   {
     icon: Search,
     label: 'Diagnose → Prescribe',
+    stepLabel: 'You are here.',
     body: `We first want to understand you, your product, your competitors and your customers before we dive into creative.\n\nWe always start with listening and learning. We brainstorm and return to present a few concepts to workshop together — and we always arrive at our creative concepts collaboratively.`,
   },
   {
     icon: Film,
     label: 'Plan → Produce',
+    stepLabel: 'This will be next.',
     body: `We write scripts. Cast the right talent. Find the right locations. We invite feedback at every step of the process, so we know everyone is happy en route to the final product.\n\nThen we bring it all together and make magic. We always welcome stakeholders on-set, or to watch remotely from a Zoom feed.`,
   },
   {
     icon: Rocket,
     label: 'Edit → Deliver',
+    stepLabel: 'And then... magic!',
     body: `We edit, design graphics, layer in music, add sound effects, and find the brand's voice, combining it all to make our shared dream a reality.\n\nAnd we keep up with the release of the campaign after launch too, so we can improve how we tell stories as we grow your brand.`,
   },
 ];
@@ -33,13 +36,13 @@ function PhaseCard({ phase, isActive }: { phase: typeof phases[number]; isActive
   return (
     <div
       data-card
-      className={`p-8 border rounded-lg ${
+      className={`p-6 sm:p-8 border rounded-lg ${
         isActive ? 'bg-purple-950 border-purple-500' : 'bg-black border-border'
       }`}
       style={{ transition: 'border-color 0.4s ease' }}
     >
-      <Icon className="w-12 h-12 mb-6 text-purple-300" strokeWidth={1.5} data-icon />
-      <h3 className="font-display text-2xl font-bold text-white mb-4" data-title>
+      <Icon className="w-10 h-10 sm:w-12 sm:h-12 mb-5 sm:mb-6 text-purple-300" strokeWidth={1.5} data-icon />
+      <h3 className="font-display text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4" data-title>
         {phase.label}
       </h3>
       <p className="font-body text-muted-foreground leading-relaxed" data-desc>
@@ -59,7 +62,7 @@ export function ProcessSlide({ slideRef }: Props) {
   const innerRef      = useRef<HTMLDivElement>(null);
   const hasAnimated   = useRef(false);
 
-  // Timeline refs
+  // Timeline refs (desktop only)
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const circleRefs    = useRef<(HTMLDivElement | null)[]>([]);
   const bgLineRef     = useRef<HTMLDivElement>(null);
@@ -120,9 +123,10 @@ export function ProcessSlide({ slideRef }: Props) {
       const wordEls   = el.querySelectorAll('[data-word]');
       const accentLine= el.querySelector('[data-accent-line]') as HTMLElement;
       const descEl    = el.querySelector('[data-desc]')        as HTMLElement;
-      const phaseCards= el.querySelectorAll('[data-phase]');
+      const phaseCards= el.querySelectorAll('[data-card]');
       const circles   = el.querySelectorAll('[data-circle]');
       const labels    = el.querySelectorAll('[data-label]');
+      const mobileSteps = el.querySelectorAll('[data-mobile-step]');
       const bgLine    = bgLineRef.current;
 
       gsap.set(eyebrow,    { opacity: 0, y: 12 });
@@ -130,9 +134,9 @@ export function ProcessSlide({ slideRef }: Props) {
       gsap.set(accentLine, { scaleX: 0, transformOrigin: 'left center' });
       gsap.set(descEl,     { opacity: 0, y: 12 });
       gsap.set(phaseCards, { opacity: 0, y: 40 });
-      gsap.set(circles,    { opacity: 0, scale: 0, transformOrigin: 'center center' });
-      // Labels: clip reveal from right (no opacity/scale — pure slide out from circle side)
-      gsap.set(labels,     { clipPath: 'inset(0 0 0 100%)', opacity: 1 });
+      if (circles.length) gsap.set(circles, { opacity: 0, scale: 0, transformOrigin: 'center center' });
+      if (labels.length)  gsap.set(labels,  { clipPath: 'inset(0 0 0 100%)', opacity: 1 });
+      if (mobileSteps.length) gsap.set(mobileSteps, { opacity: 0, y: 10 });
       // Line: scaleY so positionLine() can freely set height without fighting the animation
       if (bgLine) gsap.set(bgLine, { scaleY: 0, transformOrigin: 'top center' });
 
@@ -152,34 +156,41 @@ export function ProcessSlide({ slideRef }: Props) {
           const revealLabel = (el: Element) =>
             gsap.to(el, { clipPath: 'inset(0 0 0 0%)', duration: 0.5, ease: 'power3.out' });
 
-          gsap.timeline()
+          const tl = gsap.timeline()
             .to(eyebrow,    { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' })
             .to(wordEls,    { y: '0%', duration: 1.0, ease: 'expo.out', stagger: 0.04 }, '-=0.2')
             .to(accentLine, { scaleX: 1, duration: 0.6, ease: 'expo.out' }, '-=0.5')
             .to(descEl,     { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, '-=0.3')
-            .to(phaseCards, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out', stagger: 0.3 }, '-=0.1')
+            .to(phaseCards, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out', stagger: 0.3 }, '-=0.1');
+
+          if (mobileSteps.length) {
+            tl.to(mobileSteps, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', stagger: 0.2 }, '<');
+          }
+
+          if (circles.length) {
             // Circle 1 scales in with first card; label 1 slides out from the right
-            .to(circles[0], { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.7)' }, '<')
-            .call(() => { revealLabel(labels[0]); }, undefined, '<0.1')
-            // Grey line draws down using scaleY — circles/labels appear as tip passes them
-            .to(bgLine, {
-              scaleY: 1,
-              duration: lineDur,
-              ease: 'power2.inOut',
-              onUpdate() {
-                const p = this.progress();
-                if (!circle2Shown && p >= circle2Frac) {
-                  circle2Shown = true;
-                  gsap.to(circles[1], { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' });
-                  gsap.delayedCall(0.07, () => revealLabel(labels[1]));
-                }
-                if (!circle3Shown && p >= 0.97) {
-                  circle3Shown = true;
-                  gsap.to(circles[2], { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' });
-                  gsap.delayedCall(0.07, () => revealLabel(labels[2]));
-                }
-              },
-            }, '<0.15')
+            tl.to(circles[0], { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.7)' }, '<')
+              .call(() => { revealLabel(labels[0]); }, undefined, '<0.1')
+              // Grey line draws down using scaleY — circles/labels appear as tip passes them
+              .to(bgLine, {
+                scaleY: 1,
+                duration: lineDur,
+                ease: 'power2.inOut',
+                onUpdate() {
+                  const p = this.progress();
+                  if (!circle2Shown && p >= circle2Frac) {
+                    circle2Shown = true;
+                    gsap.to(circles[1], { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' });
+                    gsap.delayedCall(0.07, () => revealLabel(labels[1]));
+                  }
+                  if (!circle3Shown && p >= 0.97) {
+                    circle3Shown = true;
+                    gsap.to(circles[2], { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' });
+                    gsap.delayedCall(0.07, () => revealLabel(labels[2]));
+                  }
+                },
+              }, '<0.15');
+          }
         }
       }, { threshold: 0.3 });
 
@@ -259,7 +270,7 @@ export function ProcessSlide({ slideRef }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 pb-20 w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-20 pb-20 w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         {/* SlideHeader */}
         <SlideHeader
           eyebrow="HOW WE WORK"
@@ -268,11 +279,33 @@ export function ProcessSlide({ slideRef }: Props) {
           className="mb-8"
         />
 
-        {/* Phase cards with timeline */}
+        {/* ── Mobile layout: stacked cards with step label above each ── */}
+        <div className="flex flex-col gap-4 md:hidden mb-10">
+          {phases.map((phase, i) => (
+            <div key={phase.label}>
+              {/* Step badge row */}
+              <div data-mobile-step className="flex items-center gap-2.5 mb-3">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                  i === 0
+                    ? 'bg-purple-950 border-2 border-purple-500 text-purple-300'
+                    : 'bg-neutral-900 border border-neutral-700 text-neutral-500'
+                }`}>
+                  {i + 1}
+                </span>
+                <span className={`text-sm font-mono ${i === 0 ? 'text-[var(--accent)]' : 'text-white/30'}`}>
+                  {phase.stepLabel}
+                </span>
+              </div>
+              <PhaseCard phase={phase} isActive={i === 0} />
+            </div>
+          ))}
+        </div>
+
+        {/* ── Desktop layout: timeline with circles and connecting line ── */}
         {/* 7rem left padding = label space. Circle center = 7rem + 20px from container left edge */}
         <div
           ref={timelineContainerRef}
-          className="mb-10 relative"
+          className="mb-10 relative hidden md:block"
           style={{ paddingLeft: '7rem' }}
         >
           {/* ── Absolute vertical line (background + purple fill) ── */}
@@ -319,7 +352,7 @@ export function ProcessSlide({ slideRef }: Props) {
                     }`}
                     style={{ transition: 'color 0.4s ease' }}
                   >
-                    {i === 0 ? 'You are here.' : i === 1 ? 'This will be next.' : 'And then... magic!'}
+                    {phase.stepLabel}
                   </span>
                 </div>
 

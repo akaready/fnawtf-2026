@@ -132,6 +132,7 @@ export interface ProposalQuoteRow {
   friendly_discount_pct: number;
   total_amount: number | null;
   down_amount: number | null;
+  description: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

@@ -3,12 +3,12 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
 import { motion } from 'framer-motion';
-import { Lock, SlidersHorizontal, Save, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Star, User } from 'lucide-react';
 import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
-import { saveClientQuote, renameClientQuote, deleteClientQuote } from '@/app/p/[slug]/actions';
+import { saveClientQuote, renameClientQuote, deleteClientQuote, updateClientQuoteDescription } from '@/app/p/[slug]/actions';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
 // ── Icon reveal variants (matches site-wide pattern) ─────────────────────────
@@ -51,18 +51,43 @@ export function InvestmentSlide({
 }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
-
-  // Save Quote button refs
-  const saveBtnRef = useRef<HTMLButtonElement>(null);
-  const saveFillRef = useRef<HTMLDivElement>(null);
-  const [saveHovered, setSaveHovered] = useState(false);
-
-  // Imperative save handle from ProposalCalculatorEmbed
   const calcSaveRef = useRef<ProposalCalculatorSaveHandle | null>(null);
 
+  // New Comparison Quote button refs (directional fill)
+  const newBtnRef = useRef<HTMLButtonElement>(null);
+  const newFillRef = useRef<HTMLDivElement>(null);
+  const [newHovered, setNewHovered] = useState(false);
+
+  useDirectionalFill(newBtnRef, newFillRef, {
+    onFillStart: () => {
+      setNewHovered(true);
+      const textSpan = newBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    },
+    onFillEnd: () => {
+      setNewHovered(false);
+      const textSpan = newBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    },
+  });
+
   const [quotes, setQuotes] = useState(initialQuotes);
-  // 0 = Recommended, 1 = Adjust & Compare, 2+ = saved quote (index into savedQuotes)
-  const [activeQuoteTab, setActiveQuoteTab] = useState(0);
+
+  // Derived quote lists
+  const allActive = quotes.filter((q) => !q.deleted_at);
+  const recommendedQuote = allActive.find((q) => q.is_fna_quote) ?? null; // First FNA = recommended
+  const comparisonQuotes = allActive.filter((q) => q !== recommendedQuote); // Everything else
+  const clientQuotes = comparisonQuotes.filter((q) => !q.is_fna_quote);
+
+  // ID-based tab system
+  const [activeQuoteId, setActiveQuoteId] = useState<string | null>(
+    recommendedQuote?.id ?? comparisonQuotes[0]?.id ?? null
+  );
+
+  const activeQuote = quotes.find((q) => q.id === activeQuoteId) ?? null;
+  const isLocked = activeQuote?.id === recommendedQuote?.id;
+
+  // New quote creation
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveLabel, setSaveLabel] = useState('');
   const [savingQuote, setSavingQuote] = useState(false);
@@ -74,56 +99,42 @@ export function InvestmentSlide({
   // Delete confirm state
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
 
-  // Save confirmation state
-  const [savedNewConfirm, setSavedNewConfirm] = useState(false);
+  // Description editing (auto-save on blur / debounce)
+  const descriptionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [editingDescription, setEditingDescription] = useState(activeQuote?.description ?? '');
 
-  const fnaQuote = quotes.find((q) => q.is_fna_quote) ?? null;
-  const allClientQuotes = quotes.filter((q) => !q.is_fna_quote && !q.deleted_at);
-  // The first non-FNA quote is the "Adjust & Compare" working scratchpad (Tab 1)
-  const workingQuote = allClientQuotes[0] ?? undefined;
-  // Named saved quotes (Tab 2+) — everything after the working scratchpad
-  const namedQuotes = allClientQuotes.slice(1);
+  // Sync description text when switching tabs
+  useEffect(() => {
+    setEditingDescription(activeQuote?.description ?? '');
+  }, [activeQuoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Derive what to pass to the calculator
-  const isLocked = activeQuoteTab === 0;
-  const isCompare = activeQuoteTab >= 1;
-  const activeQuote = activeQuoteTab >= 2 ? namedQuotes[activeQuoteTab - 2] : undefined;
-  const initialQuoteForCalc = activeQuote ?? workingQuote ?? undefined;
-  // Tab 1 (Adjust) targets the working scratchpad; Tab 2+ targets the specific named quote
-  const activeQuoteIdForCalc = activeQuoteTab >= 2
-    ? activeQuote?.id
-    : activeQuoteTab === 1
-      ? workingQuote?.id
-      : undefined;
-  // Dynamic label for the comparison column in the summary
-  const comparisonLabel = activeQuote?.label ?? 'Adjusted';
+  const handleDescriptionChange = useCallback((value: string) => {
+    setEditingDescription(value);
+    if (!activeQuoteId || isLocked) return;
+    if (descriptionTimeoutRef.current) clearTimeout(descriptionTimeoutRef.current);
+    descriptionTimeoutRef.current = setTimeout(async () => {
+      try {
+        await updateClientQuoteDescription(activeQuoteId, value);
+        setQuotes((prev) =>
+          prev.map((q) => q.id === activeQuoteId ? { ...q, description: value } : q)
+        );
+      } catch (err) {
+        console.error('Failed to update description:', err);
+      }
+    }, 1000);
+  }, [activeQuoteId, isLocked]);
 
-  // Sync local quotes state after any auto-save or manual save so data stays fresh
+  // Sync local quotes state after any auto-save
   const handleQuoteUpdated = useCallback((payload: CalculatorStateSnapshot) => {
-    const targetId = activeQuoteIdForCalc;
-    if (!targetId) return;
+    if (!activeQuoteId) return;
     setQuotes((prev) =>
       prev.map((q) =>
-        q.id === targetId
+        q.id === activeQuoteId
           ? { ...q, ...payload, updated_at: new Date().toISOString() }
           : q
       )
     );
-  }, [activeQuoteIdForCalc]);
-
-  // ── Directional fill for Save Quote button ──
-  useDirectionalFill(saveBtnRef, saveFillRef, {
-    onFillStart: () => {
-      setSaveHovered(true);
-      const textSpan = saveBtnRef.current?.querySelector('span');
-      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
-    },
-    onFillEnd: () => {
-      setSaveHovered(false);
-      const textSpan = saveBtnRef.current?.querySelector('span');
-      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
-    },
-  });
+  }, [activeQuoteId]);
 
   // ── GSAP entrance animation ──
   useEffect(() => {
@@ -167,12 +178,11 @@ export function InvestmentSlide({
     return () => ctx.revert();
   }, []);
 
-  // ── Save quote handler ──
+  // ── Save new quote handler ──
   const MAX_SAVED_QUOTES = 5;
   const handleSaveQuote = useCallback(async () => {
     if (!saveLabel.trim()) return;
-    if (namedQuotes.length >= MAX_SAVED_QUOTES) return;
-    // Grab the live calculator state (what the user is actually looking at)
+    if (clientQuotes.length >= MAX_SAVED_QUOTES) return;
     const currentState = calcSaveRef.current?.getState();
     if (!currentState) return;
     setSavingQuote(true);
@@ -186,19 +196,15 @@ export function InvestmentSlide({
         down_amount: null,
       });
       setQuotes((prev) => [...prev, newQuote]);
-      const newSavedIndex = namedQuotes.length;
-      setActiveQuoteTab(2 + newSavedIndex);
+      setActiveQuoteId(newQuote.id);
       setShowSaveModal(false);
       setSaveLabel('');
-      // Flash confirmation
-      setSavedNewConfirm(true);
-      setTimeout(() => setSavedNewConfirm(false), 2000);
     } catch (err) {
       console.error('Failed to save quote:', err);
     } finally {
       setSavingQuote(false);
     }
-  }, [saveLabel, proposalId, namedQuotes.length]);
+  }, [saveLabel, proposalId, clientQuotes.length]);
 
   // ── Rename handler ──
   const handleRename = useCallback(async (quoteId: string) => {
@@ -223,13 +229,17 @@ export function InvestmentSlide({
         prev.map((q) => (q.id === quoteId ? { ...q, deleted_at: new Date().toISOString() } : q))
       );
       setDeletingQuoteId(null);
-      if (activeQuote?.id === quoteId) {
-        setActiveQuoteTab(1);
+      if (activeQuoteId === quoteId) {
+        setActiveQuoteId(recommendedQuote?.id ?? null);
       }
     } catch (err) {
       console.error('Failed to delete quote:', err);
     }
-  }, [activeQuote?.id]);
+  }, [activeQuoteId, recommendedQuote]);
+
+  // Active quote is the currently selected client quote (for toolbox)
+  const isClientQuoteActive = activeQuote && !activeQuote.is_fna_quote;
+  const isDeleting = isClientQuoteActive && deletingQuoteId === activeQuote?.id;
 
   return (
     <section
@@ -243,7 +253,7 @@ export function InvestmentSlide({
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="flex flex-col px-12 lg:px-20 pb-20 max-w-4xl mx-auto w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="flex flex-col px-6 sm:px-12 lg:px-20 pb-20 max-w-4xl mx-auto w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         {/* SlideHeader */}
         <SlideHeader
           eyebrow="INVESTMENT"
@@ -254,149 +264,107 @@ export function InvestmentSlide({
 
         {/* Quote tabs + content */}
         <div data-content>
-          {/* Row 1: Recommended + Adjust & Compare + Save New Quote + action icons */}
-          <div className="flex items-center gap-3 mb-3 flex-shrink-0">
-            <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-1">
+          {/* ── Recommended quote card (single purple card) ── */}
+          {recommendedQuote && (
+            <div className={`rounded-lg border border-purple-500/40 overflow-hidden mb-5 transition-opacity duration-300 ${
+              activeQuoteId === recommendedQuote.id ? 'opacity-100' : 'opacity-60'
+            }`}>
               <button
-                onClick={() => setActiveQuoteTab(0)}
-                className={`relative px-4 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
-                  activeQuoteTab === 0
-                    ? 'text-white bg-[var(--accent)]'
-                    : 'text-white/40 hover:text-white/60'
+                onClick={() => setActiveQuoteId(recommendedQuote.id)}
+                className={`w-full flex items-center gap-2 px-4 py-4 transition-colors duration-300 cursor-pointer text-left ${
+                  activeQuoteId === recommendedQuote.id
+                    ? 'bg-purple-950 text-white'
+                    : 'bg-purple-950/30 text-purple-300/70 hover:text-white hover:bg-purple-950/60'
                 }`}
               >
-                <Lock size={14} />
-                Recommended
-              </button>
-              <button
-                onClick={() => setActiveQuoteTab(1)}
-                className={`relative px-4 py-2 rounded text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
-                  activeQuoteTab === 1
-                    ? 'text-white bg-[var(--accent)]'
-                    : 'text-white/40 hover:text-white/60'
-                }`}
-              >
-                <SlidersHorizontal size={14} />
-                Adjust &amp; Compare
+                <Star size={16} fill="currentColor" className={`flex-shrink-0 ${
+                  activeQuoteId === recommendedQuote.id ? 'text-purple-400' : 'text-purple-500/50'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <span className="font-display text-base font-semibold block truncate">
+                    {recommendedQuote.label}
+                  </span>
+                  {recommendedQuote.description && (
+                    <p className="text-sm leading-relaxed text-white/40 mt-1">
+                      {recommendedQuote.description}
+                    </p>
+                  )}
+                </div>
               </button>
             </div>
+          )}
 
-            {/* Save New Quote — directional fill + icon reveal */}
-            <button
-              ref={saveBtnRef}
-              onClick={() => namedQuotes.length < MAX_SAVED_QUOTES && setShowSaveModal(true)}
-              disabled={namedQuotes.length >= MAX_SAVED_QUOTES}
-              className={`relative ml-auto px-4 py-3 font-medium border rounded-lg overflow-hidden text-sm ${
-                namedQuotes.length >= MAX_SAVED_QUOTES
-                  ? 'text-white/20 bg-white/5 border-white/10 cursor-not-allowed'
-                  : 'text-black bg-white border-white'
-              }`}
-            >
-              <div
-                ref={saveFillRef}
-                className="absolute inset-0 bg-black pointer-events-none"
-                style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
-              />
-              <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
-                {savedNewConfirm ? (
-                  <>
-                    <motion.span
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                      className="flex items-center text-green-500"
+          {/* ── Comparison quotes section (all other FNA + client quotes) ── */}
+          <div className="flex items-center gap-3 mb-3 flex-shrink-0" style={{ minHeight: 40 }}>
+            {comparisonQuotes.length > 0 && (
+              <div className="inline-flex rounded-lg border border-cyan-700/60 overflow-hidden">
+                {comparisonQuotes.map((q, idx) => {
+                  const isFna = q.is_fna_quote;
+                  const isRenaming = !isFna && renamingQuoteId === q.id;
+                  const isActive = activeQuoteId === q.id;
+
+                  return isRenaming ? (
+                    <form
+                      key={q.id}
+                      onSubmit={(e) => { e.preventDefault(); handleRename(q.id); }}
+                      className={`flex items-center ${idx > 0 ? 'border-l border-cyan-700/30' : ''}`}
                     >
-                      <Check size={16} strokeWidth={2.5} />
-                    </motion.span>
-                    Saved!
-                  </>
-                ) : (
-                  <>
-                    <motion.span
-                      variants={iconVariants}
-                      initial="hidden"
-                      animate={saveHovered ? 'visible' : 'hidden'}
-                      className="flex items-center"
-                    >
-                      <Save size={16} strokeWidth={2} />
-                    </motion.span>
-                    Save New Quote
-                  </>
-                )}
-              </span>
-            </button>
-          </div>
-
-          {/* Row 2: Named saved quote tabs + toolbox (only if any exist) */}
-          {namedQuotes.length > 0 && (
-            <div className="flex items-center gap-3 mb-6 flex-shrink-0">
-              {/* Rename inline input */}
-              {renamingQuoteId && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleRename(renamingQuoteId);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    className="bg-white/[0.06] border border-white/20 rounded px-2 py-1 text-white text-xs outline-none focus:border-[var(--accent)] transition-colors w-28"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') {
-                        setRenamingQuoteId(null);
-                        setRenameValue('');
-                      }
-                    }}
-                  />
-                  <button type="submit" className="text-green-400 hover:text-green-300 p-1 rounded hover:bg-white/10 transition-colors">
-                    <Check size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setRenamingQuoteId(null); setRenameValue(''); }}
-                    className="text-white/40 hover:text-white/60 p-1 rounded hover:bg-white/10 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </form>
-              )}
-
-              <div className="inline-flex flex-wrap items-center rounded-lg border border-white/10 bg-white/[0.04] p-1 gap-0.5">
-                {namedQuotes.map((q, i) => {
-                  const tabIndex = 2 + i;
-                  const isActive = activeQuoteTab === tabIndex;
-
-                  return (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => { if (renameValue.trim()) handleRename(q.id); else { setRenamingQuoteId(null); setRenameValue(''); } }}
+                        onKeyDown={(e) => { if (e.key === 'Escape') { setRenamingQuoteId(null); setRenameValue(''); } }}
+                        className="px-4 py-2.5 text-sm font-medium bg-cyan-700 text-white outline-none w-28 placeholder:text-white/50 ring-2 ring-cyan-400/60 ring-inset"
+                        placeholder={q.label}
+                      />
+                    </form>
+                  ) : (
                     <button
                       key={q.id}
-                      onClick={() => setActiveQuoteTab(tabIndex)}
-                      className={`px-3 py-1.5 rounded text-xs font-medium transition-colors duration-200 cursor-pointer select-none ${
+                      onClick={() => setActiveQuoteId(q.id)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         isActive
-                          ? 'text-white bg-[var(--accent)]'
-                          : 'text-white/40 hover:text-white/60'
-                      }`}
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-cyan-950/40 text-cyan-300/60 hover:text-white/80 hover:bg-cyan-900/40'
+                      } ${idx > 0 ? 'border-l border-cyan-700/30' : ''}`}
                     >
+                      {isFna ? (
+                        <Star size={16} className="flex-shrink-0 text-current opacity-70" />
+                      ) : (
+                        <User size={16} className="flex-shrink-0 text-current opacity-70" />
+                      )}
                       {q.label}
                     </button>
                   );
                 })}
               </div>
+            )}
 
-              {/* Toolbox — right-aligned grey box with action icons */}
-              {(() => {
-                const hasActive = activeQuoteTab >= 2 && activeQuote;
-                const isDeleting = hasActive && deletingQuoteId === activeQuote?.id;
-
-                return (
-                  <div className="ml-auto inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] p-1">
-                    {/* Rename / Confirm delete */}
+            {/* Pencil + Trash toolbox — only for client (non-FNA) quotes */}
+            {isClientQuoteActive && (
+              <div className="inline-flex items-center gap-1">
+                {renamingQuoteId === activeQuoteId ? (
+                  <>
                     <button
-                      disabled={!hasActive}
+                      onClick={() => handleRename(activeQuote!.id)}
+                      className="h-[28px] w-[28px] flex items-center justify-center rounded transition-colors text-green-400 hover:text-green-300 hover:bg-green-400/10"
+                      title="Confirm rename"
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      onClick={() => { setRenamingQuoteId(null); setRenameValue(''); }}
+                      className="h-[28px] w-[28px] flex items-center justify-center rounded transition-colors text-white/40 hover:text-white hover:bg-white/10"
+                      title="Cancel rename"
+                    >
+                      <X size={16} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
                       onClick={() => {
-                        if (!hasActive) return;
                         if (isDeleting) {
                           handleDelete(activeQuote!.id);
                         } else {
@@ -404,50 +372,84 @@ export function InvestmentSlide({
                           setRenameValue(activeQuote!.label);
                         }
                       }}
-                      className={`p-1.5 rounded transition-colors ${
-                        !hasActive
-                          ? 'text-white/15 cursor-not-allowed'
-                          : isDeleting
-                            ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                            : 'text-white/40 hover:text-white hover:bg-white/10'
+                      className={`h-[28px] w-[28px] flex items-center justify-center rounded transition-colors ${
+                        isDeleting
+                          ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
+                          : 'text-white/40 hover:text-white hover:bg-white/10'
                       }`}
                       title={isDeleting ? 'Confirm delete' : 'Rename'}
                     >
                       {isDeleting ? <Check size={16} /> : <Pencil size={16} />}
                     </button>
-
-                    {/* Delete / Cancel delete */}
                     <button
-                      disabled={!hasActive}
                       onClick={() => {
-                        if (!hasActive) return;
                         if (isDeleting) {
                           setDeletingQuoteId(null);
                         } else {
                           setDeletingQuoteId(activeQuote!.id);
                         }
                       }}
-                      className={`p-1.5 rounded transition-colors ${
-                        !hasActive
-                          ? 'text-white/15 cursor-not-allowed'
-                          : isDeleting
-                            ? 'text-white/40 hover:text-white hover:bg-white/10'
-                            : 'text-white/40 hover:text-red-400 hover:bg-red-400/10'
+                      className={`h-[28px] w-[28px] flex items-center justify-center rounded transition-colors ${
+                        isDeleting
+                          ? 'text-white/40 hover:text-white hover:bg-white/10'
+                          : 'text-white/40 hover:text-red-400 hover:bg-red-400/10'
                       }`}
                       title={isDeleting ? 'Cancel' : 'Delete'}
                     >
                       {isDeleting ? <X size={16} /> : <Trash2 size={16} />}
                     </button>
-                  </div>
-                );
-              })()}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* New Comparison Quote — right-aligned, directional fill button */}
+            <button
+              ref={newBtnRef}
+              onClick={() => clientQuotes.length < MAX_SAVED_QUOTES && setShowSaveModal(true)}
+              disabled={clientQuotes.length >= MAX_SAVED_QUOTES}
+              className={`relative ml-auto h-[36px] px-4 font-medium border rounded-lg overflow-hidden ${
+                clientQuotes.length >= MAX_SAVED_QUOTES
+                  ? 'text-white/20 bg-white/5 border-white/10 cursor-not-allowed'
+                  : 'text-black bg-white border-white'
+              }`}
+            >
+              <div
+                ref={newFillRef}
+                className="absolute inset-0 bg-black pointer-events-none"
+                style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+              />
+              <span className="relative flex items-center justify-center gap-2 whitespace-nowrap text-sm" style={{ zIndex: 10 }}>
+                <motion.span
+                  variants={iconVariants}
+                  initial="hidden"
+                  animate={newHovered ? 'visible' : 'hidden'}
+                  className="flex items-center"
+                >
+                  <Plus size={16} strokeWidth={2} />
+                </motion.span>
+                New Comparison Quote
+              </span>
+            </button>
+          </div>
+
+          {/* Client description — directly under client row when client quote is active */}
+          {!isLocked && (
+            <div className="mb-4">
+              <textarea
+                value={editingDescription}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
+                placeholder="Add a note about this quote..."
+                rows={2}
+                className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-white/60 placeholder:text-white/15 outline-none focus:border-cyan-500/40 transition-colors resize-none"
+              />
             </div>
           )}
 
           {/* Save name modal (inline popover) */}
           {showSaveModal && (
             <div className="mb-6 p-4 rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-sm">
-              <p className="text-white/60 text-sm mb-3">Name your saved quote</p>
+              <p className="text-white/60 text-sm mb-3">Name your comparison quote</p>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -460,12 +462,12 @@ export function InvestmentSlide({
                   value={saveLabel}
                   onChange={(e) => setSaveLabel(e.target.value)}
                   placeholder="e.g. Budget Option"
-                  className="flex-1 bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
+                  className="flex-1 bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-500 transition-colors placeholder:text-white/20"
                 />
                 <button
                   type="submit"
                   disabled={!saveLabel.trim() || savingQuote}
-                  className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   {savingQuote ? 'Saving...' : 'Save'}
                 </button>
@@ -483,24 +485,20 @@ export function InvestmentSlide({
             </div>
           )}
 
-          {/* Content area */}
-          <div className={namedQuotes.length === 0 ? 'mt-3' : ''}>
-            {fnaQuote && (
-              <ProposalCalculatorEmbed
-                isLocked={isLocked}
-                isCompare={isCompare}
-                proposalId={proposalId}
-                proposalType={proposalType}
-                initialQuote={initialQuoteForCalc}
-                prefillQuote={fnaQuote}
-                recommendedQuote={fnaQuote}
-                crowdfundingApproved={crowdfundingApproved}
-                activeQuoteId={activeQuoteIdForCalc}
-                saveRef={calcSaveRef}
-                onQuoteUpdated={handleQuoteUpdated}
-                comparisonLabel={comparisonLabel}
-              />
-            )}
+          {/* Calculator content */}
+          <div className={comparisonQuotes.length === 0 && !showSaveModal ? 'mt-3' : ''}>
+            <ProposalCalculatorEmbed
+              isLocked={isLocked}
+              proposalId={proposalId}
+              proposalType={proposalType}
+              initialQuote={activeQuote ?? undefined}
+              prefillQuote={recommendedQuote ?? undefined}
+              crowdfundingApproved={crowdfundingApproved}
+              activeQuoteId={activeQuoteId ?? undefined}
+              saveRef={calcSaveRef}
+              onQuoteUpdated={handleQuoteUpdated}
+              allQuotes={quotes.filter((q) => !q.deleted_at)}
+            />
           </div>
         </div>
       </div>

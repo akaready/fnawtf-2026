@@ -189,7 +189,7 @@ function SliderRow({
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
-                ? 'border-red-600 bg-red-950/20'
+                ? 'border-red-900/50 bg-red-950/10'
                 : enabled
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -202,14 +202,14 @@ function SliderRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
                   ? 'border-purple-400 bg-purple-400'
                   : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
-                  : compareDecreased ? 'border-red-500 bg-red-500'
+                  : compareDecreased ? 'border-red-800 bg-red-800'
                   : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
               }`}
             >
@@ -238,14 +238,14 @@ function SliderRow({
                 ${(compareAdded || compareIncreased)
                   ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
                   : compareDecreased
-                    ? '[&::-webkit-slider-thumb]:bg-red-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(248,113,113,0.4)]'
+                    ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
                     : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                 }`}
             />
             <span className="text-xs text-muted-foreground">${slider.max.toLocaleString()}</span>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {enabled ? `$${value.toLocaleString('en-US')}${addOn.perDay ? '/day' : ''}` : addOn.priceDisplay}
         </span>
       </div>
@@ -312,7 +312,7 @@ function MultiSliderRow({
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
-                ? 'border-red-600 bg-red-950/20'
+                ? 'border-red-900/50 bg-red-950/10'
                 : enabled
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -326,14 +326,14 @@ function MultiSliderRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
                   ? 'border-purple-400 bg-purple-400'
                   : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
-                  : compareDecreased ? 'border-red-500 bg-red-500'
+                  : compareDecreased ? 'border-red-800 bg-red-800'
                   : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
               }`}
             >
@@ -360,7 +360,7 @@ function MultiSliderRow({
               >+</button>
             </div>
           )}
-          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
             {enabled ? `$${perDayTotal.toLocaleString('en-US')}/day` : addOn.priceDisplay}
           </span>
         </div>
@@ -391,7 +391,7 @@ function MultiSliderRow({
                       ${(compareAdded || compareIncreased)
                         ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
                         : compareDecreased
-                          ? '[&::-webkit-slider-thumb]:bg-red-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(248,113,113,0.4)]'
+                          ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
                           : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                       }`}
                   />
@@ -411,7 +411,7 @@ function MultiSliderRow({
                               ? (compareAdded || compareIncreased)
                                 ? 'border-cyan-400 bg-cyan-400/20 text-cyan-300'
                                 : (compareRemoved || compareDecreased)
-                                  ? 'border-red-400/40 bg-red-400/10 text-red-300/40'
+                                  ? 'border-red-900/40 bg-red-950/20 text-red-900'
                                   : 'border-purple-400 bg-purple-400/20 text-purple-300'
                               : 'border-border text-muted-foreground/50 hover:border-muted-foreground/50'
                           }`}
@@ -480,7 +480,7 @@ function PhotoSliderRow({
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
-                ? 'border-red-600 bg-red-950/20'
+                ? 'border-red-900/50 bg-red-950/10'
                 : enabled
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -493,14 +493,14 @@ function PhotoSliderRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
                   ? 'border-purple-400 bg-purple-400'
                   : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
-                  : compareDecreased ? 'border-red-500 bg-red-500'
+                  : compareDecreased ? 'border-red-800 bg-red-800'
                   : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
               }`}
             >
@@ -532,14 +532,14 @@ function PhotoSliderRow({
                 ${(compareAdded || compareIncreased)
                   ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
                   : compareDecreased
-                    ? '[&::-webkit-slider-thumb]:bg-red-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(248,113,113,0.4)]'
+                    ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
                     : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                 }`}
             />
             <span className="text-xs text-muted-foreground">{ps.max}</span>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {enabled
             ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
             : addOn.priceDisplay}
@@ -588,7 +588,7 @@ function AddOnRow({
       tabIndex={0}
       onClick={isLocked ? undefined : () => onToggle(addOn.id)}
       onKeyDown={isLocked ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(addOn.id); } }}
-      className={`w-full flex items-center justify-between p-4 border rounded-lg transition-all duration-200 text-left ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
+      className={`w-full flex flex-nowrap items-center justify-between p-4 border rounded-lg transition-all duration-200 text-left ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'} ${
         lockedNotIncluded
           ? 'border-border/50 bg-[#020202]'
           : isLocked
@@ -596,7 +596,7 @@ function AddOnRow({
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
-                ? 'border-red-600 bg-red-950/20'
+                ? 'border-red-900/50 bg-red-950/10'
                 : selected
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -615,7 +615,7 @@ function AddOnRow({
               isLocked
                 ? 'border-purple-400 bg-purple-400'
                 : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
-                : compareDecreased ? 'border-red-500 bg-red-500'
+                : compareDecreased ? 'border-red-800 bg-red-800'
                 : selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
             }`}
           >
@@ -653,7 +653,7 @@ function AddOnRow({
             >+</button>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-400' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
+        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
       </div>
     </div>
   );
@@ -704,7 +704,7 @@ function TierToggleRow({
             : compareAdded
               ? 'border-cyan-600 bg-cyan-950/20'
               : compareRemoved
-                ? 'border-red-900/60 bg-[#020202]'
+                ? 'border-red-900/50 bg-red-950/10'
                 : selected
                   ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
@@ -717,7 +717,7 @@ function TierToggleRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
@@ -758,7 +758,7 @@ function TierToggleRow({
             ))}
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-400/40' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-white/20' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {selected ? `$${activePrice.toLocaleString()}/day` : addOn.priceDisplay}
         </span>
       </div>

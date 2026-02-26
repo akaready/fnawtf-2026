@@ -633,29 +633,21 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
   friendly_discount_pct: number;
   total_amount: number | null;
   down_amount: number | null;
-}): Promise<string> {
+  description?: string | null;
+}, quoteId?: string): Promise<string> {
   const { supabase } = await requireAuth();
 
-  // Check if FNA quote already exists for this proposal
-  const { data: existing } = await supabase
-    .from('proposal_quotes')
-    .select('id')
-    .eq('proposal_id', proposalId)
-    .eq('is_fna_quote', true)
-    .single();
-
-  if (existing) {
-    // Update existing
-    const row = existing as { id: string };
+  if (quoteId) {
+    // Update existing quote by ID
     const { error } = await supabase
       .from('proposal_quotes')
       .update({ ...quoteData, updated_at: new Date().toISOString() } as never)
-      .eq('id', row.id);
+      .eq('id', quoteId);
     if (error) throw new Error(error.message);
     revalidatePath('/admin/proposals');
-    return row.id;
+    return quoteId;
   } else {
-    // Create new
+    // Always create new
     const { data: row, error } = await supabase
       .from('proposal_quotes')
       .insert({ proposal_id: proposalId, is_fna_quote: true, is_locked: true, ...quoteData } as never)
@@ -665,6 +657,16 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
     revalidatePath('/admin/proposals');
     return (row as { id: string }).id;
   }
+}
+
+export async function deleteProposalQuote(quoteId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposal_quotes')
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq('id', quoteId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
 }
 
 // ── Proposal Milestones ──────────────────────────────────────────────────

@@ -69,14 +69,14 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
       const subtitle = el.querySelector('[data-subtitle]') as HTMLElement | null;
       const button = el.querySelector('[data-button]') as HTMLElement | null;
       const email = el.querySelector('[data-email]') as HTMLElement | null;
-      const instructions = el.querySelector('[data-instructions]') as HTMLElement | null;
+      const instructionEls = el.querySelectorAll('[data-instructions]');
 
       gsap.set(eyebrow, { opacity: 0, y: 20 });
       gsap.set(words, { y: '115%' });
       if (subtitle) gsap.set(subtitle, { opacity: 0, y: 24 });
       if (button) gsap.set(button, { opacity: 0, y: 32 });
       if (email) gsap.set(email, { opacity: 0, y: 20 });
-      if (instructions) gsap.set(instructions, { opacity: 0, y: 12 });
+      if (instructionEls.length) gsap.set(instructionEls, { opacity: 0, y: 12 });
 
       const tl = gsap.timeline({ delay: 0.3 });
 
@@ -90,7 +90,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         .to(subtitle, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5')
         .to(button, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3')
         .to(email, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, '-=0.3')
-        .to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3');
+        .to(instructionEls, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3');
     }, section);
 
     return () => ctx.revert();
@@ -157,7 +157,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         if (slideRef) (slideRef as React.MutableRefObject<HTMLElement | null>).current = node;
       }}
       data-slide
-      className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative flex flex-col items-center justify-center overflow-hidden pb-16"
+      className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative flex flex-col items-center justify-center overflow-hidden pb-10"
       style={{
         backgroundColor: 'var(--surface-elevated)',
         backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
@@ -179,14 +179,14 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         style={{ backgroundColor: 'black' }}
       />
 
-      <div ref={innerRef} className="relative z-10 flex flex-col items-center text-center px-8 max-w-5xl w-full">
-        <p data-eyebrow className="text-sm tracking-[0.45em] uppercase text-white/25 font-mono mb-8" style={{ opacity: 0 }}>
+      <div ref={innerRef} className="relative z-10 flex flex-col items-center text-center px-6 sm:px-8 max-w-5xl w-full">
+        <p data-eyebrow className="text-sm tracking-[0.45em] uppercase text-white/25 font-mono mb-5" style={{ opacity: 0 }}>
           {proposal.contact_company}
         </p>
 
         {/* Clip-reveal title */}
         <h1
-          className="font-display font-bold text-white leading-[0.95] mb-10"
+          className="font-display font-bold text-white leading-[0.95] mb-6"
           style={{ fontSize: 'clamp(3.5rem, 9vw, 10rem)' }}
         >
           {titleWords.map((word, i) => (
@@ -203,13 +203,13 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         </h1>
 
         {proposal.subtitle && (
-          <p data-subtitle className="text-xl text-white/40 max-w-lg leading-relaxed mb-12" style={{ opacity: 0 }}>
+          <p data-subtitle className="text-xl text-white/40 max-w-lg leading-relaxed mb-8" style={{ opacity: 0 }}>
             {proposal.subtitle}
           </p>
         )}
 
         {/* CTA Button */}
-        <div data-button className="w-full max-w-sm mb-8" style={{ opacity: 0 }}>
+        <div data-button className="w-full max-w-sm mb-5" style={{ opacity: 0 }}>
           <motion.button
             ref={buttonRef}
             onClick={onNext}
@@ -237,7 +237,7 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
         </div>
 
         {/* Email Button */}
-        <div data-email className="w-full max-w-[12rem] mb-8" style={{ opacity: 0 }}>
+        <div data-email className="w-full max-w-[12rem] mb-5" style={{ opacity: 0 }}>
           <a
             ref={emailBtnRef}
             href="mailto:hi@fna.wtf"
@@ -262,8 +262,11 @@ export function TitleSlide({ proposal, slideRef, onNext }: Props) {
           </a>
         </div>
 
-        {/* Instructions */}
-        <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+        {/* Instructions — mobile shows swipe hint, desktop shows keyboard/button hint */}
+        <p data-instructions className="sm:hidden text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+          Swipe left or right to advance.
+        </p>
+        <p data-instructions className="hidden sm:block text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
           Navigate with arrow keys, page dots below, or the left/right buttons.
         </p>
       </div>

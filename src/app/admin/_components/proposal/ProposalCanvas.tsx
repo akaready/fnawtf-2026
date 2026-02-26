@@ -55,7 +55,7 @@ export function ProposalCanvas({
   const [editingWelcome, setEditingWelcome] = useState(false);
   const [editingApproach, setEditingApproach] = useState(false);
 
-  const fnaQuote = proposalQuotes.find((q) => q.is_fna_quote) ?? null;
+  const fnaQuotes = proposalQuotes.filter((q) => q.is_fna_quote && !q.deleted_at);
 
   return (
     <VideoPlayerProvider>
@@ -216,7 +216,7 @@ export function ProposalCanvas({
         <AdminSlideShell label="Price Quote">
           <div className="bg-black border-b border-border min-h-[50vh] flex flex-col justify-center">
             <div className="max-w-5xl mx-auto px-8 py-12 w-full space-y-8">
-              <QuoteBuilder proposalId={proposal.id} existingQuote={fnaQuote} />
+              <QuoteBuilder proposalId={proposal.id} existingQuotes={fnaQuotes} />
               {proposalQuotes.length > 0 && (
                 <InvestmentSlide
                   proposalId={proposal.id}

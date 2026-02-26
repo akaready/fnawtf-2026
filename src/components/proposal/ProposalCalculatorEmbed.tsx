@@ -36,6 +36,7 @@ export interface CalculatorStateSnapshot {
   crowdfunding_enabled: boolean;
   crowdfunding_tier: number;
   fundraising_enabled: boolean;
+  friendly_discount_pct: number;
 }
 
 export interface ProposalCalculatorSaveHandle {
@@ -53,17 +54,15 @@ interface Props {
   isReadOnly?: boolean;
   prefillQuote?: ProposalQuoteRow;
   isLocked?: boolean;
-  isCompare?: boolean;
-  recommendedQuote?: ProposalQuoteRow;
   activeQuoteId?: string;
   saveRef?: React.MutableRefObject<ProposalCalculatorSaveHandle | null>;
   /** Called after any successful save (auto-save or manual) with the saved state */
   onQuoteUpdated?: (payload: CalculatorStateSnapshot) => void;
-  /** Label for the adjusted/comparison column in the summary */
-  comparisonLabel?: string;
+  /** All quotes for comparison dropdowns in the summary */
+  allQuotes?: ProposalQuoteRow[];
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, isCompare, recommendedQuote, activeQuoteId, saveRef, onQuoteUpdated, comparisonLabel }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes }: Props) {
   const visibleTabs = getVisibleTabs(proposalType);
 
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -93,6 +92,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(initialQuote?.crowdfunding_enabled ?? false);
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(initialQuote?.crowdfunding_tier ?? 0);
   const [fundraisingEnabled, setFundraisingEnabled] = useState(initialQuote?.fundraising_enabled ?? false);
+  const [friendlyDiscountPct, setFriendlyDiscountPct] = useState(initialQuote?.friendly_discount_pct ?? 0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set([(initialQuote?.quote_type as TabId) ?? visibleTabs[0]])
   );
@@ -123,52 +123,10 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     setFundraisingEnabled(prefillQuote.fundraising_enabled ?? false);
   }, [prefillQuote]);
 
-  const recommendedAddOnMap = new Map<string, number>(
-    recommendedQuote?.selected_addons
-      ? Object.entries(recommendedQuote.selected_addons).map(([k, v]) => [k, v as number])
-      : []
-  );
-  const recommendedSliderVals = new Map<string, number>(
-    recommendedQuote?.slider_values
-      ? Object.entries(recommendedQuote.slider_values).map(([k, v]) => [k, v as number])
-      : []
-  );
-  const recommendedPhotoCountVal = recommendedQuote?.photo_count ?? 25;
-
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Initialize to current value so the sync effect doesn't fire on mount
-  // (which would overwrite saved-quote state with FNA recommended state)
-  const prevIsCompare = useRef(isCompare ?? false);
   const prevQuoteId = useRef<string | undefined>(initialQuote?.id);
 
-  // When switching INTO compare mode (from locked/recommended), sync quantities
-  // from recommendedQuote so the user starts adjusting from the same config.
-  // Skip on mount (prevIsCompare starts matching isCompare) — we already loaded
-  // from initialQuote via useState initializers.
-  useEffect(() => {
-    if (isCompare && !prevIsCompare.current && recommendedQuote && !initialQuote) {
-      if (recommendedQuote.selected_addons) {
-        setSelectedAddOns(new Map(Object.entries(recommendedQuote.selected_addons)));
-      }
-      if (recommendedQuote.slider_values) {
-        setSliderValues(new Map(Object.entries(recommendedQuote.slider_values)));
-      }
-      if (recommendedQuote.tier_selections) {
-        setTierSelections(new Map(Object.entries(recommendedQuote.tier_selections).map(([k, v]) => [k, v as 'basic' | 'premium'])));
-      }
-      if (recommendedQuote.location_days) {
-        setLocationDays(new Map(Object.entries(recommendedQuote.location_days).map(([k, v]) => [k, v as number[]])));
-      }
-      if (recommendedQuote.photo_count !== undefined) {
-        setPhotoCount(recommendedQuote.photo_count);
-      }
-      setCrowdfundingEnabled(recommendedQuote.crowdfunding_enabled ?? false);
-      setFundraisingEnabled(recommendedQuote.fundraising_enabled ?? false);
-    }
-    prevIsCompare.current = isCompare ?? false;
-  }, [isCompare, recommendedQuote, initialQuote]);
-
-  // When activeQuoteId changes (user switched to a different saved quote tab),
+  // When activeQuoteId changes (user switched to a different quote tab),
   // reload all calculator state from the new initialQuote — in place, no remount.
   useEffect(() => {
     if (!initialQuote || initialQuote.id === prevQuoteId.current) return;
@@ -203,6 +161,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     setCrowdfundingEnabled(initialQuote.crowdfunding_enabled ?? false);
     setCrowdfundingTierIndex(initialQuote.crowdfunding_tier ?? 0);
     setFundraisingEnabled(initialQuote.fundraising_enabled ?? false);
+    setFriendlyDiscountPct(initialQuote.friendly_discount_pct ?? 0);
   }, [initialQuote, visibleTabs]);
 
   // Build the current state payload (shared by auto-save and manual save)
@@ -216,7 +175,8 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     crowdfunding_enabled: crowdfundingEnabled,
     crowdfunding_tier: crowdfundingTierIndex,
     fundraising_enabled: fundraisingEnabled,
-  }), [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled]);
+    friendly_discount_pct: friendlyDiscountPct,
+  }), [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled, friendlyDiscountPct]);
 
   // Expose imperative save handle so parent can trigger an immediate persist
   useEffect(() => {
@@ -233,8 +193,10 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     return () => { if (saveRef) saveRef.current = null; };
   }, [saveRef, proposalId, activeQuoteId, buildSavePayload, onQuoteUpdated]);
 
+  // Auto-save: only for unlocked (client) quotes
   useEffect(() => {
-    if (!isCompare) return;
+    if (isLocked) return;
+    if (!activeQuoteId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       const payload = buildSavePayload();
@@ -244,26 +206,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     }, 1500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCompare, proposalId, buildSavePayload, activeQuoteId, onQuoteUpdated]);
+  }, [isLocked, proposalId, buildSavePayload, activeQuoteId, onQuoteUpdated]);
 
-  // When locked, always display the FNA's recommended state — never the client's adjusted state
-  const displaySelectedAddOns = isLocked && recommendedQuote?.selected_addons
-    ? new Map(Object.entries(recommendedQuote.selected_addons))
-    : selectedAddOns;
-  const displaySliderValues = isLocked && recommendedQuote?.slider_values
-    ? new Map(Object.entries(recommendedQuote.slider_values))
-    : sliderValues;
-  const displayTierSelections = isLocked && recommendedQuote?.tier_selections
-    ? new Map(Object.entries(recommendedQuote.tier_selections).map(([k, v]) => [k, v as 'basic' | 'premium']))
-    : tierSelections;
-  const displayLocationDays = isLocked && recommendedQuote?.location_days
-    ? new Map(Object.entries(recommendedQuote.location_days).map(([k, v]) => [k, v as number[]]))
-    : locationDays;
-  const displayPhotoCount = isLocked && recommendedQuote?.photo_count !== undefined
-    ? recommendedQuote.photo_count
-    : photoCount;
-
-  const totalDays = displaySelectedAddOns.get('launch-production-days') ?? 1;
+  const totalDays = selectedAddOns.get('launch-production-days') ?? 1;
   const showBuild = activeTab === 'build';
   const showLaunch = activeTab === 'launch';
   const showFundraising = activeTab === 'fundraising';
@@ -382,17 +327,19 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
 
   const allAddOns = [...buildAddOns, ...launchAddOns, ...fundraisingIncluded, ...fundraisingAddOns];
 
-  const comparisonData = (isCompare && recommendedQuote) ? {
-    selectedAddOns: new Map(Object.entries(recommendedQuote.selected_addons ?? {})),
-    sliderValues: new Map(Object.entries(recommendedQuote.slider_values ?? {})),
-    tierSelections: new Map(Object.entries(recommendedQuote.tier_selections ?? {}).map(([k, v]) => [k, v as 'basic' | 'premium'])),
-    locationDays: new Map(Object.entries(recommendedQuote.location_days ?? {}).map(([k, v]) => [k, v as number[]])),
-    photoCount: recommendedQuote.photo_count ?? 25,
-    crowdfundingEnabled: recommendedQuote.crowdfunding_enabled ?? false,
-    crowdfundingTierIndex: recommendedQuote.crowdfunding_tier ?? 0,
-    fundraisingEnabled: recommendedQuote.fundraising_enabled ?? false,
-    friendly_discount_pct: recommendedQuote.friendly_discount_pct ?? 0,
-  } : undefined;
+  // Compute recommended (first FNA) quote data for comparison coloring on add-on rows
+  const recommendedRef = allQuotes?.find((q) => q.is_fna_quote);
+  // Only show comparison after the calculator state has synced to the current quote
+  // (prevQuoteId tracks what the state currently represents)
+  const stateSynced = prevQuoteId.current === initialQuote?.id;
+  const isCompare = !isLocked && !!recommendedRef && stateSynced;
+  const recommendedAddOnsMap = recommendedRef?.selected_addons
+    ? new Map(Object.entries(recommendedRef.selected_addons).map(([k, v]) => [k, v as number]))
+    : undefined;
+  const recommendedSliderValuesMap = recommendedRef?.slider_values
+    ? new Map(Object.entries(recommendedRef.slider_values).map(([k, v]) => [k, v as number]))
+    : undefined;
+  const recommendedPhotoCountVal = recommendedRef?.photo_count ?? undefined;
 
   return (
     <div className={
@@ -440,8 +387,8 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               >
                 <AddOnSection
                   addOns={buildAddOns}
-                  selectedAddOns={displaySelectedAddOns}
-                  sliderValues={displaySliderValues}
+                  selectedAddOns={selectedAddOns}
+                  sliderValues={sliderValues}
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
@@ -449,8 +396,8 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   onCategoryToggle={toggleCategory}
                   isLocked={isLocked}
                   isCompare={isCompare}
-                  recommendedAddOns={recommendedAddOnMap}
-                  recommendedSliderValues={recommendedSliderVals}
+                  recommendedAddOns={recommendedAddOnsMap}
+                  recommendedSliderValues={recommendedSliderValuesMap}
                   recommendedPhotoCount={recommendedPhotoCountVal}
                 />
               </CollapsibleSection>
@@ -465,25 +412,25 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               >
                 <AddOnSection
                   addOns={launchAddOns}
-                  selectedAddOns={displaySelectedAddOns}
-                  sliderValues={displaySliderValues}
+                  selectedAddOns={selectedAddOns}
+                  sliderValues={sliderValues}
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
                   fundraisingActive={false}
                   totalDays={totalDays}
-                  photoCount={displayPhotoCount}
+                  photoCount={photoCount}
                   onPhotoCountChange={setPhotoCount}
                   expandedCategories={expandedCategories}
                   onCategoryToggle={toggleCategory}
-                  tierSelections={displayTierSelections}
+                  tierSelections={tierSelections}
                   onTierChange={handleTierChange}
-                  locationDays={displayLocationDays}
+                  locationDays={locationDays}
                   onDayToggle={handleLocationDayToggle}
                   isLocked={isLocked}
                   isCompare={isCompare}
-                  recommendedAddOns={recommendedAddOnMap}
-                  recommendedSliderValues={recommendedSliderVals}
+                  recommendedAddOns={recommendedAddOnsMap}
+                  recommendedSliderValues={recommendedSliderValuesMap}
                   recommendedPhotoCount={recommendedPhotoCountVal}
                 />
               </CollapsibleSection>
@@ -498,15 +445,15 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               >
                 <AddOnSection
                   addOns={[...fundraisingIncluded, ...fundraisingAddOns]}
-                  selectedAddOns={displaySelectedAddOns}
-                  sliderValues={displaySliderValues}
+                  selectedAddOns={selectedAddOns}
+                  sliderValues={sliderValues}
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
                   isLocked={isLocked}
                   isCompare={isCompare}
-                  recommendedAddOns={recommendedAddOnMap}
-                  recommendedSliderValues={recommendedSliderVals}
+                  recommendedAddOns={recommendedAddOnsMap}
+                  recommendedSliderValues={recommendedSliderValuesMap}
                   recommendedPhotoCount={recommendedPhotoCountVal}
                 />
               </CollapsibleSection>
@@ -515,8 +462,8 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
 
           <div>
             <CalculatorSummary
-              selectedAddOns={displaySelectedAddOns}
-              sliderValues={displaySliderValues}
+              selectedAddOns={selectedAddOns}
+              sliderValues={sliderValues}
               allAddOns={allAddOns}
               buildActive={showBuild}
               launchActive={showLaunch}
@@ -527,20 +474,21 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               fundraisingEnabled={fundraisingEnabled}
               onFundraisingToggle={() => setFundraisingEnabled((p) => !p)}
               totalDays={totalDays}
-              photoCount={displayPhotoCount}
-              tierSelections={displayTierSelections}
-              locationDays={displayLocationDays}
+              photoCount={photoCount}
+              tierSelections={tierSelections}
+              locationDays={locationDays}
               onSave={handleSave}
               saving={saving}
               saved={saved}
               hideGetStarted
               hideSaveQuote
-              initialFriendlyDiscountPct={recommendedQuote?.friendly_discount_pct ?? 0}
+              initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
               crowdfundingApproved={crowdfundingApproved}
               isReadOnly={isReadOnly}
-              comparisonData={comparisonData}
-              comparisonLabel={comparisonLabel}
               isLocked={isLocked}
+              allQuotes={allQuotes}
+              activeQuoteId={activeQuoteId}
+              onFriendlyDiscountChange={setFriendlyDiscountPct}
             />
           </div>
         </div>

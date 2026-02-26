@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Fragment } from 'react';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Save, Loader2, Check } from 'lucide-react';
+import { Calendar, Save, Loader2, Check, X, Plus, ChevronDown } from 'lucide-react';
 import { getCalApi } from '@calcom/embed-react';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { AddOn } from '@/types/pricing';
 import { QuoteModal } from './QuoteModal';
 import type { QuoteData } from '@/lib/pdf/types';
 import type { LeadData } from '@/lib/pricing/leadCookie';
+import type { ProposalQuoteRow } from '@/types/proposal';
 
 interface CalculatorSummaryProps {
   selectedAddOns: Map<string, number>;
@@ -35,21 +37,14 @@ interface CalculatorSummaryProps {
   hideSaveQuote?: boolean;
   crowdfundingApproved?: boolean;
   isReadOnly?: boolean;
-  comparisonData?: {
-    selectedAddOns: Map<string, number>;
-    sliderValues: Map<string, number>;
-    tierSelections: Map<string, 'basic' | 'premium'>;
-    locationDays: Map<string, number[]>;
-    photoCount: number;
-    crowdfundingEnabled: boolean;
-    crowdfundingTierIndex: number;
-    fundraisingEnabled: boolean;
-    friendly_discount_pct?: number;
-  };
   isLocked?: boolean;
   initialFriendlyDiscountPct?: number;
-  /** Label for the adjusted/comparison column (defaults to "Adjusted") */
-  comparisonLabel?: string;
+  /** All quotes for dropdown comparison selectors (proposal context only) */
+  allQuotes?: ProposalQuoteRow[];
+  /** Which quote the live calculator state represents */
+  activeQuoteId?: string;
+  /** Called whenever the user moves the friendly discount slider */
+  onFriendlyDiscountChange?: (pct: number) => void;
 }
 
 function formatPrice(amount: number): string {
@@ -135,6 +130,109 @@ function calcTierTotal(
   }
 
   return { total, castCrewTotal, items };
+}
+
+// ── Compute totals from a stored ProposalQuoteRow ────────────────────────
+
+interface QuoteColumnData {
+  label: string;
+  quoteId: string;
+  buildActive: boolean;
+  launchActive: boolean;
+  isFundraising: boolean;
+  buildBase: number;
+  launchBase: number;
+  fundBase: number;
+  buildItems: { name: string; price: number }[];
+  launchItems: { name: string; price: number }[];
+  fundItems: { name: string; price: number }[];
+  overhead: number;
+  hasAddOns: boolean;
+  friendlyDiscountPct: number;
+  friendlyDiscount: number;
+  crowdfundingEnabled: boolean;
+  crowdDiscount: number;
+  total: number;
+  downAmount: number;
+  downPercent: number;
+}
+
+function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColumnData {
+  const sel = new Map(Object.entries(quote.selected_addons ?? {}));
+  const sliders = new Map(Object.entries(quote.slider_values ?? {}));
+  const tiers = new Map(
+    Object.entries(quote.tier_selections ?? {}).map(([k, v]) => [k, v as 'basic' | 'premium'])
+  );
+  const locDays = new Map(
+    Object.entries(quote.location_days ?? {}).map(([k, v]) => [k, v as number[]])
+  );
+  const totalDays = sel.get('launch-production-days') ?? 1;
+  const photoCount = quote.photo_count;
+
+  const isFundraising = quote.fundraising_enabled;
+  const buildActive = quote.quote_type === 'build' && !isFundraising;
+  const launchActive = (quote.quote_type === 'launch' || quote.quote_type === 'scale') && !isFundraising;
+
+  const buildAddOnsArr = addOns.filter((a) => a.tier === 'build');
+  const launchAddOnsArr = addOns.filter((a) => a.tier === 'launch');
+  const fundAddOnsArr = addOns.filter((a) => a.tier === 'fundraising');
+
+  const buildResult = buildActive ? calcTierTotal(buildAddOnsArr, sel, sliders, 1, photoCount, tiers) : null;
+  const launchResult = launchActive ? calcTierTotal(launchAddOnsArr, sel, sliders, totalDays, photoCount, tiers, locDays) : null;
+  const fundResult = isFundraising ? calcTierTotal(fundAddOnsArr, sel, sliders, 1, photoCount, tiers) : null;
+
+  const buildBase = buildActive ? 5000 : 0;
+  const launchBase = launchActive ? 10000 : 0;
+  const fundBase = isFundraising ? 15000 : 0;
+
+  const addOnTotal = (buildResult?.total ?? 0) + (launchResult?.total ?? 0) + (fundResult?.total ?? 0);
+  const castCrewTotal = launchResult?.castCrewTotal ?? 0;
+  const baseTotal = isFundraising ? fundBase : (buildBase + launchBase);
+  const subtotal = baseTotal + addOnTotal;
+  const hasAddOns = addOnTotal > 0;
+  const overhead = hasAddOns ? Math.round(subtotal * 0.1) : 0;
+  const subtotalWithOverhead = subtotal + overhead;
+
+  const crowdTierDiscounts = [0, 10, 20, 30];
+  const crowdDiscount = quote.crowdfunding_enabled
+    ? Math.round((subtotalWithOverhead - castCrewTotal) * (crowdTierDiscounts[quote.crowdfunding_tier] / 100))
+    : 0;
+
+  const showFriendly = !quote.crowdfunding_enabled && !isFundraising;
+  const friendlyDiscount = showFriendly && quote.friendly_discount_pct > 0
+    ? Math.round((subtotalWithOverhead - castCrewTotal) * (quote.friendly_discount_pct / 100))
+    : 0;
+
+  const rawTotal = subtotalWithOverhead - crowdDiscount - friendlyDiscount;
+  const hasDiscount = crowdDiscount > 0 || friendlyDiscount > 0;
+  const total = hasDiscount ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
+
+  const downPct = isFundraising ? 0.2 : 0.4;
+  const rawDown = Math.round(total * downPct);
+  const downAmount = hasDiscount ? Math.ceil(rawDown / 50) * 50 : rawDown;
+
+  return {
+    label: quote.label,
+    quoteId: quote.id,
+    buildActive,
+    launchActive,
+    isFundraising,
+    buildBase,
+    launchBase,
+    fundBase,
+    buildItems: buildResult?.items ?? [],
+    launchItems: (launchResult?.items ?? []).filter((i) => !i.name.includes('Production Days')),
+    fundItems: fundResult?.items ?? [],
+    overhead,
+    hasAddOns,
+    friendlyDiscountPct: showFriendly ? quote.friendly_discount_pct : 0,
+    friendlyDiscount,
+    crowdfundingEnabled: quote.crowdfunding_enabled,
+    crowdDiscount,
+    total,
+    downAmount,
+    downPercent: downPct,
+  };
 }
 
 // ── Checkbox button ──────────────────────────────────────────────────────
@@ -491,6 +589,188 @@ function SaveQuoteButton({ onSave, saving, saved }: { onSave: () => void; saving
   );
 }
 
+// ── Aligned two-column comparison renderer ──────────────────────────────
+
+function ComparisonGrid({ left, right, rightHeader }: { left: QuoteColumnData; right: QuoteColumnData; rightHeader?: React.ReactNode }) {
+  function addedItems(a: { name: string; price: number }[], b: { name: string; price: number }[]) {
+    const names = new Set(a.map(i => i.name));
+    return b.filter(i => !names.has(i.name));
+  }
+
+  function renderTierPair(
+    label: string,
+    leftBase: number,
+    rightBase: number,
+    leftItems: { name: string; price: number }[],
+    rightItems: { name: string; price: number }[],
+  ) {
+    const leftItemMap = new Map(leftItems.map(i => [i.name, i]));
+    const rightItemMap = new Map(rightItems.map(i => [i.name, i]));
+    const leftAdded = addedItems(rightItems, leftItems);
+    const rightAdded = addedItems(leftItems, rightItems);
+
+    return { label, leftBase, rightBase, leftItems, rightItems, leftItemMap, rightItemMap, leftAdded, rightAdded };
+  }
+
+  const tiers: ReturnType<typeof renderTierPair>[] = [];
+  if (left.buildActive || right.buildActive) {
+    tiers.push(renderTierPair('Build', left.buildBase, right.buildBase, left.buildItems, right.buildItems));
+  }
+  if (left.launchActive || right.launchActive) {
+    tiers.push(renderTierPair('Launch', left.launchBase, right.launchBase, left.launchItems, right.launchItems));
+  }
+  if (left.isFundraising || right.isFundraising) {
+    tiers.push(renderTierPair('Fundraising', left.fundBase, right.fundBase, left.fundItems, right.fundItems));
+  }
+
+  const leftHasFriendly = left.friendlyDiscountPct > 0;
+  const rightHasFriendly = right.friendlyDiscountPct > 0;
+  const eitherHasFriendly = leftHasFriendly || rightHasFriendly;
+  const leftHasCrowd = left.crowdfundingEnabled && left.crowdDiscount > 0;
+  const rightHasCrowd = right.crowdfundingEnabled && right.crowdDiscount > 0;
+  const eitherHasCrowd = leftHasCrowd || rightHasCrowd;
+
+  return (
+    <div className="grid grid-cols-2 gap-x-4 mb-4 font-mono text-sm">
+      {/* Left column */}
+      <div className="space-y-1.5">
+        <div className="mb-3 pb-2 border-b border-green-900/40">
+          <div className="w-full bg-green-900/20 border border-green-600/40 text-white font-semibold rounded-md px-3 text-sm flex items-center h-[34px]">
+            {left.label}
+          </div>
+        </div>
+        {tiers.map((tier, ti) => (
+          <Fragment key={tier.label}>
+            {ti > 0 && <div className="h-px bg-green-900/50 my-1" />}
+            <div className="flex justify-between gap-1">
+              <span className="text-muted-foreground truncate">{tier.label} base</span>
+              <span className="text-foreground flex-shrink-0">{formatPrice(tier.leftBase)}</span>
+            </div>
+            {tier.leftItems.map((item) => (
+              <div key={item.name} className="flex justify-between gap-1">
+                <span className="text-muted-foreground truncate">{item.name}</span>
+                <span className="text-foreground flex-shrink-0">{formatPrice(item.price)}</span>
+              </div>
+            ))}
+            {/* Spacers for items only in right column */}
+            {tier.rightAdded.map((item) => (
+              <div key={`spacer-${item.name}`} className="flex justify-between gap-1 invisible" aria-hidden>
+                <span className="truncate">{item.name}</span>
+                <span className="flex-shrink-0">{formatPrice(item.price)}</span>
+              </div>
+            ))}
+          </Fragment>
+        ))}
+        <div className="h-px bg-green-900/50 my-1" />
+        <div className="flex justify-between gap-1">
+          <span className="text-muted-foreground truncate">Overhead (10%)</span>
+          <span className="text-foreground flex-shrink-0">
+            {left.hasAddOns ? formatPrice(left.overhead) : <span className="text-muted-foreground/60">Waived</span>}
+          </span>
+        </div>
+        {eitherHasFriendly && (
+          leftHasFriendly ? (
+            <div className="flex justify-between gap-1">
+              <span className="text-green-600 truncate">Friendly discount ({left.friendlyDiscountPct}%)</span>
+              <span className="text-green-600 flex-shrink-0">-{formatPrice(left.friendlyDiscount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-1 invisible" aria-hidden>
+              <span className="truncate">Friendly discount</span>
+              <span className="flex-shrink-0">—</span>
+            </div>
+          )
+        )}
+        {eitherHasCrowd && (
+          leftHasCrowd ? (
+            <div className="flex justify-between gap-1">
+              <span className="text-green-600 truncate">Crowdfunding</span>
+              <span className="text-green-600 flex-shrink-0">-{formatPrice(left.crowdDiscount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-1 invisible" aria-hidden>
+              <span className="truncate">Crowdfunding</span>
+              <span className="flex-shrink-0">—</span>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Right column */}
+      <div className="border-l border-green-900/50 pl-4 space-y-1.5">
+        <div className="mb-3 pb-2 border-b border-green-900/40">
+          {rightHeader ?? (
+            <div className="w-full border border-green-600 rounded-md px-3 py-2 text-sm font-semibold text-white flex items-center">
+              {right.label}
+            </div>
+          )}
+        </div>
+        {tiers.map((tier, ti) => (
+          <Fragment key={tier.label}>
+            {ti > 0 && <div className="h-px bg-green-900/50 my-1" />}
+            <div className="flex justify-between gap-1">
+              <span className="text-muted-foreground truncate">{tier.label} base</span>
+              <span className="text-foreground flex-shrink-0">{formatPrice(tier.rightBase)}</span>
+            </div>
+            {/* Render items in left column order (matching/removed) */}
+            {tier.leftItems.map((item) => {
+              const rightItem = tier.rightItemMap.get(item.name);
+              return (
+                <div key={item.name} className="flex justify-between gap-1">
+                  <span className={`truncate ${rightItem ? 'text-muted-foreground' : 'text-red-400/60'}`}>{item.name}</span>
+                  <span className={`flex-shrink-0 ${rightItem ? 'text-foreground' : 'text-red-400/60'}`}>
+                    {rightItem ? formatPrice(rightItem.price) : '$0'}
+                  </span>
+                </div>
+              );
+            })}
+            {/* Added items (cyan) */}
+            {tier.rightAdded.map((item) => (
+              <div key={item.name} className="flex justify-between gap-1">
+                <span className="text-cyan-400/80 truncate">{item.name}</span>
+                <span className="text-cyan-400 flex-shrink-0">{formatPrice(item.price)}</span>
+              </div>
+            ))}
+          </Fragment>
+        ))}
+        <div className="h-px bg-green-900/50 my-1" />
+        <div className="flex justify-between gap-1">
+          <span className="text-muted-foreground truncate">Overhead (10%)</span>
+          <span className="text-foreground flex-shrink-0">
+            {right.hasAddOns ? formatPrice(right.overhead) : <span className="text-muted-foreground/60">Waived</span>}
+          </span>
+        </div>
+        {eitherHasFriendly && (
+          rightHasFriendly ? (
+            <div className="flex justify-between gap-1">
+              <span className="text-green-600 truncate">Friendly discount ({right.friendlyDiscountPct}%)</span>
+              <span className="text-green-600 flex-shrink-0">-{formatPrice(right.friendlyDiscount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-1 invisible" aria-hidden>
+              <span className="truncate">Friendly discount</span>
+              <span className="flex-shrink-0">—</span>
+            </div>
+          )
+        )}
+        {eitherHasCrowd && (
+          rightHasCrowd ? (
+            <div className="flex justify-between gap-1">
+              <span className="text-green-600 truncate">Crowdfunding</span>
+              <span className="text-green-600 flex-shrink-0">-{formatPrice(right.crowdDiscount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-1 invisible" aria-hidden>
+              <span className="truncate">Crowdfunding</span>
+              <span className="flex-shrink-0">—</span>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Summary ─────────────────────────────────────────────────────────
 
 export function CalculatorSummary({
@@ -518,34 +798,71 @@ export function CalculatorSummary({
   hideSaveQuote,
   crowdfundingApproved,
   isReadOnly,
-  comparisonData,
   isLocked,
   initialFriendlyDiscountPct,
-  comparisonLabel = 'Adjusted',
+  allQuotes,
+  activeQuoteId,
+  onFriendlyDiscountChange,
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
-  const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(0);
+  const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(initialFriendlyDiscountPct ?? 0);
+  const [discountsOpen, setDiscountsOpen] = useState((initialFriendlyDiscountPct ?? 0) > 0);
   const [showModal, setShowModal] = useState(false);
 
-  // Seed friendly discount from the recommended quote whenever the tab switches.
-  // - Locked (Recommended) tab: fires when isLocked transitions false→true (or on mount if initially locked)
-  // - Compare (Adjust) tab: fires when comparisonData transitions undefined→defined
-  // Both cases use the same recommended value so the user always starts from the correct baseline.
-  const prevHadComparisonData = useRef(false);
-  const prevWasLocked = useRef(false);
+  // Seed friendly discount whenever the active quote changes (tab switch)
   useEffect(() => {
-    if (comparisonData && !prevHadComparisonData.current) {
-      setFriendlyDiscountPercent(comparisonData.friendly_discount_pct ?? 0);
-    }
-    prevHadComparisonData.current = !!comparisonData;
-  }, [comparisonData]);
-  useEffect(() => {
-    if (isLocked && !prevWasLocked.current && initialFriendlyDiscountPct !== undefined) {
+    if (initialFriendlyDiscountPct !== undefined) {
       setFriendlyDiscountPercent(initialFriendlyDiscountPct);
+      if (initialFriendlyDiscountPct > 0) setDiscountsOpen(true);
     }
-    prevWasLocked.current = !!isLocked;
-  }, [isLocked, initialFriendlyDiscountPct]);
+  }, [initialFriendlyDiscountPct, activeQuoteId]);
 
+  // ── Dropdown comparison state (proposal context only) ──
+  const [showComparison, setShowComparison] = useState(false);
+  const [compareQuoteId, setCompareQuoteId] = useState<string | null>(null);
+  const [compareDropdownOpen, setCompareDropdownOpen] = useState(false);
+  const compareDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Compare button directional fill
+  const compareBtnRef = useRef<HTMLButtonElement>(null);
+  const compareFillRef = useRef<HTMLDivElement>(null);
+  const [compareHovered, setCompareHovered] = useState(false);
+
+  useDirectionalFill(compareBtnRef, compareFillRef, {
+    onFillStart: () => {
+      setCompareHovered(true);
+      const textSpan = compareBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    },
+    onFillEnd: () => {
+      setCompareHovered(false);
+      const textSpan = compareBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    },
+  });
+
+  // Clear compare dropdown if deleted
+  useEffect(() => {
+    if (compareQuoteId && allQuotes && !allQuotes.some((q) => q.id === compareQuoteId)) {
+      setCompareQuoteId(null);
+      setShowComparison(false);
+    }
+  }, [allQuotes, compareQuoteId]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (compareDropdownRef.current && !compareDropdownRef.current.contains(e.target as Node)) {
+        setCompareDropdownOpen(false);
+      }
+    }
+    if (compareDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [compareDropdownOpen]);
+
+  // ── Live calculator totals (always computed from props) ──
   const buildAddOns = allAddOns.filter((a) => a.tier === 'build');
   const launchAddOnsFiltered = allAddOns.filter((a) => a.tier === 'launch');
   const fundraisingAddOnsList = allAddOns.filter((a) => a.tier === 'fundraising');
@@ -572,25 +889,20 @@ export function CalculatorSummary({
 
   const subtotalWithOverhead = subtotal + overhead;
 
-  // Deferred payment fee: 10% for 0% tier, 5% for others (calculated on subtotal + overhead, BEFORE crowdfunding discount)
+  // Deferred payment fee
   const deferredFeePercent = crowdfundingEnabled && deferPayment
     ? (crowdfundingTierIndex === 0 ? 10 : 5)
     : 0;
   const deferredFee = Math.round(subtotalWithOverhead * (deferredFeePercent / 100));
-
-  // Apply deferred fee to subtotal before crowdfunding discount
   const subtotalWithFee = subtotalWithOverhead + deferredFee;
 
-  // Discountable total = everything EXCEPT Cast + Crew add-ons
   const discountableTotal = subtotalWithFee - totalCastCrew;
 
-  // Crowdfunding tiers: 0%, 10%, 20%, 30% off — applied to everything except CAST + CREW
   const crowdfundingTierDiscounts = [0, 10, 20, 30];
   const crowdfundingDiscount = crowdfundingEnabled
     ? Math.round(discountableTotal * (crowdfundingTierDiscounts[crowdfundingTierIndex] / 100))
     : 0;
 
-  // Friendly discount: only when NOT crowdfunding and NOT fundraising — applied to everything except CAST + CREW
   const showFriendlyDiscount = !crowdfundingEnabled && !fundraisingEnabled;
   const friendlyDiscount = showFriendlyDiscount
     ? Math.round(discountableTotal * (friendlyDiscountPercent / 100))
@@ -599,461 +911,302 @@ export function CalculatorSummary({
   const rawTotal = subtotalWithFee - crowdfundingDiscount - friendlyDiscount;
   const total = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
-  // Payment terms: Always 40% due at signing (or 20% for fundraising), regardless of deferred payment
   const downPercent = fundraisingEnabled ? 0.2 : 0.4;
   const rawDown = Math.round(total * downPercent);
   const downAmount = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawDown / 50) * 50 : rawDown;
 
-  // ── Comparison / recommended totals ──────────────────────────────────────
-  const recBuildResult = comparisonData
-    ? (buildActive && !comparisonData.fundraisingEnabled
-      ? calcTierTotal(buildAddOns, comparisonData.selectedAddOns, comparisonData.sliderValues, 1, comparisonData.photoCount, comparisonData.tierSelections)
-      : null)
-    : null;
-  const recLaunchResult = comparisonData
-    ? (launchActive && !comparisonData.fundraisingEnabled
-      ? calcTierTotal(launchAddOnsFiltered, comparisonData.selectedAddOns, comparisonData.sliderValues, totalDays, comparisonData.photoCount, comparisonData.tierSelections, comparisonData.locationDays)
-      : null)
-    : null;
-  const recFundraisingResult = comparisonData?.fundraisingEnabled
-    ? calcTierTotal(fundraisingAddOnsList, comparisonData.selectedAddOns, comparisonData.sliderValues, 1, comparisonData.photoCount, comparisonData.tierSelections)
-    : null;
+  // ── Build live column data (matches QuoteColumnData shape) ──
+  const liveColumnData: QuoteColumnData = {
+    label: allQuotes?.find((q) => q.id === activeQuoteId)?.label ?? 'Current',
+    quoteId: activeQuoteId ?? '',
+    buildActive,
+    launchActive,
+    isFundraising: fundraisingEnabled,
+    buildBase,
+    launchBase,
+    fundBase: fundraisingBase,
+    buildItems: buildResult?.items ?? [],
+    launchItems: (launchResult?.items ?? []).filter((i) => !i.name.includes('Production Days')),
+    fundItems: fundraisingResult?.items ?? [],
+    overhead,
+    hasAddOns: hasAnyAddOns,
+    friendlyDiscountPct: showFriendlyDiscount ? friendlyDiscountPercent : 0,
+    friendlyDiscount,
+    crowdfundingEnabled,
+    crowdDiscount: crowdfundingDiscount,
+    total,
+    downAmount,
+    downPercent,
+  };
 
-  const recBuildAddOnTotal = recBuildResult?.total ?? 0;
-  const recLaunchAddOnTotal = recLaunchResult?.total ?? 0;
-  const recFundraisingAddOnTotal = recFundraisingResult?.total ?? 0;
-  const recAllAddOnTotal = recBuildAddOnTotal + recLaunchAddOnTotal + recFundraisingAddOnTotal;
-  const recTotalCastCrew = recLaunchResult?.castCrewTotal ?? 0;
+  // ── Get column data for a given quote ID ──
+  function getColumnData(quoteId: string): QuoteColumnData | null {
+    if (quoteId === activeQuoteId) return liveColumnData;
+    if (!allQuotes) return null;
+    const quote = allQuotes.find((q) => q.id === quoteId);
+    if (!quote) return null;
+    return calcTotalFromQuote(quote, allAddOns);
+  }
 
-  const recBaseTotal = comparisonData?.fundraisingEnabled ? 15000 : (buildBase + launchBase);
-  const recSubtotal = recBaseTotal + recAllAddOnTotal;
-  const recHasAnyAddOns = recAllAddOnTotal > 0;
-  const recOverhead = recHasAnyAddOns ? Math.round(recSubtotal * 0.1) : 0;
-  const recSubtotalWithOverhead = recSubtotal + recOverhead;
-
-  const recCrowdfundingTierDiscounts = [0, 10, 20, 30];
-  const recCrowdfundingDiscount = comparisonData?.crowdfundingEnabled
-    ? Math.round((recSubtotalWithOverhead - recTotalCastCrew) * (recCrowdfundingTierDiscounts[comparisonData.crowdfundingTierIndex] / 100))
-    : 0;
-
-  const recFriendlyDiscountPct = comparisonData?.friendly_discount_pct ?? 0;
-  const recFriendlyDiscount = recFriendlyDiscountPct > 0
-    ? Math.round((recSubtotalWithOverhead - recTotalCastCrew - recCrowdfundingDiscount) * (recFriendlyDiscountPct / 100))
-    : 0;
-
-  const recRawTotal = recSubtotalWithOverhead - recCrowdfundingDiscount - recFriendlyDiscount;
-  const recHasDiscount = recCrowdfundingDiscount > 0 || recFriendlyDiscount > 0;
-  const recTotal = recHasDiscount ? Math.ceil(recRawTotal / 50) * 50 : recRawTotal;
-
-  // Recommended payment terms
-  const recDownPercent = comparisonData?.fundraisingEnabled ? 0.2 : 0.4;
-  const recRawDown = Math.round(recTotal * recDownPercent);
-  const recDownAmount = recHasDiscount ? Math.ceil(recRawDown / 50) * 50 : recRawDown;
-
-  // Merged item lists for aligned 3-column comparison
-  const recBuildItems = comparisonData ? (recBuildResult?.items ?? []) : [];
-  const adjBuildItems = comparisonData ? (buildResult?.items ?? []) : [];
-  const adjBuildItemMap = new Map(adjBuildItems.map(i => [i.name, i]));
-  const recBuildItemNames = new Set(recBuildItems.map(i => i.name));
-  const adjBuildAddedItems = adjBuildItems.filter(i => !recBuildItemNames.has(i.name));
-
-  const recLaunchItems = comparisonData
-    ? (recLaunchResult?.items ?? []).filter(i => !i.name.includes('Production Days'))
-    : [];
-  const adjLaunchItems = comparisonData
-    ? (launchResult?.items ?? []).filter(i => !i.name.includes('Production Days'))
-    : [];
-  const adjLaunchItemMap = new Map(adjLaunchItems.map(i => [i.name, i]));
-  const recLaunchItemNames = new Set(recLaunchItems.map(i => i.name));
-  const adjLaunchAddedItems = adjLaunchItems.filter(i => !recLaunchItemNames.has(i.name));
-
-  const recFundraisingItems = comparisonData ? (recFundraisingResult?.items ?? []) : [];
-  const adjFundraisingItems = comparisonData ? (fundraisingResult?.items ?? []) : [];
-  const adjFundraisingItemMap = new Map(adjFundraisingItems.map(i => [i.name, i]));
-  const recFundraisingItemNames = new Set(recFundraisingItems.map(i => i.name));
-  const adjFundraisingAddedItems = adjFundraisingItems.filter(i => !recFundraisingItemNames.has(i.name));
+  const isComparing = showComparison && !!compareQuoteId;
+  const compareData = compareQuoteId ? getColumnData(compareQuoteId) : null;
 
   return (
-    <div className={(isReadOnly || isLocked) ? "pointer-events-none" : ""}>
+    <div>
     <div className="sticky top-[121px]">
       {/* Quote card */}
       <div className="border border-green-900 rounded-lg bg-green-950/25 p-6">
-        {/* Receipt header */}
-        <div className="border-b border-dashed border-border py-4 mb-3 -mt-5">
-          <h3 className="font-display text-2xl font-bold text-foreground text-center">
-            {comparisonData ? 'Compare Quotes' : 'Quote'}
+        {/* Receipt header with compare button */}
+        <div className="border-b border-dashed border-green-900/60 py-4 mb-3 -mt-5 flex items-center justify-between">
+          <h3 className="font-display text-2xl font-bold text-foreground">
+            {isComparing ? 'Compare Quotes' : 'Quote'}
           </h3>
+          {allQuotes && allQuotes.length > 1 && !showComparison && (
+            <button
+              ref={compareBtnRef}
+              onClick={() => {
+                const firstOther = allQuotes.find((q) => q.id !== activeQuoteId);
+                if (firstOther) {
+                  setCompareQuoteId(firstOther.id);
+                  setShowComparison(true);
+                }
+              }}
+              className="relative h-[32px] px-3 font-medium border border-green-500 bg-green-500 text-black rounded-lg overflow-hidden pointer-events-auto"
+            >
+              <div
+                ref={compareFillRef}
+                className="absolute inset-0 bg-black pointer-events-none"
+                style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+              />
+              <span className="relative flex items-center justify-center gap-1.5 whitespace-nowrap text-sm" style={{ zIndex: 10 }}>
+                <motion.span
+                  variants={iconVariants}
+                  initial="hidden"
+                  animate={compareHovered ? 'visible' : 'hidden'}
+                  className="flex items-center"
+                >
+                  <Plus size={14} strokeWidth={2.5} />
+                </motion.span>
+                Compare
+              </span>
+            </button>
+          )}
+          {showComparison && (
+            <button
+              onClick={() => { setShowComparison(false); setCompareQuoteId(null); }}
+              className="flex items-center gap-1.5 text-sm font-semibold text-white/40 hover:text-white/60 transition-colors pointer-events-auto"
+            >
+              <X size={16} />
+              Close
+            </button>
+          )}
         </div>
 
-        {comparisonData ? (
+        {isComparing && compareData ? (
           <>
-            {/* Two-column comparison: Recommended | Adjusted */}
-            <div className="grid grid-cols-2 gap-x-4 mb-4 font-mono text-sm">
-              {/* Recommended column */}
-              <div className="space-y-1.5">
-                <p className="text-base font-bold text-white/50 uppercase tracking-wider mb-3 pb-3 border-b border-white/5">Recommended</p>
-                {buildActive && !comparisonData.fundraisingEnabled && (
-                  <>
-                    <div className="flex justify-between gap-1">
-                      <span className="text-muted-foreground truncate">Build base</span>
-                      <span className="text-foreground flex-shrink-0">{formatPrice(buildBase)}</span>
-                    </div>
-                    {recBuildItems.map((item) => (
-                      <div key={item.name} className="flex justify-between gap-1">
-                        <span className="text-muted-foreground truncate">{item.name}</span>
-                        <span className="text-foreground flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                    {/* Spacers for added items in Adjusted column */}
-                    {adjBuildAddedItems.map((item) => (
-                      <div key={`spacer-${item.name}`} className="flex justify-between gap-1 invisible" aria-hidden>
-                        <span className="truncate">{item.name}</span>
-                        <span className="flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {buildActive && launchActive && !comparisonData.fundraisingEnabled && (
-                  <div className="h-px bg-border/30 my-1" />
-                )}
-                {launchActive && !comparisonData.fundraisingEnabled && (
-                  <>
-                    <div className="flex justify-between gap-1">
-                      <span className="text-muted-foreground truncate">Launch base</span>
-                      <span className="text-foreground flex-shrink-0">{formatPrice(launchBase)}</span>
-                    </div>
-                    {recLaunchItems.map((item) => (
-                      <div key={item.name} className="flex justify-between gap-1">
-                        <span className="text-muted-foreground truncate">{item.name}</span>
-                        <span className="text-foreground flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                    {/* Spacers for added items in Adjusted column */}
-                    {adjLaunchAddedItems.map((item) => (
-                      <div key={`spacer-${item.name}`} className="flex justify-between gap-1 invisible" aria-hidden>
-                        <span className="truncate">{item.name}</span>
-                        <span className="flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {comparisonData.fundraisingEnabled && (
-                  <>
-                    <div className="flex justify-between gap-1">
-                      <span className="text-muted-foreground truncate">Fundraising base</span>
-                      <span className="text-foreground flex-shrink-0">{formatPrice(15000)}</span>
-                    </div>
-                    {recFundraisingItems.map((item) => (
-                      <div key={item.name} className="flex justify-between gap-1">
-                        <span className="text-muted-foreground truncate">{item.name}</span>
-                        <span className="text-foreground flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                    {/* Spacers for added items in Adjusted column */}
-                    {adjFundraisingAddedItems.map((item) => (
-                      <div key={`spacer-${item.name}`} className="flex justify-between gap-1 invisible" aria-hidden>
-                        <span className="truncate">{item.name}</span>
-                        <span className="flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                <div className="h-px bg-border/30 my-1" />
-                <div className="flex justify-between gap-1">
-                  <span className="text-muted-foreground truncate">Overhead (10%)</span>
-                  <span className="text-foreground flex-shrink-0">
-                    {recHasAnyAddOns ? formatPrice(recOverhead) : <span className="text-muted-foreground/60">Waived</span>}
-                  </span>
-                </div>
-                {/* Friendly discount — always render if either column has it */}
-                {(recFriendlyDiscountPct > 0 || (showFriendlyDiscount && friendlyDiscountPercent > 0)) && (
-                  recFriendlyDiscountPct > 0 ? (
-                    <div className="flex justify-between gap-1">
-                      <span className="text-green-600 truncate">Friendly discount</span>
-                      <span className="text-green-600 flex-shrink-0">-{formatPrice(recFriendlyDiscount)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between gap-1 invisible" aria-hidden>
-                      <span className="truncate">Friendly discount</span>
-                      <span className="flex-shrink-0">—</span>
-                    </div>
-                  )
-                )}
-                {/* Crowdfunding — always render if either column has it */}
-                {(comparisonData.crowdfundingEnabled && recCrowdfundingDiscount > 0) || (crowdfundingEnabled && crowdfundingDiscount > 0) ? (
-                  comparisonData.crowdfundingEnabled && recCrowdfundingDiscount > 0 ? (
-                    <div className="flex justify-between gap-1">
-                      <span className="text-green-600 truncate">Crowdfunding</span>
-                      <span className="text-green-600 flex-shrink-0">-{formatPrice(recCrowdfundingDiscount)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between gap-1 invisible" aria-hidden>
-                      <span className="truncate">Crowdfunding</span>
-                      <span className="flex-shrink-0">—</span>
-                    </div>
-                  )
-                ) : null}
-              </div>
-
-              {/* Adjusted column */}
-              <div className="border-l border-white/10 pl-4 space-y-1.5">
-                <p className="text-base font-bold text-white/50 uppercase tracking-wider mb-3 pb-3 border-b border-white/5">{comparisonLabel}</p>
-                {buildActive && !comparisonData.fundraisingEnabled && (
-                  <>
-                    <div className="flex justify-between gap-1">
-                      <span className="text-muted-foreground truncate">Build base</span>
-                      <span className="text-foreground flex-shrink-0">{formatPrice(buildBase)}</span>
-                    </div>
-                    {recBuildItems.map((item) => {
-                      const adjItem = adjBuildItemMap.get(item.name);
-                      return (
-                        <div key={item.name} className="flex justify-between gap-1">
-                          <span className={`truncate ${adjItem ? 'text-muted-foreground' : 'text-red-400/60'}`}>{item.name}</span>
-                          <span className={`flex-shrink-0 ${adjItem ? 'text-foreground' : 'text-red-400/60'}`}>
-                            {adjItem ? formatPrice(adjItem.price) : '$0'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {adjBuildAddedItems.map((item) => (
-                      <div key={item.name} className="flex justify-between gap-1">
-                        <span className="text-cyan-400/80 truncate">{item.name}</span>
-                        <span className="text-cyan-400 flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {buildActive && launchActive && !comparisonData.fundraisingEnabled && (
-                  <div className="h-px bg-border/30 my-1" />
-                )}
-                {launchActive && !comparisonData.fundraisingEnabled && (
-                  <>
-                    <div className="flex justify-between gap-1">
-                      <span className="text-muted-foreground truncate">Launch base</span>
-                      <span className="text-foreground flex-shrink-0">{formatPrice(launchBase)}</span>
-                    </div>
-                    {recLaunchItems.map((item) => {
-                      const adjItem = adjLaunchItemMap.get(item.name);
-                      return (
-                        <div key={item.name} className="flex justify-between gap-1">
-                          <span className={`truncate ${adjItem ? 'text-muted-foreground' : 'text-red-400/60'}`}>{item.name}</span>
-                          <span className={`flex-shrink-0 ${adjItem ? 'text-foreground' : 'text-red-400/60'}`}>
-                            {adjItem ? formatPrice(adjItem.price) : '$0'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {adjLaunchAddedItems.map((item) => (
-                      <div key={item.name} className="flex justify-between gap-1">
-                        <span className="text-cyan-400/80 truncate">{item.name}</span>
-                        <span className="text-cyan-400 flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {comparisonData.fundraisingEnabled && (
-                  <>
-                    <div className="flex justify-between gap-1">
-                      <span className="text-muted-foreground truncate">Fundraising base</span>
-                      <span className="text-foreground flex-shrink-0">{formatPrice(fundraisingBase)}</span>
-                    </div>
-                    {recFundraisingItems.map((item) => {
-                      const adjItem = adjFundraisingItemMap.get(item.name);
-                      return (
-                        <div key={item.name} className="flex justify-between gap-1">
-                          <span className={`truncate ${adjItem ? 'text-muted-foreground' : 'text-red-400/60'}`}>{item.name}</span>
-                          <span className={`flex-shrink-0 ${adjItem ? 'text-foreground' : 'text-red-400/60'}`}>
-                            {adjItem ? formatPrice(adjItem.price) : '$0'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {adjFundraisingAddedItems.map((item) => (
-                      <div key={item.name} className="flex justify-between gap-1">
-                        <span className="text-cyan-400/80 truncate">{item.name}</span>
-                        <span className="text-cyan-400 flex-shrink-0">{formatPrice(item.price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                <div className="h-px bg-border/30 my-1" />
-                <div className="flex justify-between gap-1">
-                  <span className="text-muted-foreground truncate">Overhead (10%)</span>
-                  <span className="text-foreground flex-shrink-0">
-                    {hasAnyAddOns ? formatPrice(overhead) : <span className="text-muted-foreground/60">Waived</span>}
-                  </span>
-                </div>
-                {/* Friendly discount — always render if either column has it */}
-                {(recFriendlyDiscountPct > 0 || (showFriendlyDiscount && friendlyDiscountPercent > 0)) && (
-                  showFriendlyDiscount && friendlyDiscountPercent > 0 ? (
-                    <div className="flex justify-between gap-1">
-                      <span className="text-green-600 truncate">Friendly discount</span>
-                      <span className="text-green-600 flex-shrink-0">-{formatPrice(friendlyDiscount)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between gap-1 invisible" aria-hidden>
-                      <span className="truncate">Friendly discount</span>
-                      <span className="flex-shrink-0">—</span>
-                    </div>
-                  )
-                )}
-                {/* Crowdfunding — always render if either column has it */}
-                {(comparisonData.crowdfundingEnabled && recCrowdfundingDiscount > 0) || (crowdfundingEnabled && crowdfundingDiscount > 0) ? (
-                  crowdfundingEnabled && crowdfundingDiscount > 0 ? (
-                    <div className="flex justify-between gap-1">
-                      <span className="text-green-600 truncate">Crowdfunding</span>
-                      <span className="text-green-600 flex-shrink-0">-{formatPrice(crowdfundingDiscount)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between gap-1 invisible" aria-hidden>
-                      <span className="truncate">Crowdfunding</span>
-                      <span className="flex-shrink-0">—</span>
-                    </div>
-                  )
-                ) : null}
-              </div>
-            </div>
+            {/* Two-column comparison — dropdown is embedded in right column header */}
+            <ComparisonGrid
+              left={liveColumnData}
+              right={compareData}
+              rightHeader={
+                allQuotes && allQuotes.filter((q) => q.id !== activeQuoteId).length > 1 ? (
+                  <div ref={compareDropdownRef} className="relative w-full">
+                    <button
+                      onClick={() => setCompareDropdownOpen(!compareDropdownOpen)}
+                      className="w-full border border-green-600 text-white font-semibold rounded-md pl-3 pr-10 text-sm outline-none focus:border-green-400 transition-colors cursor-pointer h-[34px] bg-green-800 text-left flex items-center justify-between"
+                    >
+                      <span>{allQuotes?.find((q) => q.id === compareQuoteId)?.label || 'Select quote'}</span>
+                      <ChevronDown size={16} className={`transition-transform duration-200 ${compareDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    <AnimatePresence>
+                      {compareDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute top-full left-0 right-0 mt-2 border border-green-600 rounded-md bg-green-900 shadow-lg z-50"
+                        >
+                          <div className="py-1">
+                            {allQuotes?.filter((q) => q.id !== activeQuoteId).map((q) => (
+                              <button
+                                key={q.id}
+                                onClick={() => {
+                                  setCompareQuoteId(q.id);
+                                  setCompareDropdownOpen(false);
+                                }}
+                                className={`w-full px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                                  compareQuoteId === q.id
+                                    ? 'bg-green-700 text-white'
+                                    : 'text-white/80 hover:bg-green-800 hover:text-white'
+                                }`}
+                              >
+                                {q.label}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : undefined
+              }
+            />
 
             {/* Total + Payment - comparison mode with two columns */}
-            <div className="border-t border-b border-green-900 bg-green-950/30 py-4 mb-6 -mx-6 px-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-border/50">
-                    <span className="font-display font-bold text-foreground text-base">Total</span>
-                    <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
-                      {formatPrice(recTotal)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
+            {(() => {
+              const leftTotal = liveColumnData.total;
+              const rightTotal = compareData.total;
+              return (
+                <div className="border-t border-b border-green-900 bg-green-950/30 py-4 mb-6 -mx-6 px-6">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-sm font-semibold text-green-400 block">{comparisonData?.fundraisingEnabled ? '20%' : '40%'} due at signing</span>
-                      <p className="text-xs text-muted-foreground mt-1">Minimum payment to begin</p>
+                      <div className="flex justify-between items-baseline mb-2 pb-2 border-b border-dashed border-green-900/60">
+                        <span className="font-display font-bold text-foreground text-base">Total</span>
+                        <span className="font-display text-xl font-bold text-foreground">{formatPrice(leftTotal)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-sm font-semibold text-green-400 block">{liveColumnData.isFundraising ? '20%' : '40%'} due at signing</span>
+                          <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
+                        </div>
+                        <span className="font-display font-bold text-2xl text-green-400">{formatPrice(liveColumnData.downAmount)}</span>
+                      </div>
                     </div>
-                    <span className="font-display font-bold text-2xl text-green-400">{formatPrice(recDownAmount)}</span>
+                    <div className="border-l border-green-900/50 pl-4">
+                      <div className="flex justify-between items-baseline mb-2 pb-2 border-b border-dashed border-green-900/60">
+                        <span className="font-display font-bold text-foreground text-base">Total</span>
+                        <span className="font-display text-xl font-bold text-foreground">{formatPrice(rightTotal)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="text-sm font-semibold text-green-400 block">{compareData.isFundraising ? '20%' : '40%'} due at signing</span>
+                          <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
+                        </div>
+                        <span className="font-display font-bold text-2xl text-green-400">{formatPrice(compareData.downAmount)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="border-l border-white/10 pl-4">
-                  <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-border/50">
-                    <span className="font-display font-bold text-foreground text-base">Total</span>
-                    <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
-                      {formatPrice(total)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="text-sm font-semibold text-green-400 block">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
-                      <p className="text-xs text-muted-foreground mt-1">Minimum payment to begin</p>
-                    </div>
-                    <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </>
         ) : (
           <>
-        <div className="space-y-2 mb-4 font-mono text-sm">
-          {/* Build section */}
-          {buildActive && !fundraisingEnabled && (
-            <>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Build base</span>
-                <span className={isLocked ? 'text-white/25' : 'text-foreground'}>{formatPrice(buildBase)}</span>
-              </div>
-              {buildResult?.items.map((item) => (
-                <div key={item.name} className="flex justify-between">
-                  <span className="text-muted-foreground truncate mr-2">{item.name}</span>
-                  <span className={`flex-shrink-0 ${isLocked ? 'text-white/25' : 'text-foreground'}`}>{formatPrice(item.price)}</span>
-                </div>
-              ))}
-            </>
-          )}
+        {/* Single column — standard line items with FNA diff colors when on user quote */}
+        {(() => {
+          // Always compare against the recommended (first FNA) quote, unless we ARE the recommended quote
+          const recommendedQuote = allQuotes?.find((q) => q.is_fna_quote);
+          const isRecommended = recommendedQuote?.id === activeQuoteId;
+          const fnaRef = !isRecommended ? recommendedQuote : undefined;
+          const fnaData = fnaRef ? calcTotalFromQuote(fnaRef, allAddOns) : null;
+          const fnaBuildNames = new Set((fnaData?.buildItems ?? []).map(i => i.name));
+          const fnaLaunchNames = new Set((fnaData?.launchItems ?? []).map(i => i.name));
+          const fnaFundNames = new Set((fnaData?.fundItems ?? []).map(i => i.name));
 
-          {/* Divider between tiers */}
-          {buildActive && launchActive && !fundraisingEnabled && (
-            <div className="h-px bg-border/30 my-1" />
-          )}
+          function itemColor(name: string, nameSet: Set<string>): string {
+            if (isRecommended) return 'text-white/25';
+            if (!fnaData) return 'text-foreground';
+            return nameSet.has(name) ? 'text-foreground' : 'text-cyan-400';
+          }
 
-          {/* Launch section */}
-          {launchActive && !fundraisingEnabled && (
-            <>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Launch base</span>
-                <span className={isLocked ? 'text-white/25' : 'text-foreground'}>{formatPrice(launchBase)}</span>
-              </div>
-              {launchResult?.items
-                .filter((item) => !item.name.includes('Production Days'))
-                .map((item) => (
-                  <div key={item.name} className="flex justify-between">
-                    <span className="text-muted-foreground truncate mr-2">{item.name}</span>
-                    <span className={`flex-shrink-0 ${isLocked ? 'text-white/25' : 'text-foreground'}`}>{formatPrice(item.price)}</span>
+          const userBuildItems = buildResult?.items ?? [];
+          const userLaunchItems = (launchResult?.items ?? []).filter(i => !i.name.includes('Production Days'));
+          const userFundItems = fundraisingResult?.items ?? [];
+
+          return (
+            <div className="space-y-2 mb-4 font-mono text-sm">
+              {/* Build section */}
+              {buildActive && !fundraisingEnabled && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Build base</span>
+                    <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>{formatPrice(buildBase)}</span>
                   </div>
-                ))}
-            </>
-          )}
+                  {userBuildItems.map((item) => (
+                    <div key={item.name} className="flex justify-between">
+                      <span className={`leading-tight mr-2 ${itemColor(item.name, fnaBuildNames) === 'text-cyan-400' ? 'text-cyan-400/80' : 'text-muted-foreground'}`}>{item.name}</span>
+                      <span className={`flex-shrink-0 ${itemColor(item.name, fnaBuildNames)}`}>{formatPrice(item.price)}</span>
+                    </div>
+                  ))}
+                </>
+              )}
 
-          {/* Fundraising section */}
-          {fundraisingEnabled && (
-            <>
+              {/* Divider between tiers */}
+              {buildActive && launchActive && !fundraisingEnabled && (
+                <div className="h-px bg-green-900/50 my-1" />
+              )}
+
+              {/* Launch section */}
+              {launchActive && !fundraisingEnabled && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Launch base</span>
+                    <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>{formatPrice(launchBase)}</span>
+                  </div>
+                  {userLaunchItems.map((item) => (
+                    <div key={item.name} className="flex justify-between">
+                      <span className={`leading-tight mr-2 ${itemColor(item.name, fnaLaunchNames) === 'text-cyan-400' ? 'text-cyan-400/80' : 'text-muted-foreground'}`}>{item.name}</span>
+                      <span className={`flex-shrink-0 ${itemColor(item.name, fnaLaunchNames)}`}>{formatPrice(item.price)}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Fundraising section */}
+              {fundraisingEnabled && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Fundraising base</span>
+                    <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>{formatPrice(fundraisingBase)}</span>
+                  </div>
+                  {userFundItems.map((item) => (
+                    <div key={item.name} className="flex justify-between">
+                      <span className={`leading-tight mr-2 ${itemColor(item.name, fnaFundNames) === 'text-cyan-400' ? 'text-cyan-400/80' : 'text-muted-foreground'}`}>{item.name}</span>
+                      <span className={`flex-shrink-0 ${itemColor(item.name, fnaFundNames)}`}>{formatPrice(item.price)}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Overhead */}
+              <div className="h-px bg-green-900/50 my-1" />
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Fundraising base</span>
-                <span className={isLocked ? 'text-white/25' : 'text-foreground'}>{formatPrice(fundraisingBase)}</span>
+                <span className="text-muted-foreground">Overhead (10%)</span>
+                {hasAnyAddOns ? (
+                  <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>{formatPrice(overhead)}</span>
+                ) : (
+                  <span className="text-muted-foreground/60">Waived</span>
+                )}
               </div>
-              {fundraisingResult?.items.map((item) => (
-                <div key={item.name} className="flex justify-between">
-                  <span className="text-muted-foreground truncate mr-2">{item.name}</span>
-                  <span className={`flex-shrink-0 ${isLocked ? 'text-white/25' : 'text-foreground'}`}>{formatPrice(item.price)}</span>
+
+              {/* Deferred payment fee */}
+              {crowdfundingEnabled && deferPayment && deferredFeePercent > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Deferred payment (+{deferredFeePercent}%)</span>
+                  <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>+{formatPrice(deferredFee)}</span>
                 </div>
-              ))}
-            </>
-          )}
+              )}
 
-          {/* Overhead */}
-          <div className="h-px bg-border/30 my-1" />
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Overhead (10%)</span>
-            {hasAnyAddOns ? (
-              <span className={isLocked ? 'text-white/25' : 'text-foreground'}>{formatPrice(overhead)}</span>
-            ) : (
-              <span className="text-muted-foreground/60">Waived</span>
-            )}
-          </div>
-
-          {/* Deferred payment fee (shown ABOVE crowdfunding discount) - NOT green */}
-          {crowdfundingEnabled && deferPayment && deferredFeePercent > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Deferred payment (+{deferredFeePercent}%)</span>
-              <span className={isLocked ? 'text-white/25' : 'text-foreground'}>+{formatPrice(deferredFee)}</span>
+              {/* Crowdfunding discount */}
+              {crowdfundingEnabled && crowdfundingTierDiscounts[crowdfundingTierIndex] > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-green-600">Crowdfunding ({crowdfundingTierDiscounts[crowdfundingTierIndex]}% off)</span>
+                  <span className="text-green-600">-{formatPrice(crowdfundingDiscount)}</span>
+                </div>
+              )}
             </div>
-          )}
+          );
+        })()}
 
-          {/* Crowdfunding discount */}
-          {crowdfundingEnabled && crowdfundingTierDiscounts[crowdfundingTierIndex] > 0 && (
-            <div className="flex justify-between">
-              <span className="text-green-600">Crowdfunding ({crowdfundingTierDiscounts[crowdfundingTierIndex]}% off)</span>
-              <span className="text-green-600">-{formatPrice(crowdfundingDiscount)}</span>
-            </div>
-          )}
-
-          {/* Friendly discount */}
-          {showFriendlyDiscount && friendlyDiscountPercent > 0 && (
-            <div className="flex justify-between">
-              <span className="text-green-600">Friendly discount ({friendlyDiscountPercent}% off)</span>
-              <span className="text-green-600">-{formatPrice(friendlyDiscount)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Total + Payment - green top/bottom borders, full width with green background */}
-        <div className="border-t border-b border-green-900 bg-green-950/30 py-4 mb-6 -mx-6 px-6">
-          {/* Total row */}
-          <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-border/50">
+        {/* Total + Payment */}
+        <div className={`border-t border-b border-green-900 bg-green-950/30 py-4 -mx-6 px-6 ${crowdfundingEnabled || fundraisingEnabled ? 'mb-6' : ''}`}>
+          <div className="flex justify-between items-baseline mb-3 pb-3 border-b border-dashed border-green-900/60">
             <span className="font-display font-bold text-foreground">Total</span>
             <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
               {formatPrice(total)}
             </span>
           </div>
-          {/* Payment terms row */}
           <div className="flex justify-between items-center">
             <div>
               <span className="font-semibold text-green-400 block">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
@@ -1102,110 +1255,6 @@ export function CalculatorSummary({
           </div>
         )}
 
-        {/* Friendly discount - per-column in comparison mode, full-width otherwise */}
-        {showFriendlyDiscount && (
-          comparisonData ? (
-            <div className="grid grid-cols-2 gap-4 mt-3">
-              {/* Recommended column — read-only slider showing FNA-set discount */}
-              <div className={`p-3 rounded-lg border transition-colors duration-200 cursor-not-allowed ${
-                recFriendlyDiscountPct > 0 ? 'bg-green-950/30 border-green-600/40' : 'bg-muted/20 border-border'
-              }`}>
-                <input
-                  type="range"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={recFriendlyDiscountPct}
-                  readOnly
-                  className={`w-full h-2 bg-border rounded-lg appearance-none pointer-events-none
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                    [&::-webkit-slider-thumb]:rounded-full
-                    [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-                    [&::-moz-range-thumb]:border-0 ${
-                    recFriendlyDiscountPct > 0
-                      ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
-                      : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
-                  }`}
-                />
-                <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                  <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
-                </div>
-                <div className="text-center mt-1">
-                  <span className={`text-sm font-bold transition-colors duration-200 ${
-                    recFriendlyDiscountPct > 0 ? 'text-green-600' : 'text-muted-foreground'
-                  }`}>{recFriendlyDiscountPct}% friendly discount</span>
-                </div>
-              </div>
-              {/* Adjusted column — interactive slider */}
-              <div className={`p-3 rounded-lg border transition-colors duration-200 ${
-                friendlyDiscountPercent > 0 ? 'bg-green-950/30 border-green-600/40' : 'bg-muted/20 border-border'
-              }`}>
-                <input
-                  type="range"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={friendlyDiscountPercent}
-                  onChange={(e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
-                  className={`w-full h-2 bg-border rounded-lg appearance-none cursor-pointer
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                    [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-                    [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
-                    friendlyDiscountPercent > 0
-                      ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
-                      : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
-                  }`}
-                />
-                <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                  <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
-                </div>
-                <div className="text-center mt-1">
-                  <span className={`text-sm font-bold transition-colors duration-200 ${
-                    friendlyDiscountPercent > 0 ? 'text-green-600' : 'text-muted-foreground'
-                  }`}>{friendlyDiscountPercent}% friendly discount</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className={`relative mt-3 p-4 rounded-lg border transition-colors duration-200 ${
-              friendlyDiscountPercent > 0
-                ? 'bg-green-950/30 border-green-600/40'
-                : 'bg-muted/20 border-border'
-            }`}>
-              {isLocked && <div className="absolute inset-0 rounded-lg z-10" style={{ cursor: 'not-allowed' }} />}
-              <div>
-                <input
-                  type="range"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={friendlyDiscountPercent}
-                  readOnly={!!isLocked}
-                  onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; setFriendlyDiscountPercent(Number(e.target.value)); }}
-                  className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                    [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
-                    [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
-                    friendlyDiscountPercent > 0
-                      ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
-                      : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
-                  }`}
-                />
-              </div>
-              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
-                <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
-              </div>
-              <div className="text-center mt-2">
-                <span className={`text-lg font-bold transition-colors duration-200 ${
-                  friendlyDiscountPercent > 0 ? 'text-green-600' : 'text-muted-foreground'
-                }`}>{friendlyDiscountPercent}% friendly discount</span>
-              </div>
-            </div>
-          )
-        )}
-
         {!isReadOnly && !hideSaveQuote && (
           <div className="flex flex-col xl:flex-row gap-3 mt-6">
             <SaveQuoteButton
@@ -1217,6 +1266,58 @@ export function CalculatorSummary({
           </div>
         )}
       </div>
+
+      {/* Collapsible Discounts section — outside the green card */}
+      {showFriendlyDiscount && (
+        <div className="mt-3 rounded-lg border border-green-900 overflow-hidden">
+          <button
+            onClick={() => setDiscountsOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-5 py-3 bg-green-950/30 text-left hover:bg-green-950/50 transition-colors"
+          >
+            <span className="font-display text-sm font-semibold text-foreground">
+              Discounts
+              {friendlyDiscountPercent > 0 && (
+                <span className="ml-2 text-green-400">({friendlyDiscountPercent}% off)</span>
+              )}
+            </span>
+            <ChevronDown
+              size={16}
+              className={`text-white/40 transition-transform duration-200 ${discountsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {discountsOpen && (
+            <div className="relative bg-green-950/20 px-5 pb-5 pt-3">
+              {isLocked && <div className="absolute inset-0 z-10" style={{ cursor: 'not-allowed' }} />}
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={friendlyDiscountPercent}
+                readOnly={!!isLocked}
+                onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; const v = Number(e.target.value); setFriendlyDiscountPercent(v); onFriendlyDiscountChange?.(v); }}
+                className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
+                  friendlyDiscountPercent > 0
+                    ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
+                    : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
+                }`}
+              />
+              <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
+              </div>
+              <div className="text-center mt-2">
+                <span className={`text-lg font-bold transition-colors duration-200 ${
+                  friendlyDiscountPercent > 0 ? 'text-green-400' : 'text-muted-foreground'
+                }`}>{friendlyDiscountPercent}% friendly discount</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quote PDF modal */}
       <AnimatePresence>

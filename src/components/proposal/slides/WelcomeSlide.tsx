@@ -79,9 +79,15 @@ export function WelcomeSlide({ section, slideRef }: Props) {
     <section
       ref={slideRef as React.RefObject<HTMLElement>}
       data-slide
-      className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative bg-black flex items-center justify-center overflow-clip"
+      className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative bg-black overflow-y-auto"
+      style={{ scrollbarWidth: 'none' }}
     >
-      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 w-full">
+      {/* Top gradient mask */}
+      <div className="sticky top-0 z-20 pointer-events-none" style={{ height: 'var(--slide-gradient-h)' }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
+      </div>
+
+      <div ref={innerRef} className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-20 pb-20 w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         <SlideHeader
           eyebrow="WELCOME"
           titleWords={title.split(' ')}
@@ -95,7 +101,7 @@ export function WelcomeSlide({ section, slideRef }: Props) {
         <div className="mt-8">
           <div data-sig-line className="h-px bg-white/10 w-[10%] mb-6" />
           <p data-sig-thanks className="text-white/70 text-2xl font-marker mb-2">Thanks for the opportunity!</p>
-          <p data-sig-hope className="text-white/30 text-base mb-5">We hope you enjoy the proposal and that we get to work together soon.</p>
+          <p data-sig-hope className="text-white/55 text-base mb-5">We hope you enjoy the proposal and that we get to work together soon.</p>
           <div className="flex items-end gap-6 w-fit">
             {[
               { src: '/images/about/FNA-richie-v01-RAR.jpg', name: "Ol' Richie" },
@@ -110,6 +116,18 @@ export function WelcomeSlide({ section, slideRef }: Props) {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Bottom gradient mask */}
+      <div className="sticky bottom-0 z-20 h-48 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+        <div
+          className="absolute bottom-0 left-0 right-0 h-24 backdrop-blur-[6px]"
+          style={{
+            maskImage: 'linear-gradient(to top, black 20%, transparent)',
+            WebkitMaskImage: 'linear-gradient(to top, black 20%, transparent)',
+          }}
+        />
       </div>
     </section>
   );

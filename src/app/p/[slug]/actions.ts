@@ -120,7 +120,7 @@ export async function saveClientQuote(proposalId: string, quoteData: {
   return data as ProposalQuoteRow;
 }
 
-export async function updateClientQuote(proposalId: string, data: {
+export async function updateClientQuote(_proposalId: string, data: {
   quote_type: string;
   selected_addons: Record<string, number>;
   slider_values: Record<string, number>;
@@ -130,45 +130,24 @@ export async function updateClientQuote(proposalId: string, data: {
   crowdfunding_enabled: boolean;
   crowdfunding_tier: number;
   fundraising_enabled: boolean;
+  friendly_discount_pct?: number;
 }, quoteId?: string) {
+  if (!quoteId) throw new Error('quoteId is required');
   const supabase = await createClient();
+  const { error } = await supabase.from('proposal_quotes').update({
+    ...data,
+    updated_at: new Date().toISOString(),
+  } as never).eq('id', quoteId);
+  if (error) throw new Error(error.message);
+}
 
-  if (quoteId) {
-    // Update a specific quote by ID
-    const { error } = await supabase.from('proposal_quotes').update({
-      ...data,
-      updated_at: new Date().toISOString(),
-    } as never).eq('id', quoteId);
-    if (error) throw new Error(error.message);
-    return;
-  }
-
-  // Fallback: find the first non-FNA, non-deleted quote for this proposal
-  const { data: existing } = await supabase
+export async function updateClientQuoteDescription(quoteId: string, description: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
     .from('proposal_quotes')
-    .select('id')
-    .eq('proposal_id', proposalId)
-    .eq('is_fna_quote', false)
-    .is('deleted_at', null)
-    .limit(1)
-    .single() as { data: { id: string } | null };
-
-  if (existing) {
-    const { error } = await supabase.from('proposal_quotes').update({
-      ...data,
-      updated_at: new Date().toISOString(),
-    } as never).eq('id', existing.id);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await supabase.from('proposal_quotes').insert({
-      proposal_id: proposalId,
-      is_fna_quote: false,
-      is_locked: false,
-      label: 'Adjusted',
-      ...data,
-    } as never);
-    if (error) throw new Error(error.message);
-  }
+    .update({ description, updated_at: new Date().toISOString() } as never)
+    .eq('id', quoteId);
+  if (error) throw new Error(error.message);
 }
 
 export async function renameClientQuote(quoteId: string, label: string) {

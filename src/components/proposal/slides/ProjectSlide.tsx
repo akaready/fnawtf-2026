@@ -97,7 +97,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
       </div>
 
       {/* Main content */}
-      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20 pb-20" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-20 pb-20" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
 
         {/* Eyebrow — project's client name */}
         {project?.client_name && (
@@ -150,15 +150,20 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
           </div>
         )}
 
-        {/* Video player — breaks out to near-full viewport width */}
-        <div data-video className="mb-8 rounded-xl overflow-hidden relative left-1/2 right-1/2 -ml-[37vw] -mr-[37vw] w-[74vw]">
-          <ReelPlayer
-            videoSrc={getBunnyVideoMp4Url(pv.bunny_video_id, '720p')}
-            placeholderSrc={getBunnyVideoThumbnail(pv.bunny_video_id)}
-            aspectRatio={toCssRatio(pv.aspect_ratio)}
-            defaultMuted={false}
-            hoverPreview={false}
-          />
+        {/* Video player — full-width on mobile, bleeds to 74vw on desktop */}
+        <div data-video className="mb-8 rounded-xl overflow-hidden w-full lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[37vw] lg:-mr-[37vw] lg:w-[74vw]">
+          {/* 4:3 on mobile, natural ratio on sm+ */}
+          <div className="aspect-[4/3] sm:aspect-auto">
+            <div className="h-full sm:h-auto [&>div]:h-full sm:[&>div]:h-auto">
+              <ReelPlayer
+                videoSrc={getBunnyVideoMp4Url(pv.bunny_video_id, '720p')}
+                placeholderSrc={getBunnyVideoThumbnail(pv.bunny_video_id)}
+                aspectRatio={toCssRatio(pv.aspect_ratio)}
+                defaultMuted={false}
+                hoverPreview={false}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Testimonial — directly under video */}

@@ -65,7 +65,7 @@ function SampleCard({
     <div data-card>
       {/* Thumbnail with hover video preview */}
       <div
-        className="relative rounded-2xl overflow-hidden aspect-[2.2/1] group cursor-pointer mb-8"
+        className="relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[2.2/1] group cursor-pointer mb-8"
         onClick={() => onViewProject?.(index)}
         onMouseEnter={handleHover}
         onMouseLeave={handleUnhover}
@@ -241,7 +241,7 @@ export function SamplesIntroSlide({ videos, slideRef, onViewProject }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-5xl mx-auto px-12 lg:px-20 pb-10" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="max-w-5xl mx-auto px-6 sm:px-12 lg:px-20 pb-10" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         <SlideHeader
           eyebrow="samples"
           titleWords={titleWords}
