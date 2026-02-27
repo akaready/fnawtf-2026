@@ -82,7 +82,7 @@ const COLUMN_DEFS: ColDef[] = [
   { key: 'updated_by', label: 'Updated By', sortable: false, defaultVisible: false, type: 'text', mono: true },
   { key: 'created_at', label: 'Created', sortable: true, defaultVisible: false, type: 'date' },
   { key: 'updated_at', label: 'Updated', sortable: true, defaultVisible: true, type: 'date' },
-  { key: 'published', label: 'Published', sortable: true, defaultVisible: true, type: 'toggle', toggleLabels: ['Published', 'Draft'], toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-muted-foreground/50'], group: 'Status' },
+  { key: 'published', label: 'Published', sortable: true, defaultVisible: true, type: 'toggle', toggleLabels: ['Published', 'Draft'], toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-[#515155]'], group: 'Status' },
 ];
 
 type ColumnKey = string;
@@ -148,7 +148,7 @@ function EditableTextCell({
         className={`cursor-text hover:ring-1 hover:ring-white/15 rounded px-1 -mx-1 py-0.5 transition-all inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
         title={value || 'Double-click to edit'}
       >
-        {value || <span className="text-muted-foreground/30 italic">—</span>}
+        {value || <span className="text-[#303033] italic">—</span>}
       </span>
     );
   }
@@ -212,7 +212,7 @@ function EditableNumberCell({
         className="cursor-text hover:ring-1 hover:ring-white/15 rounded px-1 -mx-1 py-0.5 transition-all text-muted-foreground tabular-nums"
         title="Double-click to edit"
       >
-        {value ?? <span className="text-muted-foreground/30">—</span>}
+        {value ?? <span className="text-[#303033]">—</span>}
       </span>
     );
   }
@@ -312,7 +312,7 @@ function SelectCell({
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <ChevronDown size={10} className="absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground/30 pointer-events-none" />
+      <ChevronDown size={10} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#303033] pointer-events-none" />
     </div>
   );
 }
@@ -394,7 +394,7 @@ function EditableTagsCell({
     return (
       <div onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="cursor-pointer min-h-[24px] flex flex-wrap gap-1 w-full rounded px-1 -mx-1 py-0.5 hover:ring-1 hover:ring-white/15 transition-all">
         {(!tags || tags.length === 0) ? (
-          <span className="text-muted-foreground/30 text-xs">—</span>
+          <span className="text-[#303033] text-xs">—</span>
         ) : tags.map((t) => (
           <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground/70 whitespace-nowrap">{t}</span>
         ))}
@@ -408,7 +408,7 @@ function EditableTagsCell({
         {value.map((t) => (
           <span key={t} className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-foreground/80">
             {t}
-            <button onClick={() => removeTag(t)} className="ml-0.5 text-muted-foreground/50 hover:text-foreground">×</button>
+            <button onClick={() => removeTag(t)} className="ml-0.5 text-[#515155] hover:text-foreground">×</button>
           </span>
         ))}
         <input
@@ -417,7 +417,7 @@ function EditableTagsCell({
           onChange={(e) => { setInput(e.target.value); setHlIndex(-1); }}
           onKeyDown={handleKeyDown}
           placeholder="Add…"
-          className="flex-1 min-w-[50px] bg-transparent text-xs text-foreground placeholder:text-muted-foreground/30 outline-none"
+          className="flex-1 min-w-[50px] bg-transparent text-xs text-foreground placeholder:text-[#303033] outline-none"
         />
       </div>
       {filtered.length > 0 && (
@@ -509,7 +509,7 @@ function renderCell(col: ColDef, project: ProjectRow, tagSuggestions?: Record<st
 
     case 'date':
       return (
-        <span className="text-muted-foreground/60 text-xs whitespace-nowrap">
+        <span className="text-[#616166] text-xs whitespace-nowrap">
           {new Date(val as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
       );
@@ -580,7 +580,7 @@ function ToolbarButton({
       className={`flex items-center gap-1.5 px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap border ${
         active
           ? 'bg-accent/10 text-accent border-accent/25'
-          : 'text-white/40 hover:text-white/70 hover:bg-white/5 border-transparent'
+          : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
       }`}
     >
       <Icon size={14} strokeWidth={1.75} />
@@ -625,9 +625,9 @@ function SortPanel({
   return (
     <ToolbarPopover onClose={onClose} width="w-96">
       <div className="space-y-2">
-        <div className="text-xs text-muted-foreground/50 uppercase tracking-wider font-medium mb-2">Sort by</div>
+        <div className="text-xs text-[#515155] uppercase tracking-wider font-medium mb-2">Sort by</div>
         {sorts.length === 0 && (
-          <p className="text-sm text-muted-foreground/40 py-2">No sorts applied. Showing default order.</p>
+          <p className="text-sm text-[#404044] py-2">No sorts applied. Showing default order.</p>
         )}
         {sorts.map((s, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -652,7 +652,7 @@ function SortPanel({
             </button>
             <button
               onClick={() => removeSort(i)}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-white/5 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[#404044] hover:text-foreground hover:bg-white/5 transition-colors"
             >
               <X size={14} />
             </button>
@@ -716,9 +716,9 @@ function FilterPanel({
   return (
     <ToolbarPopover onClose={onClose} width="w-[520px]">
       <div className="space-y-2">
-        <div className="text-xs text-muted-foreground/50 uppercase tracking-wider font-medium mb-2">Filter where</div>
+        <div className="text-xs text-[#515155] uppercase tracking-wider font-medium mb-2">Filter where</div>
         {filters.length === 0 && (
-          <p className="text-sm text-muted-foreground/40 py-2">No filters applied. Showing all projects.</p>
+          <p className="text-sm text-[#404044] py-2">No filters applied. Showing all projects.</p>
         )}
         {filters.map((f, i) => {
           const col = COLUMN_DEFS.find((c) => c.key === f.field) ?? filterableCols[0];
@@ -763,7 +763,7 @@ function FilterPanel({
                     value={f.value}
                     onChange={(e) => updateFilter(i, { value: e.target.value })}
                     placeholder={col.type === 'tags' ? 'tag name…' : 'value…'}
-                    className="flex-1 bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
+                    className="flex-1 bg-black border border-[#1f1f1f] rounded-lg px-2.5 py-1.5 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:border-white/20"
                   />
                 )
               ) : (
@@ -771,7 +771,7 @@ function FilterPanel({
               )}
               <button
                 onClick={() => removeFilter(i)}
-                className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-white/5 transition-colors"
+                className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-[#404044] hover:text-foreground hover:bg-white/5 transition-colors"
               >
                 <X size={14} />
               </button>
@@ -805,7 +805,7 @@ function GroupPanel({
   return (
     <ToolbarPopover onClose={onClose} width="w-64">
       <div className="space-y-2">
-        <div className="text-xs text-muted-foreground/50 uppercase tracking-wider font-medium mb-2">Group by</div>
+        <div className="text-xs text-[#515155] uppercase tracking-wider font-medium mb-2">Group by</div>
         <label
           className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm cursor-pointer transition-colors ${
             !groupField ? 'bg-white/5 text-foreground' : 'text-muted-foreground hover:bg-white/5'
@@ -896,29 +896,29 @@ function FieldsPanel({
     <ToolbarPopover onClose={onClose} width="w-64">
       <div className="space-y-2">
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404044]" />
           <input
             type="text"
             value={fieldSearch}
             onChange={(e) => setFieldSearch(e.target.value)}
             placeholder="Search fields…"
-            className="w-full pl-8 pr-3 py-1.5 bg-black border border-[#1f1f1f] rounded-lg text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
+            className="w-full pl-8 pr-3 py-1.5 bg-black border border-[#1f1f1f] rounded-lg text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:border-white/20"
             autoFocus
           />
         </div>
         <div className="flex items-center gap-2 pb-1 border-b border-border/20">
-          <button onClick={onShowAll} className="text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors">
+          <button onClick={onShowAll} className="text-[11px] text-[#515155] hover:text-foreground transition-colors">
             Show all
           </button>
-          <span className="text-muted-foreground/20">·</span>
-          <button onClick={onHideAll} className="text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors">
+          <span className="text-[#202022]">·</span>
+          <button onClick={onHideAll} className="text-[11px] text-[#515155] hover:text-foreground transition-colors">
             Hide all
           </button>
         </div>
         <div className="max-h-96 overflow-y-auto admin-scrollbar space-y-3">
           {groups.map((g) => (
             <div key={g.label}>
-              <div className="text-[10px] text-muted-foreground/30 uppercase tracking-wider font-medium px-2.5 mb-1">
+              <div className="text-[10px] text-[#303033] uppercase tracking-wider font-medium px-2.5 mb-1">
                 {g.label}
               </div>
               {g.cols.map((col) => (
@@ -932,7 +932,7 @@ function FieldsPanel({
                     onChange={() => onToggle(col.key)}
                     className="accent-white rounded"
                   />
-                  <span className={visibleCols.has(col.key) ? 'text-foreground' : 'text-muted-foreground/50'}>
+                  <span className={visibleCols.has(col.key) ? 'text-foreground' : 'text-[#515155]'}>
                     {col.label}
                   </span>
                 </label>
@@ -1078,7 +1078,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       if (saved.collapsedGroups) setCollapsedGroups(new Set(saved.collapsedGroups));
       if (saved.visibleCols && saved.visibleCols.length > 0) setVisibleCols(new Set(saved.visibleCols));
       if (saved.colWidths) setColWidths(saved.colWidths);
-      if (saved.freezeCount != null) setFreezeCount(saved.freezeCount);
+      if (saved.freezeCount != null) setFreezeCount(Math.min(saved.freezeCount, (saved.visibleCols ?? []).length));
       if (saved.colOrder && saved.colOrder.length > 0) {
         // Merge: use saved order but append any new columns not in saved state
         const allKeys = COLUMN_DEFS.map((c) => c.key);
@@ -1509,7 +1509,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
   }, [orderedVisibleCols, getColWidth, checkboxWidth]);
 
   const thClass =
-    'text-left px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground/60 font-medium select-none whitespace-nowrap relative overflow-hidden bg-[#141414] border-b border-r border-[#1f1f1f]';
+    'text-left px-4 py-3 text-xs uppercase tracking-wider text-[#616166] font-medium select-none whitespace-nowrap relative overflow-hidden bg-[#141414] border-b border-r border-[#1f1f1f]';
   const thSortClass = `${thClass} cursor-pointer group hover:text-muted-foreground transition-colors`;
 
   const visibleColCount = 2 + visibleCols.size;
@@ -1613,7 +1613,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
         </div>
 
         {(search || filters.length > 0) && (
-          <span className="text-xs text-muted-foreground/40 ml-1">
+          <span className="text-xs text-[#404044] ml-1">
             {filtered.length} of {projects.length}
           </span>
         )}
@@ -1623,7 +1623,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           className={`ml-auto flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
             Object.keys(colWidths).length > 0
               ? 'bg-accent/10 text-accent'
-              : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+              : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
           }`}
           title="Reset all column widths to auto-fit"
         >
@@ -1783,7 +1783,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={visibleColCount} className="px-4 py-12 text-center text-muted-foreground/50 text-sm">
+                <td colSpan={visibleColCount} className="px-4 py-12 text-center text-[#515155] text-sm">
                   {projects.length === 0 ? (
                     <>No projects yet.{' '}<Link href="/admin/projects/new" className="text-muted-foreground hover:text-foreground underline transition-colors">Create one</Link></>
                   ) : 'No projects match your filters.'}
@@ -1802,14 +1802,14 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
                       <div className="flex items-center gap-2">
                         <ChevronRight
                           size={14}
-                          className={`text-muted-foreground/50 transition-transform ${
+                          className={`text-[#515155] transition-transform ${
                             collapsedGroups.has(label) ? '' : 'rotate-90'
                           }`}
                         />
                         <span className="text-xs font-medium text-foreground uppercase tracking-wider">
                           {label}
                         </span>
-                        <span className="text-[10px] text-muted-foreground/40 tabular-nums">
+                        <span className="text-[10px] text-[#404044] tabular-nums">
                           {rows.length}
                         </span>
                       </div>

@@ -1279,7 +1279,7 @@ export function CalculatorSummary({
         })()}
 
         {/* Total + Payment */}
-        <div className={`py-4 -mx-6 px-6 ${fundraisingEnabled ? 'border-t border-green-900 bg-green-900/20 mb-6' : 'border-t border-border'}`}>
+        <div className={`py-4 -mx-6 px-6 ${fundraisingEnabled ? 'border-t border-b border-green-900 bg-green-900/20 mb-6' : 'border-t border-border'}`}>
           <div className={`flex justify-between items-baseline mb-3 pb-3 border-b border-dashed ${fundraisingEnabled ? 'border-green-900/60' : 'border-border'}`}>
             <span className="font-display font-bold text-foreground">Total</span>
             <span className="font-display text-xl font-bold text-foreground transition-all duration-300">
@@ -1301,7 +1301,7 @@ export function CalculatorSummary({
 
         {/* Fundraising terms */}
         {fundraisingEnabled && (
-          <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-border space-y-2 mb-6">
+          <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-green-900 space-y-2 mb-6">
             <p className="text-base font-semibold text-foreground">Pay up front, or after you raise.</p>
             <p className="text-sm text-muted-foreground">Minimum 20% due at signing, the rest due on delivery. Or, pay the rest after you raise.</p>
             <p className="text-xs text-muted-foreground/70 leading-relaxed">

@@ -40,7 +40,7 @@ function MergeDialog({
 
         <div className="px-6 py-5 space-y-5">
           <div>
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-2">Merging</p>
+            <p className="text-xs text-[#616166] uppercase tracking-wider mb-2">Merging</p>
             <div className="flex flex-wrap gap-1.5">
               {sourceTags.map((r) => (
                 <span key={r.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-[#2a2a2a] text-sm text-foreground">
@@ -52,7 +52,7 @@ function MergeDialog({
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-2">Keep as</p>
+            <p className="text-xs text-[#616166] uppercase tracking-wider mb-2">Keep as</p>
             <div className="space-y-1.5">
               {sourceTags.map((r) => (
                 <label key={r.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-white/[0.04] transition-colors">
@@ -252,7 +252,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
           <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl">
             <div className="divide-y divide-[#2a2a2a]">
               {filtered.length === 0 && !addingNew && (
-                <div className="px-5 py-8 text-center text-xs text-muted-foreground/40">
+                <div className="px-5 py-8 text-center text-xs text-[#404044]">
                   {search ? 'No matching roles' : 'No roles yet'}
                 </div>
               )}
@@ -304,7 +304,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingId(role.id); setPendingDeleteId(null); }}
                               disabled={isPending}
-                              className="p-1 rounded text-muted-foreground/50 hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                              className="p-1 rounded text-[#515155] hover:text-foreground hover:bg-white/[0.06] transition-colors"
                               title="Rename"
                             >
                               <Pencil size={11} />
@@ -312,7 +312,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                             <button
                               onClick={(e) => { e.stopPropagation(); setPendingDeleteId(role.id); setEditingId(null); }}
                               disabled={isPending}
-                              className="p-1 rounded text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              className="p-1 rounded text-[#515155] hover:text-red-400 hover:bg-red-500/10 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={11} />
@@ -320,16 +320,16 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                           </div>
                           {/* Counts */}
                           <div className="flex items-center gap-3 flex-shrink-0">
-                            <span className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground/50" title="People">
+                            <span className="flex items-center gap-1 text-xs tabular-nums text-[#515155]" title="People">
                               <Users size={10} />
                               {role.peopleCount}
                             </span>
-                            <span className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground/50" title="Projects">
+                            <span className="flex items-center gap-1 text-xs tabular-nums text-[#515155]" title="Projects">
                               <Clapperboard size={10} />
                               {role.projectCount}
                             </span>
                             {role.peopleCount > 0 && (
-                              <ChevronRight size={10} className={`text-muted-foreground/50 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
+                              <ChevronRight size={10} className={`text-[#515155] transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
                             )}
                           </div>
                         </>
@@ -340,7 +340,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                     {isExpanded && (
                       <div className="py-2 bg-white/[0.01]">
                         {isLoadingPeople ? (
-                          <div className="px-5 py-3 text-xs text-muted-foreground/40">Loading...</div>
+                          <div className="px-5 py-3 text-xs text-[#404044]">Loading...</div>
                         ) : cachedPeople && cachedPeople.length > 0 ? (
                           <div>
                             {cachedPeople.map((person) => (
@@ -349,12 +349,12 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                                   <span className={`w-1.5 h-1.5 rounded-full ${person.type === 'cast' ? 'bg-purple-400' : 'bg-blue-400'}`} />
                                 </span>
                                 <span className="text-xs text-foreground/80 flex-1 min-w-0 truncate">{person.first_name} {person.last_name}</span>
-                                <span className="text-xs text-muted-foreground/40 capitalize">{person.type}</span>
+                                <span className="text-xs text-[#404044] capitalize">{person.type}</span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="px-5 py-3 text-xs text-muted-foreground/40">No people found</div>
+                          <div className="px-5 py-3 text-xs text-[#404044]">No people found</div>
                         )}
                       </div>
                     )}
@@ -376,7 +376,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                         if (e.key === 'Escape') { setAddingNew(false); setNewValue(''); }
                       }}
                       placeholder="New role name..."
-                      className="flex-1 min-w-0 bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-sm text-foreground outline-none focus:border-white/40 placeholder:text-muted-foreground/40"
+                      className="flex-1 min-w-0 bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-sm text-foreground outline-none focus:border-white/40 placeholder:text-[#404044]"
                     />
                     <button onClick={handleAdd} className="text-green-400 hover:text-green-300 transition-colors flex-shrink-0">
                       <Check size={13} />

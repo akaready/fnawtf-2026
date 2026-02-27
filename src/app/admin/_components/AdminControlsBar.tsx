@@ -26,7 +26,7 @@ export function AdminControlsBar({
       {leftActions && <div className="flex items-center gap-2">{leftActions}</div>}
       {onSearchChange !== undefined && (
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
           <input
             type="text"
             value={search ?? ''}
@@ -37,7 +37,7 @@ export function AdminControlsBar({
           {search && (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616166] hover:text-foreground transition-colors"
             >
               <X size={14} />
             </button>

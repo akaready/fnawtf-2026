@@ -60,16 +60,16 @@ export function AddProjectModal({
       >
         {/* Search header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2a2a2a]">
-          <Search size={15} className="text-white/30 flex-shrink-0" />
+          <Search size={15} className="text-[#4d4d4d] flex-shrink-0" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search published projects…"
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/25 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-[#404040] focus:outline-none"
             autoFocus
           />
-          <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">
+          <button onClick={onClose} className="text-[#4d4d4d] hover:text-[#999] transition-colors">
             <X size={15} />
           </button>
         </div>
@@ -77,7 +77,7 @@ export function AddProjectModal({
         {/* Project list */}
         <div className="flex-1 overflow-y-auto admin-scrollbar p-2">
           {available.length === 0 ? (
-            <p className="text-center text-xs text-white/25 py-8">
+            <p className="text-center text-xs text-[#404040] py-8">
               {search ? 'No matching projects.' : 'All projects are already placed on this page.'}
             </p>
           ) : (
@@ -104,10 +104,10 @@ export function AddProjectModal({
                       )}
                     </div>
 
-                    <span className="flex-1 text-sm text-white/70 truncate">{project.title}</span>
+                    <span className="flex-1 text-sm text-[#b3b3b3] truncate">{project.title}</span>
 
                     {isLoading ? (
-                      <Loader2 size={13} className="text-white/30 animate-spin flex-shrink-0" />
+                      <Loader2 size={13} className="text-[#4d4d4d] animate-spin flex-shrink-0" />
                     ) : placedProjectIds.has(project.id) ? (
                       <Check size={13} className="text-green-400 flex-shrink-0" />
                     ) : null}

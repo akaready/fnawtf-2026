@@ -98,7 +98,7 @@ export function EditableSlideText({
           onChange={(e) => setEditTitle(e.target.value)}
           placeholder="Section label (optional)"
           autoFocus
-          className="w-full text-sm tracking-[0.3em] uppercase font-mono text-white/40 bg-transparent border-b border-dashed border-white/20 outline-none placeholder:text-white/10 pb-2"
+          className="w-full text-sm tracking-[0.3em] uppercase font-mono text-[#666] bg-transparent border-b border-dashed border-white/20 outline-none placeholder:text-white/10 pb-2"
         />
         <textarea
           value={editContent}
@@ -113,15 +113,15 @@ export function EditableSlideText({
           }}
           placeholder={placeholder}
           rows={5}
-          className="w-full text-2xl lg:text-3xl font-display text-white/80 leading-relaxed bg-transparent border-b border-dashed border-white/20 outline-none resize-none placeholder:text-white/15 pb-3"
+          className="w-full text-2xl lg:text-3xl font-display text-[#ccc] leading-relaxed bg-transparent border-b border-dashed border-white/20 outline-none resize-none placeholder:text-white/15 pb-3"
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
         <div className="flex items-center justify-between">
-          <p className="text-xs text-white/20 font-mono">⌘↵ to save · Esc to cancel</p>
+          <p className="text-xs text-[#333] font-mono">⌘↵ to save · Esc to cancel</p>
           <div className="flex gap-2">
             <button
               onClick={onCancel}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/30 hover:text-white/60 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
             >
               <X size={10} />
               Cancel

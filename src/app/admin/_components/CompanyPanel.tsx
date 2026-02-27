@@ -49,7 +49,7 @@ const STATUS_CONFIG: Record<CompanyStatus, { label: string; color: string; dot: 
   active:    { label: 'Active',   color: 'text-emerald-400',            dot: 'bg-emerald-500' },
   prospect:  { label: 'Prospect', color: 'text-amber-400',              dot: 'bg-amber-500' },
   'on hold': { label: 'On Hold',  color: 'text-slate-400',              dot: 'bg-slate-500' },
-  past:      { label: 'Past',     color: 'text-muted-foreground/40',    dot: 'bg-white/20' },
+  past:      { label: 'Past',     color: 'text-[#404044]',    dot: 'bg-white/20' },
 };
 
 const TYPE_CONFIG: Record<CompanyType, {
@@ -74,7 +74,7 @@ const TYPE_CONFIG: Record<CompanyType, {
 };
 
 const PIPELINE_STAGES: { value: PipelineStage; label: string; color: string }[] = [
-  { value: 'new',         label: 'New',         color: 'text-white/40' },
+  { value: 'new',         label: 'New',         color: 'text-[#666]' },
   { value: 'qualified',   label: 'Qualified',   color: 'text-amber-400' },
   { value: 'proposal',    label: 'Proposal',    color: 'text-sky-400' },
   { value: 'negotiating', label: 'Negotiating', color: 'text-violet-400' },
@@ -303,7 +303,7 @@ export function CompanyPanel({
   const pipelineStage = (localCompany.pipeline_stage ?? 'new') as PipelineStage;
   const statusCfg = STATUS_CONFIG[status];
 
-  const inputCls = 'flex-1 rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
+  const inputCls = 'flex-1 rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-muted-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
 
   const showSearchBar = activeTab === 'contacts' || activeTab === 'testimonials' || activeTab === 'projects';
 
@@ -329,10 +329,10 @@ export function CompanyPanel({
               value={localCompany.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Company name"
-              className="w-full bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
+              className="w-full bg-transparent text-lg font-medium text-foreground placeholder:text-[#303033] focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
             />
             {clientProjects.length > 0 && (
-              <p className="text-xs text-muted-foreground/40 mt-0.5">
+              <p className="text-xs text-[#404044] mt-0.5">
                 {clientProjects.length} project{clientProjects.length !== 1 ? 's' : ''}
               </p>
             )}
@@ -344,7 +344,7 @@ export function CompanyPanel({
           </span>
           <button
             onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#404044] hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
           >
             <X size={16} />
           </button>
@@ -365,12 +365,12 @@ export function CompanyPanel({
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === tabId
                   ? 'bg-white/10 text-white'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                  : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
               }`}
             >
               {label}
               {count !== null && count > 0 && (
-                <span className="text-xs text-white/30 ml-0.5">{count}</span>
+                <span className="text-xs text-[#4d4d4d] ml-0.5">{count}</span>
               )}
             </button>
           ))}
@@ -379,7 +379,7 @@ export function CompanyPanel({
         {/* Action bar — search for contacts/testimonials tabs */}
         {showSearchBar && (
           <div className="flex items-center gap-2 px-6 py-2.5 border-b border-[#2a2a2a] bg-white/[0.02] flex-shrink-0">
-            <Search size={14} className="text-muted-foreground/40 flex-shrink-0" />
+            <Search size={14} className="text-[#404044] flex-shrink-0" />
             <input
               type="text"
               value={activeTab === 'contacts' ? contactSearch : activeTab === 'projects' ? projectSearch : testimonialSearch}
@@ -389,7 +389,7 @@ export function CompanyPanel({
                 else setTestimonialSearch(e.target.value);
               }}
               placeholder={activeTab === 'contacts' ? 'Search contacts to link…' : activeTab === 'projects' ? 'Search projects to link…' : 'Search testimonials to link…'}
-              className="flex-1 rounded-lg bg-black/50 border border-border/40 px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+              className="flex-1 rounded-lg bg-black/50 border border-border/40 px-3 py-1.5 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20"
             />
           </div>
         )}
@@ -413,7 +413,7 @@ export function CompanyPanel({
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                           isActive
                             ? `${cfg.activeBg} ${cfg.activeText} ${cfg.activeBorder}`
-                            : 'border-border/30 bg-transparent text-muted-foreground/30 hover:text-muted-foreground/60 hover:border-border/50'
+                            : 'border-border/30 bg-transparent text-[#303033] hover:text-[#616166] hover:border-border/50'
                         }`}
                       >
                         <Icon size={11} />
@@ -433,7 +433,7 @@ export function CompanyPanel({
                           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                             isActive
                               ? `bg-white/8 border-white/20 ${scfg.color}`
-                              : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
+                              : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-[#515155] hover:border-border/40'
                           }`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-white/20'}`} />
@@ -445,7 +445,7 @@ export function CompanyPanel({
                 </div>
                 {isLead && (
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs text-muted-foreground/30 mr-1">Stage</span>
+                    <span className="text-xs text-[#303033] mr-1">Stage</span>
                     {PIPELINE_STAGES.map((stage) => {
                       const isActive = pipelineStage === stage.value;
                       return (
@@ -456,7 +456,7 @@ export function CompanyPanel({
                           className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                             isActive
                               ? `bg-white/8 border-white/20 ${stage.color}`
-                              : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
+                              : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-[#515155] hover:border-border/40'
                           }`}
                         >
                           {stage.label}
@@ -473,42 +473,42 @@ export function CompanyPanel({
                 onChange={(e) => handleChange('description', e.target.value || null)}
                 placeholder="Company description…"
                 rows={2}
-                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
                 style={{ fieldSizing: 'content' } as React.CSSProperties}
               />
 
               {/* URLs + Company details */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Globe size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <Globe size={14} className="text-[#303033] flex-shrink-0" />
                   <input type="url" value={localCompany.website_url ?? ''} onChange={(e) => handleChange('website_url', e.target.value || null)} placeholder="Website URL" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Linkedin size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <Linkedin size={14} className="text-[#303033] flex-shrink-0" />
                   <input type="url" value={localCompany.linkedin_url ?? ''} onChange={(e) => handleChange('linkedin_url', e.target.value || null)} placeholder="LinkedIn URL" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#303033] flex-shrink-0 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
                   <input type="url" value={localCompany.twitter_url ?? ''} onChange={(e) => handleChange('twitter_url', e.target.value || null)} placeholder="X / Twitter URL" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-[#303033] flex-shrink-0 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
                   <input type="url" value={localCompany.instagram_url ?? ''} onChange={(e) => handleChange('instagram_url', e.target.value || null)} placeholder="Instagram URL" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tag size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <Tag size={14} className="text-[#303033] flex-shrink-0" />
                   <input type="text" value={localCompany.industry ?? ''} onChange={(e) => handleChange('industry', e.target.value || null)} placeholder="Industry" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <MapPin size={14} className="text-[#303033] flex-shrink-0" />
                   <input type="text" value={localCompany.location ?? ''} onChange={(e) => handleChange('location', e.target.value || null)} placeholder="Location" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <Calendar size={14} className="text-[#303033] flex-shrink-0" />
                   <input type="number" value={localCompany.founded_year ?? ''} onChange={(e) => handleChange('founded_year', e.target.value ? parseInt(e.target.value, 10) : null)} placeholder="Founded year" className={inputCls} />
                 </div>
                 <div className="flex items-center gap-2">
-                  <UsersIcon size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <UsersIcon size={14} className="text-[#303033] flex-shrink-0" />
                   <input type="text" value={localCompany.company_size ?? ''} onChange={(e) => handleChange('company_size', e.target.value || null)} placeholder="Company size" className={inputCls} />
                 </div>
               </div>
@@ -519,7 +519,7 @@ export function CompanyPanel({
                 onChange={(e) => handleChange('notes', e.target.value || null)}
                 placeholder="Notes…"
                 rows={3}
-                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
                 style={{ fieldSizing: 'content' } as React.CSSProperties}
               />
             </div>
@@ -530,7 +530,7 @@ export function CompanyPanel({
               {/* Search results — unlinked contacts matching search */}
               {contactSearch && filteredUnlinkedContacts.length > 0 && (
                 <div className="space-y-1 mb-3">
-                  <p className="text-xs text-muted-foreground/30 mb-1.5">Link a contact</p>
+                  <p className="text-xs text-[#303033] mb-1.5">Link a contact</p>
                   {filteredUnlinkedContacts.slice(0, 8).map((ct) => (
                     <button
                       key={ct.id}
@@ -541,11 +541,11 @@ export function CompanyPanel({
                       }}
                       className="w-full text-left flex items-center gap-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[#2a2a2a] hover:border-white/10 px-3 py-2 transition-colors"
                     >
-                      <UserPlus size={12} className="text-muted-foreground/30 flex-shrink-0" />
+                      <UserPlus size={12} className="text-[#303033] flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-muted-foreground/60 truncate">{ct.first_name} {ct.last_name}</p>
+                        <p className="text-sm font-medium text-[#616166] truncate">{ct.first_name} {ct.last_name}</p>
                         {(ct.role || ct.email) && (
-                          <p className="text-xs text-muted-foreground/30 truncate">
+                          <p className="text-xs text-[#303033] truncate">
                             {[ct.role, ct.email].filter(Boolean).join(' · ')}
                           </p>
                         )}
@@ -555,19 +555,19 @@ export function CompanyPanel({
                 </div>
               )}
               {contactSearch && filteredUnlinkedContacts.length === 0 && (
-                <p className="text-xs text-muted-foreground/20 px-1 mb-3">No matching unlinked contacts.</p>
+                <p className="text-xs text-[#202022] px-1 mb-3">No matching unlinked contacts.</p>
               )}
 
               {/* Linked contacts */}
               {clientContacts.length === 0 && !contactSearch && (
-                <p className="text-sm text-muted-foreground/30 py-1">No contacts linked yet.</p>
+                <p className="text-sm text-[#303033] py-1">No contacts linked yet.</p>
               )}
               {clientContacts.map((ct) => (
                 <div key={ct.id} className="flex items-center gap-2 rounded-lg bg-white/5 border border-[#2a2a2a] px-3 py-2.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{ct.first_name} {ct.last_name}</p>
                     {(ct.role || ct.email) && (
-                      <p className="text-xs text-muted-foreground/50 truncate">
+                      <p className="text-xs text-[#515155] truncate">
                         {[ct.role, ct.email].filter(Boolean).join(' · ')}
                       </p>
                     )}
@@ -575,7 +575,7 @@ export function CompanyPanel({
                   <button
                     type="button"
                     onClick={() => onContactUnlinked(ct.id)}
-                    className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                    className="w-6 h-6 flex items-center justify-center rounded text-[#303033] hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
                     title="Unlink contact"
                   >
                     <X size={12} />
@@ -590,7 +590,7 @@ export function CompanyPanel({
               {/* Search results — unlinked projects matching search */}
               {onProjectLinked && projectSearch && filteredUnlinkedProjects.length > 0 && (
                 <div className="space-y-1 mb-3">
-                  <p className="text-xs text-muted-foreground/30 mb-1.5">Link a project</p>
+                  <p className="text-xs text-[#303033] mb-1.5">Link a project</p>
                   {filteredUnlinkedProjects.slice(0, 8).map((p) => (
                     <button
                       key={p.id}
@@ -605,13 +605,13 @@ export function CompanyPanel({
                         <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
                       ) : (
                         <div className="w-14 h-9 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
-                          <Film size={14} className="text-muted-foreground/30" />
+                          <Film size={14} className="text-[#303033]" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-muted-foreground/60 truncate">{p.title}</p>
+                        <p className="text-sm font-medium text-[#616166] truncate">{p.title}</p>
                         {p.category && (
-                          <p className="text-xs text-muted-foreground/30 truncate">{p.category}</p>
+                          <p className="text-xs text-[#303033] truncate">{p.category}</p>
                         )}
                       </div>
                     </button>
@@ -619,12 +619,12 @@ export function CompanyPanel({
                 </div>
               )}
               {projectSearch && filteredUnlinkedProjects.length === 0 && (
-                <p className="text-xs text-muted-foreground/20 px-1 mb-3">No matching unlinked projects.</p>
+                <p className="text-xs text-[#202022] px-1 mb-3">No matching unlinked projects.</p>
               )}
 
               {/* Linked projects */}
               {clientProjects.length === 0 && !projectSearch && (
-                <p className="text-sm text-muted-foreground/30 py-1">No projects linked.</p>
+                <p className="text-sm text-[#303033] py-1">No projects linked.</p>
               )}
               {clientProjects.map((p) => (
                 <div
@@ -640,13 +640,13 @@ export function CompanyPanel({
                       <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
                     ) : (
                       <div className="w-14 h-9 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
-                        <Film size={14} className="text-muted-foreground/30" />
+                        <Film size={14} className="text-[#303033]" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground group-hover:text-white truncate">{p.title}</p>
                       {p.category && (
-                        <p className="text-xs text-muted-foreground/40 truncate">{p.category}</p>
+                        <p className="text-xs text-[#404044] truncate">{p.category}</p>
                       )}
                     </div>
                   </button>
@@ -654,7 +654,7 @@ export function CompanyPanel({
                     <button
                       type="button"
                       onClick={() => onProjectUnlinked(p.id)}
-                      className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                      className="w-6 h-6 flex items-center justify-center rounded text-[#303033] hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
                       title="Unlink project"
                     >
                       <X size={12} />
@@ -670,7 +670,7 @@ export function CompanyPanel({
               {/* Search results — unlinked testimonials matching search */}
               {onTestimonialLinked && testimonialSearch && filteredUnlinkedTestimonials.length > 0 && (
                 <div className="space-y-1 mb-3">
-                  <p className="text-xs text-muted-foreground/30 mb-1.5">Link a testimonial</p>
+                  <p className="text-xs text-[#303033] mb-1.5">Link a testimonial</p>
                   {filteredUnlinkedTestimonials.slice(0, 10).map((t) => (
                     <button
                       key={t.id}
@@ -681,11 +681,11 @@ export function CompanyPanel({
                       }}
                       className="w-full text-left rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[#2a2a2a] hover:border-white/10 px-3 py-2.5 transition-colors"
                     >
-                      <p className="text-sm text-muted-foreground/50 line-clamp-1">
+                      <p className="text-sm text-[#515155] line-clamp-1">
                         &ldquo;{t.quote.slice(0, 100)}&rdquo;
                       </p>
                       {t.person_name && (
-                        <p className="text-xs text-muted-foreground/30 mt-0.5">
+                        <p className="text-xs text-[#303033] mt-0.5">
                           — {t.person_name}
                         </p>
                       )}
@@ -694,12 +694,12 @@ export function CompanyPanel({
                 </div>
               )}
               {testimonialSearch && filteredUnlinkedTestimonials.length === 0 && (
-                <p className="text-xs text-muted-foreground/20 px-1 mb-3">No matching unlinked testimonials.</p>
+                <p className="text-xs text-[#202022] px-1 mb-3">No matching unlinked testimonials.</p>
               )}
 
               {/* Linked testimonials — read-only with unlink */}
               {clientTestimonials.length === 0 && !testimonialSearch && (
-                <p className="text-sm text-muted-foreground/30 py-1">No testimonials linked yet.</p>
+                <p className="text-sm text-[#303033] py-1">No testimonials linked yet.</p>
               )}
               {clientTestimonials.map((t) => (
                 <div
@@ -707,11 +707,11 @@ export function CompanyPanel({
                   className="rounded-lg bg-white/5 border border-[#2a2a2a] px-3 py-2.5 flex items-center gap-2"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground/60 line-clamp-2">
+                    <p className="text-sm text-[#616166] line-clamp-2">
                       &ldquo;{t.quote}&rdquo;
                     </p>
                     {t.person_name && (
-                      <p className="text-xs text-muted-foreground/40 mt-1">
+                      <p className="text-xs text-[#404044] mt-1">
                         — {t.person_name}{t.person_title ? `, ${t.person_title}` : ''}
                       </p>
                     )}
@@ -720,7 +720,7 @@ export function CompanyPanel({
                     <button
                       type="button"
                       onClick={() => onTestimonialUnlinked(t.id)}
-                      className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                      className="w-6 h-6 flex items-center justify-center rounded text-[#303033] hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
                       title="Unlink testimonial"
                     >
                       <X size={12} />
@@ -758,7 +758,7 @@ export function CompanyPanel({
             disabled={hasLinks}
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
               hasLinks
-                ? 'text-muted-foreground/20 cursor-not-allowed'
+                ? 'text-[#202022] cursor-not-allowed'
                 : 'text-red-400/60 hover:text-red-400 hover:bg-red-500/10'
             }`}
             title={hasLinks ? 'Unlink projects and testimonials to delete' : 'Delete company'}
@@ -854,11 +854,11 @@ function LogoDropzone({
       title="Drop logo or click to upload"
     >
       {uploading ? (
-        <Loader2 size={16} className="animate-spin text-muted-foreground/50" />
+        <Loader2 size={16} className="animate-spin text-[#515155]" />
       ) : logoUrl ? (
         <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
       ) : (
-        <Upload size={16} className="text-muted-foreground/30" />
+        <Upload size={16} className="text-[#303033]" />
       )}
     </div>
   );

@@ -54,7 +54,7 @@ interface Props {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-white/10 text-white/40',
+  draft: 'bg-white/10 text-[#666]',
   sent: 'bg-blue-500/20 text-blue-300',
   viewed: 'bg-yellow-500/20 text-yellow-300',
   accepted: 'bg-green-500/20 text-green-300',
@@ -136,7 +136,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             </p>
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
-            <span className="flex items-center gap-1.5 px-4 py-1 rounded-full text-xs text-white/40 whitespace-nowrap bg-white/[0.04]">
+            <span className="flex items-center gap-1.5 px-4 py-1 rounded-full text-xs text-[#666] whitespace-nowrap bg-white/[0.04]">
               <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-400' : 'bg-white/25'}`} />
               {isLive ? 'Live' : 'Draft'}
             </span>
@@ -145,7 +145,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             </span>
             <button
               onClick={handleClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-[#666] hover:text-white hover:bg-white/5 transition-colors"
               aria-label="Close"
             >
               <X size={15} />
@@ -241,7 +241,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             initialProposalProjects={proposalProjects}
           />
         </div>
-        <div className={activeTab === 'pricing' ? 'h-full overflow-y-auto' : 'hidden'}>
+        <div className={activeTab === 'pricing' ? 'h-full overflow-y-auto admin-scrollbar' : 'hidden'}>
           <PricingTab
             ref={pricingRef}
             proposalId={proposal.id}
@@ -297,7 +297,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#4d4d4d] hover:text-[#b3b3b3] hover:bg-white/5 transition-colors"
                 title="Cancel"
               >
                 <X size={14} />

@@ -48,10 +48,10 @@ function CardContent({
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white/80 truncate">
+        <p className="text-sm font-medium text-[#ccc] truncate">
           {placement.project.title}
         </p>
-        <p className="text-xs text-white/30 truncate">{placement.project.client_name}</p>
+        <p className="text-xs text-[#4d4d4d] truncate">{placement.project.client_name}</p>
       </div>
 
       {!isDragging && showFullWidth && onToggleFullWidth && (
@@ -61,7 +61,7 @@ function CardContent({
           className={`flex-shrink-0 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 ${
             placement.full_width
               ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-400/10'
-              : 'text-white/20 hover:text-white/40 hover:bg-white/5'
+              : 'text-[#333] hover:text-[#666] hover:bg-white/5'
           }`}
           title={placement.full_width ? 'Shrink to normal' : 'Expand to full width'}
         >
@@ -73,7 +73,7 @@ function CardContent({
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(placement.id); }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="flex-shrink-0 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 hover:bg-red-400/10"
+          className="flex-shrink-0 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 text-[#333] hover:text-red-400 hover:bg-red-400/10"
           aria-label="Remove from page"
         >
           <X size={14} />

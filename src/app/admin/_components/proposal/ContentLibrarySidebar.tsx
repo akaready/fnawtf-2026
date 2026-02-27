@@ -35,7 +35,7 @@ function DraggableSidebarItem({ id, dragData, children }: { id: string; dragData
         <div
           {...listeners}
           {...attributes}
-          className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-muted-foreground/15 hover:text-muted-foreground/40 transition-colors"
+          className="flex-shrink-0 p-1 cursor-grab active:cursor-grabbing text-muted-foreground/15 hover:text-[#404044] transition-colors"
         >
           <GripVertical size={10} />
         </div>
@@ -118,12 +118,12 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
               className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors border-b-2 ${
                 activeTab === tab.id
                   ? 'border-white text-foreground'
-                  : 'border-transparent text-muted-foreground/50 hover:text-muted-foreground'
+                  : 'border-transparent text-[#515155] hover:text-muted-foreground'
               }`}
             >
               <Icon size={12} />
               {tab.label}
-              <span className="text-muted-foreground/30">{tab.count}</span>
+              <span className="text-[#303033]">{tab.count}</span>
             </button>
           );
         })}
@@ -132,13 +132,13 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
       {/* Search */}
       <div className="px-3 py-2">
         <div className="relative">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404044]" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`Search ${activeTab}…`}
-            className="w-full rounded-md border border-[#2a2a2a] bg-black/50 pl-7 pr-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+            className="w-full rounded-md border border-[#2a2a2a] bg-black/50 pl-7 pr-2 py-1.5 text-xs text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20"
           />
         </div>
       </div>
@@ -149,7 +149,7 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
         {activeTab === 'snippets' && (
           <div className="space-y-1.5">
             {filteredSnippets.length === 0 && (
-              <div className="text-xs text-muted-foreground/30 text-center py-6">No snippets found</div>
+              <div className="text-xs text-[#303033] text-center py-6">No snippets found</div>
             )}
             {filteredSnippets.map((s) => (
               <DraggableSidebarItem key={s.id} id={s.id} dragData={{ dragType: 'snippet', label: s.title, snippet: s }}>
@@ -159,14 +159,14 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
                       <span className={`text-[10px] font-medium uppercase ${SNIPPET_TYPE_COLORS[s.snippet_type] ?? 'text-zinc-400'}`}>
                         {s.snippet_type}
                       </span>
-                      <span className="text-[10px] text-muted-foreground/30">{s.category}</span>
+                      <span className="text-[10px] text-[#303033]">{s.category}</span>
                     </div>
                     <div className="text-xs font-medium text-foreground mt-0.5 truncate">{s.title}</div>
-                    <div className="text-[11px] text-muted-foreground/40 line-clamp-2 mt-0.5">{s.body}</div>
+                    <div className="text-[11px] text-[#404044] line-clamp-2 mt-0.5">{s.body}</div>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); onAddSnippet(s); }}
-                    className="flex-shrink-0 p-1.5 rounded text-white/20 hover:text-foreground hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                    className="flex-shrink-0 p-1.5 rounded text-[#333] hover:text-foreground hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
                     title="Add to proposal"
                   >
                     <Plus size={14} />
@@ -181,7 +181,7 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
         {activeTab === 'videos' && (
           <div className="space-y-1">
             {Object.keys(filteredVideoGroups).length === 0 && (
-              <div className="text-xs text-muted-foreground/30 text-center py-6">No videos found</div>
+              <div className="text-xs text-[#303033] text-center py-6">No videos found</div>
             )}
             {Object.entries(filteredVideoGroups).map(([projectId, group]) => {
               const isExpanded = expandedProjects.has(projectId);
@@ -193,7 +193,7 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
                   >
                     {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     <span className="truncate">{group.projectTitle}</span>
-                    <span className="text-muted-foreground/30 ml-auto flex-shrink-0">{group.videos.length}</span>
+                    <span className="text-[#303033] ml-auto flex-shrink-0">{group.videos.length}</span>
                   </button>
                   {isExpanded && (
                     <div className="space-y-1 ml-4 mb-2">
@@ -209,11 +209,11 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="text-xs text-foreground truncate">{v.title}</div>
-                              <div className="text-[10px] text-muted-foreground/40">{v.video_type} · {v.aspect_ratio}</div>
+                              <div className="text-[10px] text-[#404044]">{v.video_type} · {v.aspect_ratio}</div>
                             </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onAddVideo(v); }}
-                              className="flex-shrink-0 p-1.5 rounded text-white/20 hover:text-foreground hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
+                              className="flex-shrink-0 p-1.5 rounded text-[#333] hover:text-foreground hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100"
                               title="Add to proposal"
                             >
                               <Plus size={14} />

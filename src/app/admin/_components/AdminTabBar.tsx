@@ -31,7 +31,7 @@ export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfte
             className={`flex items-center gap-1.5 px-[15px] py-[7px] rounded-lg text-sm font-medium transition-colors border ${
               activeTab === tab.value
                 ? (tab.activeClassName ?? 'bg-white/10 text-white border-transparent')
-                : 'text-white/40 hover:text-white/70 hover:bg-white/5 border-transparent'
+                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
             }`}
           >
             {tab.icon}

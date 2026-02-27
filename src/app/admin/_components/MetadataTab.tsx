@@ -54,10 +54,10 @@ export type MetadataTabHandle = {
 };
 
 const inputClass =
-  'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors disabled:opacity-40';
+  'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors disabled:opacity-40';
 
 const textareaClass =
-  'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors resize-none disabled:opacity-40';
+  'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors resize-none disabled:opacity-40';
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -190,7 +190,7 @@ function ClientCombobox({
         <Link2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400/70" />
       )}
       {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#111] border border-white/15 rounded-lg shadow-xl">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
           {filtered.slice(0, 20).map((opt) => (
             <button
               key={opt.id}
@@ -366,7 +366,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
               <button
                 type="button"
                 onClick={() => set('slug', slugify(form.title))}
-                className="w-10 h-10 flex items-center justify-center text-muted-foreground/50 border border-border rounded-lg hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
+                className="w-10 h-10 flex items-center justify-center text-[#515155] border border-border rounded-lg hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
                 title="Regenerate from title"
               >
                 <RefreshCw size={14} />
@@ -384,7 +384,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
                 <option value="video">Video</option>
                 <option value="design">Design</option>
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
             </div>
           </Field>
         </div>
@@ -420,7 +420,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
                   <option key={pt} value={pt}>{pt}</option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
             </div>
           </Field>
         </div>
@@ -445,7 +445,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 
       {/* Tags & Deliverables */}
       {showMetadata && (<><section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
+        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
           Tags &amp; Deliverables
         </h3>
         <div className="grid grid-cols-2 gap-4">
@@ -470,7 +470,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 
       {/* Scope */}
       <section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
+        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
           Production Scope
         </h3>
         <div className="grid grid-cols-4 gap-4">
@@ -499,7 +499,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 
       {/* Testimonial */}
       <section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
+        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
           Testimonial
         </h3>
         <Field>
@@ -525,19 +525,19 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
                       </option>
                     ))}
                 </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
               </div>
               {linkedTestimonialId && (
-                <p className="text-xs text-muted-foreground/50 italic">
+                <p className="text-xs text-[#515155] italic">
                   &ldquo;{testimonials.find((t) => t.id === linkedTestimonialId)?.quote.slice(0, 120)}…&rdquo;
                 </p>
               )}
-              <p className="text-[10px] text-muted-foreground/40">
+              <p className="text-[10px] text-[#404044]">
                 Manage testimonials in the <a href="/admin/testimonials" className="underline hover:text-foreground">Testimonials</a> section.
               </p>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground/40">
+            <p className="text-xs text-[#404044]">
               No testimonials available. <a href="/admin/testimonials" className="underline hover:text-foreground">Create one</a> first.
             </p>
           )}
@@ -546,7 +546,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 
       {/* Published */}
       {showProject && (<section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
+        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
           Visibility
         </h3>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">

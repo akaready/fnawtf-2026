@@ -52,7 +52,7 @@ function MergeDialog({ tags, sourceIds, category, onClose, onMerge, isPending }:
 
         <div className="px-6 py-5 space-y-5">
           <div>
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-2">Merging</p>
+            <p className="text-xs text-[#616166] uppercase tracking-wider mb-2">Merging</p>
             <div className="flex flex-wrap gap-1.5">
               {sourceTags.map((t) => (
                 <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-[#2a2a2a] text-sm text-foreground">
@@ -64,7 +64,7 @@ function MergeDialog({ tags, sourceIds, category, onClose, onMerge, isPending }:
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-2">Keep as</p>
+            <p className="text-xs text-[#616166] uppercase tracking-wider mb-2">Keep as</p>
             <div className="space-y-1.5">
               {sourceTags.map((t) => (
                 <label key={t.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-white/[0.04] transition-colors">
@@ -229,7 +229,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-foreground tracking-tight">{config.label}</h3>
-            <span className="text-xs text-muted-foreground/50 bg-white/[0.04] px-1.5 py-0.5 rounded">{tags.length}</span>
+            <span className="text-xs text-[#515155] bg-white/[0.04] px-1.5 py-0.5 rounded">{tags.length}</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -257,7 +257,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
       {/* Tag list */}
       <div className="flex-1 divide-y divide-[#2a2a2a]">
         {tags.length === 0 && !addingNew && (
-          <div className="px-5 py-8 text-center text-xs text-muted-foreground/40">No tags yet</div>
+          <div className="px-5 py-8 text-center text-xs text-[#404044]">No tags yet</div>
         )}
         {tags.map((tag) => {
           const isEditing = editingId === tag.id;
@@ -303,7 +303,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingId(tag.id); setPendingDeleteId(null); }}
                         disabled={isPending}
-                        className="p-1 rounded text-muted-foreground/50 hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                        className="p-1 rounded text-[#515155] hover:text-foreground hover:bg-white/[0.06] transition-colors"
                         title="Rename"
                       >
                         <Pencil size={11} />
@@ -311,7 +311,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                       <button
                         onClick={(e) => { e.stopPropagation(); setPendingDeleteId(tag.id); setEditingId(null); }}
                         disabled={isPending}
-                        className="p-1 rounded text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="p-1 rounded text-[#515155] hover:text-red-400 hover:bg-red-500/10 transition-colors"
                         title="Delete"
                       >
                         <Trash2 size={11} />
@@ -319,12 +319,12 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                     </div>
                     {/* Project count — clickable if > 0 */}
                     {tag.projectCount > 0 ? (
-                      <span className="flex items-center gap-1 text-xs tabular-nums flex-shrink-0 text-muted-foreground/50">
+                      <span className="flex items-center gap-1 text-xs tabular-nums flex-shrink-0 text-[#515155]">
                         {tag.projectCount}
                         <ChevronRight size={10} className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
                       </span>
                     ) : (
-                      <span className="text-xs tabular-nums flex-shrink-0 text-muted-foreground/20">0</span>
+                      <span className="text-xs tabular-nums flex-shrink-0 text-[#202022]">0</span>
                     )}
                   </>
                 )}
@@ -334,7 +334,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
               {isExpanded && (
                 <div className="py-2">
                   {isLoadingProjects ? (
-                    <div className="px-5 py-3 text-xs text-muted-foreground/40">Loading…</div>
+                    <div className="px-5 py-3 text-xs text-[#404044]">Loading…</div>
                   ) : cachedProjects && cachedProjects.length > 0 ? (
                     <div>
                       {cachedProjects.map((project) => (
@@ -345,13 +345,13 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                         >
                           <span className={`w-4 flex items-center justify-center flex-shrink-0`}><span className={`w-1.5 h-1.5 rounded-full ${project.published ? 'bg-green-500' : 'bg-white/20'}`} /></span>
                           <span className="text-xs text-foreground/80 flex-shrink-0 truncate max-w-[200px]">{project.title}</span>
-                          <span className="text-xs text-muted-foreground/60 flex-1 min-w-0 truncate">{project.client_name}</span>
-                          <span className="flex-shrink-0 w-8 flex justify-center"><ArrowUpRight size={11} className="text-muted-foreground/30 group-hover/proj:text-muted-foreground transition-colors" /></span>
+                          <span className="text-xs text-[#616166] flex-1 min-w-0 truncate">{project.client_name}</span>
+                          <span className="flex-shrink-0 w-8 flex justify-center"><ArrowUpRight size={11} className="text-[#303033] group-hover/proj:text-muted-foreground transition-colors" /></span>
                         </Link>
                       ))}
                     </div>
                   ) : (
-                    <div className="px-3 py-3 text-xs text-muted-foreground/40">No projects found</div>
+                    <div className="px-3 py-3 text-xs text-[#404044]">No projects found</div>
                   )}
                 </div>
               )}
@@ -373,7 +373,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                   if (e.key === 'Escape') { setAddingNew(false); setNewValue(''); }
                 }}
                 placeholder="New tag name…"
-                className="flex-1 min-w-0 bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-sm text-foreground outline-none focus:border-white/40 placeholder:text-muted-foreground/40"
+                className="flex-1 min-w-0 bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-sm text-foreground outline-none focus:border-white/40 placeholder:text-[#404044]"
               />
               <button onClick={handleAdd} className="text-green-400 hover:text-green-300 transition-colors flex-shrink-0">
                 <Check size={13} />

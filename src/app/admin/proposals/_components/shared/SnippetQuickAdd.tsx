@@ -15,7 +15,7 @@ export function SnippetQuickAdd({ snippets, proposalType, onInsert }: SnippetQui
 
   if (matching.length === 0) {
     return (
-      <p className="text-xs text-white/25">No snippets for this proposal type.</p>
+      <p className="text-xs text-[#404040]">No snippets for this proposal type.</p>
     );
   }
 
@@ -27,13 +27,13 @@ export function SnippetQuickAdd({ snippets, proposalType, onInsert }: SnippetQui
             key={snippet.id}
             type="button"
             onClick={() => onInsert(snippet.body)}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/[0.04] whitespace-nowrap hover:bg-white/[0.08] transition-colors text-white/60 hover:text-white"
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs border border-white/10 bg-white/[0.04] whitespace-nowrap hover:bg-white/[0.08] transition-colors text-[#999] hover:text-white"
           >
             {snippet.title}
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-white/20 font-mono">
+      <p className="text-[10px] text-[#333] font-mono">
         {matching.length} snippet{matching.length !== 1 ? 's' : ''} available
       </p>
     </div>

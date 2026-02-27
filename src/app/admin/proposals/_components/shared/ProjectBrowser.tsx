@@ -50,12 +50,12 @@ function FilterSelect({ value, onChange, placeholder, options }: {
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center justify-between gap-1 bg-black/40 border rounded-md px-2 py-1.5 text-xs transition-colors cursor-pointer min-w-0 ${
           value
-            ? 'border-white/20 text-white/70'
-            : 'border-[#2a2a2a] text-white/40'
+            ? 'border-white/20 text-[#b3b3b3]'
+            : 'border-[#2a2a2a] text-[#666]'
         } hover:border-white/20`}
       >
         <span className="truncate">{value || placeholder}</span>
-        <ChevronsUpDown size={11} className="flex-shrink-0 text-white/25" />
+        <ChevronsUpDown size={11} className="flex-shrink-0 text-[#404040]" />
       </button>
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-md shadow-xl overflow-hidden">
@@ -66,7 +66,7 @@ function FilterSelect({ value, onChange, placeholder, options }: {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${placeholder.toLowerCase()}…`}
-              className="w-full bg-transparent text-xs text-white/70 placeholder:text-white/20 focus:outline-none"
+              className="w-full bg-transparent text-xs text-[#b3b3b3] placeholder:text-[#333] focus:outline-none"
             />
           </div>
           <div className="max-h-40 overflow-y-auto admin-scrollbar">
@@ -74,7 +74,7 @@ function FilterSelect({ value, onChange, placeholder, options }: {
               type="button"
               onClick={() => { onChange(''); setOpen(false); }}
               className={`w-full text-left px-2.5 py-1.5 text-xs transition-colors ${
-                !value ? 'text-white/60 bg-white/[0.06]' : 'text-white/35 hover:bg-white/[0.06] hover:text-white/50'
+                !value ? 'text-[#999] bg-white/[0.06]' : 'text-white/35 hover:bg-white/[0.06] hover:text-[#808080]'
               }`}
             >
               All
@@ -86,16 +86,16 @@ function FilterSelect({ value, onChange, placeholder, options }: {
                 onClick={() => { onChange(opt); setOpen(false); }}
                 className={`w-full text-left px-2.5 py-1.5 text-xs transition-colors flex items-center justify-between ${
                   value === opt
-                    ? 'text-white/80 bg-white/[0.06]'
-                    : 'text-white/50 hover:bg-white/[0.06] hover:text-white/70'
+                    ? 'text-[#ccc] bg-white/[0.06]'
+                    : 'text-[#808080] hover:bg-white/[0.06] hover:text-[#b3b3b3]'
                 }`}
               >
                 <span className="truncate">{opt}</span>
-                {value === opt && <Check size={11} className="flex-shrink-0 text-white/40" />}
+                {value === opt && <Check size={11} className="flex-shrink-0 text-[#666]" />}
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="px-2.5 py-2 text-xs text-white/20">No matches</p>
+              <p className="px-2.5 py-2 text-xs text-[#333]">No matches</p>
             )}
           </div>
         </div>
@@ -123,7 +123,7 @@ function uniqueSortedScalar(projects: BrowserProject[], field: keyof Pick<Browse
 }
 
 const numInputCls =
-  'bg-black/40 border border-[#2a2a2a] rounded-md text-xs text-white/70 focus:outline-none focus:border-white/20 transition-colors w-full text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
+  'bg-black/40 border border-[#2a2a2a] rounded-md text-xs text-[#b3b3b3] focus:outline-none focus:border-white/20 transition-colors w-full text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
 export function ProjectBrowser({
   projects,
@@ -197,13 +197,13 @@ export function ProjectBrowser({
       {/* Search + filter dropdowns */}
       <div className="px-3 py-3 border-b border-[#2a2a2a] space-y-2 flex-shrink-0">
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404040] pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects…"
-            className="w-full bg-black/40 border border-[#2a2a2a] rounded-md pl-8 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+            className="w-full bg-black/40 border border-[#2a2a2a] rounded-md pl-8 pr-3 py-2 text-sm text-white placeholder:text-[#333] focus:outline-none focus:border-white/20"
           />
         </div>
         {/* Tag filters — ordered to match tags admin page */}
@@ -225,7 +225,7 @@ export function ProjectBrowser({
             { label: 'Locs', value: locationFilter, set: setLocationFilter, min: 1, step: 1 },
           ] as const).map(({ label, value, set, min, step }) => (
             <div key={label} className="flex items-center gap-1.5">
-              <span className="text-xs text-white/30 leading-none whitespace-nowrap">{label}</span>
+              <span className="text-xs text-[#4d4d4d] leading-none whitespace-nowrap">{label}</span>
               <input
                 type="number"
                 value={value ?? ''}
@@ -239,14 +239,14 @@ export function ProjectBrowser({
                 <button
                   type="button"
                   onClick={() => set(stepNum(value, step, min))}
-                  className="px-1 py-px rounded hover:bg-white/[0.08] text-white/30 hover:text-white/60 transition-colors leading-none"
+                  className="px-1 py-px rounded hover:bg-white/[0.08] text-[#4d4d4d] hover:text-[#999] transition-colors leading-none"
                 >
                   <ChevronUp size={12} strokeWidth={2.5} />
                 </button>
                 <button
                   type="button"
                   onClick={() => set(stepNum(value, -step, min))}
-                  className="px-1 py-px rounded hover:bg-white/[0.08] text-white/30 hover:text-white/60 transition-colors leading-none"
+                  className="px-1 py-px rounded hover:bg-white/[0.08] text-[#4d4d4d] hover:text-[#999] transition-colors leading-none"
                 >
                   <ChevronDown size={12} strokeWidth={2.5} />
                 </button>
@@ -259,7 +259,7 @@ export function ProjectBrowser({
       {/* Project list */}
       <div className="flex-1 overflow-y-auto admin-scrollbar p-2">
         {filtered.length === 0 ? (
-          <p className="text-center text-xs text-white/20 py-8">No matching projects.</p>
+          <p className="text-center text-xs text-[#333] py-8">No matching projects.</p>
         ) : (
           <div className="flex flex-col gap-0.5">
             {filtered.map((project) => {
@@ -286,17 +286,17 @@ export function ProjectBrowser({
 
                   {/* Text */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-white/70' : 'text-white/50'}`}>
+                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-[#b3b3b3]' : 'text-[#808080]'}`}>
                       {project.title}
                     </p>
                     {project.client_name && (
-                      <p className="text-xs text-white/25 truncate">{project.client_name}</p>
+                      <p className="text-xs text-[#404040] truncate">{project.client_name}</p>
                     )}
                   </div>
 
                   {/* State indicator */}
                   {isLoading ? (
-                    <Loader2 size={14} className="text-white/30 animate-spin flex-shrink-0" />
+                    <Loader2 size={14} className="text-[#4d4d4d] animate-spin flex-shrink-0" />
                   ) : isSelected ? (
                     <>
                       <span className="flex-shrink-0 text-green-400/60 group-hover/item:hidden">

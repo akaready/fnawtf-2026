@@ -66,7 +66,7 @@ function ProjectListItem({
         <p className="text-base font-medium text-white/90 truncate leading-tight">
           {item.project.title}
         </p>
-        <p className="text-sm text-white/40 truncate mt-0.5">
+        <p className="text-sm text-[#666] truncate mt-0.5">
           {item.project.client_name ?? ''}
         </p>
       </div>
@@ -77,7 +77,7 @@ function ProjectListItem({
         value={blurb}
         onChange={(e) => setBlurb(e.target.value)}
         placeholder="What to look for..."
-        className="w-full bg-black/40 border border-[#2a2a2a] rounded text-sm text-white/70 placeholder:text-white/20 px-2.5 py-2 resize-none focus:outline-none focus:border-white/20 transition-colors leading-relaxed"
+        className="w-full bg-black/40 border border-[#2a2a2a] rounded text-sm text-[#b3b3b3] placeholder:text-[#333] px-2.5 py-2 resize-none focus:outline-none focus:border-white/20 transition-colors leading-relaxed"
       />
 
       {/* Action row */}
@@ -89,7 +89,7 @@ function ProjectListItem({
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-40 ${
             blurb.trim()
               ? 'bg-white text-black hover:bg-white/90'
-              : 'text-white/40 hover:text-white/70 hover:bg-white/[0.06]'
+              : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/[0.06]'
           }`}
         >
           {saving ? (
@@ -107,7 +107,7 @@ function ProjectListItem({
           onClick={() => onMoveUp(item.id)}
           disabled={isFirst}
           title="Move up"
-          className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.04] text-white/30 hover:text-white/60 hover:bg-white/[0.08] transition-colors disabled:opacity-20 disabled:hover:bg-white/[0.04] disabled:hover:text-white/30"
+          className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.04] text-[#4d4d4d] hover:text-[#999] hover:bg-white/[0.08] transition-colors disabled:opacity-20 disabled:hover:bg-white/[0.04] disabled:hover:text-[#4d4d4d]"
         >
           <ChevronUp size={13} />
         </button>
@@ -115,7 +115,7 @@ function ProjectListItem({
           onClick={() => onMoveDown(item.id)}
           disabled={isLast}
           title="Move down"
-          className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.04] text-white/30 hover:text-white/60 hover:bg-white/[0.08] transition-colors disabled:opacity-20 disabled:hover:bg-white/[0.04] disabled:hover:text-white/30"
+          className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.04] text-[#4d4d4d] hover:text-[#999] hover:bg-white/[0.08] transition-colors disabled:opacity-20 disabled:hover:bg-white/[0.04] disabled:hover:text-[#4d4d4d]"
         >
           <ChevronDown size={13} />
         </button>
@@ -135,7 +135,7 @@ function ProjectListItem({
             <button
               onClick={() => setConfirmingRemove(false)}
               title="Cancel"
-              className="w-6 h-6 flex items-center justify-center rounded text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded text-[#4d4d4d] hover:text-[#999] hover:bg-white/[0.06] transition-colors"
             >
               <X size={12} />
             </button>
@@ -143,7 +143,7 @@ function ProjectListItem({
         ) : (
           <button
             onClick={() => setConfirmingRemove(true)}
-            className="w-6 h-6 flex items-center justify-center rounded text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded text-[#333] hover:text-red-400 hover:bg-red-500/10 transition-colors"
             aria-label="Remove project"
           >
             <X size={12} />
@@ -227,12 +227,12 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
     <div className="flex h-full">
       {/* Left panel: selected + ordered list (40%) */}
       <div className="w-[40%] border-r border-[#2a2a2a] overflow-y-auto admin-scrollbar p-4">
-        <p className="text-xs font-mono text-white/25 uppercase tracking-widest mb-4">
+        <p className="text-xs font-mono text-[#404040] uppercase tracking-widest mb-4">
           Selected ({proposalProjects.length})
         </p>
 
         {sortedProposalProjects.length === 0 ? (
-          <p className="text-xs text-white/25 text-center mt-8">
+          <p className="text-xs text-[#404040] text-center mt-8">
             Click projects on the right to add them.
           </p>
         ) : (

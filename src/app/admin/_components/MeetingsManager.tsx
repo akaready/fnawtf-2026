@@ -168,13 +168,13 @@ export function MeetingsManager({
       sortable: true,
       render: (row) => (
         <div className="text-sm">
-          <div className="text-white/70">
+          <div className="text-[#b3b3b3]">
             {new Date(row.start_time).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
             })}
           </div>
-          <div className="text-white/30 text-xs">
+          <div className="text-[#4d4d4d] text-xs">
             {new Date(row.start_time).toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
@@ -193,7 +193,7 @@ export function MeetingsManager({
             new Date(row.start_time).getTime()) /
             60_000,
         );
-        return <span className="text-sm text-white/40">{mins}m</span>;
+        return <span className="text-sm text-[#666]">{mins}m</span>;
       },
     },
     {
@@ -201,7 +201,7 @@ export function MeetingsManager({
       label: 'Attendees',
       width: 'w-24',
       render: (row) => (
-        <span className="flex items-center gap-1 text-sm text-white/40">
+        <span className="flex items-center gap-1 text-sm text-[#666]">
           <Users size={12} />
           {row.meeting_attendees.length}
         </span>
@@ -227,7 +227,7 @@ export function MeetingsManager({
                 ? 'text-amber-400'
                 : row.transcript_status === 'failed'
                   ? 'text-red-400'
-                  : 'text-white/20'
+                  : 'text-[#333]'
           }`}
         >
           <FileText size={12} />
@@ -254,7 +254,7 @@ export function MeetingsManager({
               </span>
             ))}
             {companyRels.length > 3 && (
-              <span className="text-[10px] text-white/30">
+              <span className="text-[10px] text-[#4d4d4d]">
                 +{companyRels.length - 3}
               </span>
             )}
@@ -272,11 +272,11 @@ export function MeetingsManager({
         <div className="flex-1 flex items-center justify-center">
           <div className="max-w-lg w-full text-center space-y-8 px-6">
             <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto">
-              <Calendar size={36} className="text-white/30" />
+              <Calendar size={36} className="text-[#4d4d4d]" />
             </div>
             <div>
               <h2 className="text-2xl font-semibold">Connect your calendar</h2>
-              <p className="text-base text-white/40 mt-3 leading-relaxed">
+              <p className="text-base text-[#666] mt-3 leading-relaxed">
                 Paste your Google Calendar iCal feed URL to start automatically
                 tracking meetings and deploying Recall.AI bots.
               </p>
@@ -304,7 +304,7 @@ export function MeetingsManager({
                 </button>
               </div>
             </div>
-            <p className="text-sm text-white/25 leading-relaxed">
+            <p className="text-sm text-[#404040] leading-relaxed">
               Find this in Google Calendar → Settings → Calendar settings →
               Secret address in iCal format
             </p>
@@ -352,11 +352,11 @@ export function MeetingsManager({
           ...t,
           badge:
             t.value !== 'all' ? (
-              <span className="ml-1 text-[10px] text-white/30">
+              <span className="ml-1 text-[10px] text-[#4d4d4d]">
                 {meetings.filter((m) => m.status === t.value).length || ''}
               </span>
             ) : (
-              <span className="ml-1 text-[10px] text-white/30">
+              <span className="ml-1 text-[10px] text-[#4d4d4d]">
                 {meetings.length}
               </span>
             ),

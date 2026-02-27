@@ -51,7 +51,7 @@ export function AdminPageHeader({
           <div className="flex-1 flex items-center justify-end gap-3 ml-auto min-w-0">
             {onSearchChange !== undefined && (
               <div className="relative w-64">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
                 <input
                   type="text"
                   value={search ?? ''}
@@ -62,7 +62,7 @@ export function AdminPageHeader({
                 {search && (
                   <button
                     onClick={() => onSearchChange('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616166] hover:text-foreground transition-colors"
                   >
                     <X size={14} />
                   </button>

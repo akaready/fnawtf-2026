@@ -42,7 +42,7 @@ const TYPE_COLORS: Record<ContactType, string> = {
 };
 
 const TYPE_ICON_COLORS: Record<string, string> = {
-  all: 'text-white/40',
+  all: 'text-[#666]',
   crew: 'text-purple-400',
   cast: 'text-pink-400',
   contact: 'text-green-400',
@@ -332,7 +332,7 @@ function PersonPanel({
     await searchEmails(allUrls);
   };
 
-  const inputClass = 'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
+  const inputClass = 'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[520px]">
@@ -348,7 +348,7 @@ function PersonPanel({
           {draft.headshot_url ? (
             <img src={draft.headshot_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 text-muted-foreground/40">
+            <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 text-[#404044]">
               <ImageIcon size={16} />
             </div>
           )}
@@ -358,14 +358,14 @@ function PersonPanel({
                 type="text"
                 value={draft.first_name}
                 onChange={(e) => handleChange('first_name', e.target.value)}
-                className="bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground/30 focus:outline-none flex-1 min-w-0"
+                className="bg-transparent text-lg font-semibold text-foreground placeholder:text-[#303033] focus:outline-none flex-1 min-w-0"
                 placeholder="First"
               />
               <input
                 type="text"
                 value={draft.last_name}
                 onChange={(e) => handleChange('last_name', e.target.value)}
-                className="bg-transparent text-lg font-semibold text-foreground placeholder:text-muted-foreground/30 focus:outline-none flex-1 min-w-0"
+                className="bg-transparent text-lg font-semibold text-foreground placeholder:text-[#303033] focus:outline-none flex-1 min-w-0"
                 placeholder="Last"
               />
             </div>
@@ -394,12 +394,12 @@ function PersonPanel({
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
               activeTab === tab.id
                 ? 'bg-white/10 text-white'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
             }`}
           >
             {tab.label}
             {tab.count > 0 && (
-              <span className="ml-1 text-xs text-white/30">{tab.count}</span>
+              <span className="ml-1 text-xs text-[#4d4d4d]">{tab.count}</span>
             )}
           </button>
         ))}
@@ -419,7 +419,7 @@ function PersonPanel({
                     key={t}
                     onClick={() => handleChange('type', t)}
                     className={`px-3 py-1.5 text-xs rounded-lg border capitalize transition-colors ${
-                      draft.type === t ? TYPE_COLORS[t] : 'border-[#2a2a2a] text-muted-foreground/50 hover:text-foreground hover:border-white/20'
+                      draft.type === t ? TYPE_COLORS[t] : 'border-[#2a2a2a] text-[#515155] hover:text-foreground hover:border-white/20'
                     }`}
                   >
                     {t}
@@ -494,9 +494,9 @@ function PersonPanel({
                       placeholder={placeholder}
                       className={`${inputClass} pl-8 pr-8`}
                     />
-                    <Icon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/30" />
+                    <Icon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#303033]" />
                     {draft[key] && (
-                      <a href={draft[key]!} target="_blank" rel="noopener noreferrer" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/30 hover:text-foreground hover:bg-white/10 transition-colors">
+                      <a href={draft[key]!} target="_blank" rel="noopener noreferrer" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-[#303033] hover:text-foreground hover:bg-white/10 transition-colors">
                         <ExternalLink size={12} />
                       </a>
                     )}
@@ -538,7 +538,7 @@ function PersonPanel({
                       <img src={hs.url} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex items-center justify-between px-1.5 py-1">
-                      <span className="text-xs text-muted-foreground/50">{hs.width}×{hs.height}</span>
+                      <span className="text-xs text-[#515155]">{hs.width}×{hs.height}</span>
                       <div className="flex items-center gap-0.5">
                         <button
                           onClick={() => {
@@ -550,7 +550,7 @@ function PersonPanel({
                           className={`p-1 rounded transition-colors ${
                             hs.featured
                               ? 'text-yellow-400'
-                              : 'text-muted-foreground/30 hover:text-yellow-400 hover:bg-yellow-500/10'
+                              : 'text-[#303033] hover:text-yellow-400 hover:bg-yellow-500/10'
                           }`}
                           title={hs.featured ? 'Featured' : 'Set as featured'}
                         >
@@ -563,7 +563,7 @@ function PersonPanel({
                               setHeadshots(prev => prev.filter(h => h.id !== hs.id));
                             });
                           }}
-                          className="p-1 rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1 rounded text-[#303033] hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Delete headshot"
                         >
                           <Trash2 size={12} />
@@ -574,12 +574,12 @@ function PersonPanel({
                 ))}
               </div>
             ) : !hsSearchResults && (
-              <p className="text-sm text-muted-foreground/40">No headshots yet. Use Fetch Data to search.</p>
+              <p className="text-sm text-[#404044]">No headshots yet. Use Fetch Data to search.</p>
             )}
             {/* Search results */}
             {hsSearchResults && hsSearchResults.length > 0 && (
               <div className="space-y-2">
-                <p className="text-[11px] text-muted-foreground/50">Search results — select to save:</p>
+                <p className="text-[11px] text-[#515155]">Search results — select to save:</p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {hsSearchResults.map((img, i) => (
                     <button
@@ -611,7 +611,7 @@ function PersonPanel({
                   </button>
                   <button
                     onClick={() => { setHsSearchResults(null); setHsSelected(new Set()); }}
-                    className="px-3 py-1.5 text-xs rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-white/5 transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg text-[#515155] hover:text-foreground hover:bg-white/5 transition-colors"
                   >
                     Cancel
                   </button>
@@ -619,7 +619,7 @@ function PersonPanel({
               </div>
             )}
             {hsSearchResults && hsSearchResults.length === 0 && (
-              <p className="text-xs text-muted-foreground/40">No headshots found for &ldquo;{contactFullName(draft)}&rdquo;</p>
+              <p className="text-xs text-[#404044]">No headshots found for &ldquo;{contactFullName(draft)}&rdquo;</p>
             )}
           </>
         )}
@@ -630,7 +630,7 @@ function PersonPanel({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Production Roles</label>
               {loadingMeta ? (
-                <p className="text-xs text-muted-foreground/40">Loading...</p>
+                <p className="text-xs text-[#404044]">Loading...</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {roles.map((r) => (
@@ -640,7 +640,7 @@ function PersonPanel({
                       className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
                         personRoleIds.has(r.id)
                           ? 'bg-white/10 border-white/20 text-foreground'
-                          : 'border-[#2a2a2a] text-muted-foreground/50 hover:text-foreground hover:border-white/15'
+                          : 'border-[#2a2a2a] text-[#515155] hover:text-foreground hover:border-white/15'
                       }`}
                     >
                       {r.name}
@@ -672,16 +672,16 @@ function PersonPanel({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white/50 group-hover:text-white/70 truncate">{p.title}</p>
+                      <p className="text-sm font-medium text-[#808080] group-hover:text-[#b3b3b3] truncate">{p.title}</p>
                       {p.client_name && (
-                        <p className="text-xs text-white/25 truncate">{p.client_name}</p>
+                        <p className="text-xs text-[#404040] truncate">{p.client_name}</p>
                       )}
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground/40">No linked projects.</p>
+              <p className="text-sm text-[#404044]">No linked projects.</p>
             )}
           </>
         )}
@@ -775,7 +775,7 @@ function FilterDropdown({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 hover:border-white/5 transition-colors border border-transparent"
+        className="flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 hover:border-white/5 transition-colors border border-transparent"
       >
         {icon}
         {label}
@@ -785,18 +785,18 @@ function FilterDropdown({
       {open && (
         <div className="absolute top-full left-0 mt-[5px] w-72 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in">
           <div className="flex items-center gap-2 px-3 py-[10px] border-b border-[#2a2a2a] bg-black/30">
-            <Search size={13} className="text-white/30 flex-shrink-0" />
+            <Search size={13} className="text-[#4d4d4d] flex-shrink-0" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${searchPlural ?? `${label.toLowerCase()}s`}...`}
-              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/25"
+              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#404040]"
             />
           </div>
           <div className="max-h-56 overflow-y-auto admin-scrollbar py-1">
             {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-white/25 text-center">No matches</div>
+              <div className="px-3 py-4 text-xs text-[#404040] text-center">No matches</div>
             ) : (
               filtered.map((item) => (
                 <button
@@ -805,12 +805,12 @@ function FilterDropdown({
                   className={`w-full text-left px-3 py-1.5 transition-colors ${
                     value === item.id
                       ? 'bg-white/10 text-white'
-                      : 'text-white/60 hover:bg-white/[0.06] hover:text-white/90'
+                      : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
                   }`}
                 >
                   <span className="text-sm truncate block">{item.name}</span>
                   {item.subtitle && (
-                    <span className="text-xs text-white/30 truncate block">{item.subtitle}</span>
+                    <span className="text-xs text-[#4d4d4d] truncate block">{item.subtitle}</span>
                   )}
                 </button>
               ))
@@ -848,22 +848,22 @@ function FieldsPickerPanel({
     <div className="absolute right-0 top-full mt-[5px] w-64 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in p-3">
       <div className="space-y-2">
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404044]" />
           <input
             type="text"
             value={fieldSearch}
             onChange={(e) => setFieldSearch(e.target.value)}
             placeholder="Search fields…"
-            className="w-full pl-8 pr-3 py-1.5 bg-black/30 border border-[#2a2a2a] rounded-lg text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-white/20"
+            className="w-full pl-8 pr-3 py-1.5 bg-black/30 border border-[#2a2a2a] rounded-lg text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:border-white/20"
             autoFocus
           />
         </div>
         <div className="flex items-center gap-2 pb-1 border-b border-[#2a2a2a]">
-          <button onClick={onShowAll} className="text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors">
+          <button onClick={onShowAll} className="text-[11px] text-[#515155] hover:text-foreground transition-colors">
             Show all
           </button>
-          <span className="text-muted-foreground/20">·</span>
-          <button onClick={onHideAll} className="text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors">
+          <span className="text-[#202022]">·</span>
+          <button onClick={onHideAll} className="text-[11px] text-[#515155] hover:text-foreground transition-colors">
             Hide all
           </button>
         </div>
@@ -879,13 +879,13 @@ function FieldsPickerPanel({
                 onChange={() => onToggle(col.key)}
                 className="accent-white rounded"
               />
-              <span className={visibleCols.has(col.key) ? 'text-foreground' : 'text-muted-foreground/50'}>
+              <span className={visibleCols.has(col.key) ? 'text-foreground' : 'text-[#515155]'}>
                 {col.label}
               </span>
             </label>
           ))}
           {filteredCols.length === 0 && (
-            <div className="px-2.5 py-3 text-xs text-muted-foreground/30 text-center">No matches</div>
+            <div className="px-2.5 py-3 text-xs text-[#303033] text-center">No matches</div>
           )}
         </div>
       </div>
@@ -1188,7 +1188,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             value: t,
             label: t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1),
             icon: <Icon size={13} className={TYPE_ICON_COLORS[t]} />,
-            badge: <span className="text-xs text-white/30 ml-0.5">{typeCounts[t] ?? 0}</span>,
+            badge: <span className="text-xs text-[#4d4d4d] ml-0.5">{typeCounts[t] ?? 0}</span>,
             activeClassName: TYPE_ACTIVE_CLASSES[t],
           };
         })}
@@ -1228,12 +1228,12 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             {companyFilter && (() => {
               const name = companies.find((co) => co.id === companyFilter)?.name;
               return name ? (
-                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-white/80 border border-[#2a2a2a]">
-                  <Building2 size={13} className="text-white/40" />
+                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                  <Building2 size={13} className="text-[#666]" />
                   <span className="truncate max-w-[160px]">{name}</span>
                   <button
                     onClick={() => setCompanyFilter(null)}
-                    className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
+                    className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"
                   >
                     <X size={12} />
                   </button>
@@ -1243,12 +1243,12 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             {projectFilter && (() => {
               const p = projects.find((p) => p.id === projectFilter);
               return p ? (
-                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-white/80 border border-[#2a2a2a]">
-                  <LayoutGrid size={13} className="text-white/40" />
+                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                  <LayoutGrid size={13} className="text-[#666]" />
                   <span className="truncate max-w-[160px]">{p.title}</span>
                   <button
                     onClick={() => setProjectFilter(null)}
-                    className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
+                    className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"
                   >
                     <X size={12} />
                   </button>
@@ -1258,12 +1258,12 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             {roleFilter && (() => {
               const name = roles.find((r) => r.id === roleFilter)?.name;
               return name ? (
-                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-white/80 border border-[#2a2a2a]">
-                  <Tag size={13} className="text-white/40" />
+                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                  <Tag size={13} className="text-[#666]" />
                   <span className="truncate max-w-[160px]">{name}</span>
                   <button
                     onClick={() => setRoleFilter(null)}
-                    className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
+                    className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"
                   >
                     <X size={12} />
                   </button>
@@ -1281,7 +1281,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
               className={`flex items-center gap-1.5 px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap border ${
                 fieldsModified
                   ? 'bg-accent/10 text-accent border-accent/25'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/5 border-transparent'
+                  : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
               }`}
             >
               <SlidersHorizontal size={14} strokeWidth={1.75} />
@@ -1306,7 +1306,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             className={`flex items-center gap-1.5 px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
               Object.keys(colWidths).length > 0
                 ? 'bg-accent/10 text-accent'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
             }`}
             title="Reset all column widths to auto-fit"
           >
@@ -1322,7 +1322,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
         <div className="absolute top-0 right-0 w-3 h-[41px] bg-[#141414] z-20 pointer-events-none border-b border-[#2a2a2a]" />
       <div ref={tableRef} className="h-full overflow-y-auto admin-scrollbar">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground/40 text-sm">
+          <div className="text-center py-12 text-[#404044] text-sm">
             {contacts.length === 0 ? 'No people yet.' : 'No matching people.'}
           </div>
         ) : isCastView ? (
@@ -1340,12 +1340,12 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                   {c.headshot_url ? (
                     <img src={c.headshot_url} alt={contactFullName(c)} className="w-full h-full object-cover" />
                   ) : (
-                    <ImageIcon size={24} className="text-muted-foreground/20" />
+                    <ImageIcon size={24} className="text-[#202022]" />
                   )}
                 </div>
                 <div className="px-3 py-2.5">
                   <p className="text-sm font-medium text-foreground truncate">{contactFullName(c)}</p>
-                  <p className="text-xs text-muted-foreground/50 truncate">{c.role || 'Cast'}</p>
+                  <p className="text-xs text-[#515155] truncate">{c.role || 'Cast'}</p>
                 </div>
               </div>
             ))}
@@ -1354,7 +1354,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
           /* Table view */
           <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
             <thead className="sticky top-0 z-10">
-              <tr className="text-xs text-muted-foreground/60 uppercase tracking-wider">
+              <tr className="text-xs text-[#616166] uppercase tracking-wider">
                 <th className="text-left px-8 py-3 font-medium bg-[#141414] border-b border-r border-[#2a2a2a] select-none">Name</th>
                 {orderedVisibleCols.map((col, idx) => {
                   const nextCol = idx < orderedVisibleCols.length - 1 ? orderedVisibleCols[idx + 1] : null;
@@ -1427,7 +1427,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                   {orderedVisibleCols.map((col) => (
                     <td
                       key={col.key}
-                      className={`${col.align === 'right' ? 'px-8 text-right text-muted-foreground/50 text-xs' : 'px-3 text-muted-foreground'} py-3`}
+                      className={`${col.align === 'right' ? 'px-8 text-right text-[#515155] text-xs' : 'px-3 text-muted-foreground'} py-3`}
                       style={colWidths[col.key] ? { width: colWidths[col.key], minWidth: colWidths[col.key], maxWidth: colWidths[col.key] } : undefined}
                     >
                       {col.render(c)}

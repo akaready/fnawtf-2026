@@ -54,9 +54,9 @@ function QuoteIcon({ index, className }: { index: number; className?: string }) 
   );
 }
 
-const labelCls = 'block text-xs text-white/50 uppercase tracking-wide mb-1';
+const labelCls = 'block text-xs text-[#808080] uppercase tracking-wide mb-1';
 const inputCls =
-  'w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
+  'w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-[#333]';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
   { proposalId, proposalType, initialQuotes, onProposalTypeChange }: PricingTabProps,
@@ -75,7 +75,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [activeQuoteIndex, setActiveQuoteIndex] = useState(0);
 
   const isDirtyRef = useRef(false);
+  const readyForDirtyRef = useRef(false);
   const embedSaveRef = useRef<ProposalCalculatorSaveHandle | null>(null);
+
+  // Only accept dirty signals after mount settles (avoids StrictMode double-fire)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => { readyForDirtyRef.current = true; });
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     get isDirty() { return isDirtyRef.current; },
@@ -247,7 +254,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             key={type}
             onClick={() => handleTypeChange(type)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
-              selectedType === type ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'
+              selectedType === type ? 'bg-white/10 text-white' : 'text-[#666] hover:text-[#999]'
             }`}
           >
             <Icon size={14} />
@@ -258,7 +265,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
           <button
             onClick={() => setCrowdfundingEnabled((p) => !p)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ml-1 ${
-              crowdfundingEnabled ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'
+              crowdfundingEnabled ? 'bg-white/10 text-white' : 'text-[#666] hover:text-[#999]'
             }`}
           >
             <Coins size={14} />
@@ -288,13 +295,13 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                       index={i}
                       className={`group-hover/tab:hidden transition-colors ${
                         isHidden
-                          ? i === activeQuoteIndex ? 'text-white/30' : 'text-white/15'
-                          : i === activeQuoteIndex ? 'text-white/60' : 'text-white/25'
+                          ? i === activeQuoteIndex ? 'text-[#4d4d4d]' : 'text-white/15'
+                          : i === activeQuoteIndex ? 'text-[#999]' : 'text-[#404040]'
                       }`}
                     />
                     <button
                       onClick={(e) => { e.stopPropagation(); handleVisibilityToggle(q); }}
-                      className="hidden group-hover/tab:flex items-center justify-center text-white/30 hover:text-white/70 transition-colors"
+                      className="hidden group-hover/tab:flex items-center justify-center text-[#4d4d4d] hover:text-[#b3b3b3] transition-colors"
                       title={isHidden ? 'Show quote' : 'Hide quote'}
                     >
                       {isHidden
@@ -306,7 +313,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 ) : (
                   <QuoteIcon
                     index={i}
-                    className={i === activeQuoteIndex ? 'text-white/60' : 'text-white/25'}
+                    className={i === activeQuoteIndex ? 'text-[#999]' : 'text-[#404040]'}
                   />
                 )}
               </div>
@@ -314,8 +321,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               <span
                 className={`pl-1.5 pr-3 py-1.5 text-sm font-medium transition-colors ${
                   isHidden
-                    ? i === activeQuoteIndex ? 'text-white/40' : 'text-white/20'
-                    : i === activeQuoteIndex ? 'text-white' : 'text-white/40 group-hover/tab:text-white/70'
+                    ? i === activeQuoteIndex ? 'text-[#666]' : 'text-[#333]'
+                    : i === activeQuoteIndex ? 'text-white' : 'text-[#666] group-hover/tab:text-[#b3b3b3]'
                 }`}
               >
                 {q.label || QUOTE_CONFIG[i]?.defaultLabel || `Option ${i + 1}`}
@@ -332,7 +339,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             title={quotes.length >= 5 ? 'Maximum 5 quotes' : 'Add a quote option'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
               quotes.length >= 5
-                ? 'border border-white/20 text-white/30'
+                ? 'border border-white/20 text-[#4d4d4d]'
                 : 'bg-white text-black hover:bg-white/90'
             }`}
           >
@@ -352,7 +359,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(null)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-[#4d4d4d] hover:text-[#b3b3b3] hover:bg-white/5 transition-colors"
                     title="Cancel"
                   >
                     <X size={13} />
@@ -373,7 +380,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
       </div>
 
       {/* Quote content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto admin-scrollbar">
         {activeQuote ? (
           <div className="p-8 space-y-6">
 
@@ -416,7 +423,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               typeOverride={selectedType}
               crowdfundingOverride={crowdfundingEnabled}
               saveRef={embedSaveRef}
-              onAnyChange={() => { isDirtyRef.current = true; }}
+              onAnyChange={() => { if (readyForDirtyRef.current) isDirtyRef.current = true; }}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
                 const id = await saveProposalQuote(
@@ -440,7 +447,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-white/20">Setting up quotes…</p>
+            <p className="text-sm text-[#333]">Setting up quotes…</p>
           </div>
         )}
       </div>

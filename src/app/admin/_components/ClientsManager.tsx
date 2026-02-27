@@ -221,7 +221,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                     <img src={c.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain flex-shrink-0" />
                   ) : (
                     <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                      <Building2 size={14} className="text-muted-foreground/20" />
+                      <Building2 size={14} className="text-[#202022]" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -229,7 +229,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                     <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
                       <span className={statusCfg.color}>{statusCfg.label}</span>
                       {countParts.length > 0 && <span className="text-muted-foreground/25">·</span>}
-                      <span className="text-muted-foreground/40">{countParts.join(' · ')}</span>
+                      <span className="text-[#404044]">{countParts.join(' · ')}</span>
                     </p>
                   </div>
                   {companyTypes.length > 0 && (
@@ -249,7 +249,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
           })}
         </div>
         {clientOnly.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground/40 text-sm">
+          <div className="text-center py-12 text-[#404044] text-sm">
             No clients yet. Click &quot;Add Client&quot; to create one.
           </div>
         )}

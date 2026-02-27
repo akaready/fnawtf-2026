@@ -35,7 +35,7 @@ export type CreditsTabHandle = {
 };
 
 const inputClass =
-  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors';
+  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors';
 
 /* ── Combobox ───────────────────────────────────────────────────────────── */
 
@@ -127,7 +127,7 @@ function Combobox({
         className={inputClass}
       />
       {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#111] border border-white/15 rounded-lg shadow-xl">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
           {filtered.slice(0, 20).map((opt) => (
             <button
               key={opt.id}
@@ -219,7 +219,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
   return (
     <div className="space-y-4">
       {credits.length === 0 ? (
-        <p className="text-sm text-muted-foreground/50 py-4">No credits yet.</p>
+        <p className="text-sm text-[#515155] py-4">No credits yet.</p>
       ) : (
         <div className="space-y-2">
           {credits.map((credit, i) => (
@@ -232,7 +232,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
                   type="button"
                   onClick={() => move(i, -1)}
                   disabled={i === 0}
-                  className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors"
+                  className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors"
                 >
                   <ArrowUp size={12} />
                 </button>
@@ -240,7 +240,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
                   type="button"
                   onClick={() => move(i, 1)}
                   disabled={i === credits.length - 1}
-                  className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors"
+                  className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors"
                 >
                   <ArrowDown size={12} />
                 </button>

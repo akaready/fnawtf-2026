@@ -52,7 +52,7 @@ export function DropZone({ id, zoneType, zoneId, label, children }: Props) {
           {isOver ? (
             <span className="text-accent/60">Drop {label.toLowerCase()} here</span>
           ) : (
-            <span className="text-white/20">{label}</span>
+            <span className="text-[#333]">{label}</span>
           )}
         </div>
       ) : children ? (

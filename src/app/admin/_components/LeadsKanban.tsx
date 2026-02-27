@@ -36,7 +36,7 @@ import {
 type PipelineStage = 'new' | 'qualified' | 'proposal' | 'negotiating' | 'closed' | 'lost';
 
 const PIPELINE_COLUMNS: { value: PipelineStage; label: string; accent: string; headerColor: string; overColor: string; cardBg: string; cardBgFocused: string; cardBorder: string; cardBorderFocused: string }[] = [
-  { value: 'new',         label: 'New Lead',    accent: 'border-[#2a2a2a]',      headerColor: 'text-white/40',    overColor: 'bg-white/[0.04]',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
+  { value: 'new',         label: 'New Lead',    accent: 'border-[#2a2a2a]',      headerColor: 'text-[#666]',    overColor: 'bg-white/[0.04]',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
   { value: 'qualified',   label: 'Qualified',   accent: 'border-amber-500/30',   headerColor: 'text-amber-400',   overColor: 'bg-amber-500/[0.06]',   cardBg: '#1a1408',   cardBgFocused: '#251c0c',   cardBorder: 'bg-amber-800/50',   cardBorderFocused: 'bg-amber-600/70' },
   { value: 'proposal',    label: 'Proposal',    accent: 'border-sky-500/30',     headerColor: 'text-sky-400',     overColor: 'bg-sky-500/[0.06]',     cardBg: '#0a1520',   cardBgFocused: '#0d1e2e',   cardBorder: 'bg-sky-800/50',     cardBorderFocused: 'bg-sky-600/70' },
   { value: 'negotiating', label: 'Negotiating', accent: 'border-violet-500/30',  headerColor: 'text-violet-400',  overColor: 'bg-violet-500/[0.06]',  cardBg: '#150f1e',   cardBgFocused: '#1d1528',   cardBorder: 'bg-violet-800/50',  cardBorderFocused: 'bg-violet-600/70' },
@@ -379,7 +379,7 @@ function KanbanColumn({
       {/* Column header */}
       <div className={`px-3 py-2.5 border-b flex items-center justify-between ${col.accent}`}>
         <span className={`text-xs font-semibold ${col.headerColor}`}>{col.label}</span>
-        <span className="text-[10px] text-muted-foreground/30 bg-white/5 rounded px-1.5 py-0.5">
+        <span className="text-[10px] text-[#303033] bg-white/5 rounded px-1.5 py-0.5">
           {cards.length}
         </span>
       </div>
@@ -440,7 +440,7 @@ function LostZone({
         <span className={`text-[10px] rounded px-1.5 py-0.5 ${
           lostLeads.length > 0
             ? 'text-red-400/70 bg-red-500/10'
-            : 'text-muted-foreground/30 bg-white/5'
+            : 'text-[#303033] bg-white/5'
         }`}>
           {lostLeads.length}
         </span>
@@ -455,7 +455,7 @@ function LostZone({
                 <img src={animatingCard.logo_url} alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0" />
               ) : (
                 <div className="w-6 h-6 rounded-md bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                  <Building2 size={10} className="text-muted-foreground/20" />
+                  <Building2 size={10} className="text-[#202022]" />
                 </div>
               )}
               <p className="text-xs font-medium text-foreground/60 truncate">{animatingCard.name}</p>
@@ -493,7 +493,7 @@ function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRe
           <img src={c.logo_url} alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0 opacity-50" />
         ) : (
           <div className="w-6 h-6 rounded-md bg-white/[0.03] flex items-center justify-center flex-shrink-0">
-            <Building2 size={10} className="text-muted-foreground/20" />
+            <Building2 size={10} className="text-[#202022]" />
           </div>
         )}
         <p className="text-[11px] text-red-200/40 truncate flex-1">{c.name}</p>
@@ -501,7 +501,7 @@ function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRe
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onRestore(c.id); }}
           title="Restore to New Lead"
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-white/70 flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-[#404044] hover:text-[#b3b3b3] flex-shrink-0"
         >
           <RotateCcw size={11} />
         </button>
@@ -595,7 +595,7 @@ function LeadCard({
           <img src={c.logo_url} alt="" className="w-7 h-7 rounded-md object-contain flex-shrink-0" />
         ) : (
           <div className="w-7 h-7 rounded-md bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-            <Building2 size={12} className="text-muted-foreground/20" />
+            <Building2 size={12} className="text-[#202022]" />
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -605,7 +605,7 @@ function LeadCard({
             {(contactCount > 0 || projectCount > 0) && (
               <>
                 <span className="text-muted-foreground/25">·</span>
-                <span className="text-muted-foreground/40">
+                <span className="text-[#404044]">
                   {[
                     contactCount > 0 && `${contactCount}c`,
                     projectCount > 0 && `${projectCount}p`,

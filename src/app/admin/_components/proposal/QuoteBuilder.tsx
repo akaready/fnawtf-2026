@@ -93,23 +93,23 @@ function QuoteForm({
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/[0.02] transition-colors"
       >
         <div className="text-left">
-          <p className="text-sm font-medium text-white/70">
+          <p className="text-sm font-medium text-[#b3b3b3]">
             {quote ? label || 'FNA Quote' : 'New FNA Quote'}
           </p>
           {quote && !open && (
-            <p className="text-xs text-white/30 font-mono mt-0.5">
+            <p className="text-xs text-[#4d4d4d] font-mono mt-0.5">
               {quote.quote_type} · ${quote.total_amount?.toLocaleString() ?? '—'}
             </p>
           )}
         </div>
-        {open ? <ChevronUp size={14} className="text-white/30" /> : <ChevronDown size={14} className="text-white/30" />}
+        {open ? <ChevronUp size={14} className="text-[#4d4d4d]" /> : <ChevronDown size={14} className="text-[#4d4d4d]" />}
       </button>
 
       {open && (
         <div className="px-6 pb-6 space-y-5 border-t border-[#2a2a2a]">
           {/* Label */}
           <div className="pt-5">
-            <label className="block text-xs font-mono tracking-wider uppercase text-white/25 mb-2">
+            <label className="block text-xs font-mono tracking-wider uppercase text-[#404040] mb-2">
               Quote Label
             </label>
             <input
@@ -117,13 +117,13 @@ function QuoteForm({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Recommended, Budget Option"
-              className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+              className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-mono tracking-wider uppercase text-white/25 mb-2">
+            <label className="block text-xs font-mono tracking-wider uppercase text-[#404040] mb-2">
               Description (visible to client)
             </label>
             <textarea
@@ -131,13 +131,13 @@ function QuoteForm({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explain the choices in this quote..."
               rows={3}
-              className="w-full bg-white/[0.04] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors resize-none"
+              className="w-full bg-white/[0.04] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-white/20 transition-colors resize-none"
             />
           </div>
 
           {/* Quote type */}
           <div>
-            <p className="text-xs font-mono tracking-wider uppercase text-white/25 mb-3">Quote Type</p>
+            <p className="text-xs font-mono tracking-wider uppercase text-[#404040] mb-3">Quote Type</p>
             <div className="flex gap-2 flex-wrap">
               {QUOTE_TYPES.map((qt) => (
                 <button
@@ -146,7 +146,7 @@ function QuoteForm({
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     quoteType === qt.value
                       ? 'bg-accent text-white'
-                      : 'bg-white/[0.04] border border-[#2a2a2a] text-white/40 hover:text-white/70'
+                      : 'bg-white/[0.04] border border-[#2a2a2a] text-[#666] hover:text-[#b3b3b3]'
                   }`}
                 >
                   {qt.label}
@@ -158,7 +158,7 @@ function QuoteForm({
           {/* Total + Down payment */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-mono tracking-wider uppercase text-white/25 mb-2">
+              <label className="block text-xs font-mono tracking-wider uppercase text-[#404040] mb-2">
                 Total ($)
               </label>
               <input
@@ -166,11 +166,11 @@ function QuoteForm({
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+                className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-mono tracking-wider uppercase text-white/25 mb-2">
+              <label className="block text-xs font-mono tracking-wider uppercase text-[#404040] mb-2">
                 Down Payment ($)
               </label>
               <input
@@ -178,14 +178,14 @@ function QuoteForm({
                 value={downAmount}
                 onChange={(e) => setDownAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+                className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
               />
             </div>
           </div>
 
           {/* Discount */}
           <div>
-            <label className="block text-xs font-mono tracking-wider uppercase text-white/25 mb-2">
+            <label className="block text-xs font-mono tracking-wider uppercase text-[#404040] mb-2">
               Discount (%)
             </label>
             <input
@@ -194,15 +194,15 @@ function QuoteForm({
               max="100"
               value={discountPct}
               onChange={(e) => setDiscountPct(e.target.value)}
-              className="w-32 bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 outline-none focus:border-white/20 transition-colors"
+              className="w-32 bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-[#ccc] outline-none focus:border-white/20 transition-colors"
             />
           </div>
 
           {/* Defer payment toggle */}
           <div className="flex items-center justify-between py-2">
             <div>
-              <p className="text-sm text-white/60">Defer Payment</p>
-              <p className="text-xs text-white/25">Client pays after delivery</p>
+              <p className="text-sm text-[#999]">Defer Payment</p>
+              <p className="text-xs text-[#404040]">Client pays after delivery</p>
             </div>
             <button
               onClick={() => setDeferPayment(!deferPayment)}
@@ -256,7 +256,7 @@ export function QuoteBuilder({ proposalId, existingQuotes }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-mono tracking-wider uppercase text-white/25 mb-2">FNA Quotes</p>
+      <p className="text-xs font-mono tracking-wider uppercase text-[#404040] mb-2">FNA Quotes</p>
       {existingQuotes.map((q) => (
         <QuoteForm
           key={q.id}
@@ -275,7 +275,7 @@ export function QuoteBuilder({ proposalId, existingQuotes }: Props) {
       ) : (
         <button
           onClick={() => setShowNew(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-white/10 rounded-xl text-sm text-white/40 hover:text-white/60 hover:border-white/20 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-white/10 rounded-xl text-sm text-[#666] hover:text-[#999] hover:border-white/20 transition-colors"
         >
           <Plus size={14} />
           New FNA Quote

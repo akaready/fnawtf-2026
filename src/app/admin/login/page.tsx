@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
   };
 
   const inputClass =
-    'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors';
+    'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors';
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">

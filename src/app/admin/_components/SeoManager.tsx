@@ -75,7 +75,7 @@ export function SeoManager({ initialSettings }: Props) {
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         {activeRow && (
           <div className="space-y-4">
-            <p className="text-xs text-muted-foreground/50">
+            <p className="text-xs text-[#515155]">
               {PAGE_META[activeRow.page_slug]?.description ?? activeRow.page_slug}
             </p>
 
@@ -135,7 +135,7 @@ export function SeoManager({ initialSettings }: Props) {
                   className="rounded border-border-subtle bg-transparent"
                 />
                 <span className="text-muted-foreground">
-                  No Index <span className="text-muted-foreground/40">(hide from search engines)</span>
+                  No Index <span className="text-[#404044]">(hide from search engines)</span>
                 </span>
               </label>
 
@@ -176,7 +176,7 @@ function Field({
         {maxLength && (
           <span
             className={`text-[10px] ${
-              overLimit ? 'text-red-400' : nearLimit ? 'text-yellow-400' : 'text-muted-foreground/30'
+              overLimit ? 'text-red-400' : nearLimit ? 'text-yellow-400' : 'text-[#303033]'
             }`}
           >
             {len}/{maxLength}

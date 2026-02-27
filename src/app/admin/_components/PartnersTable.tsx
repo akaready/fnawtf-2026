@@ -141,7 +141,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
           <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
         ) : (
           <div className="w-8 h-8 rounded-md bg-white/[0.04] flex items-center justify-center">
-            <Building2 size={12} className="text-muted-foreground/20" />
+            <Building2 size={12} className="text-[#202022]" />
           </div>
         ),
     },
@@ -185,9 +185,9 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       render: (row) => {
         const count = localContacts.filter((ct) => ct.client_id === row.id).length;
         return count > 0 ? (
-          <span className="text-xs text-muted-foreground/50">{count}</span>
+          <span className="text-xs text-[#515155]">{count}</span>
         ) : (
-          <span className="text-xs text-muted-foreground/20">—</span>
+          <span className="text-xs text-[#202022]">—</span>
         );
       },
     },
@@ -197,9 +197,9 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       render: (row) => {
         const count = projects.filter((p) => p.client_id === row.id).length;
         return count > 0 ? (
-          <span className="text-xs text-muted-foreground/50">{count}</span>
+          <span className="text-xs text-[#515155]">{count}</span>
         ) : (
-          <span className="text-xs text-muted-foreground/20">—</span>
+          <span className="text-xs text-[#202022]">—</span>
         );
       },
     },
@@ -207,7 +207,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       key: 'created_at',
       label: 'Added',
       render: (row) => (
-        <span className="text-xs text-muted-foreground/40">
+        <span className="text-xs text-[#404044]">
           {new Date(row.created_at).toLocaleDateString()}
         </span>
       ),

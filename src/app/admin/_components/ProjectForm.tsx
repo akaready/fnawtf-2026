@@ -68,7 +68,7 @@ export function ProjectForm({ project, videos, credits, btsImages, tagSuggestion
             >
               {tab.label}
               {disabled && (
-                <span className="ml-1 text-[10px] text-muted-foreground/30">(save first)</span>
+                <span className="ml-1 text-[10px] text-[#303033]">(save first)</span>
               )}
             </button>
           );

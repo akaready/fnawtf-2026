@@ -21,7 +21,7 @@ export type BTSTabHandle = {
 };
 
 const inputClass =
-  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors';
+  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors';
 
 export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectId, initialImages }, ref) {
   const [images, setImages] = useState<BTSImage[]>(initialImages);
@@ -63,7 +63,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
   return (
     <div className="space-y-4">
       {images.length === 0 ? (
-        <p className="text-sm text-muted-foreground/50 py-4">No BTS images yet.</p>
+        <p className="text-sm text-[#515155] py-4">No BTS images yet.</p>
       ) : (
         <div className="space-y-3">
           {images.map((img, i) => (
@@ -72,10 +72,10 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
               className="flex gap-3 p-3 border border-border/40 rounded-lg bg-white/[0.02]"
             >
               <div className="flex flex-col gap-0.5 pt-1">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors">
                   <ArrowUp size={12} />
                 </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === images.length - 1} className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors">
+                <button type="button" onClick={() => move(i, 1)} disabled={i === images.length - 1} className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors">
                   <ArrowDown size={12} />
                 </button>
               </div>

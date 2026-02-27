@@ -188,7 +188,7 @@ export function ProjectPanel({
             {isNew ? 'New Project' : String(project?.title || 'Untitled')}
           </h2>
           {!isNew && project?.slug ? (
-            <p className="text-xs text-muted-foreground/50 truncate">{String(project.slug)}</p>
+            <p className="text-xs text-[#515155] truncate">{String(project.slug)}</p>
           ) : null}
         </div>
         <button
@@ -214,7 +214,7 @@ export function ProjectPanel({
                   ? 'text-muted-foreground/25 cursor-not-allowed'
                   : activeTab === tab.id
                   ? 'bg-white/10 text-white'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                  : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
               }`}
             >
               {tab.label}

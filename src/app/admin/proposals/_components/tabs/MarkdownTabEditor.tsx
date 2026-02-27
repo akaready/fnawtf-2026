@@ -260,13 +260,13 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           {/* Page title */}
           {titlePlaceholder && (
             <div className="flex-shrink-0 max-w-3xl w-full px-8 pt-5 pb-2">
-              <label className="text-[10px] uppercase tracking-widest text-white/30 mb-1.5 block">Slide Title</label>
+              <label className="text-[10px] uppercase tracking-widest text-[#4d4d4d] mb-1.5 block">Slide Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder={titlePlaceholder}
-                className="w-full bg-transparent text-xl font-semibold text-white placeholder:text-white/20 outline-none border-b border-white/[0.06] pb-2 focus:border-white/20 transition-colors"
+                className="w-full bg-transparent text-xl font-semibold text-white placeholder:text-[#333] outline-none border-b border-white/[0.06] pb-2 focus:border-white/20 transition-colors"
               />
             </div>
           )}
@@ -283,7 +283,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                   className={`p-1.5 rounded transition-colors ${
                     isActive
                       ? 'text-foreground bg-white/[0.1]'
-                      : 'text-white/30 hover:text-foreground hover:bg-white/[0.06]'
+                      : 'text-[#4d4d4d] hover:text-foreground hover:bg-white/[0.06]'
                   }`}
                 >
                   <Icon size={14} />
@@ -295,14 +295,14 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
               {/* Link button */}
               {isLink ? (
                 <div className="flex items-center gap-1 px-2 py-1 rounded bg-white/[0.06] text-xs">
-                  <Link2 size={12} className="text-white/40 flex-shrink-0" />
-                  <span className="text-white/40 max-w-[120px] truncate">{linkHref}</span>
+                  <Link2 size={12} className="text-[#666] flex-shrink-0" />
+                  <span className="text-[#666] max-w-[120px] truncate">{linkHref}</span>
                   <a
                     href={linkHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Open link"
-                    className="ml-0.5 text-white/30 hover:text-foreground transition-colors p-0.5 rounded"
+                    className="ml-0.5 text-[#4d4d4d] hover:text-foreground transition-colors p-0.5 rounded"
                   >
                     <ExternalLink size={11} />
                   </a>
@@ -310,7 +310,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); openLink(); }}
                     title="Edit link"
-                    className="text-white/30 hover:text-foreground transition-colors p-0.5 rounded"
+                    className="text-[#4d4d4d] hover:text-foreground transition-colors p-0.5 rounded"
                   >
                     <Link2 size={11} />
                   </button>
@@ -318,7 +318,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
                     title="Remove link"
-                    className="text-white/30 hover:text-red-400 transition-colors p-0.5 rounded"
+                    className="text-[#4d4d4d] hover:text-red-400 transition-colors p-0.5 rounded"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -328,7 +328,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); openLink(); }}
                   title="Link (⌘⇧U)"
-                  className="p-1.5 rounded transition-colors text-white/30 hover:text-foreground hover:bg-white/[0.06]"
+                  className="p-1.5 rounded transition-colors text-[#4d4d4d] hover:text-foreground hover:bg-white/[0.06]"
                 >
                   <Link2 size={14} />
                 </button>
@@ -337,13 +337,13 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           </div>
 
           {/* Scrollable dark content area — fills remaining height */}
-          <div className="flex-1 overflow-y-auto bg-black/40">
+          <div className="flex-1 overflow-y-auto admin-scrollbar bg-black/40">
             <div className="max-w-3xl">
 
               {/* Link URL input */}
               {showLinkInput && (
                 <div className="mx-8 mt-3 flex items-center gap-2.5 bg-[#1c1c1c] border border-white/15 rounded-xl px-3.5 py-2.5">
-                  <Link2 size={13} className="text-white/30 flex-shrink-0" />
+                  <Link2 size={13} className="text-[#4d4d4d] flex-shrink-0" />
                   <input
                     ref={linkInputRef}
                     value={linkUrl}
@@ -353,9 +353,9 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                       if (e.key === 'Escape') { setShowLinkInput(false); editor.chain().focus().run(); }
                     }}
                     placeholder="https://"
-                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-white/25 outline-none"
+                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-[#404040] outline-none"
                   />
-                  <kbd className="text-xs text-white/20 font-mono">↵</kbd>
+                  <kbd className="text-xs text-[#333] font-mono">↵</kbd>
                 </div>
               )}
 
@@ -373,7 +373,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                     className={`p-1.5 rounded transition-colors ${
                       isActive
                         ? 'text-foreground bg-white/[0.12]'
-                        : 'text-white/40 hover:text-foreground hover:bg-white/[0.08]'
+                        : 'text-[#666] hover:text-foreground hover:bg-white/[0.08]'
                     }`}
                   >
                     <Icon size={13} />
@@ -384,7 +384,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); openLink(); }}
                   title="Link"
-                  className="p-1.5 rounded transition-colors text-white/40 hover:text-foreground hover:bg-white/[0.08]"
+                  className="p-1.5 rounded transition-colors text-[#666] hover:text-foreground hover:bg-white/[0.08]"
                 >
                   <Link2 size={13} />
                 </button>
@@ -411,21 +411,21 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
         <div className="w-64 flex-shrink-0 border-l border-[#2a2a2a] flex flex-col">
           <div className="px-3 h-[51px] border-b border-[#2a2a2a] flex-shrink-0 flex items-center gap-2">
             <div className="relative flex-1">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404040] pointer-events-none" />
               <input
                 type="text"
                 value={snippetSearch}
                 onChange={(e) => setSnippetSearch(e.target.value)}
                 placeholder="Search snippets…"
-                className="w-full h-8 bg-black/40 border border-[#2a2a2a] rounded-md pl-8 pr-3 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                className="w-full h-8 bg-black/40 border border-[#2a2a2a] rounded-md pl-8 pr-3 text-xs text-white placeholder:text-[#333] focus:outline-none focus:border-white/20"
               />
             </div>
             {snippetCategories.length > 0 && (
               <div
                 className={`relative flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
                   snippetCategory
-                    ? 'border-white/30 text-white/70 bg-white/[0.08]'
-                    : 'border-[#2a2a2a] text-white/30 hover:text-white/60 hover:border-white/25'
+                    ? 'border-white/30 text-[#b3b3b3] bg-white/[0.08]'
+                    : 'border-[#2a2a2a] text-[#4d4d4d] hover:text-[#999] hover:border-white/25'
                 }`}
                 title={snippetCategory ? `Filter: ${snippetCategory}` : 'Filter by category'}
               >
@@ -445,7 +445,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           </div>
           <div className="flex-1 overflow-y-auto admin-scrollbar p-3 space-y-2">
             {visibleSnippets.length === 0 ? (
-              <p className="text-xs text-white/20 pt-2">No snippets match.</p>
+              <p className="text-xs text-[#333] pt-2">No snippets match.</p>
             ) : (
               visibleSnippets.map((snippet) => (
                 <button
@@ -454,10 +454,10 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                   onClick={() => handleSnippetInsert(snippet.body)}
                   className="w-full text-left p-3 rounded-lg border border-[#2a2a2a] hover:border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.05] transition-colors group"
                 >
-                  <p className="text-sm font-medium text-white/70 group-hover:text-white/90 transition-colors leading-tight">
+                  <p className="text-sm font-medium text-[#b3b3b3] group-hover:text-white/90 transition-colors leading-tight">
                     {snippet.title}
                   </p>
-                  <p className="text-xs text-white/30 mt-1.5 line-clamp-3 leading-relaxed">
+                  <p className="text-xs text-[#4d4d4d] mt-1.5 line-clamp-3 leading-relaxed">
                     {snippet.body}
                   </p>
                 </button>

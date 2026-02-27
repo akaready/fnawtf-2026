@@ -16,7 +16,7 @@ import {
 /* ── Combobox ───────────────────────────────────────────────────────────── */
 
 const inputClass =
-  'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
+  'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
 
 function Combobox({
   value,
@@ -99,7 +99,7 @@ function Combobox({
         className={inputClass}
       />
       {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#111] border border-white/15 rounded-lg shadow-xl">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
           {filtered.slice(0, 20).map((opt) => (
             <button
               key={opt.id}
@@ -349,7 +349,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
               }}
               ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
               placeholder="Quote text…"
-              className="w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none overflow-hidden"
+              className="w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-base text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20 resize-none overflow-hidden"
             />
 
             {/* Attribution row */}
@@ -442,7 +442,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
       })}
 
       {testimonials.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground/40 text-sm">
+        <div className="text-center py-12 text-[#404044] text-sm">
           No testimonials yet. Click &quot;Add Testimonial&quot; to create one.
         </div>
       )}

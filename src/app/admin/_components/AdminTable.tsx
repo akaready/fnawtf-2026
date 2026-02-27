@@ -54,7 +54,7 @@ interface AdminTableProps<T extends { id: string }> {
 
 export const STATUS_COLORS: Record<string, string> = {
   // Proposals
-  draft:         'bg-white/10 text-white/50',
+  draft:         'bg-white/10 text-[#808080]',
   sent:          'bg-blue-500/20 text-blue-300',
   viewed:        'bg-yellow-500/20 text-yellow-300',
   accepted:      'bg-green-500/20 text-green-300',
@@ -66,21 +66,21 @@ export const STATUS_COLORS: Record<string, string> = {
   active:        'bg-green-500/20 text-green-400',
   prospect:      'bg-amber-500/20 text-amber-400',
   'on hold':     'bg-slate-500/20 text-slate-400',
-  past:          'bg-white/5 text-white/30',
+  past:          'bg-white/5 text-[#4d4d4d]',
   // Meetings
   upcoming:       'bg-sky-500/20 text-sky-300',
   bot_scheduled:  'bg-indigo-500/20 text-indigo-300',
   in_progress:    'bg-green-500/20 text-green-300',
   completed:      'bg-emerald-500/20 text-emerald-300',
   failed:         'bg-red-500/20 text-red-300',
-  no_video_link:  'bg-white/5 text-white/30',
-  cancelled:      'bg-white/5 text-white/30',
+  no_video_link:  'bg-white/5 text-[#4d4d4d]',
+  cancelled:      'bg-white/5 text-[#4d4d4d]',
 };
 
 export function StatusBadge({ value }: { value: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[value] ?? 'bg-white/10 text-white/50'}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[value] ?? 'bg-white/10 text-[#808080]'}`}
     >
       {value}
     </span>
@@ -151,12 +151,12 @@ export function AdminDeleteModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-white mb-2">{title}</h3>
-        {description && <div className="text-sm text-white/50 mb-6">{description}</div>}
+        {description && <div className="text-sm text-[#808080] mb-6">{description}</div>}
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
             disabled={isDeleting}
-            className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
+            className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-sm text-[#999] hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
           >
             Cancel
           </button>
@@ -199,11 +199,11 @@ export function AdminTable<T extends { id: string }>({
       <div
         className={`flex flex-col items-center justify-center flex-1 min-h-[240px] gap-3 ${className ?? ''}`}
       >
-        <p className="text-sm text-white/30">{emptyMessage}</p>
+        <p className="text-sm text-[#4d4d4d]">{emptyMessage}</p>
         {emptyAction && (
           <button
             onClick={emptyAction.onClick}
-            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[#808080] hover:text-white transition-colors"
           >
             <Plus size={12} />
             {emptyAction.label}
@@ -239,12 +239,12 @@ export function AdminTable<T extends { id: string }>({
               <th
                 key={col.key}
                 className={[
-                  'px-4 py-3 text-xs font-mono text-white/25 uppercase tracking-widest font-normal whitespace-nowrap bg-[#0f0f0f] border-b border-[#1f1f1f]',
+                  'px-4 py-3 text-xs font-mono text-[#404040] uppercase tracking-widest font-normal whitespace-nowrap bg-[#0f0f0f] border-b border-[#1f1f1f]',
                   isLast ? '' : 'border-r',
                   alignClass(col.align),
                   col.width ?? '',
                   col.sortable && onSort
-                    ? 'cursor-pointer select-none group/th hover:text-white/40 transition-colors'
+                    ? 'cursor-pointer select-none group/th hover:text-[#666] transition-colors'
                     : '',
                 ]
                   .filter(Boolean)
@@ -254,7 +254,7 @@ export function AdminTable<T extends { id: string }>({
                 <span className="inline-flex items-center gap-1">
                   {col.label}
                   {col.sortable && onSort && (
-                    <span className="inline-flex text-white/20">
+                    <span className="inline-flex text-[#333]">
                       {sortKey === col.key ? (
                         sortDir === 'asc' ? (
                           <ChevronUp size={10} />
@@ -274,7 +274,7 @@ export function AdminTable<T extends { id: string }>({
               );
             })}
             {hasActions && (
-              <th className="px-4 py-3 w-20 text-xs font-mono text-white/25 uppercase tracking-widest font-normal bg-[#0f0f0f] border-b border-[#1f1f1f]" />
+              <th className="px-4 py-3 w-20 text-xs font-mono text-[#404040] uppercase tracking-widest font-normal bg-[#0f0f0f] border-b border-[#1f1f1f]" />
             )}
           </tr>
         </thead>
@@ -314,8 +314,8 @@ export function AdminTable<T extends { id: string }>({
                         title={action.label}
                         className={`p-1.5 rounded transition-colors ${
                           action.variant === 'danger'
-                            ? 'text-white/40 hover:text-red-400 hover:bg-red-500/10'
-                            : 'text-white/40 hover:text-white hover:bg-white/10'
+                            ? 'text-[#666] hover:text-red-400 hover:bg-red-500/10'
+                            : 'text-[#666] hover:text-white hover:bg-white/10'
                         }`}
                       >
                         {action.icon}

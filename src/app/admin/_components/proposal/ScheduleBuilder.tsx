@@ -87,7 +87,7 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
                 key={ms.id}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-border group"
               >
-                <Calendar size={12} className="text-white/20 flex-shrink-0" />
+                <Calendar size={12} className="text-[#333] flex-shrink-0" />
                 <input
                   type="text"
                   value={ms.label}
@@ -98,14 +98,14 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
                   type="date"
                   value={ms.start_date}
                   onChange={(e) => onUpdate(ms.id, { start_date: e.target.value })}
-                  className="bg-transparent text-xs text-white/40 outline-none [color-scheme:dark]"
+                  className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
                 />
-                <span className="text-white/20 text-xs">to</span>
+                <span className="text-[#333] text-xs">to</span>
                 <input
                   type="date"
                   value={ms.end_date}
                   onChange={(e) => onUpdate(ms.id, { end_date: e.target.value })}
-                  className="bg-transparent text-xs text-white/40 outline-none [color-scheme:dark]"
+                  className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
                 />
                 <button
                   onClick={() => onDelete(ms.id)}
@@ -134,26 +134,26 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
               type="date"
               value={newStart}
               onChange={(e) => setNewStart(e.target.value)}
-              className="bg-transparent text-xs text-white/40 outline-none [color-scheme:dark]"
+              className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
             />
-            <span className="text-white/20 text-xs">to</span>
+            <span className="text-[#333] text-xs">to</span>
             <input
               type="date"
               value={newEnd}
               onChange={(e) => setNewEnd(e.target.value)}
-              className="bg-transparent text-xs text-white/40 outline-none [color-scheme:dark]"
+              className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
             />
             <button onClick={handleAdd} className="px-2 py-1 text-xs bg-white/10 hover:bg-white/15 rounded font-medium transition-colors">
               Add
             </button>
-            <button onClick={() => setAdding(false)} className="px-2 py-1 text-xs text-white/30 hover:text-white/50 transition-colors">
+            <button onClick={() => setAdding(false)} className="px-2 py-1 text-xs text-[#4d4d4d] hover:text-[#808080] transition-colors">
               Cancel
             </button>
           </div>
         ) : (
           <button
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-white/20 hover:text-white/50 border border-dashed border-border hover:border-white/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#333] hover:text-[#808080] border border-dashed border-border hover:border-white/20 transition-colors"
           >
             <Plus size={12} />
             Add Milestone
@@ -168,7 +168,7 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
               <button
                 key={preset}
                 onClick={() => handlePresetClick(preset)}
-                className="px-2 py-0.5 rounded text-[10px] text-white/25 hover:text-white/50 bg-white/[0.02] hover:bg-white/[0.05] border border-[#2a2a2a] transition-colors"
+                className="px-2 py-0.5 rounded text-[10px] text-[#404040] hover:text-[#808080] bg-white/[0.02] hover:bg-white/[0.05] border border-[#2a2a2a] transition-colors"
               >
                 + {preset}
               </button>

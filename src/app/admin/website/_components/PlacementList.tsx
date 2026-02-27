@@ -94,7 +94,7 @@ export function PlacementList({
   if (placements.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-white/20">No projects yet — add from the sidebar.</p>
+        <p className="text-sm text-[#333]">No projects yet — add from the sidebar.</p>
       </div>
     );
   }

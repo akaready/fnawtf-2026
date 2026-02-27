@@ -26,7 +26,7 @@ interface Props {
 }
 
 const inputClass =
-  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors';
+  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors';
 
 const VIDEO_TYPES: VideoType[] = ['flagship', 'cutdown', 'bts'];
 
@@ -207,7 +207,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
     <div className="space-y-4">
       {/* Existing videos */}
       {videos.length === 0 ? (
-        <p className="text-sm text-muted-foreground/50 py-2">No videos linked yet.</p>
+        <p className="text-sm text-[#515155] py-2">No videos linked yet.</p>
       ) : (
         <div className="space-y-2">
           {videos.map((video, i) => (
@@ -216,17 +216,17 @@ export function VideosTab({ projectId, initialVideos }: Props) {
               className="flex items-center gap-3 p-3 border border-border/40 rounded-lg bg-white/[0.02]"
             >
               <div className="flex flex-col gap-0.5">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors">
                   <ArrowUp size={12} />
                 </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === videos.length - 1} className="text-muted-foreground/40 hover:text-muted-foreground disabled:opacity-20 transition-colors">
+                <button type="button" onClick={() => move(i, 1)} disabled={i === videos.length - 1} className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors">
                   <ArrowDown size={12} />
                 </button>
               </div>
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{video.title}</p>
-                <p className="text-xs text-muted-foreground/50 font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
+                <p className="text-xs text-[#515155] font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
               </div>
 
               <select
@@ -254,7 +254,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                 title="Auto-detect ratio from Bunny"
                 onClick={() => handleAutoDetectRatio(video)}
                 disabled={isPending}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#404044] hover:text-muted-foreground transition-colors"
               >
                 <Scan size={13} />
               </button>
@@ -268,7 +268,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
                   video.password_protected
                     ? 'text-amber-400 hover:text-amber-300 bg-amber-500/10'
-                    : 'text-muted-foreground/40 hover:text-muted-foreground'
+                    : 'text-[#404044] hover:text-muted-foreground'
                 }`}
               >
                 {video.password_protected ? <Lock size={13} /> : <Unlock size={13} />}
@@ -280,7 +280,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                   value={video.viewer_password ?? ''}
                   onChange={(e) => handlePasswordChange(video, e.target.value)}
                   placeholder="password"
-                  className="w-28 px-2 py-1.5 bg-black border border-amber-500/30 rounded-lg text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-amber-400/50 font-mono transition-colors"
+                  className="w-28 px-2 py-1.5 bg-black border border-amber-500/30 rounded-lg text-xs text-foreground placeholder:text-[#303033] focus:outline-none focus:border-amber-400/50 font-mono transition-colors"
                 />
               )}
 

@@ -117,7 +117,7 @@ function SnippetEditor({
             key={key}
             onMouseDown={e => { e.preventDefault(); fn(); }}
             title={lbl}
-            className={`p-1.5 rounded transition-colors flex-shrink-0 ${isActive ? 'text-foreground bg-white/[0.1]' : 'text-white/30 hover:text-foreground hover:bg-white/[0.06]'}`}
+            className={`p-1.5 rounded transition-colors flex-shrink-0 ${isActive ? 'text-foreground bg-white/[0.1]' : 'text-[#4d4d4d] hover:text-foreground hover:bg-white/[0.06]'}`}
           >
             <I size={14} />
           </button>
@@ -129,7 +129,7 @@ function SnippetEditor({
         <button
           onMouseDown={e => { e.preventDefault(); openLink(); }}
           title="Link (⌘⇧U)"
-          className={`p-1.5 rounded transition-colors flex-shrink-0 ${isLink || showLinkInput ? 'text-foreground bg-white/[0.1]' : 'text-white/30 hover:text-foreground hover:bg-white/[0.06]'}`}
+          className={`p-1.5 rounded transition-colors flex-shrink-0 ${isLink || showLinkInput ? 'text-foreground bg-white/[0.1]' : 'text-[#4d4d4d] hover:text-foreground hover:bg-white/[0.06]'}`}
         >
           <Link2 size={14} />
         </button>
@@ -146,7 +146,7 @@ function SnippetEditor({
                 if (e.key === 'Escape') { editor.chain().focus().run(); }
               }}
               placeholder="https://"
-              className="flex-1 min-w-0 ml-1 bg-transparent text-sm text-white/70 placeholder:text-white/20 outline-none"
+              className="flex-1 min-w-0 ml-1 bg-transparent text-sm text-[#b3b3b3] placeholder:text-[#333] outline-none"
             />
             {linkUrl && (
               <a
@@ -156,7 +156,7 @@ function SnippetEditor({
                 tabIndex={-1}
                 onMouseDown={e => e.preventDefault()}
                 title="Open link"
-                className="text-white/25 hover:text-white/60 transition-colors p-1 flex-shrink-0"
+                className="text-[#404040] hover:text-[#999] transition-colors p-1 flex-shrink-0"
               >
                 <ExternalLink size={12} />
               </a>
@@ -165,7 +165,7 @@ function SnippetEditor({
               <button
                 onMouseDown={e => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
                 title="Remove link"
-                className="text-white/25 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                className="text-[#404040] hover:text-red-400 transition-colors p-1 flex-shrink-0"
               >
                 <Trash2 size={12} />
               </button>
@@ -362,7 +362,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
 
               <button onClick={() => setFilterCat('all')} className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${filterCat === 'all' ? `${SEL} text-foreground` : `text-muted-foreground ${HOV} hover:text-foreground`}`}>
                 <span className="flex items-center gap-2.5 min-w-0 truncate"><FolderOpen size={13} className="flex-shrink-0" />All</span>
-                <span className="text-xs text-white/30 flex-shrink-0 ml-1">{snippets.length}</span>
+                <span className="text-xs text-[#4d4d4d] flex-shrink-0 ml-1">{snippets.length}</span>
               </button>
 
               {categories.length > 0 && <div className="my-2 mx-4 border-t border-border" />}
@@ -395,10 +395,10 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                     )}
                     {!isEditing && <>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <button onClick={e => { e.stopPropagation(); setEditingCat(cat); setEditingCatVal(cat); }} className="p-0.5 rounded text-white/30 hover:text-white/70 transition-colors"><Pencil size={11} /></button>
-                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteCat(cat); }} className="p-0.5 rounded text-white/30 hover:text-red-400 transition-colors"><Trash2 size={11} /></button>
+                        <button onClick={e => { e.stopPropagation(); setEditingCat(cat); setEditingCatVal(cat); }} className="p-0.5 rounded text-[#4d4d4d] hover:text-[#b3b3b3] transition-colors"><Pencil size={11} /></button>
+                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteCat(cat); }} className="p-0.5 rounded text-[#4d4d4d] hover:text-red-400 transition-colors"><Trash2 size={11} /></button>
                       </div>
-                      <span className="text-xs text-white/30 flex-shrink-0">{count}</span>
+                      <span className="text-xs text-[#4d4d4d] flex-shrink-0">{count}</span>
                     </>}
                   </div>
                 );
@@ -417,7 +417,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                   }}
                   onBlur={handleAddCat}
                   placeholder="Category name…"
-                  className="w-full text-xs bg-transparent border-b border-border outline-none text-foreground placeholder:text-white/20 pb-0.5 focus:border-white/30 transition-colors"
+                  className="w-full text-xs bg-transparent border-b border-border outline-none text-foreground placeholder:text-[#333] pb-0.5 focus:border-white/30 transition-colors"
                 />
               ) : (
                 <button onClick={() => setAddingCat(true)} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-white/10 hover:bg-white/20 border border-transparent rounded-lg h-[36px] transition-colors"><Plus size={12} />New Category</button>
@@ -434,7 +434,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
             <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
               {filtered.length === 0 ? (
                 <div className="flex items-center justify-center h-full px-6 text-center">
-                  <p className="text-xs text-muted-foreground/40">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
+                  <p className="text-xs text-[#404044]">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
                 </div>
               ) : filtered.map(s => (
                 <button
@@ -442,7 +442,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                   onClick={() => setActiveId(s.id)}
                   className={`w-full text-left px-4 py-3.5 border-b border-border transition-colors ${activeId === s.id ? SEL : HOV}`}
                 >
-                  <div className="text-sm font-medium text-foreground truncate leading-snug">{s.title || <span className="text-white/30 italic">Untitled</span>}</div>
+                  <div className="text-sm font-medium text-foreground truncate leading-snug">{s.title || <span className="text-[#4d4d4d] italic">Untitled</span>}</div>
                   {s.body && <div className="text-xs text-white/35 mt-1 line-clamp-2 leading-relaxed">{stripMd(s.body)}</div>}
                 </button>
               ))}
@@ -456,7 +456,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {!active ? (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground/30">Select a snippet to edit</p>
+              <p className="text-sm text-[#303033]">Select a snippet to edit</p>
             </div>
           ) : (<>
             <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
@@ -468,13 +468,13 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                     value={active.title}
                     onChange={e => mutate(active.id, 'title', e.target.value)}
                     placeholder="Snippet title…"
-                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-foreground placeholder:text-white/20 focus:ring-0"
+                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-foreground placeholder:text-[#333] focus:ring-0"
                   />
                   <div className="flex items-center gap-2 mt-[2.1rem] mr-5 flex-shrink-0">
                     <button
                       onClick={() => setFocusMode(v => !v)}
                       title={focusMode ? 'Exit focus mode' : 'Focus mode (hide sidebars)'}
-                      className="p-1.5 rounded text-white/20 hover:text-white/60 hover:bg-white/5 transition-colors"
+                      className="p-1.5 rounded text-[#333] hover:text-[#999] hover:bg-white/5 transition-colors"
                     >
                       {focusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                     </button>
@@ -501,7 +501,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                   >
                     {active.category}
                   </button>
-                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
                   {catDropOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setCatDropOpen(false)} />
@@ -541,7 +541,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                     </button>
                     <button
                       onClick={() => setConfirmDeleteId(null)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#4d4d4d] hover:text-[#b3b3b3] hover:bg-white/5 transition-colors"
                       title="Cancel"
                     >
                       <X size={14} />

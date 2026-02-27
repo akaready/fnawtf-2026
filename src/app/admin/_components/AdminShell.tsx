@@ -99,7 +99,7 @@ export function AdminShell({ children }: Props) {
                     <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
                     <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>
                       {label}
-                      <span className="ml-1.5 text-xs text-white/30 font-normal">⌘+K</span>
+                      <span className="ml-1.5 text-xs text-[#4d4d4d] font-normal">⌘+K</span>
                     </span>
                   </button>
                 ) : (

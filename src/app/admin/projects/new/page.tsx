@@ -8,7 +8,7 @@ export default async function NewProjectPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-[#2a2a2a]">
-        <p className="text-xs text-muted-foreground/50 uppercase tracking-wider mb-1">
+        <p className="text-xs text-[#515155] uppercase tracking-wider mb-1">
           <Link href="/admin/projects" className="hover:text-muted-foreground transition-colors">
             Projects
           </Link>

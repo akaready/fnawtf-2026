@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Camera, Scissors, Sparkles, Loader2, X, Plus, Minus } from 'lucide-react';
+import { Pencil, Camera, Scissors, Sparkles, Loader2, X, Plus } from 'lucide-react';
 import { MiniCalendar, type DragState } from '@/components/proposal/MiniCalendar';
 import {
   updateProposal, updateProposalMilestone,
@@ -27,9 +27,9 @@ interface TimelineTabProps {
 // ── Phase icon (matches ScheduleSlide) ───────────────────────────────────────
 
 function PhaseIcon({ phase }: { phase: string }) {
-  if (phase === 'pre-production')  return <Pencil  size={12} className="text-white/30" />;
-  if (phase === 'production')      return <Camera  size={12} className="text-white/30" />;
-  if (phase === 'post-production') return <Scissors size={12} className="text-white/30" />;
+  if (phase === 'pre-production')  return <Pencil  size={12} className="text-[#4d4d4d]" />;
+  if (phase === 'production')      return <Camera  size={12} className="text-[#4d4d4d]" />;
+  if (phase === 'post-production') return <Scissors size={12} className="text-[#4d4d4d]" />;
   return null;
 }
 
@@ -43,7 +43,7 @@ function displayLabel(m: ProposalMilestoneRow): string {
 // ── Month dropdown options ───────────────────────────────────────────────────
 
 const dateInputCls =
-  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-3 py-1.5 text-white/70 ' +
+  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-3 py-1.5 text-[#b3b3b3] ' +
   'focus:outline-none focus:border-white/20 focus:text-white/90 transition-colors ' +
   '[color-scheme:dark]';
 
@@ -128,7 +128,7 @@ function generateDefaultTimeline(
 
 const resetBtnCls =
   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ' +
-  'bg-white/[0.06] border border-[#2a2a2a] text-white/60 ' +
+  'bg-white/[0.06] border border-[#2a2a2a] text-[#999] ' +
   'hover:text-white hover:bg-white/[0.10] transition-colors disabled:opacity-30';
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -245,13 +245,15 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
     return months;
   })();
 
-  // Can remove last month if it's an extra and has no milestones
-  const canRemoveMonth = extraMonths > 0 && (() => {
-    const last = visibleMonths[visibleMonths.length - 1];
-    const lastStr = ymd(last);
-    const lastEnd = ymd(new Date(last.getFullYear(), last.getMonth() + 1, 0));
-    return !milestones.some(m => m.start_date <= lastEnd && (m.end_date || m.start_date) >= lastStr);
-  })();
+  // Which calendar months are "extra" (user-added) and have no milestones → removable
+  const baseMonthCount = visibleMonths.length - extraMonths;
+  const canRemoveMonthAt = (idx: number) => {
+    if (idx < baseMonthCount) return false;
+    const m = visibleMonths[idx];
+    const mStr = ymd(m);
+    const mEnd = ymd(new Date(m.getFullYear(), m.getMonth() + 1, 0));
+    return !milestones.some(ms => ms.start_date <= mEnd && (ms.end_date || ms.start_date) >= mStr);
+  };
 
   // ── Phase ranges for calendar outlines ────────────────────────────────────
 
@@ -387,11 +389,11 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
 
       {/* Schedule window header */}
       <div className="px-8 h-[51px] border-b border-[#2a2a2a] flex items-center gap-6">
-        <p className="text-xs font-mono text-white/25 uppercase tracking-widest flex-shrink-0">
+        <p className="text-xs font-mono text-[#404040] uppercase tracking-widest flex-shrink-0">
           Schedule window
         </p>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-white/40 flex-shrink-0">Kickoff</label>
+          <label className="text-xs text-[#666] flex-shrink-0">Kickoff</label>
           <input
             type="date"
             value={scheduleStart}
@@ -400,7 +402,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           />
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-white/40 flex-shrink-0">Go Live</label>
+          <label className="text-xs text-[#666] flex-shrink-0">Go Live</label>
           <div className={`relative${goLiveShake ? ' animate-shake' : ''}`}>
             <input
               type="date"
@@ -411,7 +413,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
             {scheduleEnd && (
               <button
                 onClick={() => handleScheduleEndChange('')}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-white/25 hover:text-white/60 transition-colors"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-[#404040] hover:text-[#999] transition-colors"
                 title="Clear Go Live date"
               >
                 <X size={10} />
@@ -438,8 +440,17 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           {visibleMonths.map((m, i) => (
             <div
               key={i}
-              className="border border-[#2a2a2a] rounded-xl p-1 bg-white/[0.05]"
+              className="relative group border border-[#2a2a2a] rounded-xl p-1 bg-white/[0.05]"
             >
+              {canRemoveMonthAt(i) && (
+                <button
+                  onClick={() => setExtraMonths(n => n - 1)}
+                  className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-[#4d4d4d] hover:text-white hover:bg-white/10 transition-all"
+                  title="Remove month"
+                >
+                  <X size={12} />
+                </button>
+              )}
               <MiniCalendar
                 month={m}
                 milestones={sorted}
@@ -451,19 +462,10 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
               />
             </div>
           ))}
-          <div className="flex items-center justify-center gap-3 py-2">
-            {canRemoveMonth && (
-              <button
-                onClick={() => setExtraMonths(n => n - 1)}
-                className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors"
-              >
-                <Minus size={13} />
-                Remove
-              </button>
-            )}
+          <div className="flex items-center justify-center py-2">
             <button
               onClick={() => setExtraMonths(n => n + 1)}
-              className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
             >
               <Plus size={13} />
               Add month
@@ -477,7 +479,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
         {/* Right panel: phase-grouped milestone display */}
         <div className="flex-1 overflow-y-auto admin-scrollbar p-6">
           {sorted.length === 0 ? (
-            <p className="text-xs text-white/25 text-center mt-8">
+            <p className="text-xs text-[#404040] text-center mt-8">
               No milestones yet. Select a Kickoff month and click Generate Timeline.
             </p>
           ) : (
@@ -490,7 +492,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
                       <PhaseIcon phase={phase} />
                       {phase !== 'production' && (
                         <span
-                          className="text-[9px] font-mono text-white/25 uppercase my-1"
+                          className="text-[9px] font-mono text-[#404040] uppercase my-1"
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {phase.replace('-', ' ')}
@@ -543,7 +545,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
                               </p>
                             </div>
                             {m.description && (
-                              <p className={`text-sm leading-relaxed ${isRedRow ? 'text-red-400/50' : 'text-white/50'}`}>{m.description}</p>
+                              <p className={`text-sm leading-relaxed ${isRedRow ? 'text-red-400/50' : 'text-[#808080]'}`}>{m.description}</p>
                             )}
                           </div>
                         </div>

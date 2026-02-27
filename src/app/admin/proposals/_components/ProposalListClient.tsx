@@ -85,7 +85,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       label: '#',
       width: 'w-12',
       render: (row) => (
-        <span className="text-white/25 font-mono text-xs">{row.proposal_number}</span>
+        <span className="text-[#404040] font-mono text-xs">{row.proposal_number}</span>
       ),
     },
     {
@@ -97,13 +97,13 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     {
       key: 'contact_name',
       label: 'Contact',
-      render: (row) => <span className="text-white/60">{row.contact_name}</span>,
+      render: (row) => <span className="text-[#999]">{row.contact_name}</span>,
     },
     {
       key: 'proposal_type',
       label: 'Type',
       render: (row) => (
-        <span className="text-white/50 text-xs">
+        <span className="text-[#808080] text-xs">
           {TYPE_LABELS[row.proposal_type] ?? row.proposal_type}
         </span>
       ),
@@ -119,9 +119,9 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       width: 'w-36',
       render: (row) => {
         const vc = viewCounts[row.id];
-        if (!vc?.views) return <span className="text-white/20 text-xs">—</span>;
+        if (!vc?.views) return <span className="text-[#333] text-xs">—</span>;
         return (
-          <span className="text-white/40 text-xs font-mono whitespace-nowrap">
+          <span className="text-[#666] text-xs font-mono whitespace-nowrap">
             {vc.views} view{vc.views !== 1 ? 's' : ''} · {relativeTime(vc.lastViewed)}
           </span>
         );
@@ -178,19 +178,19 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === tab.value
                 ? 'bg-white/10 text-white'
-                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
             }`}
           >
             {tab.label}
             {tab.value !== 'all' && (
-              <span className="ml-1.5 text-white/25">
+              <span className="ml-1.5 text-[#404040]">
                 {proposals.filter((p) => p.status === tab.value).length}
               </span>
             )}
           </button>
         ))}
         {(search || statusFilter !== 'all') && filtered.length !== proposals.length && (
-          <span className="ml-auto text-xs text-white/25 font-mono pr-1">
+          <span className="ml-auto text-xs text-[#404040] font-mono pr-1">
             {filtered.length} of {proposals.length}
           </span>
         )}
@@ -218,7 +218,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           title="Delete proposal?"
           description={
             <>
-              <span className="text-white/80">{deleteTarget.contact_company}</span> — this action
+              <span className="text-[#ccc]">{deleteTarget.contact_company}</span> — this action
               cannot be undone.
             </>
           }

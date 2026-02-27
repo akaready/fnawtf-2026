@@ -100,7 +100,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
     });
   };
 
-  const inputCls = 'w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
+  const inputCls = 'w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
   const labelCls = 'text-xs font-medium text-muted-foreground mb-1.5 block';
 
   return (
@@ -244,7 +244,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
             <div>
               <label className={labelCls}>URL Slug *</label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground/40 font-mono whitespace-nowrap">/p/</span>
+                <span className="text-xs text-[#404044] font-mono whitespace-nowrap">/p/</span>
                 <input
                   type="text"
                   value={slug}

@@ -57,7 +57,7 @@ export function EditableTextSection({ sectionId, title, content, onUpdate }: Pro
             onChange={(e) => setEditTitle(e.target.value)}
             placeholder="Section label (optional)"
             autoFocus
-            className="w-full text-sm tracking-[0.3em] uppercase font-mono text-white/40 bg-transparent border-b border-dashed border-white/20 outline-none placeholder:text-white/10 pb-2"
+            className="w-full text-sm tracking-[0.3em] uppercase font-mono text-[#666] bg-transparent border-b border-dashed border-white/20 outline-none placeholder:text-white/10 pb-2"
           />
           <textarea
             ref={textareaRef}
@@ -72,7 +72,7 @@ export function EditableTextSection({ sectionId, title, content, onUpdate }: Pro
               e.target.style.height = e.target.scrollHeight + 'px';
             }}
             placeholder="Write your content…"
-            className="w-full text-white/80 leading-relaxed text-xl bg-transparent border-b border-dashed border-white/20 outline-none resize-none placeholder:text-white/10 pb-2"
+            className="w-full text-[#ccc] leading-relaxed text-xl bg-transparent border-b border-dashed border-white/20 outline-none resize-none placeholder:text-white/10 pb-2"
           />
           <div className="flex justify-end gap-2">
             <button
@@ -104,7 +104,7 @@ export function EditableTextSection({ sectionId, title, content, onUpdate }: Pro
     >
       <div className="max-w-5xl mx-auto">
         {title && (
-          <p className="text-sm tracking-[0.3em] uppercase font-mono text-white/40 mb-6">
+          <p className="text-sm tracking-[0.3em] uppercase font-mono text-[#666] mb-6">
             {title}
           </p>
         )}
@@ -112,7 +112,7 @@ export function EditableTextSection({ sectionId, title, content, onUpdate }: Pro
           <p className="text-white/15 italic text-xl">Click to add content…</p>
         ) : (
           paragraphs.map((para, i) => (
-            <p key={i} className="text-white/80 leading-relaxed text-xl [&+p]:mt-5">
+            <p key={i} className="text-[#ccc] leading-relaxed text-xl [&+p]:mt-5">
               {para}
             </p>
           ))
