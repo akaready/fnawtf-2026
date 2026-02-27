@@ -83,9 +83,28 @@ export type Database = {
           role: string;
           name: string;
           sort_order: number;
+          role_id: string | null;
+          contact_id: string | null;
         };
         Insert: Omit<Database['public']['Tables']['project_credits']['Row'], 'id'>;
         Update: Partial<Database['public']['Tables']['project_credits']['Row']>;
+      };
+      roles: {
+        Row: {
+          id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['roles']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['roles']['Row']>;
+      };
+      contact_roles: {
+        Row: {
+          contact_id: string;
+          role_id: string;
+        };
+        Insert: Database['public']['Tables']['contact_roles']['Row'];
+        Update: Partial<Database['public']['Tables']['contact_roles']['Row']>;
       };
       tags: {
         Row: {

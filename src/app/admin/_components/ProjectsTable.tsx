@@ -4,7 +4,7 @@ import React, { useState, useMemo, useTransition, useRef, useEffect, useCallback
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Edit2, Trash2, Eye, EyeOff, CheckSquare, Square, Minus,
+  Trash2, Eye, EyeOff, CheckSquare, Square, Minus,
   Search, ChevronDown, ChevronUp, SlidersHorizontal, X,
   ArrowUpDown, Filter, Layers, Plus,
   ChevronRight, GripVertical, Columns,
@@ -1510,7 +1510,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
   }, [orderedVisibleCols, getColWidth, checkboxWidth]);
 
   const thClass =
-    'text-left px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground/60 font-medium select-none whitespace-nowrap relative overflow-hidden';
+    'text-left px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground/60 font-medium select-none whitespace-nowrap relative overflow-hidden bg-[#141414] border-b border-r border-[#1f1f1f]';
   const thSortClass = `${thClass} cursor-pointer group hover:text-muted-foreground transition-colors`;
 
   const visibleColCount = 2 + visibleCols.size;
@@ -1547,22 +1547,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           </td>
         );
       })}
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1 justify-end">
-          <button
-            onClick={(e) => { e.stopPropagation(); onRowClick?.(project); }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground bg-white/5 hover:bg-white/10 transition-colors"
-          >
-            <Edit2 size={13} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setConfirmDelete(project.id); }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400/60 bg-red-500/5 hover:text-red-400 hover:bg-red-500/15 transition-colors"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </td>
     </tr>
   );
 
@@ -1715,7 +1699,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
         <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
           <thead className="bg-[#141414]">
             <tr>
-              <th className="w-10 px-4 py-3 align-middle" style={stickyStyle(0, true)}>
+              <th className="w-10 px-4 py-3 align-middle bg-[#141414] border-b border-r border-[#1f1f1f]" style={stickyStyle(0, true)}>
                 <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
                   {allSelected ? <CheckSquare size={15} /> : someSelected ? <Minus size={15} /> : <Square size={15} />}
                 </button>
@@ -1763,11 +1747,13 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
 
                 const frozenStyle = stickyStyle(1 + idx, true);
                 const mergedStyle = { ...style, ...frozenStyle };
+                const isLast = idx === orderedVisibleCols.length - 1;
+                const borderCls = isLast ? 'border-r-0' : '';
 
                 return col.sortable ? (
                   <th
                     key={col.key}
-                    className={`${thSortClass} ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
+                    className={`${thSortClass} ${borderCls} ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
                     style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                     onClick={() => handleSort(col.key)}
                     {...dropProps}
@@ -1781,7 +1767,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
                 ) : (
                   <th
                     key={col.key}
-                    className={`${thClass} group ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
+                    className={`${thClass} group ${borderCls} ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
                     style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                     {...dropProps}
                   >
@@ -1793,7 +1779,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
                   </th>
                 );
               })}
-              <th className="w-20 px-4 py-3" style={thStickyBase} />
             </tr>
           </thead>
           <tbody>

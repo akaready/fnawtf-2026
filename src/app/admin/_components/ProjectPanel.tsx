@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
-import { X, Trash2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
+import { X, Trash2, Loader2, Save, Check } from 'lucide-react';
 import { PanelDrawer } from './PanelDrawer';
 import { MetadataTab } from './MetadataTab';
+import type { MetadataTabHandle } from './MetadataTab';
 import { VideosTab } from './VideosTab';
 import { CreditsTab } from './CreditsTab';
+import type { CreditsTabHandle } from './CreditsTab';
 import { BTSTab } from './BTSTab';
+import type { BTSTabHandle } from './BTSTab';
 import { ThumbnailGallery } from './ThumbnailGallery';
 import {
   getProjectById,
@@ -14,6 +17,8 @@ import {
   getProjectCredits,
   getProjectBTSImages,
   deleteProject,
+  getAllRoles,
+  getContacts,
 } from '../actions';
 import type { TagSuggestions, TestimonialOption } from './ProjectForm';
 
@@ -54,11 +59,21 @@ export function ProjectPanel({
   const [activeTab, setActiveTab] = useState<Tab>('project');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [videos, setVideos] = useState<any[]>([]);
-  const [credits, setCredits] = useState<Array<{ id?: string; role: string; name: string; sort_order: number }>>([]);
+  const [credits, setCredits] = useState<Array<{ id?: string; role: string; name: string; sort_order: number; role_id: string | null; contact_id: string | null }>>([]);
   const [btsImages, setBtsImages] = useState<Array<{ id?: string; image_url: string; caption: string | null; sort_order: number }>>([]);
+  const [allRoles, setAllRoles] = useState<Array<{ id: string; name: string }>>([]);
+  const [allPeople, setAllPeople] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, startDelete] = useTransition();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  // Refs for tabs that expose save/isDirty
+  const projectTabRef = useRef<MetadataTabHandle>(null);
+  const metadataTabRef = useRef<MetadataTabHandle>(null);
+  const creditsRef = useRef<CreditsTabHandle>(null);
+  const btsRef = useRef<BTSTabHandle>(null);
 
   const isNew = !project;
   const projectId = project?.id;
@@ -70,6 +85,7 @@ export function ProjectPanel({
     setCredits([]);
     setBtsImages([]);
     setConfirmDelete(false);
+    setSaveStatus('idle');
 
     if (projectId) {
       setLoadingRelated(true);
@@ -77,11 +93,15 @@ export function ProjectPanel({
         getProjectVideos(projectId),
         getProjectCredits(projectId),
         getProjectBTSImages(projectId),
+        getAllRoles(),
+        getContacts(),
       ])
-        .then(([v, c, b]) => {
+        .then(([v, c, b, roles, contacts]) => {
           setVideos(v);
           setCredits(c);
           setBtsImages(b);
+          setAllRoles(roles);
+          setAllPeople(contacts.map((p) => ({ id: p.id, name: p.name })));
         })
         .finally(() => setLoadingRelated(false));
     }
@@ -108,8 +128,41 @@ export function ProjectPanel({
     onProjectCreated(newProject);
   }, [onProjectCreated]);
 
+  // Universal save — commits all dirty tabs
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    setSaveStatus('idle');
+    try {
+      const saves: Promise<void>[] = [];
+      if (projectTabRef.current?.isDirty) saves.push(projectTabRef.current.save());
+      if (metadataTabRef.current?.isDirty) saves.push(metadataTabRef.current.save());
+      if (!loadingRelated && creditsRef.current?.isDirty) saves.push(creditsRef.current.save());
+      if (!loadingRelated && btsRef.current?.isDirty) saves.push(btsRef.current.save());
+      await Promise.all(saves);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2500);
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Close guard — warn if unsaved changes exist
+  const handleClose = useCallback(() => {
+    const dirty = [
+      projectTabRef.current?.isDirty,
+      metadataTabRef.current?.isDirty,
+      creditsRef.current?.isDirty,
+      btsRef.current?.isDirty,
+    ].some(Boolean);
+
+    if (dirty && !window.confirm('You have unsaved changes. Close anyway?')) return;
+    onClose();
+  }, [onClose]);
+
   return (
-    <PanelDrawer open={open} onClose={onClose} width="w-[640px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[640px]">
       {/* Header */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-white/[0.08] flex-shrink-0">
         {project?.thumbnail_url ? (
@@ -126,7 +179,7 @@ export function ProjectPanel({
           ) : null}
         </div>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
         >
           <X size={16} />
@@ -159,37 +212,42 @@ export function ProjectPanel({
 
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-5">
-        {activeTab === 'project' && (
+        {/* Project + Metadata tabs: always mounted (hidden when inactive) to preserve state */}
+        <div key={projectId} className={activeTab === 'project' ? '' : 'hidden'}>
           <MetadataTab
+            ref={projectTabRef}
             project={project as Parameters<typeof MetadataTab>[0]['project']}
             tagSuggestions={tagSuggestions as TagSuggestions | undefined}
             testimonials={testimonials}
             onSaved={handleSaved}
             onCreated={handleCreated}
             visibleSections="project"
+            hideInlineSave={!isNew}
           />
+        </div>
+        {!isNew && projectId && (
+          <div key={`${projectId}-meta`} className={activeTab === 'metadata' ? '' : 'hidden'}>
+            <MetadataTab
+              ref={metadataTabRef}
+              project={project as Parameters<typeof MetadataTab>[0]['project']}
+              tagSuggestions={tagSuggestions as TagSuggestions | undefined}
+              testimonials={testimonials}
+              onSaved={handleSaved}
+              onCreated={handleCreated}
+              visibleSections="metadata"
+              hideInlineSave
+            />
+          </div>
         )}
-        {activeTab === 'metadata' && projectId && (
-          <MetadataTab
-            project={project as Parameters<typeof MetadataTab>[0]['project']}
-            tagSuggestions={tagSuggestions as TagSuggestions | undefined}
-            testimonials={testimonials}
-            onSaved={handleSaved}
-            onCreated={handleCreated}
-            visibleSections="metadata"
-          />
-        )}
+
+        {/* Videos tab */}
         {activeTab === 'videos' && projectId && (
-          loadingRelated ? (
-            <LoadingSkeleton />
-          ) : (
-            <VideosTab projectId={projectId} initialVideos={videos} />
-          )
+          loadingRelated ? <LoadingSkeleton /> : <VideosTab projectId={projectId} initialVideos={videos} />
         )}
+
+        {/* Thumbnail tab */}
         {activeTab === 'thumbnail' && projectId && (
-          loadingRelated ? (
-            <LoadingSkeleton />
-          ) : (
+          loadingRelated ? <LoadingSkeleton /> : (
             <ThumbnailGallery
               projectId={projectId}
               videos={videos}
@@ -197,37 +255,53 @@ export function ProjectPanel({
             />
           )
         )}
-        {activeTab === 'credits' && projectId && (
-          loadingRelated ? (
-            <LoadingSkeleton />
-          ) : (
-            <CreditsTab projectId={projectId} initialCredits={credits} />
-          )
+
+        {/* Credits tab: always mounted after load to preserve edits */}
+        {activeTab === 'credits' && loadingRelated && <LoadingSkeleton />}
+        {!loadingRelated && projectId && (
+          <div key={`${projectId}-credits`} className={activeTab === 'credits' ? '' : 'hidden'}>
+            <CreditsTab ref={creditsRef} projectId={projectId} initialCredits={credits} roles={allRoles} people={allPeople} />
+          </div>
         )}
-        {activeTab === 'bts' && projectId && (
-          loadingRelated ? (
-            <LoadingSkeleton />
-          ) : (
-            <BTSTab projectId={projectId} initialImages={btsImages} />
-          )
+
+        {/* BTS tab: always mounted after load to preserve edits */}
+        {activeTab === 'bts' && loadingRelated && <LoadingSkeleton />}
+        {!loadingRelated && projectId && (
+          <div key={`${projectId}-bts`} className={activeTab === 'bts' ? '' : 'hidden'}>
+            <BTSTab ref={btsRef} projectId={projectId} initialImages={btsImages} />
+          </div>
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer: save (left) | delete (right) */}
       {!isNew && projectId && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08] flex-shrink-0">
-          <span className="text-xs text-muted-foreground/40">
-            {project?.created_at
-              ? new Date(String(project.created_at)).toLocaleDateString()
-              : ''}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveAll}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40"
+            >
+              {isSaving ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : saveStatus === 'saved' ? (
+                <Check size={14} className="text-green-600" />
+              ) : (
+                <Save size={14} />
+              )}
+              {isSaving ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
+            </button>
+            {saveStatus === 'error' && (
+              <span className="text-sm text-red-400">Save failed</span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {confirmDelete ? (
               <>
                 <span className="text-xs text-red-400 mr-1">Delete this project?</span>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-border-subtle text-muted-foreground hover:text-foreground transition-colors"
+                  className="px-3 py-1.5 text-xs rounded-lg border border-white/[0.08] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>
@@ -236,7 +310,7 @@ export function ProjectPanel({
                   disabled={deleting}
                   className="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-40"
                 >
-                  {deleting ? <Loader2 size={12} className="animate-spin" /> : 'Confirm'}
+                  {deleting ? <Loader2 size={12} className="animate-spin" /> : 'Delete'}
                 </button>
               </>
             ) : (

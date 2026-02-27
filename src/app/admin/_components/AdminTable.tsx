@@ -219,17 +219,20 @@ export function AdminTable<T extends { id: string }>({
   return (
     <div className={`flex-1 min-h-0 relative ${className ?? ''}`}>
       {headerHeight > 0 && (
-        <div className="absolute top-0 right-0 w-3 bg-[#0f0f0f] z-20 pointer-events-none border-b border-white/[0.12]" style={{ height: headerHeight - 0.5 }} />
+        <div className="absolute top-0 right-0 w-3 bg-[#0f0f0f] z-20 pointer-events-none border-b border-[#1f1f1f]" style={{ height: headerHeight - 0.5 }} />
       )}
       <div ref={scrollRef} className="h-full overflow-y-auto admin-scrollbar">
-      <table className="w-full text-sm">
-        <thead className="sticky top-0 bg-[#0f0f0f] z-10">
-          <tr className="border-b border-white/[0.12]">
-            {columns.map((col) => (
+      <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
+        <thead className="sticky top-0 z-10">
+          <tr>
+            {columns.map((col, idx) => {
+              const isLast = idx === columns.length - 1 && !hasActions;
+              return (
               <th
                 key={col.key}
                 className={[
-                  'px-4 py-3 text-xs font-mono text-white/25 uppercase tracking-widest font-normal whitespace-nowrap',
+                  'px-4 py-3 text-xs font-mono text-white/25 uppercase tracking-widest font-normal whitespace-nowrap bg-[#0f0f0f] border-b border-[#1f1f1f]',
+                  isLast ? '' : 'border-r',
                   alignClass(col.align),
                   col.width ?? '',
                   col.sortable && onSort
@@ -260,9 +263,10 @@ export function AdminTable<T extends { id: string }>({
                   )}
                 </span>
               </th>
-            ))}
+              );
+            })}
             {hasActions && (
-              <th className="px-4 py-3 w-20 text-xs font-mono text-white/25 uppercase tracking-widest font-normal" />
+              <th className="px-4 py-3 w-20 text-xs font-mono text-white/25 uppercase tracking-widest font-normal bg-[#0f0f0f] border-b border-[#1f1f1f]" />
             )}
           </tr>
         </thead>

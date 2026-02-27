@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown } from 'lucide-react';
 import { ChipInput } from './ChipInput';
@@ -39,7 +39,14 @@ interface Props {
   onCreated?: (newId: string) => void;
   /** Which sections to show: 'project' = core + visibility, 'metadata' = tags + scope + testimonial, undefined = all */
   visibleSections?: 'project' | 'metadata';
+  /** Hide the inline save button (use when parent provides a universal footer save) */
+  hideInlineSave?: boolean;
 }
+
+export type MetadataTabHandle = {
+  save: () => Promise<void>;
+  isDirty: boolean;
+};
 
 const inputClass =
   'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors disabled:opacity-40';
@@ -69,12 +76,11 @@ function CheckField({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2.5 cursor-pointer group">
+    <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2.5 cursor-pointer group">
       <div
         className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
           checked ? 'bg-white border-white' : 'border-border group-hover:border-white/40'
         }`}
-        onClick={() => onChange(!checked)}
       >
         {checked && (
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
@@ -85,7 +91,7 @@ function CheckField({
       <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
         {label}
       </span>
-    </label>
+    </button>
   );
 }
 
@@ -98,11 +104,15 @@ function slugify(text: string) {
     .trim();
 }
 
-export function MetadataTab({ project, tagSuggestions, testimonials, onSaved, onCreated, visibleSections }: Props) {
+export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function MetadataTab(
+  { project, tagSuggestions, testimonials, onSaved, onCreated, visibleSections, hideInlineSave },
+  ref
+) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
 
   // Find the testimonial currently linked to this project
   const initialTestimonialId = testimonials?.find((t) => t.project_id === project?.id)?.id ?? '';
@@ -131,61 +141,69 @@ export function MetadataTab({ project, tagSuggestions, testimonials, onSaved, on
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
+    setIsDirty(true);
     if (status !== 'idle') setStatus('idle');
   };
+
+  async function doSave(): Promise<void> {
+    const data = {
+      ...form,
+      production_days: form.production_days === '' ? null : Number(form.production_days),
+      crew_count: form.crew_count === '' ? null : Number(form.crew_count),
+      talent_count: form.talent_count === '' ? null : Number(form.talent_count),
+      location_count: form.location_count === '' ? null : Number(form.location_count),
+      category: form.category || null,
+      preview_gif_url: form.preview_gif_url || null,
+      thumbnail_url: form.thumbnail_url || null,
+      style_tags: form.style_tags.length ? form.style_tags : null,
+      premium_addons: form.premium_addons.length ? form.premium_addons : null,
+      camera_techniques: form.camera_techniques.length ? form.camera_techniques : null,
+      assets_delivered: form.assets_delivered.length ? form.assets_delivered : null,
+    };
+
+    if (project) {
+      await updateProject(project.id, data);
+
+      // Update testimonial link: unlink previous, link new
+      if (initialTestimonialId && initialTestimonialId !== linkedTestimonialId) {
+        await updateTestimonial(initialTestimonialId, { project_id: null });
+      }
+      if (linkedTestimonialId && linkedTestimonialId !== initialTestimonialId) {
+        await updateTestimonial(linkedTestimonialId, { project_id: project.id });
+      }
+
+      setStatus('saved');
+      setIsDirty(false);
+      onSaved?.();
+      setTimeout(() => setStatus('idle'), 2500);
+    } else {
+      const newId = await createProject(data);
+
+      // Link testimonial to new project
+      if (linkedTestimonialId) {
+        await updateTestimonial(linkedTestimonialId, { project_id: newId });
+      }
+
+      if (onCreated) {
+        onCreated(newId);
+      } else {
+        router.push(`/admin/projects/${newId}`);
+      }
+    }
+  }
 
   const handleSave = () => {
     startTransition(async () => {
       try {
-        const data = {
-          ...form,
-          production_days: form.production_days === '' ? null : Number(form.production_days),
-          crew_count: form.crew_count === '' ? null : Number(form.crew_count),
-          talent_count: form.talent_count === '' ? null : Number(form.talent_count),
-          location_count: form.location_count === '' ? null : Number(form.location_count),
-          category: form.category || null,
-          preview_gif_url: form.preview_gif_url || null,
-          thumbnail_url: form.thumbnail_url || null,
-          style_tags: form.style_tags.length ? form.style_tags : null,
-          premium_addons: form.premium_addons.length ? form.premium_addons : null,
-          camera_techniques: form.camera_techniques.length ? form.camera_techniques : null,
-          assets_delivered: form.assets_delivered.length ? form.assets_delivered : null,
-        };
-
-        if (project) {
-          await updateProject(project.id, data);
-
-          // Update testimonial link: unlink previous, link new
-          if (initialTestimonialId && initialTestimonialId !== linkedTestimonialId) {
-            await updateTestimonial(initialTestimonialId, { project_id: null });
-          }
-          if (linkedTestimonialId && linkedTestimonialId !== initialTestimonialId) {
-            await updateTestimonial(linkedTestimonialId, { project_id: project.id });
-          }
-
-          setStatus('saved');
-          onSaved?.();
-          setTimeout(() => setStatus('idle'), 2500);
-        } else {
-          const newId = await createProject(data);
-
-          // Link testimonial to new project
-          if (linkedTestimonialId) {
-            await updateTestimonial(linkedTestimonialId, { project_id: newId });
-          }
-
-          if (onCreated) {
-            onCreated(newId);
-          } else {
-            router.push(`/admin/projects/${newId}`);
-          }
-        }
+        await doSave();
       } catch (err) {
         setErrorMsg(err instanceof Error ? err.message : 'Save failed');
         setStatus('error');
       }
     });
   };
+
+  useImperativeHandle(ref, () => ({ save: doSave, isDirty }));
 
   const showProject = !visibleSections || visibleSections === 'project';
   const showMetadata = !visibleSections || visibleSections === 'metadata';
@@ -363,7 +381,7 @@ export function MetadataTab({ project, tagSuggestions, testimonials, onSaved, on
               <div className="relative">
                 <select
                   value={linkedTestimonialId}
-                  onChange={(e) => setLinkedTestimonialId(e.target.value)}
+                  onChange={(e) => { setLinkedTestimonialId(e.target.value); setIsDirty(true); }}
                   className={`${inputClass} appearance-none pr-9 cursor-pointer`}
                 >
                   <option value="">No testimonial linked</option>
@@ -409,23 +427,28 @@ export function MetadataTab({ project, tagSuggestions, testimonials, onSaved, on
         </div>
       </section>)}
 
-      {/* Save */}
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending}
-          className="px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {isPending ? 'Saving…' : project ? 'Save Changes' : 'Create Project'}
-        </button>
-        {status === 'saved' && (
-          <span className="text-sm text-green-400">Saved</span>
-        )}
-        {status === 'error' && (
-          <span className="text-sm text-red-400">{errorMsg}</span>
-        )}
-      </div>
+      {/* Save — only shown for new projects or when parent doesn't own the save */}
+      {!hideInlineSave && (
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isPending}
+            className="px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isPending ? 'Saving…' : project ? 'Save Changes' : 'Create Project'}
+          </button>
+          {status === 'saved' && (
+            <span className="text-sm text-green-400">Saved</span>
+          )}
+          {status === 'error' && (
+            <span className="text-sm text-red-400">{errorMsg}</span>
+          )}
+        </div>
+      )}
+      {hideInlineSave && status === 'error' && (
+        <p className="text-sm text-red-400 pt-2">{errorMsg}</p>
+      )}
     </div>
   );
-}
+});

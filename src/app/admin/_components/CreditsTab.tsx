@@ -1,43 +1,187 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
-import { saveProjectCredits } from '../actions';
+import { saveProjectCredits, createRole, createContact } from '../actions';
 
 interface Credit {
   role: string;
   name: string;
   sort_order: number;
+  role_id?: string | null;
+  contact_id?: string | null;
+}
+
+interface RoleOption {
+  id: string;
+  name: string;
+}
+
+interface PersonOption {
+  id: string;
+  name: string;
 }
 
 interface Props {
   projectId: string;
   initialCredits: Credit[];
+  roles?: RoleOption[];
+  people?: PersonOption[];
 }
+
+export type CreditsTabHandle = {
+  save: () => Promise<void>;
+  isDirty: boolean;
+};
 
 const inputClass =
   'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors';
 
-export function CreditsTab({ projectId, initialCredits }: Props) {
-  const [credits, setCredits] = useState<Credit[]>(
-    initialCredits.length
-      ? initialCredits
-      : []
-  );
-  const [isPending, startTransition] = useTransition();
-  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+/* ── Combobox ───────────────────────────────────────────────────────────── */
 
-  const update = (index: number, key: keyof Credit, value: string | number) => {
-    setCredits((prev) => prev.map((c, i) => (i === index ? { ...c, [key]: value } : c)));
-    if (status !== 'idle') setStatus('idle');
+function Combobox({
+  value,
+  options,
+  onChange,
+  placeholder,
+  createLabel,
+  onCreate,
+  className,
+}: {
+  value: string;
+  options: Array<{ id: string; name: string }>;
+  onChange: (name: string, id: string | null) => void;
+  placeholder: string;
+  createLabel: string;
+  onCreate?: (name: string) => Promise<string>;
+  className?: string;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  const exactMatch = options.find((o) => o.name.toLowerCase() === query.trim().toLowerCase());
+
+  const handleSelect = (option: { id: string; name: string }) => {
+    setQuery(option.name);
+    onChange(option.name, option.id);
+    setOpen(false);
+  };
+
+  const handleCreate = async () => {
+    if (!onCreate || !query.trim()) return;
+    setCreating(true);
+    try {
+      const id = await onCreate(query.trim());
+      onChange(query.trim(), id);
+      setOpen(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleBlur = () => {
+    // Allow time for click events on dropdown items
+    setTimeout(() => {
+      if (!ref.current?.contains(document.activeElement)) {
+        setOpen(false);
+        if (query.trim() && !exactMatch) {
+          // Text was typed but no match selected — keep as freeform
+          onChange(query.trim(), null);
+        }
+      }
+    }, 150);
+  };
+
+  return (
+    <div ref={ref} className={`relative ${className || ''}`}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!open) setOpen(true);
+          // If empty, clear
+          if (!e.target.value.trim()) onChange('', null);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={inputClass}
+      />
+      {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#111] border border-white/15 rounded-lg shadow-xl">
+          {filtered.slice(0, 20).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(opt)}
+              className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-white/[0.06] transition-colors truncate"
+            >
+              {opt.name}
+            </button>
+          ))}
+          {query.trim() && !exactMatch && onCreate && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleCreate}
+              disabled={creating}
+              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-white/[0.06]"
+            >
+              {creating ? 'Creating...' : `${createLabel} "${query.trim()}"`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Credits Tab ────────────────────────────────────────────────────────── */
+
+export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTab(
+  { projectId, initialCredits, roles: initialRoles = [], people: initialPeople = [] },
+  ref
+) {
+  const [credits, setCredits] = useState<Credit[]>(
+    initialCredits.length ? initialCredits : []
+  );
+  const [roles, setRoles] = useState(initialRoles);
+  const [people, setPeople] = useState(initialPeople);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const updateCredit = (index: number, updates: Partial<Credit>) => {
+    setCredits((prev) => prev.map((c, i) => (i === index ? { ...c, ...updates } : c)));
+    setIsDirty(true);
   };
 
   const add = () => {
-    setCredits((prev) => [...prev, { role: '', name: '', sort_order: prev.length }]);
+    setCredits((prev) => [...prev, { role: '', name: '', sort_order: prev.length, role_id: null, contact_id: null }]);
+    setIsDirty(true);
   };
 
   const remove = (index: number) => {
     setCredits((prev) => prev.filter((_, i) => i !== index).map((c, i) => ({ ...c, sort_order: i })));
+    setIsDirty(true);
   };
 
   const move = (index: number, dir: -1 | 1) => {
@@ -46,20 +190,28 @@ export function CreditsTab({ projectId, initialCredits }: Props) {
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
     setCredits(next.map((c, i) => ({ ...c, sort_order: i })));
+    setIsDirty(true);
   };
 
-  const handleSave = () => {
-    startTransition(async () => {
-      try {
-        await saveProjectCredits(projectId, credits);
-        setStatus('saved');
-        setTimeout(() => setStatus('idle'), 2500);
-      } catch (err) {
-        console.error(err);
-        setStatus('error');
-      }
-    });
+  const handleCreateRole = async (name: string): Promise<string> => {
+    const id = await createRole(name);
+    setRoles((prev) => [...prev, { id, name }].sort((a, b) => a.name.localeCompare(b.name)));
+    return id;
   };
+
+  const handleCreatePerson = async (name: string): Promise<string> => {
+    const id = await createContact({ name, type: 'crew' });
+    setPeople((prev) => [...prev, { id, name }].sort((a, b) => a.name.localeCompare(b.name)));
+    return id;
+  };
+
+  async function handleSave(): Promise<void> {
+    await saveProjectCredits(projectId, credits);
+    setIsDirty(false);
+  }
+
+  useImperativeHandle(ref, () => ({ save: handleSave, isDirty }));
+
 
   return (
     <div className="space-y-4">
@@ -90,19 +242,23 @@ export function CreditsTab({ projectId, initialCredits }: Props) {
                   <ArrowDown size={12} />
                 </button>
               </div>
-              <input
-                type="text"
+              <Combobox
                 value={credit.role}
-                onChange={(e) => update(i, 'role', e.target.value)}
+                options={roles}
+                onChange={(name, id) => updateCredit(i, { role: name, role_id: id })}
                 placeholder="Role"
-                className={`${inputClass} max-w-40`}
+                createLabel="Add role"
+                onCreate={handleCreateRole}
+                className="max-w-44"
               />
-              <input
-                type="text"
+              <Combobox
                 value={credit.name}
-                onChange={(e) => update(i, 'name', e.target.value)}
+                options={people}
+                onChange={(name, id) => updateCredit(i, { name, contact_id: id })}
                 placeholder="Full Name"
-                className={inputClass}
+                createLabel="Add person"
+                onCreate={handleCreatePerson}
+                className="flex-1"
               />
               <button
                 type="button"
@@ -124,18 +280,6 @@ export function CreditsTab({ projectId, initialCredits }: Props) {
         <Plus size={14} /> Add credit
       </button>
 
-      <div className="flex items-center gap-3 pt-2 border-t border-border/20">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending}
-          className="px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors disabled:opacity-40"
-        >
-          {isPending ? 'Saving…' : 'Save Credits'}
-        </button>
-        {status === 'saved' && <span className="text-sm text-green-400">Saved</span>}
-        {status === 'error' && <span className="text-sm text-red-400">Save failed</span>}
-      </div>
     </div>
   );
-}
+});

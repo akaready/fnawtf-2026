@@ -192,16 +192,18 @@ export function AdminSearchModal({ open, onClose }: Props) {
       <div className="w-full max-w-xl mx-4 bg-[#111] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden">
 
         {/* Input row */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.07]">
-          <Search size={15} className="flex-shrink-0 text-white/40" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search…"
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-white/30 outline-none"
-          />
+        <div className="flex items-center gap-3 px-3 py-2 border-b border-white/[0.07]">
+          <div className="flex-1 relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search…"
+              className="w-full bg-black rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-white/30 outline-none border border-white/[0.08] focus:border-white/20"
+            />
+          </div>
           <span className="text-[10px] text-white/20 tracking-wide flex-shrink-0">⌘+K</span>
           <button onClick={onClose} className="flex-shrink-0 text-white/30 hover:text-white/70 transition-colors">
             <X size={14} />
@@ -209,7 +211,7 @@ export function AdminSearchModal({ open, onClose }: Props) {
         </div>
 
         {/* Type filter pills */}
-        <div className="flex items-center gap-1.5 px-3 py-2.5 border-b border-white/[0.07] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-white/[0.07] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {(['all', ...ALL_TYPES] as const).map((t) => (
             <button
               key={t}

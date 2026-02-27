@@ -6,6 +6,8 @@ export type ProposalType = 'build' | 'launch' | 'scale' | 'build-launch' | 'fund
 export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'accepted';
 export type SectionType = 'text' | 'video' | 'projects' | 'quote' | 'calendar' | 'custom_text';
 
+export type ContactType = 'contact' | 'crew' | 'staff' | 'partner' | 'cast';
+
 export interface ContactRow {
   id: string;
   name: string;
@@ -15,6 +17,8 @@ export interface ContactRow {
   company: string | null;
   client_id: string | null;
   notes: string | null;
+  type: ContactType;
+  headshot_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -99,7 +103,7 @@ export type ProposalVideo = {
       crew_count: number | null;
       talent_count: number | null;
       location_count: number | null;
-      credits: Array<{ id: string; project_id: string; role: string; name: string; sort_order: number }> | null;
+      credits: Array<{ id: string; project_id: string; role: string; name: string; sort_order: number; role_id: string | null; contact_id: string | null }> | null;
       bts_images: Array<{ id: string; project_id: string; image_url: string; caption: string | null; sort_order: number }> | null;
       testimonials: Array<{ quote: string; person_name: string | null; person_title: string | null; display_title: string | null }> | null;
     } | null;

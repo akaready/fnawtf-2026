@@ -52,6 +52,14 @@ export interface ProjectCredit {
   role: string;
   name: string;
   sort_order: number;
+  role_id: string | null;
+  contact_id: string | null;
+}
+
+export interface RoleRow {
+  id: string;
+  name: string;
+  created_at: string;
 }
 
 export interface ProjectTag {

@@ -3,7 +3,7 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, Link2, AppWindow } from 'lucide-react';
+import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, AppWindow, Clapperboard, GitFork } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
@@ -43,10 +43,11 @@ export function AdminShell({ children }: Props) {
     { href: '/admin/search',   label: 'Search',   icon: Search },
     { href: '/admin/clients',  label: 'Clients',  icon: Briefcase },
     { href: '/admin/leads',    label: 'Leads',    icon: Target },
-    { href: '/admin/partners', label: 'Partners', icon: Link2 },
-    { href: '/admin/contacts', label: 'Contacts', icon: Users },
+    { href: '/admin/partners', label: 'Pipelines', icon: GitFork },
+    { href: '/admin/contacts', label: 'People',   icon: Users },
     { href: '/admin/projects', label: 'Projects', icon: LayoutGrid },
     { href: '/admin/tags',     label: 'Tags',     icon: Tag },
+    { href: '/admin/roles',    label: 'Roles',    icon: Clapperboard },
     { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
     { href: '/admin/proposals', label: 'Proposals', icon: FileText },
     { href: '/admin/snippets', label: 'Snippets', icon: BookOpen },
@@ -81,8 +82,8 @@ export function AdminShell({ children }: Props) {
               <React.Fragment key={href}>
                 {i === 1 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
                 {i === 5 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
-                {i === 8 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
-                {i === 10 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
+                {i === 9 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
+                {i === 11 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
                 {label === 'Search' ? (
                   <button
                     onClick={() => setSearchOpen(true)}

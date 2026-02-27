@@ -240,77 +240,8 @@ export function CompanyPanel({
           </button>
         </div>
 
-        {/* Type pills + status */}
-        <div className="flex items-center gap-1.5 flex-wrap px-6 py-3 border-b border-white/[0.08]">
-          {ALL_TYPES.map((type) => {
-            const cfg = TYPE_CONFIG[type];
-            const isActive = companyTypes.includes(type);
-            const { Icon } = cfg;
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => toggleCompanyType(type)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
-                  isActive
-                    ? `${cfg.activeBg} ${cfg.activeText} ${cfg.activeBorder}`
-                    : 'border-border/30 bg-transparent text-muted-foreground/30 hover:text-muted-foreground/60 hover:border-border/50'
-                }`}
-              >
-                <Icon size={11} />
-                {cfg.label}
-              </button>
-            );
-          })}
-          <div className="ml-auto flex items-center gap-1.5">
-            {ALL_STATUSES.map((s) => {
-              const scfg = STATUS_CONFIG[s];
-              const isActive = status === s;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => handleChange('status', s)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
-                    isActive
-                      ? `bg-white/8 border-white/20 ${scfg.color}`
-                      : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-white/20'}`} />
-                  {scfg.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Pipeline stage (only for leads) */}
-        {isLead && (
-          <div className="flex items-center gap-1.5 px-6 py-2.5 border-b border-white/[0.08]">
-            <span className="text-xs text-muted-foreground/30 mr-1">Stage</span>
-            {PIPELINE_STAGES.map((stage) => {
-              const isActive = pipelineStage === stage.value;
-              return (
-                <button
-                  key={stage.value}
-                  type="button"
-                  onClick={() => handleChange('pipeline_stage', stage.value)}
-                  className={`px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
-                    isActive
-                      ? `bg-white/8 border-white/20 ${stage.color}`
-                      : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
-                  }`}
-                >
-                  {stage.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Tab strip */}
-        <div className="flex items-center border-b border-white/[0.08] px-6">
+        {/* Tab strip (pill style, right under header) */}
+        <div className="flex items-center gap-1 border-b border-white/[0.08] px-6 py-2 flex-shrink-0">
           {([
             { id: 'info',         label: 'Info',         count: null },
             { id: 'contacts',     label: 'Contacts',     count: clientContacts.length },
@@ -321,15 +252,15 @@ export function CompanyPanel({
               key={tabId}
               type="button"
               onClick={() => setActiveTab(tabId)}
-              className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium border-b-2 -mb-px transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === tabId
-                  ? 'border-white/60 text-foreground'
-                  : 'border-transparent text-muted-foreground/50 hover:text-muted-foreground'
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
               }`}
             >
               {label}
               {count !== null && count > 0 && (
-                <span className="text-[10px] bg-white/8 rounded px-1 py-0.5 leading-none">{count}</span>
+                <span className="text-[10px] text-white/30 ml-0.5">{count}</span>
               )}
             </button>
           ))}
@@ -338,13 +269,83 @@ export function CompanyPanel({
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-4">
           {activeTab === 'info' && (
-            <textarea
-              value={localCompany.notes ?? ''}
-              onChange={(e) => handleChange('notes', e.target.value || null)}
-              placeholder="Notes…"
-              rows={5}
-              className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
-            />
+            <div className="space-y-4">
+              {/* Type + status controls */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {ALL_TYPES.map((type) => {
+                    const cfg = TYPE_CONFIG[type];
+                    const isActive = companyTypes.includes(type);
+                    const { Icon } = cfg;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => toggleCompanyType(type)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
+                          isActive
+                            ? `${cfg.activeBg} ${cfg.activeText} ${cfg.activeBorder}`
+                            : 'border-border/30 bg-transparent text-muted-foreground/30 hover:text-muted-foreground/60 hover:border-border/50'
+                        }`}
+                      >
+                        <Icon size={11} />
+                        {cfg.label}
+                      </button>
+                    );
+                  })}
+                  <div className="ml-auto flex items-center gap-1.5">
+                    {ALL_STATUSES.map((s) => {
+                      const scfg = STATUS_CONFIG[s];
+                      const isActive = status === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => handleChange('status', s)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
+                            isActive
+                              ? `bg-white/8 border-white/20 ${scfg.color}`
+                              : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-white/20'}`} />
+                          {scfg.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {isLead && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs text-muted-foreground/30 mr-1">Stage</span>
+                    {PIPELINE_STAGES.map((stage) => {
+                      const isActive = pipelineStage === stage.value;
+                      return (
+                        <button
+                          key={stage.value}
+                          type="button"
+                          onClick={() => handleChange('pipeline_stage', stage.value)}
+                          className={`px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
+                            isActive
+                              ? `bg-white/8 border-white/20 ${stage.color}`
+                              : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
+                          }`}
+                        >
+                          {stage.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <textarea
+                value={localCompany.notes ?? ''}
+                onChange={(e) => handleChange('notes', e.target.value || null)}
+                placeholder="Notes…"
+                rows={5}
+                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+              />
+            </div>
           )}
 
           {activeTab === 'contacts' && (
@@ -464,39 +465,34 @@ export function CompanyPanel({
           )}
         </div>
 
-        {/* Footer: date + delete + save */}
+        {/* Footer: save (left) | delete (right) */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08]">
-          <span className="text-xs text-muted-foreground/40">
-            {new Date(localCompany.created_at).toLocaleDateString()}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { !hasLinks && setConfirmDeleteId(localCompany.id); }}
-              disabled={hasLinks}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                hasLinks
-                  ? 'text-muted-foreground/20 cursor-not-allowed'
-                  : 'text-red-400/60 hover:text-red-400 hover:bg-red-500/10'
-              }`}
-              title={hasLinks ? 'Unlink projects and testimonials to delete' : 'Delete company'}
-            >
-              <Trash2 size={14} />
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-border-subtle border border-border-subtle hover:bg-[#0a0a0a] text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {savedId === localCompany.id ? (
-                <Check size={14} className="text-green-400" />
-              ) : saving ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Save size={14} />
-              )}
-              {savedId === localCompany.id ? 'Saved' : 'Save'}
-            </button>
-          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40"
+          >
+            {savedId === localCompany.id ? (
+              <Check size={14} className="text-green-600" />
+            ) : saving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
+            {savedId === localCompany.id ? 'Saved' : 'Save'}
+          </button>
+          <button
+            onClick={() => { !hasLinks && setConfirmDeleteId(localCompany.id); }}
+            disabled={hasLinks}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+              hasLinks
+                ? 'text-muted-foreground/20 cursor-not-allowed'
+                : 'text-red-400/60 hover:text-red-400 hover:bg-red-500/10'
+            }`}
+            title={hasLinks ? 'Unlink projects and testimonials to delete' : 'Delete company'}
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       </PanelDrawer>
 
@@ -633,7 +629,7 @@ function LogoDropzone({
         dragOver
           ? 'border-white/40 bg-white/10'
           : logoUrl
-          ? 'border-transparent bg-white/5'
+          ? 'border-transparent'
           : 'border-border/40 bg-white/[0.02] hover:border-white/20'
       }`}
       title="Drop logo or click to upload"

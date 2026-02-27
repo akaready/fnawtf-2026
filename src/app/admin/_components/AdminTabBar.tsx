@@ -7,6 +7,8 @@ export interface AdminTab {
   label: string;
   icon?: ReactNode;
   badge?: ReactNode;
+  /** Custom class applied when this tab is active (overrides default bg-white/10 text-white) */
+  activeClassName?: string;
 }
 
 interface AdminTabBarProps {
@@ -28,7 +30,7 @@ export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfte
             onClick={() => onTabChange(tab.value)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === tab.value
-                ? 'bg-white/10 text-white'
+                ? (tab.activeClassName ?? 'bg-white/10 text-white')
                 : 'text-white/40 hover:text-white/70 hover:bg-white/5'
             }`}
           >

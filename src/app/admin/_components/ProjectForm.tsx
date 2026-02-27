@@ -27,7 +27,7 @@ export type TestimonialOption = {
 interface Props {
   project: Record<string, unknown> & { id: string } | null;
   videos: Array<Record<string, unknown> & { id: string; bunny_video_id: string; title: string; video_type: 'flagship' | 'cutdown' | 'bts'; sort_order: number }>;
-  credits: Array<{ id?: string; role: string; name: string; sort_order: number }>;
+  credits: Array<{ id?: string; role: string; name: string; sort_order: number; role_id?: string | null; contact_id?: string | null }>;
   btsImages: Array<{ id?: string; image_url: string; caption: string | null; sort_order: number }>;
   tagSuggestions?: TagSuggestions;
   testimonials?: TestimonialOption[];

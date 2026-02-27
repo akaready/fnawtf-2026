@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, forwardRef, useImperativeHandle } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { saveProjectBTSImages } from '../actions';
 
@@ -15,27 +15,33 @@ interface Props {
   initialImages: BTSImage[];
 }
 
+export type BTSTabHandle = {
+  save: () => Promise<void>;
+  isDirty: boolean;
+};
+
 const inputClass =
   'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-white/30 transition-colors';
 
-export function BTSTab({ projectId, initialImages }: Props) {
+export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectId, initialImages }, ref) {
   const [images, setImages] = useState<BTSImage[]>(initialImages);
-  const [isPending, startTransition] = useTransition();
-  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [isDirty, setIsDirty] = useState(false);
 
   const update = (index: number, key: keyof BTSImage, value: string | null) => {
     setImages((prev) => prev.map((img, i) => (i === index ? { ...img, [key]: value } : img)));
-    if (status !== 'idle') setStatus('idle');
+    setIsDirty(true);
   };
 
   const add = () => {
     setImages((prev) => [...prev, { image_url: '', caption: null, sort_order: prev.length }]);
+    setIsDirty(true);
   };
 
   const remove = (index: number) => {
     setImages((prev) =>
       prev.filter((_, i) => i !== index).map((img, i) => ({ ...img, sort_order: i }))
     );
+    setIsDirty(true);
   };
 
   const move = (index: number, dir: -1 | 1) => {
@@ -44,20 +50,15 @@ export function BTSTab({ projectId, initialImages }: Props) {
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
     setImages(next.map((img, i) => ({ ...img, sort_order: i })));
+    setIsDirty(true);
   };
 
-  const handleSave = () => {
-    startTransition(async () => {
-      try {
-        await saveProjectBTSImages(projectId, images);
-        setStatus('saved');
-        setTimeout(() => setStatus('idle'), 2500);
-      } catch (err) {
-        console.error(err);
-        setStatus('error');
-      }
-    });
-  };
+  async function handleSave(): Promise<void> {
+    await saveProjectBTSImages(projectId, images);
+    setIsDirty(false);
+  }
+
+  useImperativeHandle(ref, () => ({ save: handleSave, isDirty }));
 
   return (
     <div className="space-y-4">
@@ -122,18 +123,6 @@ export function BTSTab({ projectId, initialImages }: Props) {
         <Plus size={14} /> Add image
       </button>
 
-      <div className="flex items-center gap-3 pt-2 border-t border-border/20">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending}
-          className="px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors disabled:opacity-40"
-        >
-          {isPending ? 'Saving…' : 'Save BTS Images'}
-        </button>
-        {status === 'saved' && <span className="text-sm text-green-400">Saved</span>}
-        {status === 'error' && <span className="text-sm text-red-400">Save failed</span>}
-      </div>
     </div>
   );
-}
+});

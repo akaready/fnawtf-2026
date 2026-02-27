@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, ExternalLink, Trash2 } from 'lucide-react';
-import { deleteProposal } from '@/app/admin/actions';
+import { useState, useTransition } from 'react';
+import { Plus, ExternalLink, Trash2, Loader2 } from 'lucide-react';
+import { deleteProposal, createProposalDraft } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
   AdminTable,
@@ -13,6 +12,7 @@ import {
   type ColumnDef,
   type RowAction,
 } from '@/app/admin/_components/AdminTable';
+import { ProposalPanel } from './ProposalPanel';
 import type { ProposalRow, ProposalStatus } from '@/types/proposal';
 
 interface ProposalListClientProps {
@@ -37,12 +37,13 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function ProposalListClient({ proposals: initialProposals, viewCounts }: ProposalListClientProps) {
-  const router = useRouter();
   const [proposals, setProposals] = useState(initialProposals);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
   const [deleteTarget, setDeleteTarget] = useState<ProposalRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isCreating, startCreate] = useTransition();
 
   const filtered = proposals.filter((p) => {
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
@@ -145,10 +146,14 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         searchPlaceholder="Search proposals…"
         actions={
           <button
-            onClick={() => router.push('/admin/proposals/new')}
+            onClick={() => startCreate(async () => {
+              const id = await createProposalDraft();
+              setActiveId(id);
+            })}
+            disabled={isCreating}
             className="btn-primary px-5 py-2.5 text-sm"
           >
-            <Plus size={14} />
+            {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
             New Proposal
           </button>
         }
@@ -185,7 +190,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         data={filtered}
         columns={columns}
         rowActions={rowActions}
-        onRowClick={(row) => router.push(`/admin/proposals/${row.id}?tab=details`)}
+        onRowClick={(row) => setActiveId(row.id)}
         emptyMessage={
           search || statusFilter !== 'all'
             ? 'No proposals match your filters.'
@@ -193,7 +198,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         }
         emptyAction={
           !search && statusFilter === 'all'
-            ? { label: 'Create your first proposal', onClick: () => router.push('/admin/proposals/new') }
+            ? { label: 'Create your first proposal', onClick: () => startCreate(async () => { const id = await createProposalDraft(); setActiveId(id); }) }
             : undefined
         }
       />
@@ -212,6 +217,17 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           onCancel={() => setDeleteTarget(null)}
         />
       )}
+
+      <ProposalPanel
+        proposalId={activeId}
+        open={!!activeId}
+        onClose={() => setActiveId(null)}
+        onProposalUpdated={(updated) => setProposals((prev) => prev.map((p) => p.id === updated.id ? updated : p))}
+        onProposalDeleted={(id) => {
+          setProposals((prev) => prev.filter((p) => p.id !== id));
+          setActiveId(null);
+        }}
+      />
     </div>
   );
 }

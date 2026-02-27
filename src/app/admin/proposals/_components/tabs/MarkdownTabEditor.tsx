@@ -414,7 +414,7 @@ export function MarkdownTabEditor({
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div className="flex-1 overflow-y-auto admin-scrollbar p-3 space-y-2">
             {visibleSnippets.length === 0 ? (
               <p className="text-xs text-white/20 pt-2">No snippets match.</p>
             ) : (

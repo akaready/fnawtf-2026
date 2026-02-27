@@ -95,7 +95,7 @@ export async function getProjectCredits(projectId: string) {
     .eq('project_id', projectId)
     .order('sort_order');
   if (error) throw new Error(error.message);
-  return (data ?? []) as Array<{ id?: string; role: string; name: string; sort_order: number }>;
+  return (data ?? []) as Array<{ id?: string; role: string; name: string; sort_order: number; role_id: string | null; contact_id: string | null }>;
 }
 
 export async function getProjectBTSImages(projectId: string) {
@@ -145,7 +145,7 @@ export async function deleteProjectVideo(id: string) {
 
 export async function saveProjectCredits(
   projectId: string,
-  credits: Array<{ role: string; name: string; sort_order: number }>
+  credits: Array<{ role: string; name: string; sort_order: number; role_id?: string | null; contact_id?: string | null }>
 ) {
   const { supabase } = await requireAuth();
   await supabase.from('project_credits').delete().eq('project_id', projectId);
@@ -155,6 +155,8 @@ export async function saveProjectCredits(
       role: c.role,
       name: c.name,
       sort_order: c.sort_order ?? i,
+      role_id: c.role_id ?? null,
+      contact_id: c.contact_id ?? null,
     }));
     const { error } = await supabase.from('project_credits').insert(rows as never);
     if (error) throw new Error(error.message);
@@ -460,6 +462,31 @@ export async function deleteProposal(id: string) {
   const { error } = await supabase.from('proposals').delete().eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/proposals');
+}
+
+export async function createProposalDraft(): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+  const slug = `proposal-${Date.now()}`;
+  const password = Math.random().toString(36).slice(2, 10);
+  const { data: row, error } = await supabase
+    .from('proposals')
+    .insert({
+      title: 'Untitled Proposal',
+      slug,
+      contact_name: '',
+      contact_email: null,
+      contact_company: '',
+      proposal_password: password,
+      proposal_type: 'build',
+      subtitle: '',
+      status: 'draft',
+      created_by: userId,
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+  return (row as { id: string }).id;
 }
 
 // ── Proposal Sections ───────────────────────────────────────────────────
@@ -777,7 +804,54 @@ export async function getContacts(): Promise<import('@/types/proposal').ContactR
     .select('*')
     .order('name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as import('@/types/proposal').ContactRow[];
+  const contacts = (data ?? []) as import('@/types/proposal').ContactRow[];
+
+  // For crew/cast without an explicit role/title, derive one from credits
+  const crewCastIds = contacts
+    .filter((c) => (c.type === 'crew' || c.type === 'cast') && !c.role)
+    .map((c) => c.id);
+
+  if (crewCastIds.length > 0) {
+    const { data: credits } = await supabase
+      .from('project_credits')
+      .select('contact_id, role')
+      .in('contact_id', crewCastIds);
+
+    if (credits && credits.length > 0) {
+      // Count role frequency per contact
+      const roleCounts = new Map<string, Map<string, number>>();
+      for (const cr of credits as Array<{ contact_id: string; role: string }>) {
+        if (!cr.role) continue;
+        let counts = roleCounts.get(cr.contact_id);
+        if (!counts) { counts = new Map(); roleCounts.set(cr.contact_id, counts); }
+        counts.set(cr.role, (counts.get(cr.role) ?? 0) + 1);
+      }
+
+      for (const contact of contacts) {
+        if (contact.role) continue;
+        if (contact.type === 'cast') {
+          contact.role = 'Cast';
+        } else if (contact.type === 'crew') {
+          const counts = roleCounts.get(contact.id);
+          if (counts) {
+            let topRole = '';
+            let topCount = 0;
+            for (const [role, count] of counts) {
+              if (count > topCount) { topRole = role; topCount = count; }
+            }
+            if (topRole) contact.role = topRole;
+          }
+        }
+      }
+    } else {
+      // No credits found — still label cast
+      for (const contact of contacts) {
+        if (!contact.role && contact.type === 'cast') contact.role = 'Cast';
+      }
+    }
+  }
+
+  return contacts;
 }
 
 export async function createContact(data: {
@@ -787,6 +861,7 @@ export async function createContact(data: {
   role?: string | null;
   company?: string | null;
   notes?: string | null;
+  type?: string;
 }): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: row, error } = await supabase
@@ -814,6 +889,191 @@ export async function deleteContact(id: string) {
   const { error } = await supabase.from('contacts').delete().eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/contacts');
+}
+
+// ── Roles ────────────────────────────────────────────────────────────────
+
+export type RoleWithCounts = {
+  id: string;
+  name: string;
+  created_at: string;
+  peopleCount: number;
+  projectCount: number;
+};
+
+export async function getRoles(): Promise<RoleWithCounts[]> {
+  const { supabase } = await requireAuth();
+  const [{ data: rolesRaw }, { data: contactRolesRaw }, { data: creditsRaw }] = await Promise.all([
+    supabase.from('roles').select('*').order('name'),
+    supabase.from('contact_roles').select('role_id'),
+    supabase.from('project_credits').select('role_id, project_id'),
+  ]);
+
+  const roles = (rolesRaw ?? []) as Array<{ id: string; name: string; created_at: string }>;
+  const contactRoles = (contactRolesRaw ?? []) as Array<{ role_id: string }>;
+  const credits = (creditsRaw ?? []) as Array<{ role_id: string | null; project_id: string }>;
+
+  const peopleCounts = new Map<string, number>();
+  for (const cr of contactRoles) {
+    peopleCounts.set(cr.role_id, (peopleCounts.get(cr.role_id) ?? 0) + 1);
+  }
+
+  const projectSets = new Map<string, Set<string>>();
+  for (const c of credits) {
+    if (!c.role_id) continue;
+    if (!projectSets.has(c.role_id)) projectSets.set(c.role_id, new Set());
+    projectSets.get(c.role_id)!.add(c.project_id);
+  }
+
+  return roles.map((r) => ({
+    id: r.id,
+    name: r.name,
+    created_at: r.created_at,
+    peopleCount: peopleCounts.get(r.id) ?? 0,
+    projectCount: projectSets.get(r.id)?.size ?? 0,
+  }));
+}
+
+export async function getAllRoles(): Promise<Array<{ id: string; name: string }>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase.from('roles').select('id, name').order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; name: string }>;
+}
+
+export async function createRole(name: string): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('roles')
+    .insert({ name: name.trim() } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/roles');
+  return (row as { id: string }).id;
+}
+
+export async function renameRole(id: string, newName: string) {
+  const { supabase } = await requireAuth();
+  const { data: roleRaw } = await supabase.from('roles').select('name').eq('id', id).single();
+  const role = roleRaw as { name: string } | null;
+  if (!role) throw new Error('Role not found');
+
+  const trimmed = newName.trim();
+  if (trimmed === role.name) return;
+
+  // Check if a role with this name already exists
+  const { data: existing } = await supabase.from('roles').select('id').eq('name', trimmed).neq('id', id).maybeSingle();
+  if (existing) throw new Error(`A role named "${trimmed}" already exists. Use merge instead.`);
+
+  // Update denormalized role text on project_credits
+  await supabase
+    .from('project_credits')
+    .update({ role: trimmed } as never)
+    .eq('role_id', id);
+
+  const { error } = await supabase.from('roles').update({ name: trimmed } as never).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/roles');
+  revalidatePath('/work');
+  revalidatePath('/');
+}
+
+export async function deleteRole(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('roles').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/roles');
+}
+
+export async function mergeRoles(sourceIds: string[], targetId: string) {
+  const { supabase } = await requireAuth();
+  const { data: targetRaw } = await supabase.from('roles').select('name').eq('id', targetId).single();
+  const target = targetRaw as { name: string } | null;
+  if (!target) throw new Error('Target role not found');
+
+  for (const sourceId of sourceIds) {
+    if (sourceId === targetId) continue;
+
+    // Update project_credits: point to target role
+    await supabase
+      .from('project_credits')
+      .update({ role_id: targetId, role: target.name } as never)
+      .eq('role_id', sourceId);
+
+    // Move contact_roles: re-point to target, ignore conflicts
+    const { data: existingCR } = await supabase
+      .from('contact_roles')
+      .select('contact_id')
+      .eq('role_id', sourceId);
+    for (const cr of (existingCR ?? []) as Array<{ contact_id: string }>) {
+      await supabase
+        .from('contact_roles')
+        .upsert({ contact_id: cr.contact_id, role_id: targetId } as never, { onConflict: 'contact_id,role_id' });
+    }
+    await supabase.from('contact_roles').delete().eq('role_id', sourceId);
+
+    // Delete source role
+    await supabase.from('roles').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/roles');
+  revalidatePath('/work');
+  revalidatePath('/');
+}
+
+export async function getPeopleForRole(roleId: string): Promise<Array<{ id: string; name: string; type: string }>> {
+  const { supabase } = await requireAuth();
+  const { data: crRaw } = await supabase.from('contact_roles').select('contact_id').eq('role_id', roleId);
+  const contactIds = ((crRaw ?? []) as Array<{ contact_id: string }>).map((cr) => cr.contact_id);
+  if (contactIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('id, name, type')
+    .in('id', contactIds)
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; name: string; type: string }>;
+}
+
+// ── Contact Roles (junction) ──────────────────────────────────────────────
+
+export async function getContactRoles(contactId: string): Promise<Array<{ id: string; name: string }>> {
+  const { supabase } = await requireAuth();
+  const { data: crRaw } = await supabase.from('contact_roles').select('role_id').eq('contact_id', contactId);
+  const roleIds = ((crRaw ?? []) as Array<{ role_id: string }>).map((cr) => cr.role_id);
+  if (roleIds.length === 0) return [];
+  const { data, error } = await supabase.from('roles').select('id, name').in('id', roleIds).order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; name: string }>;
+}
+
+export async function setContactRoles(contactId: string, roleIds: string[]) {
+  const { supabase } = await requireAuth();
+  await supabase.from('contact_roles').delete().eq('contact_id', contactId);
+  if (roleIds.length > 0) {
+    const rows = roleIds.map((role_id) => ({ contact_id: contactId, role_id }));
+    const { error } = await supabase.from('contact_roles').insert(rows as never);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath('/admin/contacts');
+}
+
+export async function getContactProjects(contactId: string): Promise<Array<{ id: string; title: string; client_name: string; thumbnail_url: string | null }>> {
+  const { supabase } = await requireAuth();
+  const { data: creditsRaw } = await supabase
+    .from('project_credits')
+    .select('project_id')
+    .eq('contact_id', contactId);
+  const projectIds = [...new Set(((creditsRaw ?? []) as Array<{ project_id: string }>).map((c) => c.project_id))];
+  if (projectIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, title, client_name, thumbnail_url')
+    .in('id', projectIds)
+    .order('title');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; title: string; client_name: string; thumbnail_url: string | null }>;
 }
 
 // ── Tag Suggestions ──────────────────────────────────────────────────────
