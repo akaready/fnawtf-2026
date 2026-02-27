@@ -275,9 +275,9 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
       <button
         type="button"
         onClick={add}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
       >
-        <Plus size={14} /> Add credit
+        <Plus size={14} /> Add Credit
       </button>
 
     </div>

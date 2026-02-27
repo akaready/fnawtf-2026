@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Trash2 } from 'lucide-react';
-import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
+import { Plus, Trash2, Check, X, GripVertical } from 'lucide-react';
+import { saveProposalQuote, deleteProposalQuote, updateProposal, reorderProposalQuotes } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
@@ -15,13 +15,16 @@ interface PricingTabProps {
 
 const labelCls = 'block text-xs text-white/50 uppercase tracking-wide mb-1';
 const inputCls =
-  'w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
+  'w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
 
 export function PricingTab({ proposalId, proposalType, crowdfundingApproved: initialCrowdfunding, initialQuotes }: PricingTabProps) {
-  const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(initialQuotes.filter((q) => !q.deleted_at));
+  const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
+    [...initialQuotes.filter((q) => !q.deleted_at)].sort((a, b) => a.sort_order - b.sort_order)
+  );
   const [crowdfundingApproved, setCrowdfundingApproved] = useState(initialCrowdfunding);
   const [activeQuoteIndex, setActiveQuoteIndex] = useState(0);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [, startTransition] = useTransition();
 
   const activeQuote = quotes[activeQuoteIndex] ?? null;
@@ -30,31 +33,17 @@ export function PricingTab({ proposalId, proposalType, crowdfundingApproved: ini
   const handleLabelSave = (quote: ProposalQuoteRow, label: string) => {
     if (label === quote.label) return;
     startTransition(async () => {
-      await saveProposalQuote(
-        proposalId,
-        {
-          ...quote,
-          label,
-        },
-        quote.id,
-      );
+      await saveProposalQuote(proposalId, { ...quote, label }, quote.id);
       setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, label } : q)));
     });
   };
 
-  // ── Description save (first quote only) ────────────────────────────────
+  // ── Description save (first position only) ─────────────────────────────
   const handleDescSave = (quote: ProposalQuoteRow, description: string) => {
     if (description === (quote.description ?? '')) return;
     const descValue = description.trim() || null;
     startTransition(async () => {
-      await saveProposalQuote(
-        proposalId,
-        {
-          ...quote,
-          description: descValue,
-        },
-        quote.id,
-      );
+      await saveProposalQuote(proposalId, { ...quote, description: descValue }, quote.id);
       setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
     });
   };
@@ -64,16 +53,16 @@ export function PricingTab({ proposalId, proposalType, crowdfundingApproved: ini
     if (quotes.length >= 3) return;
     const label =
       quotes.length === 0 ? 'Option 1' : quotes.length === 1 ? 'Option 2' : 'Option 3';
+    const sortOrder = quotes.length;
     const newQuoteData = {
       label,
       is_fna_quote: true,
       is_locked: true,
+      sort_order: sortOrder,
       quote_type:
-        proposalType === 'build-launch'
-          ? 'build'
-          : proposalType === 'scale'
-          ? 'build'
-          : proposalType,
+        proposalType === 'build-launch' ? 'build'
+        : proposalType === 'scale' ? 'build'
+        : proposalType,
       selected_addons: {} as Record<string, number>,
       slider_values: {} as Record<string, number>,
       tier_selections: {} as Record<string, string>,
@@ -111,6 +100,7 @@ export function PricingTab({ proposalId, proposalType, crowdfundingApproved: ini
         friendly_discount_pct: 0,
         total_amount: null,
         down_amount: null,
+        sort_order: sortOrder,
         description: null,
         created_at: now,
         updated_at: now,
@@ -128,76 +118,103 @@ export function PricingTab({ proposalId, proposalType, crowdfundingApproved: ini
     setConfirmDeleteId(null);
   };
 
+  // ── Drag-and-drop reorder ───────────────────────────────────────────────
+  const handleDragStart = (i: number) => setDragIndex(i);
+  const handleDragOver = (e: React.DragEvent, i: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === i) return;
+    setQuotes((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(i, 0, moved);
+      // Keep activeQuote focused on the same quote
+      return next;
+    });
+    // Update active index to follow the active quote
+    setActiveQuoteIndex((prev) => {
+      if (prev === dragIndex) return i;
+      if (dragIndex < i && prev > dragIndex && prev <= i) return prev - 1;
+      if (dragIndex > i && prev >= i && prev < dragIndex) return prev + 1;
+      return prev;
+    });
+    setDragIndex(i);
+  };
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    startTransition(async () => {
+      await reorderProposalQuotes(quotes.map((q) => q.id));
+    });
+  };
+
   return (
     <div className="flex flex-col h-full">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 px-8 pt-4 pb-0 border-b border-white/[0.08]">
+      {/* Nav bar — quote tabs + add + delete */}
+      <div className="flex items-center gap-1 px-8 py-2 border-b border-white/[0.08] bg-white/[0.02] flex-shrink-0">
         {quotes.map((q, i) => (
-          <button
+          <div
             key={q.id}
-            onClick={() => setActiveQuoteIndex(i)}
-            className={`px-5 py-2.5 text-sm transition-colors rounded-t-lg ${
+            draggable
+            onDragStart={() => handleDragStart(i)}
+            onDragOver={(e) => handleDragOver(e, i)}
+            onDragEnd={handleDragEnd}
+            className={`group/tab flex items-center rounded-lg transition-colors ${
+              dragIndex === i ? 'opacity-50' : ''
+            } ${
               i === activeQuoteIndex
-                ? 'text-white border-b-2 border-white -mb-px'
-                : 'text-white/40 hover:text-white/70'
+                ? 'bg-white/10'
+                : 'hover:bg-white/5'
             }`}
           >
-            {q.label || `Option ${i + 1}`}
-          </button>
+            <GripVertical
+              size={12}
+              className="ml-3 text-white/0 group-hover/tab:text-white/25 cursor-grab active:cursor-grabbing flex-shrink-0 transition-colors"
+            />
+            <button
+              onClick={() => setActiveQuoteIndex(i)}
+              className={`pl-1.5 pr-3 py-1.5 text-sm font-medium transition-colors ${
+                i === activeQuoteIndex ? 'text-white' : 'text-white/40 hover:text-white/70'
+              }`}
+            >
+              {q.label || `Option ${i + 1}`}
+            </button>
+          </div>
         ))}
 
         <button
           onClick={handleAddQuote}
           disabled={quotes.length >= 3}
           title={quotes.length >= 3 ? 'Maximum 3 quotes' : 'Add a quote option'}
-          className="px-4 py-2.5 text-sm text-white/30 hover:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white text-black hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
-          + Add Quote
+          <Plus size={13} /> Add Quote
         </button>
 
-        {/* Crowdfunding toggle — right side of tab bar */}
-        <label className="ml-auto flex items-center gap-2 cursor-pointer group pr-2">
-          <input
-            type="checkbox"
-            checked={crowdfundingApproved}
-            onChange={async (e) => {
-              const val = e.target.checked;
-              setCrowdfundingApproved(val);
-              await updateProposal(proposalId, { crowdfunding_approved: val });
-            }}
-            className="w-3.5 h-3.5 rounded border border-white/20 bg-white/[0.04] accent-white cursor-pointer"
-          />
-          <span className="text-xs text-white/40 group-hover:text-white/70 transition-colors whitespace-nowrap">
-            Crowdfunding
-          </span>
-        </label>
-
-        {/* Delete button right-aligned */}
         {quotes.length > 1 && activeQuote && (
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
             {confirmDeleteId === activeQuote.id ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-white/40">Remove this quote?</span>
+              <>
                 <button
                   onClick={() => handleConfirmDelete(activeQuote.id)}
-                  className="text-xs px-2 py-1 text-red-400 hover:text-red-300 transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                  title="Confirm delete"
                 >
-                  Yes, delete
+                  <Check size={13} />
                 </button>
                 <button
                   onClick={() => setConfirmDeleteId(null)}
-                  className="text-xs px-2 py-1 text-white/30 hover:text-white/60 transition-colors"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                  title="Cancel"
                 >
-                  Cancel
+                  <X size={13} />
                 </button>
-              </div>
+              </>
             ) : (
               <button
                 onClick={() => setConfirmDeleteId(activeQuote.id)}
-                className="p-2 text-red-400/40 hover:text-red-400 transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 title="Delete this quote"
               >
-                <Trash2 size={14} />
+                <Trash2 size={13} />
               </button>
             )}
           </div>
@@ -221,7 +238,7 @@ export function PricingTab({ proposalId, proposalType, crowdfundingApproved: ini
               />
             </div>
 
-            {/* Description — first quote only */}
+            {/* Description — first position only */}
             {activeQuoteIndex === 0 && (
               <div>
                 <label className={labelCls}>
@@ -233,13 +250,30 @@ export function PricingTab({ proposalId, proposalType, crowdfundingApproved: ini
                   onBlur={(e) => handleDescSave(activeQuote, e.target.value)}
                   placeholder="Describe this recommended package..."
                   rows={3}
-                  className={
-                    inputCls +
-                    ' resize-none leading-relaxed'
-                  }
+                  className={inputCls + ' resize-none leading-relaxed'}
                 />
               </div>
             )}
+
+            {/* Crowdfunding toggle */}
+            <div className="flex items-center justify-between py-3 px-4 rounded-lg border border-white/[0.08] bg-white/[0.02]">
+              <div>
+                <p className="text-sm text-white/70 font-medium">Crowdfunding</p>
+                <p className="text-xs text-white/30 mt-0.5">Allow client to enable crowdfunding on this proposal</p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={crowdfundingApproved}
+                  onChange={async (e) => {
+                    const val = e.target.checked;
+                    setCrowdfundingApproved(val);
+                    await updateProposal(proposalId, { crowdfunding_approved: val });
+                  }}
+                  className="w-4 h-4 rounded border border-white/20 bg-white/[0.04] accent-white cursor-pointer"
+                />
+              </label>
+            </div>
 
             {/* Calculator */}
             <ProposalCalculatorEmbed

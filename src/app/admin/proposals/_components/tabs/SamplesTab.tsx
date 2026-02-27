@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { Trash2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Check, Loader2, Save, X } from 'lucide-react';
 import {
   addProposalProject,
   removeProposalProject,
@@ -14,60 +14,90 @@ import type { BrowserProject, ProposalProjectWithProject } from '@/types/proposa
 
 function ProjectListItem({
   item,
-  onBlurbChange,
+  onBlurbSave,
   onRemove,
 }: {
   item: ProposalProjectWithProject;
-  onBlurbChange: (id: string, blurb: string) => void;
+  onBlurbSave: (id: string, blurb: string) => Promise<void>;
   onRemove: (id: string) => void;
 }) {
+  const [blurb, setBlurb] = useState(item.blurb ?? '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onBlurbSave(item.id, blurb);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="group p-3 rounded-lg border border-white/[0.12] hover:border-white/[0.12] transition-colors">
-      <div className="flex items-center gap-2.5">
-        {/* Thumbnail */}
-        <div
-          className="flex-shrink-0 w-12 rounded-md overflow-hidden bg-white/[0.06]"
-          style={{ aspectRatio: '16/9' }}
-        >
-          {item.project.thumbnail_url ? (
-            <img
-              src={item.project.thumbnail_url}
-              alt={item.project.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-white/[0.04]" />
-          )}
-        </div>
-
-        {/* Title + client */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white/90 truncate leading-tight">
-            {item.project.title}
-          </p>
-          {item.project.client_name && (
-            <p className="text-xs text-white/40 truncate mt-0.5">{item.project.client_name}</p>
-          )}
-        </div>
-
-        {/* Remove — hover only */}
-        <button
-          onClick={() => onRemove(item.id)}
-          className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all"
-          aria-label="Remove project"
-        >
-          <Trash2 size={13} />
-        </button>
+    <div className="p-3 rounded-lg border border-white/[0.12] transition-colors">
+      {/* Full-width thumbnail */}
+      <div className="w-full rounded-md overflow-hidden bg-white/[0.06] mb-2.5" style={{ aspectRatio: '16/9' }}>
+        {item.project.thumbnail_url ? (
+          <img
+            src={item.project.thumbnail_url}
+            alt={item.project.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-white/[0.04]" />
+        )}
       </div>
 
-      {/* Full-width blurb */}
+      {/* Title + client */}
+      <div className="mt-1 mb-2.5">
+        <p className="text-base font-medium text-white/90 truncate leading-tight">
+          {item.project.title}
+        </p>
+        <p className="text-sm text-white/40 truncate mt-0.5">
+          {item.project.client_name ?? ''}
+        </p>
+      </div>
+
+      {/* Blurb textarea */}
       <textarea
-        rows={2}
-        defaultValue={item.blurb ?? ''}
-        onChange={(e) => onBlurbChange(item.id, e.target.value)}
+        rows={4}
+        value={blurb}
+        onChange={(e) => setBlurb(e.target.value)}
         placeholder="What to look for..."
-        className="mt-2.5 w-full bg-white/[0.04] border border-white/[0.12] rounded text-xs text-white/55 placeholder:text-white/20 px-2.5 py-1.5 resize-none focus:outline-none focus:border-white/20 transition-colors leading-relaxed"
+        className="w-full bg-black/40 border border-white/[0.12] rounded text-sm text-white/70 placeholder:text-white/20 px-2.5 py-2 resize-none focus:outline-none focus:border-white/20 transition-colors leading-relaxed"
       />
+
+      {/* Action row */}
+      <div className="flex items-center justify-end gap-1.5 mt-1.5">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-40 ${
+            blurb.trim()
+              ? 'bg-white text-black hover:bg-white/90'
+              : 'text-white/40 hover:text-white/70'
+          }`}
+        >
+          {saving ? (
+            <Loader2 size={11} className="animate-spin" />
+          ) : saved ? (
+            <Check size={11} className={blurb.trim() ? 'text-black' : 'text-green-400'} />
+          ) : (
+            <Save size={11} />
+          )}
+          {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
+        </button>
+        <button
+          onClick={() => onRemove(item.id)}
+          className="w-6 h-6 flex items-center justify-center rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          aria-label="Remove project"
+        >
+          <X size={12} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -84,8 +114,6 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
   const [proposalProjects, setProposalProjects] = useState<ProposalProjectWithProject[]>(
     initialProposalProjects
   );
-
-  const blurbTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const selectedProjectIds = new Set(proposalProjects.map((p) => p.project_id));
   const projectIdToProposalProjectId = new Map(
@@ -113,12 +141,9 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
     setProposalProjects((prev) => prev.filter((p) => p.id !== proposalProjectId));
   }, []);
 
-  const handleBlurbChange = useCallback((id: string, blurb: string) => {
-    if (blurbTimers.current[id]) clearTimeout(blurbTimers.current[id]);
-    blurbTimers.current[id] = setTimeout(async () => {
-      await updateProposalProjectBlurb(id, blurb);
-      setProposalProjects((prev) => prev.map((p) => (p.id === id ? { ...p, blurb } : p)));
-    }, 800);
+  const handleBlurbSave = useCallback(async (id: string, blurb: string) => {
+    await updateProposalProjectBlurb(id, blurb);
+    setProposalProjects((prev) => prev.map((p) => (p.id === id ? { ...p, blurb } : p)));
   }, []);
 
   // Sort selected projects by client name, then project title
@@ -148,7 +173,7 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
               <ProjectListItem
                 key={item.id}
                 item={item}
-                onBlurbChange={handleBlurbChange}
+                onBlurbSave={handleBlurbSave}
                 onRemove={handleRemove}
               />
             ))}

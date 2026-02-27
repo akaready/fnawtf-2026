@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { ProposalAdminEditor } from './ProposalAdminEditor';
+import type { ProposalEditorHandle } from './ProposalAdminEditor';
 import {
   getProposal,
   getProposalSections,
@@ -44,9 +45,18 @@ interface ProposalPanelProps {
 }
 
 export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, onProposalDeleted }: ProposalPanelProps) {
+  const editorRef = useRef<ProposalEditorHandle>(null);
   const [data, setData] = useState<PanelData | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  const handleClose = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.tryClose();
+    } else {
+      onClose();
+    }
+  }, [onClose]);
 
   useEffect(() => {
     if (!proposalId || proposalId === loadedFor) return;
@@ -86,7 +96,7 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
   }, [open]);
 
   return (
-    <PanelDrawer open={open} onClose={onClose} width="w-[min(92vw,840px)]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[min(92vw,840px)]">
       {loading && (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
@@ -94,6 +104,7 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
       )}
       {!loading && data && (
         <ProposalAdminEditor
+          ref={editorRef}
           proposal={data.proposal}
           contacts={data.contacts}
           snippets={data.snippets}

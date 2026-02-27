@@ -14,6 +14,7 @@ export type TagSuggestions = {
   premium_addons: string[];
   camera_techniques: string[];
   assets_delivered: string[];
+  project_type: string[];
 };
 
 export type TestimonialOption = {

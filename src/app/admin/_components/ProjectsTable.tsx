@@ -577,10 +577,10 @@ function ToolbarButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
+      className={`flex items-center gap-1.5 px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap border ${
         active
-          ? 'bg-accent/10 text-accent'
-          : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+          ? 'bg-accent/10 text-accent border-accent/25'
+          : 'text-white/40 hover:text-white/70 hover:bg-white/5 border-transparent'
       }`}
     >
       <Icon size={14} strokeWidth={1.75} />

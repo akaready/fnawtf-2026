@@ -1,7 +1,8 @@
 'use client';
 
-import { Fragment, useState, useTransition, useRef } from 'react';
+import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { X, ExternalLink, Check, Loader2, Save, Home, Hand, GitBranch, Calendar, Play, DollarSign, Trash2 } from 'lucide-react';
+import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import type { LucideIcon } from 'lucide-react';
 import { deleteProposal } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
@@ -28,6 +29,10 @@ const TAB_ICONS: Record<TabId, LucideIcon> = {
   pricing: DollarSign,
 };
 
+export interface ProposalEditorHandle {
+  tryClose: () => void;
+}
+
 interface Props {
   proposal: ProposalRow;
   contacts: ContactRow[];
@@ -48,10 +53,10 @@ const STATUS_BADGE: Record<string, string> = {
   accepted: 'bg-green-500/20 text-green-300',
 };
 
-export function ProposalAdminEditor({
+export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, snippets, sections: initialSections,
   milestones, quotes, allProjects, proposalProjects, onClose, onDelete,
-}: Props) {
+}, editorRef) {
   const [proposal] = useState(initialProposal);
   const [sections, setSections] = useState(initialSections);
   const [status] = useState(initialProposal.status);
@@ -61,8 +66,19 @@ export function ProposalAdminEditor({
   const [detailsSaved, setDetailsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   const isLive = status !== 'draft';
+
+  const handleClose = useCallback(() => {
+    if (detailsRef.current?.isDirty) {
+      setConfirmClose(true);
+    } else {
+      onClose();
+    }
+  }, [onClose]);
+
+  useImperativeHandle(editorRef, () => ({ tryClose: handleClose }), [handleClose]);
 
   function handleDelete() {
     startDelete(async () => {
@@ -81,7 +97,12 @@ export function ProposalAdminEditor({
   const activeQuotes = quotes.filter(q => !q.deleted_at);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
+      <DiscardChangesDialog
+        open={confirmClose}
+        onKeepEditing={() => setConfirmClose(false)}
+        onDiscard={() => { setConfirmClose(false); onClose(); }}
+      />
 
       {/* Header: title + meta (left) | status + X (right) */}
       <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-white/[0.12]">
@@ -93,16 +114,16 @@ export function ProposalAdminEditor({
             </p>
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
-            <span className="flex items-center gap-1.5 text-xs text-white/40 whitespace-nowrap">
+            <span className="flex items-center gap-1.5 px-4 py-1 rounded-full text-xs text-white/40 whitespace-nowrap bg-white/[0.04]">
               <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-400' : 'bg-white/25'}`} />
               {isLive ? 'Live' : 'Draft'}
             </span>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
+            <span className={`px-4 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
               {status}
             </span>
             <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] text-white/50 hover:text-white transition-all"
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors"
               aria-label="Close"
             >
               <X size={15} />
@@ -112,7 +133,7 @@ export function ProposalAdminEditor({
       </div>
 
       {/* Tabs */}
-      <div className="flex-shrink-0 px-8 py-3 border-b border-white/[0.12]">
+      <div className="flex-shrink-0 px-8 py-3 border-b border-white/[0.12] bg-white/[0.02]">
         <nav className="inline-flex flex-wrap gap-1.5">
           {TABS.map(tab => {
             const Icon = TAB_ICONS[tab];
@@ -204,7 +225,7 @@ export function ProposalAdminEditor({
       </div>
 
       {/* Footer: action buttons (left) | delete (right) */}
-      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-white/[0.12]">
+      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-white/[0.12] bg-white/[0.02]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => detailsRef.current?.save()}
@@ -234,19 +255,21 @@ export function ProposalAdminEditor({
         <div className="flex items-center gap-2">
           {confirmDelete ? (
             <>
-              <span className="text-xs text-red-400 mr-1">Delete this proposal?</span>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="px-3 py-1.5 text-xs rounded-lg border border-white/[0.08] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cancel
-              </button>
+              <span className="text-xs text-red-400">Delete this proposal?</span>
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-40"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                title="Confirm delete"
               >
-                {isDeleting ? <Loader2 size={12} className="animate-spin" /> : 'Delete'}
+                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+                title="Cancel"
+              >
+                <X size={14} />
               </button>
             </>
           ) : (
@@ -261,4 +284,4 @@ export function ProposalAdminEditor({
       </div>
     </div>
   );
-}
+});

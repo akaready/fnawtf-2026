@@ -103,11 +103,13 @@ export function AdminShell({ children }: Props) {
                     title={collapsed ? label : undefined}
                     className={`flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
                       active
-                        ? 'bg-white/8 text-foreground'
+                        ? 'text-foreground bg-white/10'
                         : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                     }`}
                   >
-                    <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
+                    <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
+                      <Icon size={15} strokeWidth={1.75} />
+                    </span>
                     <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
                     {active && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
                   </Link>

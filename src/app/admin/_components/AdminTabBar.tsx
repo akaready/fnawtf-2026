@@ -28,10 +28,10 @@ export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfte
         <Fragment key={tab.value}>
           <button
             onClick={() => onTabChange(tab.value)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`flex items-center gap-1.5 px-[15px] py-[7px] rounded-lg text-sm font-medium transition-colors border ${
               activeTab === tab.value
-                ? (tab.activeClassName ?? 'bg-white/10 text-white')
-                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                ? (tab.activeClassName ?? 'bg-white/10 text-white border-transparent')
+                : 'text-white/40 hover:text-white/70 hover:bg-white/5 border-transparent'
             }`}
           >
             {tab.icon}

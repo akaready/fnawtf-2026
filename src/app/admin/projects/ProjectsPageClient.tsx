@@ -1,23 +1,36 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Download } from 'lucide-react';
 import { AdminPageHeader } from '../_components/AdminPageHeader';
 import { ProjectsTable } from '../_components/ProjectsTable';
 import { ProjectPanel } from '../_components/ProjectPanel';
 import type { TestimonialOption } from '../_components/ProjectForm';
 
+export type ClientOption = { id: string; name: string };
+
 interface Props {
   projects: Record<string, unknown>[];
   tagSuggestions: Record<string, string[]>;
   testimonials?: TestimonialOption[];
+  clients?: ClientOption[];
 }
 
-export function ProjectsPageClient({ projects: initialProjects, tagSuggestions, testimonials }: Props) {
+export function ProjectsPageClient({ projects: initialProjects, tagSuggestions, testimonials, clients }: Props) {
   const exportRef = useRef<(() => void) | null>(null);
   const [search, setSearch] = useState('');
   const [projects, setProjects] = useState(initialProjects);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get('open');
+    if (id) {
+      setActiveId(id);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams]);
 
   const activeProject = projects.find((p) => (p as { id: string }).id === activeId) ?? null;
 
@@ -93,6 +106,7 @@ export function ProjectsPageClient({ projects: initialProjects, tagSuggestions, 
         onProjectCreated={handleProjectCreated}
         tagSuggestions={tagSuggestions}
         testimonials={testimonials}
+        clients={clients}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Plus, Trash2, Save, Check, Loader2, Download, X,
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
@@ -9,6 +10,7 @@ import {
 import { AdminPageHeader } from './AdminPageHeader';
 import { AdminTabBar } from './AdminTabBar';
 import { PanelDrawer } from './PanelDrawer';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { ProjectPanel } from './ProjectPanel';
 import {
   createContact,
@@ -18,7 +20,11 @@ import {
   getContactRoles,
   setContactRoles,
   getContactProjects,
+  getHeadshots,
+  setFeaturedHeadshot,
+  deleteHeadshot,
   type ClientRow,
+  type HeadshotRow,
 } from '../actions';
 import type { ContactRow, ContactType } from '@/types/proposal';
 
@@ -40,12 +46,12 @@ const TYPE_ICON_COLORS: Record<string, string> = {
 };
 
 const TYPE_ACTIVE_CLASSES: Record<string, string> = {
-  all: 'bg-white/10 text-white',
-  crew: 'bg-purple-500/15 text-purple-300',
-  cast: 'bg-pink-500/15 text-pink-300',
-  contact: 'bg-green-500/15 text-green-300',
-  staff: 'bg-yellow-500/15 text-yellow-300',
-  partner: 'bg-orange-500/15 text-orange-300',
+  all: 'bg-white/10 text-white border-white/20',
+  crew: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+  cast: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
+  contact: 'bg-green-500/15 text-green-300 border-green-500/30',
+  staff: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30',
+  partner: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
 };
 
 const TYPE_ICONS: Record<string, typeof Users> = {
@@ -90,6 +96,7 @@ function PersonPanel({
   const [personRoleIds, setPersonRoleIds] = useState<Set<string>>(new Set());
   const [projects, setProjects] = useState<Array<{ id: string; title: string; client_name: string; thumbnail_url: string | null }>>([]);
   const [openProject, setOpenProject] = useState<{ id: string; title: string; thumbnail_url: string | null } | null>(null);
+  const [headshots, setHeadshots] = useState<HeadshotRow[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
 
   useEffect(() => {
@@ -98,21 +105,25 @@ function PersonPanel({
     setSavedStatus('idle');
     setConfirmClose(false);
     setConfirmDelete(false);
+    setOpenProject(null);
     if (person) {
       setLoadingMeta(true);
       Promise.all([
         getAllRoles(),
         getContactRoles(person.id),
         getContactProjects(person.id),
-      ]).then(([allRoles, contactRoles, contactProjects]) => {
+        getHeadshots(person.id),
+      ]).then(([allRoles, contactRoles, contactProjects, contactHeadshots]) => {
         setRoles(allRoles);
         setPersonRoleIds(new Set(contactRoles.map((r) => r.id)));
         setProjects(contactProjects);
+        setHeadshots(contactHeadshots);
       }).finally(() => setLoadingMeta(false));
     } else {
       setRoles([]);
       setPersonRoleIds(new Set());
       setProjects([]);
+      setHeadshots([]);
     }
   }, [person]);
 
@@ -127,6 +138,7 @@ function PersonPanel({
   const handleSave = () => {
     if (!draft) return;
     onSave(draft);
+    setContactRoles(draft.id, [...personRoleIds]);
     setDirty(false);
     setSavedStatus('saved');
     setTimeout(() => setSavedStatus('idle'), 2000);
@@ -144,30 +156,19 @@ function PersonPanel({
     const next = new Set(personRoleIds);
     if (next.has(roleId)) next.delete(roleId); else next.add(roleId);
     setPersonRoleIds(next);
-    setContactRoles(draft.id, [...next]);
+    setDirty(true);
+    if (savedStatus !== 'idle') setSavedStatus('idle');
   };
 
   const inputClass = 'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[520px]">
-      {/* Unsaved changes warning */}
-      {confirmClose && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-6 mx-6 max-w-sm space-y-4 shadow-2xl">
-            <p className="text-sm text-foreground font-medium">You have unsaved changes</p>
-            <p className="text-xs text-muted-foreground">Closing will discard your edits. Save first or discard to continue.</p>
-            <div className="flex items-center gap-2 justify-end">
-              <button onClick={() => setConfirmClose(false)} className="px-4 py-2 text-sm rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
-                Keep editing
-              </button>
-              <button onClick={() => { setConfirmClose(false); setDirty(false); onClose(); }} className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DiscardChangesDialog
+        open={confirmClose}
+        onKeepEditing={() => setConfirmClose(false)}
+        onDiscard={() => { setConfirmClose(false); setDirty(false); onClose(); }}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.12] flex-shrink-0">
@@ -263,13 +264,60 @@ function PersonPanel({
           <input type="text" value={draft.role ?? ''} onChange={(e) => handleChange('role', e.target.value || null)} placeholder="CEO, Founder, Marketing Director..." className={inputClass} />
         </div>
 
-        {/* Headshot URL */}
-        {(draft.type === 'cast' || draft.type === 'crew') && (
+        {/* Headshots */}
+        {(draft.type === 'cast' || draft.type === 'crew') && headshots.length > 0 && (
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <ImageIcon size={12} /> Headshot URL
+              <ImageIcon size={12} /> Headshots ({headshots.length})
             </label>
-            <input type="url" value={draft.headshot_url ?? ''} onChange={(e) => handleChange('headshot_url', e.target.value || null)} placeholder="https://..." className={inputClass} />
+            <div className="grid grid-cols-3 gap-2">
+              {headshots.map((hs) => (
+                <div
+                  key={hs.id}
+                  className={`rounded-lg overflow-hidden border transition-colors ${
+                    hs.featured ? 'border-yellow-500/50 ring-1 ring-yellow-500/20' : 'border-white/[0.08]'
+                  }`}
+                >
+                  <div className="aspect-[3/4] bg-white/[0.03]">
+                    <img src={hs.url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  {/* Bottom bar with dimensions + controls */}
+                  <div className="flex items-center justify-between px-1.5 py-1">
+                    <span className="text-xs text-muted-foreground/50">{hs.width}×{hs.height}</span>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => {
+                          setFeaturedHeadshot(hs.id, draft.id).then(() => {
+                            setHeadshots(prev => prev.map(h => ({ ...h, featured: h.id === hs.id })));
+                            handleChange('headshot_url', hs.url);
+                          });
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          hs.featured
+                            ? 'text-yellow-400'
+                            : 'text-muted-foreground/30 hover:text-yellow-400 hover:bg-yellow-500/10'
+                        }`}
+                        title={hs.featured ? 'Featured' : 'Set as featured'}
+                      >
+                        <Star size={12} fill={hs.featured ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!confirm('Delete this headshot?')) return;
+                          deleteHeadshot(hs.id).then(() => {
+                            setHeadshots(prev => prev.filter(h => h.id !== hs.id));
+                          });
+                        }}
+                        className="p-1 rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Delete headshot"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -369,11 +417,11 @@ function PersonPanel({
         )}
       </div>
 
-      {/* Nested Project Panel */}
+      {/* Nested Project Panel — backdrop click closes everything */}
       <ProjectPanel
         project={openProject ? { id: openProject.id, title: openProject.title, thumbnail_url: openProject.thumbnail_url } : null}
         open={!!openProject}
-        onClose={() => setOpenProject(null)}
+        onClose={() => { setOpenProject(null); onClose(); }}
         onProjectUpdated={() => {}}
         onProjectDeleted={() => {}}
         onProjectCreated={() => {}}
@@ -391,6 +439,15 @@ export function ContactsManager({ initialContacts, companies }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ContactType | 'all'>('all');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get('open');
+    if (id) {
+      setActiveId(id);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams]);
 
   useEffect(() => { setContacts(initialContacts); }, [initialContacts]);
 
@@ -578,7 +635,16 @@ export function ContactsManager({ initialContacts, companies }: Props) {
                     activeId === c.id ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'
                   }`}
                 >
-                  <td className="px-8 py-3 font-medium text-foreground">{c.name}</td>
+                  <td className="px-8 py-3 font-medium text-foreground">
+                    <div className="flex items-center gap-2.5">
+                      {c.headshot_url ? (
+                        <img src={c.headshot_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                      ) : (c.type === 'cast' || c.type === 'crew') ? (
+                        <div className="w-7 h-7 rounded-full bg-white/[0.04] flex-shrink-0" />
+                      ) : null}
+                      {c.name}
+                    </div>
+                  </td>
                   <td className="px-3 py-3">
                     <span className={`inline-flex px-2 py-0.5 text-xs rounded border capitalize ${TYPE_COLORS[c.type]}`}>
                       {c.type}

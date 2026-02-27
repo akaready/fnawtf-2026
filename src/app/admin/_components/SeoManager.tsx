@@ -135,7 +135,7 @@ export function SeoManager({ initialSettings }: Props) {
                   type="checkbox"
                   checked={activeRow.no_index}
                   onChange={(e) => handleChange(activeRow.id, 'no_index', e.target.checked)}
-                  className="rounded border-border/60 bg-transparent"
+                  className="rounded border-border-subtle bg-transparent"
                 />
                 <span className="text-muted-foreground">
                   No Index <span className="text-muted-foreground/40">(hide from search engines)</span>
@@ -205,7 +205,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={2}
-          className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+          className="w-full rounded-lg admin-input px-3 py-2 text-sm resize-none"
         />
       ) : (
         <input
@@ -213,7 +213,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+          className="w-full rounded-lg admin-input px-3 py-2 text-sm"
         />
       )}
     </div>

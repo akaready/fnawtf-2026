@@ -117,7 +117,7 @@ function QuoteForm({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Recommended, Budget Option"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+              className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
             />
           </div>
 
@@ -166,7 +166,7 @@ function QuoteForm({
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+                className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
               />
             </div>
             <div>
@@ -178,7 +178,7 @@ function QuoteForm({
                 value={downAmount}
                 onChange={(e) => setDownAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+                className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
               />
             </div>
           </div>
@@ -194,7 +194,7 @@ function QuoteForm({
               max="100"
               value={discountPct}
               onChange={(e) => setDiscountPct(e.target.value)}
-              className="w-32 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 outline-none focus:border-white/20 transition-colors"
+              className="w-32 bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 outline-none focus:border-white/20 transition-colors"
             />
           </div>
 

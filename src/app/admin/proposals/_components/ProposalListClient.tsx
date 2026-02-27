@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus, ExternalLink, Trash2, Loader2 } from 'lucide-react';
 import { deleteProposal, createProposalDraft } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
@@ -44,6 +45,15 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isCreating, startCreate] = useTransition();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get('open');
+    if (id) {
+      setActiveId(id);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams]);
 
   const filtered = proposals.filter((p) => {
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;

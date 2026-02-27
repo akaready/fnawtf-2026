@@ -7,6 +7,7 @@ import type { ProposalRow, ContactRow, ProposalType, ProposalStatus } from '@/ty
 
 export interface DetailsTabHandle {
   save: () => void;
+  isDirty: boolean;
 }
 
 interface DetailsTabProps {
@@ -47,7 +48,7 @@ const STATUSES: { value: ProposalStatus; label: string }[] = [
 
 const labelCls = 'block text-xs text-white/50 uppercase tracking-wide mb-1';
 const inputCls =
-  'w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
+  'w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
 const sectionHeadingCls = 'text-xs font-mono text-white/25 uppercase tracking-widest mb-4';
 
 export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
@@ -104,7 +105,18 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
     });
   };
 
-  useImperativeHandle(ref, () => ({ save: handleSave }));
+  const isDirty =
+    contactName !== proposal.contact_name ||
+    contactEmail !== (proposal.contact_email ?? '') ||
+    contactCompany !== proposal.contact_company ||
+    proposalType !== proposal.proposal_type ||
+    title !== proposal.title ||
+    subtitle !== proposal.subtitle ||
+    slug !== proposal.slug ||
+    password !== proposal.proposal_password ||
+    status !== proposal.status;
+
+  useImperativeHandle(ref, () => ({ save: handleSave, get isDirty() { return isDirty; } }));
 
   useEffect(() => {
     onSaveStateChange?.(isPending, saved);

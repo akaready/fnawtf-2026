@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition, useCallback, useMemo } from 'react';
+import { useState, useTransition, useCallback, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Download, Building2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import {
@@ -33,6 +34,15 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get('open');
+    if (id) {
+      setActiveId(id);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams]);
 
   const activeCompany = clients.find((c) => c.id === activeId) ?? null;
 

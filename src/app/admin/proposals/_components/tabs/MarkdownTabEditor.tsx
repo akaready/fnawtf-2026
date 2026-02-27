@@ -22,8 +22,6 @@ interface MarkdownTabEditorProps {
   label: string;
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved';
-
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function MarkdownTabEditor({
@@ -33,15 +31,13 @@ export function MarkdownTabEditor({
   snippets,
   section,
   onSectionUpdated,
-  label,
+  label: _label,
 }: MarkdownTabEditorProps) {
-  const [saveStatus, setSaveStatus]     = useState<SaveStatus>('idle');
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl]           = useState('');
   const linkInputRef                    = useRef<HTMLInputElement>(null);
   const sectionRef                      = useRef<ProposalSectionRow | null>(section);
   const debounceTimer                   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedFadeTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, startTransition]             = useTransition();
 
   // Keep sectionRef in sync so the autosave closure always has the latest value
@@ -51,7 +47,6 @@ export function MarkdownTabEditor({
 
   const persist = useCallback((markdownContent: string) => {
     startTransition(async () => {
-      setSaveStatus('saving');
       try {
         const current = sectionRef.current;
         if (current) {
@@ -80,11 +75,7 @@ export function MarkdownTabEditor({
           sectionRef.current = created;
           onSectionUpdated(created);
         }
-        setSaveStatus('saved');
-        if (savedFadeTimer.current) clearTimeout(savedFadeTimer.current);
-        savedFadeTimer.current = setTimeout(() => setSaveStatus('idle'), 2000);
       } catch {
-        setSaveStatus('idle');
       }
     });
   }, [proposalId, sortOrder, onSectionUpdated]);
@@ -98,7 +89,6 @@ export function MarkdownTabEditor({
   useEffect(() => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      if (savedFadeTimer.current) clearTimeout(savedFadeTimer.current);
     };
   }, []);
 
@@ -181,18 +171,6 @@ export function MarkdownTabEditor({
     return result;
   }, [matchingSnippets, snippetSearch, snippetCategory]);
 
-  // ── Status dot ──────────────────────────────────────────────────────────
-
-  const dotClass =
-    saveStatus === 'saving' ? 'bg-yellow-400'
-    : saveStatus === 'saved'  ? 'bg-green-400'
-    : 'bg-white/20';
-
-  const statusLabel =
-    saveStatus === 'saving' ? 'Saving…'
-    : saveStatus === 'saved'  ? 'Saved'
-    : 'Auto-save on';
-
   // ── Toolbar items ────────────────────────────────────────────────────────
 
   if (!editor) return null;
@@ -247,11 +225,11 @@ export function MarkdownTabEditor({
       <div className="flex flex-1 min-h-0">
 
         {/* Editor column */}
-        <div className="flex-1 overflow-y-auto min-w-0">
-          <div className="max-w-3xl">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
 
-            {/* Toolbar */}
-            <div className="flex items-center gap-0.5 px-8 pt-4 pb-2">
+          {/* Toolbar — normal bg, fixed height */}
+          <div className="flex-shrink-0 max-w-3xl w-full">
+            <div className="flex items-center gap-0.5 px-8 pt-4 pb-2 border-b border-white/[0.06]">
               {formatTools.map(({ key, Icon, label, fn, isActive }) => (
                 <button
                   key={key}
@@ -312,70 +290,77 @@ export function MarkdownTabEditor({
                 </button>
               )}
             </div>
+          </div>
 
-            {/* Link URL input */}
-            {showLinkInput && (
-              <div className="mx-8 mb-3 flex items-center gap-2.5 bg-[#1c1c1c] border border-white/15 rounded-xl px-3.5 py-2.5">
-                <Link2 size={13} className="text-white/30 flex-shrink-0" />
-                <input
-                  ref={linkInputRef}
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter')  { e.preventDefault(); applyLink(); }
-                    if (e.key === 'Escape') { setShowLinkInput(false); editor.chain().focus().run(); }
-                  }}
-                  placeholder="https://"
-                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-white/25 outline-none"
-                />
-                <kbd className="text-xs text-white/20 font-mono">↵</kbd>
-              </div>
-            )}
+          {/* Scrollable dark content area — fills remaining height */}
+          <div className="flex-1 overflow-y-auto bg-black/40">
+            <div className="max-w-3xl">
 
-            {/* BubbleMenu — appears on text selection */}
-            <BubbleMenu
-              editor={editor}
-              className="flex items-center gap-0.5 bg-[#1a1a1a] border border-white/[0.12] rounded-lg p-1 shadow-xl"
-            >
-              {formatTools.map(({ key, Icon, label, fn, isActive }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); fn(); }}
-                  title={label}
-                  className={`p-1.5 rounded transition-colors ${
-                    isActive
-                      ? 'text-foreground bg-white/[0.12]'
-                      : 'text-white/40 hover:text-foreground hover:bg-white/[0.08]'
-                  }`}
-                >
-                  <Icon size={13} />
-                </button>
-              ))}
-              <span className="w-px h-3.5 bg-white/10 mx-0.5 flex-shrink-0" />
-              <button
-                type="button"
-                onMouseDown={(e) => { e.preventDefault(); openLink(); }}
-                title="Link"
-                className="p-1.5 rounded transition-colors text-white/40 hover:text-foreground hover:bg-white/[0.08]"
+              {/* Link URL input */}
+              {showLinkInput && (
+                <div className="mx-8 mt-3 flex items-center gap-2.5 bg-[#1c1c1c] border border-white/15 rounded-xl px-3.5 py-2.5">
+                  <Link2 size={13} className="text-white/30 flex-shrink-0" />
+                  <input
+                    ref={linkInputRef}
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter')  { e.preventDefault(); applyLink(); }
+                      if (e.key === 'Escape') { setShowLinkInput(false); editor.chain().focus().run(); }
+                    }}
+                    placeholder="https://"
+                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-white/25 outline-none"
+                  />
+                  <kbd className="text-xs text-white/20 font-mono">↵</kbd>
+                </div>
+              )}
+
+              {/* BubbleMenu — appears on text selection */}
+              <BubbleMenu
+                editor={editor}
+                className="flex items-center gap-0.5 bg-[#1a1a1a] border border-white/[0.12] rounded-lg p-1 shadow-xl"
               >
-                <Link2 size={13} />
-              </button>
-            </BubbleMenu>
+                {formatTools.map(({ key, Icon, label, fn, isActive }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); fn(); }}
+                    title={label}
+                    className={`p-1.5 rounded transition-colors ${
+                      isActive
+                        ? 'text-foreground bg-white/[0.12]'
+                        : 'text-white/40 hover:text-foreground hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <Icon size={13} />
+                  </button>
+                ))}
+                <span className="w-px h-3.5 bg-white/10 mx-0.5 flex-shrink-0" />
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); openLink(); }}
+                  title="Link"
+                  className="p-1.5 rounded transition-colors text-white/40 hover:text-foreground hover:bg-white/[0.08]"
+                >
+                  <Link2 size={13} />
+                </button>
+              </BubbleMenu>
 
-            {/* Editor content */}
-            <div
-              className="px-8 py-4"
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'u') {
-                  e.preventDefault();
-                  openLink();
-                }
-              }}
-            >
-              <EditorContent editor={editor} />
+              {/* Editor content */}
+              <div
+                className="px-8 pt-5 pb-4"
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'u') {
+                    e.preventDefault();
+                    openLink();
+                  }
+                }}
+              >
+                <EditorContent editor={editor} />
+              </div>
             </div>
-          </div>{/* /max-w-3xl */}
+          </div>
+
         </div>
 
         {/* Snippet sidebar */}
@@ -388,7 +373,7 @@ export function MarkdownTabEditor({
                 value={snippetSearch}
                 onChange={(e) => setSnippetSearch(e.target.value)}
                 placeholder="Search snippets…"
-                className="w-full bg-white/[0.04] border border-white/[0.12] rounded-md pl-8 pr-3 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                className="w-full bg-black/40 border border-white/[0.12] rounded-md pl-8 pr-3 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
               />
             </div>
             {snippetCategories.length > 0 && (
@@ -439,14 +424,6 @@ export function MarkdownTabEditor({
 
       </div>{/* /flex row */}
 
-      {/* Footer with autosave status */}
-      <div className="px-8 py-3 border-t border-white/[0.12] flex items-center justify-between flex-shrink-0">
-        <p className="text-xs text-white/30">{label} section</p>
-        <span className="flex items-center gap-1.5 text-xs text-white/30">
-          <span className={`inline-block w-1.5 h-1.5 rounded-full transition-colors duration-300 ${dotClass}`} />
-          {statusLabel}
-        </span>
-      </div>
     </div>
   );
 }

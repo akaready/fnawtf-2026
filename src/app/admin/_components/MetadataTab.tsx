@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useEffect, useTransition, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, RefreshCw, Link2 } from 'lucide-react';
 import { ChipInput } from './ChipInput';
-import { updateProject, createProject, updateTestimonial } from '../actions';
+import { updateProject, createProject, updateTestimonial, createClientRecord } from '../actions';
 import type { TagSuggestions, TestimonialOption } from './ProjectForm';
 
 type ProjectRow = Record<string, unknown> & {
@@ -31,10 +31,13 @@ type ProjectRow = Record<string, unknown> & {
   published: boolean;
 };
 
+export type ClientOption = { id: string; name: string };
+
 interface Props {
   project: ProjectRow | null;
   tagSuggestions?: TagSuggestions;
   testimonials?: TestimonialOption[];
+  clients?: ClientOption[];
   onSaved?: () => void;
   onCreated?: (newId: string) => void;
   /** Which sections to show: 'project' = core + visibility, 'metadata' = tags + scope + testimonial, undefined = all */
@@ -104,8 +107,120 @@ function slugify(text: string) {
     .trim();
 }
 
+function ClientCombobox({
+  value,
+  clientId,
+  options,
+  onChange,
+  onCreate,
+}: {
+  value: string;
+  clientId: string | null;
+  options: ClientOption[];
+  onChange: (name: string, id: string | null) => void;
+  onCreate: (name: string) => Promise<{ id: string; name: string }>;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  const exactMatch = options.find((o) => o.name.toLowerCase() === query.trim().toLowerCase());
+
+  const handleSelect = (opt: ClientOption) => {
+    setQuery(opt.name);
+    onChange(opt.name, opt.id);
+    setOpen(false);
+  };
+
+  const handleCreate = async () => {
+    if (!query.trim()) return;
+    setCreating(true);
+    try {
+      const created = await onCreate(query.trim());
+      onChange(created.name, created.id);
+      setOpen(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      if (!containerRef.current?.contains(document.activeElement)) {
+        setOpen(false);
+      }
+    }, 150);
+  };
+
+  const linked = clientId && options.find((o) => o.id === clientId);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!open) setOpen(true);
+          if (!e.target.value.trim()) onChange('', null);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={handleBlur}
+        placeholder="Search or create client…"
+        className={`${inputClass}${linked ? ' pr-9' : ''}`}
+      />
+      {linked && (
+        <Link2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400/70" />
+      )}
+      {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#111] border border-white/15 rounded-lg shadow-xl">
+          {filtered.slice(0, 20).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(opt)}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors truncate ${
+                opt.id === clientId ? 'text-foreground bg-white/[0.04]' : 'text-muted-foreground'
+              }`}
+            >
+              {opt.name}
+            </button>
+          ))}
+          {query.trim() && !exactMatch && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleCreate}
+              disabled={creating}
+              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-white/[0.06]"
+            >
+              {creating ? 'Creating…' : `Create "${query.trim()}"`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function MetadataTab(
-  { project, tagSuggestions, testimonials, onSaved, onCreated, visibleSections, hideInlineSave },
+  { project, tagSuggestions, testimonials, clients: initialClients, onSaved, onCreated, visibleSections, hideInlineSave },
   ref
 ) {
   const router = useRouter();
@@ -113,6 +228,9 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+
+  // Local clients list (can grow if user creates a new client inline)
+  const [clients, setClients] = useState<ClientOption[]>(initialClients ?? []);
 
   // Find the testimonial currently linked to this project
   const initialTestimonialId = testimonials?.find((t) => t.project_id === project?.id)?.id ?? '';
@@ -124,6 +242,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
     slug: project?.slug ?? '',
     description: project?.description ?? '',
     client_name: project?.client_name ?? '',
+    client_id: (project?.client_id as string | null) ?? null,
     type: (project?.type ?? 'video') as 'video' | 'design',
     category: project?.category ?? '',
     thumbnail_url: project?.thumbnail_url ?? '',
@@ -210,11 +329,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 
   return (
     <div className="space-y-8">
-      {/* Core */}
       {showProject && (<section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
-          Core
-        </h3>
         <div className="grid grid-cols-2 gap-4">
           <Field>
             <Label>Title</Label>
@@ -254,9 +369,10 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
               <button
                 type="button"
                 onClick={() => set('slug', slugify(form.title))}
-                className="px-3 py-2 text-xs text-muted-foreground border border-border rounded-lg hover:text-foreground hover:border-border/80 transition-colors whitespace-nowrap"
+                className="w-10 h-10 flex items-center justify-center text-muted-foreground/50 border border-border rounded-lg hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
+                title="Regenerate from title"
               >
-                Generate
+                <RefreshCw size={14} />
               </button>
             </div>
           </Field>
@@ -277,24 +393,39 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field>
-            <Label>Client Name</Label>
-            <input
-              type="text"
+            <Label>Client</Label>
+            <ClientCombobox
               value={form.client_name}
-              onChange={(e) => set('client_name', e.target.value)}
-              placeholder="Acme Corp"
-              className={inputClass}
+              clientId={form.client_id}
+              options={clients}
+              onChange={(name, id) => {
+                setForm((f) => ({ ...f, client_name: name, client_id: id }));
+                setIsDirty(true);
+                if (status !== 'idle') setStatus('idle');
+              }}
+              onCreate={async (name) => {
+                const id = await createClientRecord({ name, email: '' });
+                const opt = { id, name };
+                setClients((prev) => [...prev, opt].sort((a, b) => a.name.localeCompare(b.name)));
+                return opt;
+              }}
             />
           </Field>
           <Field>
             <Label>Category</Label>
-            <input
-              type="text"
-              value={form.category}
-              onChange={(e) => set('category', e.target.value)}
-              placeholder="e.g. Brand Film"
-              className={inputClass}
-            />
+            <div className="relative">
+              <select
+                value={form.category}
+                onChange={(e) => set('category', e.target.value)}
+                className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+              >
+                <option value="">Select type…</option>
+                {(tagSuggestions?.project_type ?? []).map((pt) => (
+                  <option key={pt} value={pt}>{pt}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+            </div>
           </Field>
         </div>
         <Field>

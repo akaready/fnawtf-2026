@@ -106,11 +106,48 @@ export type Database = {
         Insert: Database['public']['Tables']['contact_roles']['Row'];
         Update: Partial<Database['public']['Tables']['contact_roles']['Row']>;
       };
+      headshots: {
+        Row: {
+          id: string;
+          contact_id: string;
+          storage_path: string;
+          url: string;
+          featured: boolean;
+          width: number;
+          height: number;
+          aspect_ratio: number;
+          file_size: number;
+          source_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          contact_id: string;
+          storage_path: string;
+          url: string;
+          featured?: boolean;
+          width: number;
+          height: number;
+          aspect_ratio: number;
+          file_size: number;
+          source_url?: string | null;
+        };
+        Update: {
+          contact_id?: string;
+          storage_path?: string;
+          url?: string;
+          featured?: boolean;
+          width?: number;
+          height?: number;
+          aspect_ratio?: number;
+          file_size?: number;
+          source_url?: string | null;
+        };
+      };
       tags: {
         Row: {
           id: string;
           name: string;
-          category: 'style' | 'technique' | 'addon' | 'deliverable';
+          category: 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type';
           color: string | null;
         };
         Insert: Omit<Database['public']['Tables']['tags']['Row'], 'id'>;
@@ -253,6 +290,7 @@ export type Database = {
           friendly_discount_pct: number;
           total_amount: number | null;
           down_amount: number | null;
+          sort_order: number;
           created_at: string;
           updated_at: string;
         };

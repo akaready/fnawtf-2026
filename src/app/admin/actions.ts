@@ -708,6 +708,15 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
   }
 }
 
+export async function reorderProposalQuotes(orderedIds: string[]) {
+  const { supabase } = await requireAuth();
+  await Promise.all(
+    orderedIds.map((id, sort_order) =>
+      supabase.from('proposal_quotes').update({ sort_order } as never).eq('id', id)
+    )
+  );
+}
+
 export async function deleteProposalQuote(quoteId: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase
@@ -805,6 +814,20 @@ export async function getContacts(): Promise<import('@/types/proposal').ContactR
     .order('name');
   if (error) throw new Error(error.message);
   const contacts = (data ?? []) as import('@/types/proposal').ContactRow[];
+
+  // Populate headshot_url from featured headshots
+  const { data: featuredHeadshots } = await supabase
+    .from('headshots')
+    .select('contact_id, url')
+    .eq('featured', true) as { data: Array<{ contact_id: string; url: string }> | null };
+  if (featuredHeadshots) {
+    const hsMap = new Map(featuredHeadshots.map(h => [h.contact_id, h.url]));
+    for (const c of contacts) {
+      if (!c.headshot_url && hsMap.has(c.id)) {
+        c.headshot_url = hsMap.get(c.id) ?? null;
+      }
+    }
+  }
 
   // For crew/cast without an explicit role/title, derive one from credits
   const crewCastIds = contacts
@@ -1083,6 +1106,7 @@ export async function getTagSuggestions(): Promise<{
   premium_addons: string[];
   camera_techniques: string[];
   assets_delivered: string[];
+  project_type: string[];
 }> {
   const { supabase } = await requireAuth();
   const { data } = await supabase.from('tags').select('name, category').order('name');
@@ -1092,19 +1116,23 @@ export async function getTagSuggestions(): Promise<{
     premium_addons: rows.filter((t) => t.category === 'addon').map((t) => t.name),
     camera_techniques: rows.filter((t) => t.category === 'technique').map((t) => t.name),
     assets_delivered: rows.filter((t) => t.category === 'deliverable').map((t) => t.name),
+    project_type: rows.filter((t) => t.category === 'project_type').map((t) => t.name),
   };
 }
 
 // ── Tag CRUD ──────────────────────────────────────────────────────────────
 
-type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable';
+type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type';
 
 const CATEGORY_COLUMN: Record<TagCategory, string> = {
   style: 'style_tags',
   technique: 'camera_techniques',
   addon: 'premium_addons',
   deliverable: 'assets_delivered',
+  project_type: 'category',
 };
+
+const SCALAR_CATEGORIES = new Set<TagCategory>(['project_type']);
 
 export type TagWithCount = {
   id: string;
@@ -1115,13 +1143,13 @@ export type TagWithCount = {
 };
 
 type TagRow = { id: string; name: string; category: string; color: string | null };
-type ProjTagRow = { id: string; style_tags: string[] | null; premium_addons: string[] | null; camera_techniques: string[] | null; assets_delivered: string[] | null };
+type ProjTagRow = { id: string; style_tags: string[] | null; premium_addons: string[] | null; camera_techniques: string[] | null; assets_delivered: string[] | null; category: string | null };
 
 export async function getTags(): Promise<TagWithCount[]> {
   const { supabase } = await requireAuth();
   const [{ data: tagsRaw }, { data: projectsRaw }] = await Promise.all([
     supabase.from('tags').select('*').order('category').order('name'),
-    supabase.from('projects').select('style_tags, premium_addons, camera_techniques, assets_delivered'),
+    supabase.from('projects').select('style_tags, premium_addons, camera_techniques, assets_delivered, category'),
   ]);
 
   const tags = (tagsRaw ?? []) as TagRow[];
@@ -1133,6 +1161,7 @@ export async function getTags(): Promise<TagWithCount[]> {
     (row.premium_addons ?? []).forEach((t) => countMap.set(`addon:${t}`, (countMap.get(`addon:${t}`) ?? 0) + 1));
     (row.camera_techniques ?? []).forEach((t) => countMap.set(`technique:${t}`, (countMap.get(`technique:${t}`) ?? 0) + 1));
     (row.assets_delivered ?? []).forEach((t) => countMap.set(`deliverable:${t}`, (countMap.get(`deliverable:${t}`) ?? 0) + 1));
+    if (row.category) countMap.set(`project_type:${row.category}`, (countMap.get(`project_type:${row.category}`) ?? 0) + 1);
   }
 
   return tags.map((tag) => ({
@@ -1159,18 +1188,23 @@ export async function renameTag(id: string, newName: string) {
   if (!tag) throw new Error('Tag not found');
 
   const col = CATEGORY_COLUMN[tag.category as TagCategory];
+  const isScalar = SCALAR_CATEGORIES.has(tag.category as TagCategory);
   const oldName = tag.name;
   const trimmed = newName.trim();
 
-  const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [oldName]);
-  const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
-  if (affected.length > 0) {
-    await Promise.all(
-      affected.map((p) => {
-        const arr = ((p[col] as string[]) ?? []).map((t) => (t === oldName ? trimmed : t));
-        return supabase.from('projects').update({ [col]: arr } as never).eq('id', p.id as string);
-      })
-    );
+  if (isScalar) {
+    await supabase.from('projects').update({ [col]: trimmed } as never).eq(col, oldName);
+  } else {
+    const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [oldName]);
+    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    if (affected.length > 0) {
+      await Promise.all(
+        affected.map((p) => {
+          const arr = ((p[col] as string[]) ?? []).map((t) => (t === oldName ? trimmed : t));
+          return supabase.from('projects').update({ [col]: arr } as never).eq('id', p.id as string);
+        })
+      );
+    }
   }
 
   const { error } = await supabase.from('tags').update({ name: trimmed } as never).eq('id', id);
@@ -1187,16 +1221,21 @@ export async function deleteTag(id: string) {
   if (!tag) throw new Error('Tag not found');
 
   const col = CATEGORY_COLUMN[tag.category as TagCategory];
+  const isScalar = SCALAR_CATEGORIES.has(tag.category as TagCategory);
 
-  const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [tag.name]);
-  const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
-  if (affected.length > 0) {
-    await Promise.all(
-      affected.map((p) => {
-        const arr = ((p[col] as string[]) ?? []).filter((t) => t !== tag.name);
-        return supabase.from('projects').update({ [col]: arr.length > 0 ? arr : null } as never).eq('id', p.id as string);
-      })
-    );
+  if (isScalar) {
+    await supabase.from('projects').update({ [col]: null } as never).eq(col, tag.name);
+  } else {
+    const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [tag.name]);
+    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    if (affected.length > 0) {
+      await Promise.all(
+        affected.map((p) => {
+          const arr = ((p[col] as string[]) ?? []).filter((t) => t !== tag.name);
+          return supabase.from('projects').update({ [col]: arr.length > 0 ? arr : null } as never).eq('id', p.id as string);
+        })
+      );
+    }
   }
 
   const { error } = await supabase.from('tags').delete().eq('id', id);
@@ -1213,6 +1252,7 @@ export async function mergeTags(sourceIds: string[], targetId: string) {
   if (!target) throw new Error('Target tag not found');
 
   const col = CATEGORY_COLUMN[target.category as TagCategory];
+  const isScalar = SCALAR_CATEGORIES.has(target.category as TagCategory);
 
   for (const sourceId of sourceIds) {
     if (sourceId === targetId) continue;
@@ -1220,20 +1260,24 @@ export async function mergeTags(sourceIds: string[], targetId: string) {
     const source = sourceRaw as { name: string } | null;
     if (!source) continue;
 
-    const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [source.name]);
-    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
-    if (affected.length > 0) {
-      await Promise.all(
-        affected.map((p) => {
-          let arr = (p[col] as string[]) ?? [];
-          if (arr.includes(target.name)) {
-            arr = arr.filter((t) => t !== source.name);
-          } else {
-            arr = arr.map((t) => (t === source.name ? target.name : t));
-          }
-          return supabase.from('projects').update({ [col]: arr } as never).eq('id', p.id as string);
-        })
-      );
+    if (isScalar) {
+      await supabase.from('projects').update({ [col]: target.name } as never).eq(col, source.name);
+    } else {
+      const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [source.name]);
+      const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+      if (affected.length > 0) {
+        await Promise.all(
+          affected.map((p) => {
+            let arr = (p[col] as string[]) ?? [];
+            if (arr.includes(target.name)) {
+              arr = arr.filter((t) => t !== source.name);
+            } else {
+              arr = arr.map((t) => (t === source.name ? target.name : t));
+            }
+            return supabase.from('projects').update({ [col]: arr } as never).eq('id', p.id as string);
+          })
+        );
+      }
     }
     await supabase.from('tags').delete().eq('id', sourceId);
   }
@@ -1249,11 +1293,12 @@ export async function getProjectsForTag(
 ): Promise<Array<{ id: string; title: string; published: boolean; client_name: string }>> {
   const { supabase } = await requireAuth();
   const col = CATEGORY_COLUMN[category];
-  const { data, error } = await supabase
+  const isScalar = SCALAR_CATEGORIES.has(category);
+  let query = supabase
     .from('projects')
-    .select('id, title, published, client_name')
-    .contains(col, [tagName])
-    .order('title');
+    .select('id, title, published, client_name');
+  query = isScalar ? query.eq(col, tagName) : query.contains(col, [tagName]);
+  const { data, error } = await query.order('title');
   if (error) throw new Error(error.message);
   return (data ?? []) as Array<{ id: string; title: string; published: boolean; client_name: string }>;
 }
@@ -1264,7 +1309,7 @@ export async function getProposalProjects(proposalId: string): Promise<import('@
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('proposal_projects')
-    .select('id, proposal_id, project_id, section_id, sort_order, blurb, project:projects(id, title, slug, thumbnail_url, style_tags, premium_addons, camera_techniques)')
+    .select('id, proposal_id, project_id, section_id, sort_order, blurb, project:projects(id, title, slug, thumbnail_url, client_name, style_tags, premium_addons, camera_techniques)')
     .eq('proposal_id', proposalId)
     .order('sort_order');
   if (error) throw new Error(error.message);
@@ -1382,4 +1427,88 @@ function revalidatePlacements(page: PlacementPage) {
   if (page === 'homepage') revalidatePath('/');
   else if (page === 'work') revalidatePath('/work');
   else revalidatePath('/services');
+}
+
+// ── Headshots ──────────────────────────────────────────────────────────────
+
+export interface HeadshotRow {
+  id: string;
+  contact_id: string;
+  storage_path: string;
+  url: string;
+  featured: boolean;
+  width: number;
+  height: number;
+  aspect_ratio: number;
+  file_size: number;
+  source_url: string | null;
+  created_at: string;
+}
+
+export async function getHeadshots(contactId: string): Promise<HeadshotRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('headshots')
+    .select('*')
+    .eq('contact_id', contactId)
+    .order('featured', { ascending: false })
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return (data || []) as HeadshotRow[];
+}
+
+export async function getContactsWithHeadshots(): Promise<
+  (import('@/types/proposal').ContactRow & { featured_headshot_url: string | null })[]
+> {
+  const supabase = await createClient();
+  const { data: contacts, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .order('name');
+  if (error) throw new Error(error.message);
+
+  // Get featured headshots for all contacts in one query
+  const { data: headshots } = await supabase
+    .from('headshots')
+    .select('contact_id, url')
+    .eq('featured', true) as { data: Array<{ contact_id: string; url: string }> | null };
+
+  const headshotMap = new Map((headshots || []).map(h => [h.contact_id, h.url]));
+
+  return ((contacts || []) as unknown as import('@/types/proposal').ContactRow[]).map(c => ({
+    ...c,
+    featured_headshot_url: headshotMap.get(c.id) || null,
+  }));
+}
+
+export async function setFeaturedHeadshot(headshotId: string, contactId: string) {
+  const { supabase } = await requireAuth();
+  // Unset all featured for this contact
+  await supabase
+    .from('headshots')
+    .update({ featured: false } as never)
+    .eq('contact_id', contactId);
+  // Set the selected one
+  const { error } = await supabase
+    .from('headshots')
+    .update({ featured: true } as never)
+    .eq('id', headshotId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/contacts');
+}
+
+export async function deleteHeadshot(headshotId: string) {
+  const { supabase } = await requireAuth();
+  // Get storage path first
+  const { data: headshot } = await supabase
+    .from('headshots')
+    .select('storage_path')
+    .eq('id', headshotId)
+    .single() as { data: { storage_path: string } | null };
+  if (headshot) {
+    await supabase.storage.from('headshots').remove([headshot.storage_path]);
+  }
+  const { error } = await supabase.from('headshots').delete().eq('id', headshotId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/contacts');
 }

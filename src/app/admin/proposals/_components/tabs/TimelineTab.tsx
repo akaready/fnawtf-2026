@@ -18,7 +18,7 @@ interface TimelineTabProps {
 // ── Style constants ──────────────────────────────────────────────────────────
 
 const dateInputCls =
-  'text-xs bg-white/[0.04] border border-white/10 rounded px-3 py-1.5 text-white/70 ' +
+  'text-xs bg-black/40 border border-white/10 rounded px-3 py-1.5 text-white/70 ' +
   'focus:outline-none focus:border-white/20 focus:text-white/90 transition-colors ' +
   '[color-scheme:dark]';
 

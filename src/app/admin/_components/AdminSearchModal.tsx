@@ -20,14 +20,14 @@ interface SearchResult {
 
 type TypeKey = 'companies' | 'contacts' | 'projects' | 'tags' | 'testimonials' | 'proposals' | 'snippets';
 
-const TYPE_META: Record<TypeKey, { label: string; color: string }> = {
-  companies:    { label: 'Company',     color: 'bg-blue-500' },
-  contacts:     { label: 'Contact',     color: 'bg-emerald-500' },
-  projects:     { label: 'Project',     color: 'bg-violet-500' },
-  tags:         { label: 'Tag',         color: 'bg-yellow-500' },
-  testimonials: { label: 'Testimonial', color: 'bg-pink-500' },
-  proposals:    { label: 'Proposal',    color: 'bg-orange-500' },
-  snippets:     { label: 'Snippet',     color: 'bg-teal-500' },
+const TYPE_META: Record<TypeKey, { label: string; plural: string; color: string }> = {
+  companies:    { label: 'Company',     plural: 'Companies',    color: 'bg-blue-500' },
+  contacts:     { label: 'Contact',     plural: 'Contacts',     color: 'bg-emerald-500' },
+  projects:     { label: 'Project',     plural: 'Projects',     color: 'bg-violet-500' },
+  tags:         { label: 'Tag',         plural: 'Tags',         color: 'bg-yellow-500' },
+  testimonials: { label: 'Testimonial', plural: 'Testimonials', color: 'bg-pink-500' },
+  proposals:    { label: 'Proposal',    plural: 'Proposals',    color: 'bg-orange-500' },
+  snippets:     { label: 'Snippet',     plural: 'Snippets',     color: 'bg-teal-500' },
 };
 
 const ALL_TYPES = Object.keys(TYPE_META) as TypeKey[];
@@ -43,7 +43,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .or(`name.ilike.${like},notes.ilike.${like}`)
         .limit(5);
       return ((data ?? []) as any[]).map((r) => ({
-        id: r.id, type, primary: r.name, secondary: r.notes ?? undefined, href: '/admin/companies',
+        id: r.id, type, primary: r.name, secondary: r.notes ?? undefined, href: `/admin/clients?open=${r.id}`,
       }));
     }
     case 'contacts': {
@@ -55,7 +55,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
       return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.name,
         secondary: [r.role, r.company].filter(Boolean).join(' · ') || r.email || undefined,
-        href: '/admin/contacts',
+        href: `/admin/contacts?open=${r.id}`,
       }));
     }
     case 'projects': {
@@ -65,7 +65,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .or(`title.ilike.${like},client_name.ilike.${like}`)
         .limit(5);
       return ((data ?? []) as any[]).map((r) => ({
-        id: r.id, type, primary: r.title, secondary: r.client_name ?? undefined, href: '/admin/projects',
+        id: r.id, type, primary: r.title, secondary: r.client_name ?? undefined, href: `/admin/projects?open=${r.id}`,
       }));
     }
     case 'tags': {
@@ -99,7 +99,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
       return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.title,
         secondary: [r.contact_name, r.contact_company].filter(Boolean).join(' · ') || undefined,
-        href: `/admin/proposals/${r.id}`,
+        href: `/admin/proposals?open=${r.id}`,
       }));
     }
     case 'snippets': {
@@ -201,7 +201,7 @@ export function AdminSearchModal({ open, onClose }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search…"
-              className="w-full bg-black rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-white/30 outline-none border border-white/[0.08] focus:border-white/20"
+              className="w-full bg-black/40 rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-white/30 outline-none border border-white/[0.08] focus:border-white/20"
             />
           </div>
           <button onClick={onClose} className="flex-shrink-0 text-white/30 hover:text-white/70 transition-colors">
@@ -221,7 +221,7 @@ export function AdminSearchModal({ open, onClose }: Props) {
                   : 'text-white/40 hover:text-white/70 hover:bg-white/5'
               }`}
             >
-              {t === 'all' ? 'All' : TYPE_META[t].label + 's'}
+              {t === 'all' ? 'All' : TYPE_META[t].plural}
             </button>
           ))}
         </div>

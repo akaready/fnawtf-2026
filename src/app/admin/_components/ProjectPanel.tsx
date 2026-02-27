@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import { X, Trash2, Loader2, Save, Check } from 'lucide-react';
 import { PanelDrawer } from './PanelDrawer';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { MetadataTab } from './MetadataTab';
 import type { MetadataTabHandle } from './MetadataTab';
 import { VideosTab } from './VideosTab';
@@ -19,6 +20,8 @@ import {
   deleteProject,
   getAllRoles,
   getContacts,
+  getTagSuggestions,
+  getTestimonials,
 } from '../actions';
 import type { TagSuggestions, TestimonialOption } from './ProjectForm';
 
@@ -44,6 +47,7 @@ interface ProjectPanelProps {
   onProjectCreated: (newProject: ProjectRow) => void;
   tagSuggestions?: Record<string, string[]>;
   testimonials?: TestimonialOption[];
+  clients?: Array<{ id: string; name: string }>;
 }
 
 export function ProjectPanel({
@@ -55,6 +59,7 @@ export function ProjectPanel({
   onProjectCreated,
   tagSuggestions,
   testimonials,
+  clients,
 }: ProjectPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('project');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,7 +69,10 @@ export function ProjectPanel({
   const [allRoles, setAllRoles] = useState<Array<{ id: string; name: string }>>([]);
   const [allPeople, setAllPeople] = useState<Array<{ id: string; name: string }>>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [localTagSuggestions, setLocalTagSuggestions] = useState<Record<string, string[]> | undefined>(tagSuggestions);
+  const [localTestimonials, setLocalTestimonials] = useState<TestimonialOption[] | undefined>(testimonials);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [deleting, startDelete] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -85,6 +93,7 @@ export function ProjectPanel({
     setCredits([]);
     setBtsImages([]);
     setConfirmDelete(false);
+    setConfirmClose(false);
     setSaveStatus('idle');
 
     if (projectId) {
@@ -95,13 +104,17 @@ export function ProjectPanel({
         getProjectBTSImages(projectId),
         getAllRoles(),
         getContacts(),
+        !tagSuggestions ? getTagSuggestions() : Promise.resolve(null),
+        !testimonials ? getTestimonials() : Promise.resolve(null),
       ])
-        .then(([v, c, b, roles, contacts]) => {
+        .then(([v, c, b, roles, contacts, tags, tests]) => {
           setVideos(v);
           setCredits(c);
           setBtsImages(b);
           setAllRoles(roles);
           setAllPeople(contacts.map((p) => ({ id: p.id, name: p.name })));
+          if (tags) setLocalTagSuggestions(tags);
+          if (tests) setLocalTestimonials(tests.map((t: any) => ({ id: t.id, person_name: t.person_name, company: t.company, quote: t.quote ?? null, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
         })
         .finally(() => setLoadingRelated(false));
     }
@@ -149,6 +162,7 @@ export function ProjectPanel({
   };
 
   // Close guard — warn if unsaved changes exist
+  // Check refs at call-time (not render-time) because ref changes don't trigger re-renders
   const handleClose = useCallback(() => {
     const dirty = [
       projectTabRef.current?.isDirty,
@@ -157,12 +171,21 @@ export function ProjectPanel({
       btsRef.current?.isDirty,
     ].some(Boolean);
 
-    if (dirty && !window.confirm('You have unsaved changes. Close anyway?')) return;
-    onClose();
+    if (dirty) {
+      setConfirmClose(true);
+    } else {
+      onClose();
+    }
   }, [onClose]);
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[640px]">
+      <DiscardChangesDialog
+        open={confirmClose}
+        onKeepEditing={() => setConfirmClose(false)}
+        onDiscard={() => { setConfirmClose(false); onClose(); }}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-white/[0.08] flex-shrink-0">
         {project?.thumbnail_url ? (
@@ -187,7 +210,7 @@ export function ProjectPanel({
       </div>
 
       {/* Tab strip */}
-      <div className="flex items-center gap-1 border-b border-white/[0.08] px-6 py-2 flex-shrink-0">
+      <div className="flex items-center gap-1 border-b border-white/[0.08] px-6 py-2 flex-shrink-0 bg-white/[0.02]">
         {TABS.map((tab) => {
           const disabled = isNew && tab.id !== 'project';
           return (
@@ -217,8 +240,9 @@ export function ProjectPanel({
           <MetadataTab
             ref={projectTabRef}
             project={project as Parameters<typeof MetadataTab>[0]['project']}
-            tagSuggestions={tagSuggestions as TagSuggestions | undefined}
-            testimonials={testimonials}
+            tagSuggestions={localTagSuggestions as TagSuggestions | undefined}
+            testimonials={localTestimonials}
+            clients={clients}
             onSaved={handleSaved}
             onCreated={handleCreated}
             visibleSections="project"
@@ -230,8 +254,9 @@ export function ProjectPanel({
             <MetadataTab
               ref={metadataTabRef}
               project={project as Parameters<typeof MetadataTab>[0]['project']}
-              tagSuggestions={tagSuggestions as TagSuggestions | undefined}
-              testimonials={testimonials}
+              tagSuggestions={localTagSuggestions as TagSuggestions | undefined}
+              testimonials={localTestimonials}
+              clients={clients}
               onSaved={handleSaved}
               onCreated={handleCreated}
               visibleSections="metadata"
@@ -275,7 +300,7 @@ export function ProjectPanel({
 
       {/* Footer: save (left) | delete (right) */}
       {!isNew && projectId && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08] flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08] flex-shrink-0 bg-white/[0.02]">
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveAll}

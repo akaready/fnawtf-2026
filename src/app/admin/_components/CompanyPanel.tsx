@@ -5,16 +5,18 @@ import {
   Save, Check, Loader2, Upload, Film, ChevronDown, ChevronUp,
   Trash2, X, UserPlus, Briefcase, Target, Link2,
 } from 'lucide-react';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import {
   type ClientRow,
   updateClientRecord,
   deleteClientRecord,
   updateTestimonial,
+  getProjectById,
 } from '../actions';
+import { ProjectPanel } from './ProjectPanel';
 import type { ContactRow } from '@/types/proposal';
 import { PanelDrawer } from './PanelDrawer';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 
 type ClientProject = {
   id: string;
@@ -108,6 +110,16 @@ export function CompanyPanel({
   const [saving, startSave] = useTransition();
   const [savingTestimonialId, setSavingTestimonialId] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeProjectRow, setActiveProjectRow] = useState<(Record<string, unknown> & { id: string }) | null>(null);
+
+  const openProject = useCallback(async (id: string) => {
+    setActiveProjectId(id);
+    const row = await getProjectById(id);
+    if (row) setActiveProjectRow(row as Record<string, unknown> & { id: string });
+  }, []);
 
   // Sync localCompany when panel opens with a new company
   useEffect(() => {
@@ -116,12 +128,15 @@ export function CompanyPanel({
       setActiveTab('info');
       setExpandedTestimonialId(null);
       setSavedId(null);
+      setDirty(false);
+      setConfirmClose(false);
     }
   }, [company?.id]);
 
   // ALL hooks must be declared before any conditional return
   const handleChange = useCallback((field: string, value: unknown) => {
     setLocalCompany((prev) => prev ? { ...prev, [field]: value } : prev);
+    setDirty(true);
   }, []);
 
   const handleLogoDrop = useCallback(async (file: File) => {
@@ -150,6 +165,14 @@ export function CompanyPanel({
       return current;
     });
   }, []);
+
+  const handleClose = useCallback(() => {
+    if (dirty) {
+      setConfirmClose(true);
+    } else {
+      onClose();
+    }
+  }, [dirty, onClose]);
 
   if (!localCompany) return <PanelDrawer open={false} onClose={onClose}>{null}</PanelDrawer>;
 
@@ -185,6 +208,7 @@ export function CompanyPanel({
         status: localCompany.status ?? 'active',
         pipeline_stage: localCompany.pipeline_stage ?? 'new',
       });
+      setDirty(false);
       setSavedId(localCompany.id);
       setTimeout(() => setSavedId(null), 2000);
       onCompanyUpdated(localCompany);
@@ -217,7 +241,13 @@ export function CompanyPanel({
 
   return (
     <>
-      <PanelDrawer open={!!company} onClose={onClose}>
+      <PanelDrawer open={!!company} onClose={handleClose}>
+        <DiscardChangesDialog
+          open={confirmClose}
+          onKeepEditing={() => setConfirmClose(false)}
+          onDiscard={() => { setConfirmClose(false); setDirty(false); onClose(); }}
+        />
+
         {/* Header: logo + name + close */}
         <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-white/[0.08]">
           <LogoDropzone
@@ -233,7 +263,7 @@ export function CompanyPanel({
             className="flex-1 bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
           />
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
           >
             <X size={16} />
@@ -404,10 +434,10 @@ export function CompanyPanel({
                 <p className="text-xs text-muted-foreground/30 py-1">No projects linked.</p>
               )}
               {clientProjects.map((p) => (
-                <Link
+                <button
                   key={p.id}
-                  href={`/admin/projects/${p.id}`}
-                  className="flex items-center gap-2.5 rounded-lg bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors group w-full"
+                  onClick={() => openProject(p.id)}
+                  className="flex items-center gap-2.5 rounded-lg bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors group w-full text-left"
                 >
                   {p.thumbnail_url ? (
                     <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
@@ -417,7 +447,7 @@ export function CompanyPanel({
                     </div>
                   )}
                   <span className="text-sm text-muted-foreground group-hover:text-foreground truncate">{p.title}</span>
-                </Link>
+                </button>
               ))}
             </div>
           )}
@@ -521,6 +551,16 @@ export function CompanyPanel({
           </div>
         </div>
       )}
+
+      {/* Nested project panel */}
+      <ProjectPanel
+        project={activeProjectRow}
+        open={activeProjectId !== null}
+        onClose={() => { setActiveProjectId(null); setActiveProjectRow(null); }}
+        onProjectUpdated={(updated) => setActiveProjectRow(updated)}
+        onProjectDeleted={() => { setActiveProjectId(null); setActiveProjectRow(null); }}
+        onProjectCreated={() => {}}
+      />
     </>
   );
 }

@@ -8,7 +8,7 @@ import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { createTag, renameTag, deleteTag, mergeTags, getProjectsForTag } from '../../actions';
 import type { TagWithCount } from '../../actions';
 
-type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable';
+type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type';
 type ProjectRef = { id: string; title: string; published: boolean; client_name: string };
 
 const CATEGORY_CONFIG: Record<TagCategory, { label: string; description: string }> = {
@@ -16,9 +16,10 @@ const CATEGORY_CONFIG: Record<TagCategory, { label: string; description: string 
   technique: { label: 'Camera Techniques', description: 'Camera and filming methods used' },
   addon: { label: 'Premium Add-ons', description: 'Premium services included' },
   deliverable: { label: 'Assets Delivered', description: 'File formats and deliverables' },
+  project_type: { label: 'Project Types', description: 'Type or format of the project' },
 };
 
-const CATEGORIES: TagCategory[] = ['style', 'technique', 'addon', 'deliverable'];
+const CATEGORIES: TagCategory[] = ['project_type', 'deliverable', 'style', 'addon', 'technique'];
 
 interface MergeDialogProps {
   tags: TagWithCount[];
@@ -478,31 +479,57 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Tags"
-        subtitle={`${totalTags} total across 4 categories`}
+        subtitle={`${totalTags} total across ${CATEGORIES.length} categories`}
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-5xl">
-          {CATEGORIES.map((category) => {
-            const categoryTags = tags.filter((t) => t.category === category);
-            return (
-              <CategorySection
-                key={category}
-                category={category}
-                tags={categoryTags}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-                onRename={handleRename}
-                onDelete={handleDelete}
-                onAdd={(name) => handleAdd(category, name)}
-                onMergeSelected={() => {
-                  const sourceIds = categoryTags.filter((t) => selectedIds.has(t.id)).map((t) => t.id);
-                  setMergeState({ sourceIds, category });
-                }}
-                isPending={isPending}
-              />
-            );
-          })}
+        <div className="flex flex-col gap-4 max-w-6xl">
+          {/* Top row — Project Types + Deliverables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            {CATEGORIES.slice(0, 2).map((category) => {
+              const categoryTags = tags.filter((t) => t.category === category);
+              return (
+                <CategorySection
+                  key={category}
+                  category={category}
+                  tags={categoryTags}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onRename={handleRename}
+                  onDelete={handleDelete}
+                  onAdd={(name) => handleAdd(category, name)}
+                  onMergeSelected={() => {
+                    const sourceIds = categoryTags.filter((t) => selectedIds.has(t.id)).map((t) => t.id);
+                    setMergeState({ sourceIds, category });
+                  }}
+                  isPending={isPending}
+                />
+              );
+            })}
+          </div>
+          {/* Bottom row — Style, Technique, Add-ons */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+            {CATEGORIES.slice(2).map((category) => {
+              const categoryTags = tags.filter((t) => t.category === category);
+              return (
+                <CategorySection
+                  key={category}
+                  category={category}
+                  tags={categoryTags}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onRename={handleRename}
+                  onDelete={handleDelete}
+                  onAdd={(name) => handleAdd(category, name)}
+                  onMergeSelected={() => {
+                    const sourceIds = categoryTags.filter((t) => selectedIds.has(t.id)).map((t) => t.id);
+                    setMergeState({ sourceIds, category });
+                  }}
+                  isPending={isPending}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
 

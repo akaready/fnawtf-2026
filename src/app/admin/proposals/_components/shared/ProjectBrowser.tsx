@@ -13,7 +13,7 @@ interface ProjectBrowserProps {
 }
 
 const selectCls =
-  'bg-white/[0.04] border border-white/[0.10] rounded-md px-2 py-1.5 text-xs text-white/50 focus:outline-none focus:border-white/20 transition-colors cursor-pointer min-w-0';
+  'bg-black/40 border border-white/[0.10] rounded-md px-2 py-1.5 text-xs text-white/50 focus:outline-none focus:border-white/20 transition-colors cursor-pointer min-w-0';
 
 function uniqueSorted(projects: BrowserProject[], field: keyof Pick<BrowserProject, 'style_tags' | 'premium_addons' | 'camera_techniques'>): string[] {
   const set = new Set<string>();
@@ -82,7 +82,7 @@ export function ProjectBrowser({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects…"
-            className="w-full bg-white/[0.04] border border-white/[0.10] rounded-md pl-8 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+            className="w-full bg-black/40 border border-white/[0.10] rounded-md pl-8 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
           />
         </div>
         <div className="flex gap-2">

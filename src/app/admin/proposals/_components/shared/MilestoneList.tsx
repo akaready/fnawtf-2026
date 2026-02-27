@@ -37,12 +37,12 @@ const inputCls =
   'bg-transparent text-sm text-white focus:outline-none min-w-0';
 
 const dateInputCls =
-  'text-xs bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-white/60 ' +
+  'text-xs bg-black/40 border border-white/10 rounded px-2 py-1 text-white/60 ' +
   'focus:outline-none focus:border-white/20 focus:text-white/80 transition-colors ' +
   '[color-scheme:dark]';
 
 const selectCls =
-  'text-xs bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-white/50 ' +
+  'text-xs bg-black/40 border border-white/10 rounded px-2 py-1 text-white/50 ' +
   'focus:outline-none focus:border-white/20 cursor-pointer [color-scheme:dark]';
 
 // ── Props ────────────────────────────────────────────────────────────────────
