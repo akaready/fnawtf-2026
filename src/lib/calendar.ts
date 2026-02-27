@@ -20,7 +20,9 @@ export interface ParsedEvent {
 export async function fetchAndParseCalendar(
   icalUrl: string,
 ): Promise<ParsedEvent[]> {
-  const res = await fetch(icalUrl);
+  const res = await fetch(icalUrl, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FNA-CalSync/1.0)' },
+  });
   if (!res.ok) throw new Error(`Failed to fetch iCal feed: ${res.status}`);
   const text = await res.text();
   return parseIcalText(text);
@@ -93,6 +95,9 @@ function parseVEvent(lines: string[]): ParsedEvent | null {
   const description = unescapeIcal(props['DESCRIPTION'] || '') || null;
   const location = unescapeIcal(props['LOCATION'] || '') || null;
   const title = unescapeIcal(props['SUMMARY'] || '') || 'Untitled Meeting';
+
+  // Skip placeholder / busy-block events
+  if (title.toLowerCase() === 'busy') return null;
 
   const organizerEmail = parseOrganizerEmail(
     lines.find((l) => l.startsWith('ORGANIZER')) || '',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition, useCallback } from 'react';
+import { useState, useMemo, useTransition, useCallback, useEffect, useRef } from 'react';
 import {
   RefreshCw,
   FileText,
@@ -58,12 +58,26 @@ export function MeetingsManager({
 
   const handleSync = useCallback(() => {
     startSync(async () => {
-      const result = await triggerCalendarSync();
-      // Refresh will happen via revalidatePath, but update local state for immediate feedback
-      console.log('Sync result:', result);
-      window.location.reload();
+      try {
+        await triggerCalendarSync();
+        window.location.reload();
+      } catch (err) {
+        console.error('Sync failed:', err);
+      }
     });
   }, []);
+
+  // Auto-sync on mount if last sync was >1 hour ago
+  const didAutoSync = useRef(false);
+  useEffect(() => {
+    if (!config || didAutoSync.current) return;
+    didAutoSync.current = true;
+    const lastSync = config.last_synced_at ? new Date(config.last_synced_at).getTime() : 0;
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    if (lastSync < oneHourAgo) {
+      handleSync();
+    }
+  }, [config, handleSync]);
 
   const handleSetup = useCallback(() => {
     if (!icalUrl.trim()) return;
@@ -305,25 +319,24 @@ export function MeetingsManager({
     <div className="flex-1 flex flex-col min-h-0">
       <AdminPageHeader
         title="Meetings"
+        subtitle={
+          config.last_synced_at
+            ? `Last synced ${new Date(config.last_synced_at).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+              })} · Auto-syncs hourly`
+            : 'Calendar connected · Auto-syncs hourly'
+        }
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search meetings…"
-        rightContent={
-          config.last_synced_at && (
-            <span className="text-xs text-white/20 flex-shrink-0">
-              Synced{' '}
-              {new Date(config.last_synced_at).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </span>
-          )
-        }
         actions={
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="admin-btn flex items-center gap-1.5 text-sm"
+            className="btn-primary px-4 py-2 text-sm cursor-pointer"
           >
             <RefreshCw
               size={14}
@@ -352,7 +365,7 @@ export function MeetingsManager({
         onTabChange={setTab}
       />
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto admin-scrollbar">
         <AdminTable
           data={filtered}
           columns={columns}

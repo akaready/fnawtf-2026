@@ -1715,6 +1715,7 @@ export async function getMeetings(filters?: {
         contacts:contact_id (id, first_name, last_name, email)
       )
     `)
+    .neq('title', 'Busy')
     .order('start_time', { ascending: false });
 
   if (filters?.status) query = query.eq('status', filters.status);
@@ -1793,108 +1794,117 @@ export async function triggerCalendarSync() {
     .single();
 
   const icalUrl = (config as { ical_url?: string } | null)?.ical_url || process.env.GOOGLE_ICAL_URL;
-  if (!icalUrl) throw new Error('No iCal URL configured');
+  if (!icalUrl) return { synced: 0, botsScheduled: 0, error: 'No iCal URL configured' };
 
   // Import and run sync logic directly (server action context)
   const { fetchAndParseCalendar } = await import('@/lib/calendar');
   const { createRecallBot } = await import('@/lib/recall');
   const { matchAttendeesForMeeting } = await import('@/lib/meetings/matchAttendees');
 
-  const events = await fetchAndParseCalendar(icalUrl);
-  const now = new Date();
-  const tenMinFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+  try {
+    // Clean up any previously-synced "Busy" placeholder events
+    await supabase.from('meetings').delete().eq('title', 'Busy');
 
-  let synced = 0;
-  let botsScheduled = 0;
+    const events = await fetchAndParseCalendar(icalUrl);
+    const now = new Date();
+    const tenMinFromNow = new Date(now.getTime() + 10 * 60 * 1000);
 
-  for (const event of events) {
-    if (event.endTime < new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
-      continue;
+    let synced = 0;
+    let botsScheduled = 0;
 
-    const status = event.meetingUrl
-      ? event.startTime < now
-        ? 'completed'
-        : 'upcoming'
-      : 'no_video_link';
+    for (const event of events) {
+      if (event.endTime < new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
+        continue;
 
-    const { data: meeting } = await supabase
-      .from('meetings')
-      .upsert(
-        {
-          ical_uid: event.uid,
-          title: event.title,
-          description: event.description,
-          start_time: event.startTime.toISOString(),
-          end_time: event.endTime.toISOString(),
-          meeting_url: event.meetingUrl,
-          location: event.location,
-          organizer_email: event.organizerEmail,
-          status,
-          raw_event: event.raw,
-          updated_at: new Date().toISOString(),
-        } as never,
-        { onConflict: 'ical_uid' },
-      )
-      .select('id, recall_bot_id, status')
-      .single();
+      const status = event.meetingUrl
+        ? event.startTime < now
+          ? 'completed'
+          : 'upcoming'
+        : 'no_video_link';
 
-    const m = meeting as { id: string; recall_bot_id: string | null; status: string } | null;
-    if (!m) continue;
-    synced++;
-
-    if (event.attendees.length > 0) {
-      await supabase.from('meeting_attendees').upsert(
-        event.attendees.map((att) => ({
-          meeting_id: m.id,
-          email: att.email,
-          display_name: att.name,
-          response_status: att.status,
-          is_organizer: att.email === event.organizerEmail,
-        })) as never,
-        { onConflict: 'meeting_id,email' },
-      );
-    }
-
-    if (
-      event.meetingUrl &&
-      event.startTime > tenMinFromNow &&
-      !m.recall_bot_id
-    ) {
-      try {
-        const bot = await createRecallBot({
-          meeting_url: event.meetingUrl,
-          join_at: event.startTime.toISOString(),
-        });
-        await supabase
-          .from('meetings')
-          .update({
-            recall_bot_id: bot.id,
-            status: 'bot_scheduled',
+      const { data: meeting } = await supabase
+        .from('meetings')
+        .upsert(
+          {
+            ical_uid: event.uid,
+            title: event.title,
+            description: event.description,
+            start_time: event.startTime.toISOString(),
+            end_time: event.endTime.toISOString(),
+            meeting_url: event.meetingUrl,
+            location: event.location,
+            organizer_email: event.organizerEmail,
+            status,
+            raw_event: event.raw,
             updated_at: new Date().toISOString(),
-          } as never)
-          .eq('id', m.id);
-        botsScheduled++;
-      } catch (err) {
-        console.error(`Failed to schedule bot for ${event.uid}:`, err);
+          } as never,
+          { onConflict: 'ical_uid' },
+        )
+        .select('id, recall_bot_id, status')
+        .single();
+
+      const m = meeting as { id: string; recall_bot_id: string | null; status: string } | null;
+      if (!m) continue;
+      synced++;
+
+      if (event.attendees.length > 0) {
+        await supabase.from('meeting_attendees').upsert(
+          event.attendees.map((att) => ({
+            meeting_id: m.id,
+            email: att.email,
+            display_name: att.name,
+            response_status: att.status,
+            is_organizer: att.email === event.organizerEmail,
+          })) as never,
+          { onConflict: 'meeting_id,email' },
+        );
       }
+
+      if (
+        event.meetingUrl &&
+        event.startTime > tenMinFromNow &&
+        !m.recall_bot_id
+      ) {
+        try {
+          const bot = await createRecallBot({
+            meeting_url: event.meetingUrl,
+            join_at: event.startTime.toISOString(),
+          });
+          await supabase
+            .from('meetings')
+            .update({
+              recall_bot_id: bot.id,
+              status: 'bot_scheduled',
+              updated_at: new Date().toISOString(),
+            } as never)
+            .eq('id', m.id);
+          botsScheduled++;
+        } catch (err) {
+          console.error(`Failed to schedule bot for ${event.uid}:`, err);
+        }
+      }
+
+      await matchAttendeesForMeeting(supabase, m.id);
     }
 
-    await matchAttendeesForMeeting(supabase, m.id);
-  }
+    // Update last synced
+    if (config) {
+      await supabase
+        .from('meetings_config')
+        .update({
+          last_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq('ical_url', icalUrl);
+    }
 
-  // Update last synced
-  if (config) {
-    await supabase
-      .from('meetings_config')
-      .update({
-        last_synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      } as never)
-      .eq('ical_url', icalUrl);
+    revalidatePath('/admin/meetings');
+    return { synced, botsScheduled };
+  } catch (err) {
+    console.error('Calendar sync failed:', err);
+    revalidatePath('/admin/meetings');
+    return { synced: 0, botsScheduled: 0, error: (err as Error).message };
   }
-
-  revalidatePath('/admin/meetings');
-  return { synced, botsScheduled };
 }
 
 export async function linkMeetingToCompany(meetingId: string, clientId: string) {
