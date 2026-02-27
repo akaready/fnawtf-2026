@@ -1,8 +1,13 @@
 import { ReactNode } from 'react';
+import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { AdminShell } from './_components/AdminShell';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'FNA.wtf • Admin Portal',
+};
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();
