@@ -55,7 +55,7 @@ const TEMPLATE = [
   { label: 'Script Rev 1',   gap: 5, desc: 'First draft script delivered for client review and feedback.' },
   { label: 'Script Rev 2',   gap: 3, desc: 'Revised script incorporating client notes from the first round.' },
   { label: 'Final Script',   gap: 3, desc: 'Approved final script locked for production.' },
-  { label: 'Location Scout', gap: 3, desc: 'Scouting and securing shoot locations based on creative direction.' },
+  { label: 'Location Scout', gap: 3, desc: 'Scouting and securing locations for production.' },
   { label: 'Production',     gap: 5, desc: 'On-set filming of all planned scenes and coverage.' },
   { label: 'Edit Rev 1',     gap: 4, desc: 'First rough cut delivered for client review.' },
   { label: 'Edit Rev 2',     gap: 3, desc: 'Revised edit incorporating client feedback from the first cut.' },
@@ -235,8 +235,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
       months.push(cursor);
       cursor = addMonths(cursor, 1);
     }
-    // Always show at least 2 months
-    if (months.length < 2) months.push(addMonths(start, 1));
+    // At least 1 month is guaranteed by the while loop above
     // Append extra months added by the user
     for (let i = 0; i < extraMonths; i++) {
       const next = addMonths(months[months.length - 1], 1);

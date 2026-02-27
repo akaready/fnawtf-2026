@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  Plus, Trash2, Save, Loader2, Download, X, Search, ChevronDown,
+  Plus, Trash2, Save, Loader2, Download, X, Search, ChevronDown, ChevronUp, ArrowUpDown,
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
   Wrench, Sparkles, Contact, Star, HeartHandshake, Users, LayoutGrid, Tag,
   Globe, ExternalLink, Linkedin, Instagram, Film, RefreshCw,
@@ -73,16 +73,17 @@ interface ContactColDef {
   defaultVisible: boolean;
   align?: 'left' | 'right';
   render: (c: ContactRow) => ReactNode;
+  sortValue?: (c: ContactRow) => string | number;
 }
 
 const CONTACT_COLUMNS: ContactColDef[] = [
-  { key: 'type', label: 'Type', defaultVisible: true, render: (c) => (
+  { key: 'type', label: 'Type', defaultVisible: true, sortValue: (c) => c.type, render: (c) => (
     <span className={`inline-flex px-2 py-0.5 text-xs rounded border capitalize ${TYPE_COLORS[c.type]}`}>{c.type}</span>
   )},
-  { key: 'email', label: 'Email', defaultVisible: true, render: (c) => c.email || '—' },
+  { key: 'email', label: 'Email', defaultVisible: true, sortValue: (c) => (c.email ?? '').toLowerCase(), render: (c) => c.email || '—' },
   { key: 'phone', label: 'Phone', defaultVisible: false, render: (c) => c.phone || '—' },
-  { key: 'company', label: 'Company', defaultVisible: true, render: (c) => c.company || '—' },
-  { key: 'title', label: 'Title', defaultVisible: true, render: (c) => c.role || '—' },
+  { key: 'company', label: 'Company', defaultVisible: true, sortValue: (c) => (c.company ?? '').toLowerCase(), render: (c) => c.company || '—' },
+  { key: 'title', label: 'Title', defaultVisible: true, sortValue: (c) => (c.role ?? '').toLowerCase(), render: (c) => c.role || '—' },
   { key: 'website_url', label: 'Website', defaultVisible: false, render: (c) => c.website_url ? (
     <a href={c.website_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">{new URL(c.website_url).hostname}</a>
   ) : '—' },
@@ -98,9 +99,15 @@ const CONTACT_COLUMNS: ContactColDef[] = [
   { key: 'notes', label: 'Notes', defaultVisible: false, render: (c) => c.notes ? (
     <span className="truncate block max-w-[200px]" title={c.notes}>{c.notes}</span>
   ) : '—' },
-  { key: 'created_at', label: 'Added', defaultVisible: true, align: 'right', render: (c) => new Date(c.created_at).toLocaleDateString() },
-  { key: 'updated_at', label: 'Updated', defaultVisible: false, align: 'right', render: (c) => new Date(c.updated_at).toLocaleDateString() },
+  { key: 'created_at', label: 'Added', defaultVisible: true, align: 'right', sortValue: (c) => new Date(c.created_at).getTime(), render: (c) => new Date(c.created_at).toLocaleDateString() },
+  { key: 'updated_at', label: 'Updated', defaultVisible: false, align: 'right', sortValue: (c) => new Date(c.updated_at).getTime(), render: (c) => new Date(c.updated_at).toLocaleDateString() },
 ];
+
+/* Sort value getters for the built-in name columns */
+const NAME_SORT: Record<string, (c: ContactRow) => string> = {
+  first_name: (c) => c.first_name.toLowerCase(),
+  last_name: (c) => c.last_name.toLowerCase(),
+};
 
 type ContactColKey = string;
 const defaultVisibleCols = new Set<ContactColKey>(CONTACT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
@@ -905,6 +912,8 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [visibleCols, setVisibleCols] = useState<Set<ContactColKey>>(defaultVisibleCols);
+  const [sortKey, setSortKey] = useState('last_name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const [colOrder, setColOrder] = useState<string[]>(() => CONTACT_COLUMNS.map((c) => c.key));
   const [fieldsOpen, setFieldsOpen] = useState(false);
@@ -933,6 +942,17 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSort = useCallback((key: string) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return prev;
+      }
+      setSortDir('asc');
+      return key;
+    });
   }, []);
 
   const toggleCol = useCallback((key: ContactColKey) => {
@@ -1017,9 +1037,9 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
         const ths = Array.from(headerRow.querySelectorAll('th'));
         setColWidths((prev) => {
           const next = { ...prev };
-          // First th is Name (always visible), data cols start at index 1
-          for (let i = 1; i < ths.length; i++) {
-            const colIdx = i - 1;
+          // First two ths are First Name & Last Name (always visible), data cols start at index 2
+          for (let i = 2; i < ths.length; i++) {
+            const colIdx = i - 2;
             if (colIdx < orderedVisibleCols.length) {
               const key = orderedVisibleCols[colIdx].key;
               if (!next[key]) {
@@ -1073,8 +1093,20 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
           c.role?.toLowerCase().includes(q)
       );
     }
+    // Sort
+    const nameSortFn = NAME_SORT[sortKey];
+    const colSortFn = CONTACT_COLUMNS.find((col) => col.key === sortKey)?.sortValue;
+    const getSortVal = nameSortFn ?? colSortFn;
+    if (getSortVal) {
+      result = [...result].sort((a, b) => {
+        const va = getSortVal(a);
+        const vb = getSortVal(b);
+        const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb));
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
     return result;
-  }, [contacts, search, typeFilter, companyFilter, projectFilter, contactProjectMap, roleFilter, contactRoleMap]);
+  }, [contacts, search, typeFilter, companyFilter, projectFilter, contactProjectMap, roleFilter, contactRoleMap, sortKey, sortDir]);
 
   const activePerson = activeId ? contacts.find((c) => c.id === activeId) ?? null : null;
 
@@ -1134,9 +1166,9 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
   };
 
   const handleExportCsv = () => {
-    const header = ['Name', 'Type', 'Email', 'Phone', 'Role', 'Company', 'Notes', 'Created'];
+    const header = ['First Name', 'Last Name', 'Type', 'Email', 'Phone', 'Role', 'Company', 'Notes', 'Created'];
     const rows = filtered.map((c) => [
-      contactFullName(c), c.type, c.email ?? '', c.phone ?? '', c.role ?? '', c.company ?? '', c.notes ?? '',
+      c.first_name, c.last_name, c.type, c.email ?? '', c.phone ?? '', c.role ?? '', c.company ?? '', c.notes ?? '',
       new Date(c.created_at).toLocaleDateString(),
     ]);
     const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -1355,7 +1387,38 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
           <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
             <thead className="sticky top-0 z-10">
               <tr className="text-xs text-[#616166] uppercase tracking-wider">
-                <th className="text-left px-8 py-3 font-medium bg-[#141414] border-b border-r border-[#2a2a2a] select-none">Name</th>
+                {/* First Name column */}
+                <th
+                  className="text-left px-8 py-3 font-medium bg-[#141414] border-b border-r border-[#2a2a2a] select-none cursor-pointer group/th hover:text-[#999] transition-colors"
+                  onClick={() => handleSort('first_name')}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    First Name
+                    <span className="inline-flex text-[#333]">
+                      {sortKey === 'first_name' ? (
+                        sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />
+                      ) : (
+                        <ArrowUpDown size={10} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />
+                      )}
+                    </span>
+                  </span>
+                </th>
+                {/* Last Name column */}
+                <th
+                  className="text-left px-3 py-3 font-medium bg-[#141414] border-b border-r border-[#2a2a2a] select-none cursor-pointer group/th hover:text-[#999] transition-colors"
+                  onClick={() => handleSort('last_name')}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    Last Name
+                    <span className="inline-flex text-[#333]">
+                      {sortKey === 'last_name' ? (
+                        sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />
+                      ) : (
+                        <ArrowUpDown size={10} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />
+                      )}
+                    </span>
+                  </span>
+                </th>
                 {orderedVisibleCols.map((col, idx) => {
                   const nextCol = idx < orderedVisibleCols.length - 1 ? orderedVisibleCols[idx + 1] : null;
                   const isLast = idx === orderedVisibleCols.length - 1;
@@ -1363,12 +1426,14 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                   const style = colWidths[col.key]
                     ? { width: colWidths[col.key], minWidth: colWidths[col.key], maxWidth: colWidths[col.key] }
                     : undefined;
+                  const isSortable = !!col.sortValue;
 
                   return (
                     <th
                       key={col.key}
-                      className={`${col.align === 'right' ? 'text-right px-8' : 'text-left px-3'} py-3 font-medium bg-[#141414] border-b ${isLast ? '' : 'border-r'} border-[#2a2a2a] select-none whitespace-nowrap relative overflow-hidden group ${isDragOver ? 'border-l-2 border-l-accent' : ''}`}
+                      className={`${col.align === 'right' ? 'text-right px-8' : 'text-left px-3'} py-3 font-medium bg-[#141414] border-b ${isLast ? '' : 'border-r'} border-[#2a2a2a] select-none whitespace-nowrap relative overflow-hidden group ${isDragOver ? 'border-l-2 border-l-accent' : ''} ${isSortable ? 'cursor-pointer group/th hover:text-[#999] transition-colors' : ''}`}
                       style={style}
+                      onClick={isSortable ? () => handleSort(col.key) : undefined}
                       onDragOver={(e) => handleColDragOver(e, col.key)}
                       onDrop={(e) => handleColDrop(e, col.key)}
                     >
@@ -1382,6 +1447,15 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                           <GripVertical size={10} />
                         </span>
                         {col.label}
+                        {isSortable && (
+                          <span className="inline-flex text-[#333]">
+                            {sortKey === col.key ? (
+                              sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />
+                            ) : (
+                              <ArrowUpDown size={10} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />
+                            )}
+                          </span>
+                        )}
                       </span>
                       <span
                         onMouseDown={(e) => {
@@ -1421,9 +1495,10 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                           <User size={14} className={TYPE_ICON_COLORS[c.type]} />
                         </div>
                       )}
-                      {contactFullName(c)}
+                      {c.first_name}
                     </div>
                   </td>
+                  <td className="px-3 py-3 text-foreground">{c.last_name}</td>
                   {orderedVisibleCols.map((col) => (
                     <td
                       key={col.key}

@@ -72,7 +72,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
 
   // Dynamic refs for N video slides
   const videoSlideRefsRef = useRef<{ current: HTMLElement | null }[]>([]);
-  const validVideos = (videos ?? []).filter((v: ProposalVideo) => v.project_video?.project && (v.project_video.project.testimonials?.length ?? 0) > 0);
+  const validVideos = (videos ?? []).filter((v: ProposalVideo) => v.project_video?.project);
 
   // Slide order: Title → Welcome → Process → Approach → Timeline → Samples → Projects... → Investment → Next Steps
   const slideNames = [
@@ -104,6 +104,11 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     nextStepsRef,
   ] as React.RefObject<HTMLElement>[];
 
+  // Stable slug for each slide (used for URL hash deep linking)
+  const slideSlugs = slideNames.map((name) =>
+    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  );
+
   const deckRef = useRef<HTMLDivElement>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -127,11 +132,38 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Deep-link: jump to slide from URL hash on mount ──────────
+  const hasNavigatedFromHash = useRef(false);
+  useEffect(() => {
+    const hash = window.location.hash.slice(1).toLowerCase();
+    if (!hash) return;
+    const idx = slideSlugs.findIndex((s) => s === hash);
+    if (idx > 0) {
+      hasNavigatedFromHash.current = true;
+      // Delay to let DOM settle after hydration
+      requestAnimationFrame(() => {
+        slideRefs[idx]?.current?.scrollIntoView({ inline: 'start', block: 'nearest' });
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Update URL hash as user navigates ───────────────────────
+  useEffect(() => {
+    const slug = slideSlugs[currentSlide];
+    if (slug && currentSlide > 0) {
+      window.history.replaceState(null, '', `#${slug}`);
+    } else if (currentSlide === 0) {
+      // On title slide, remove hash
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [currentSlide, slideSlugs]);
+
   // ── Nav highlight: bright on first slide visited, dim after ──
   useEffect(() => {
     if (currentSlide === 0) return;
     navVisitCountRef.current += 1;
-    if (navVisitCountRef.current === 1) {
+    if (navVisitCountRef.current === 1 && !hasNavigatedFromHash.current) {
       setNavHighlighted(true);
     } else {
       setNavHighlighted(false);

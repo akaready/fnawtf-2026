@@ -248,7 +248,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
-        <div className="max-w-2xl">
+        <div>
           <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl">
             <div className="divide-y divide-[#2a2a2a]">
               {filtered.length === 0 && !addingNew && (

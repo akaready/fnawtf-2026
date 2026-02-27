@@ -76,11 +76,47 @@ export async function getProposalData(slug: string) {
     .eq('proposal_id', p.id)
     .order('sort_order');
 
-  const { data: proposalVideos } = await supabase
-    .from('proposal_videos')
-    .select('*, proposal_blurb, project_video:project_videos(id, bunny_video_id, title, video_type, aspect_ratio, project:projects(id, title, subtitle, description, category, client_name, style_tags, assets_delivered, premium_addons, camera_techniques, production_days, crew_count, talent_count, location_count, credits:project_credits(id, project_id, role, name, sort_order), bts_images:project_bts_images(id, project_id, image_url, caption, sort_order), testimonials(quote, person_name, person_title, display_title)))')
+  // Fetch proposal_projects (admin-managed) and reshape into ProposalVideo format
+  const { data: proposalProjects } = await supabase
+    .from('proposal_projects')
+    .select(`
+      id, proposal_id, sort_order, blurb,
+      project:projects(
+        id, title, subtitle, description, category, client_name,
+        style_tags, assets_delivered, premium_addons, camera_techniques,
+        production_days, crew_count, talent_count, location_count,
+        credits:project_credits(id, project_id, role, name, sort_order),
+        bts_images:project_bts_images(id, project_id, image_url, caption, sort_order),
+        testimonials(quote, person_name, person_title, display_title),
+        project_videos(id, bunny_video_id, title, video_type, aspect_ratio, sort_order)
+      )
+    `)
     .eq('proposal_id', p.id)
     .order('sort_order');
+
+  // Reshape proposal_projects → ProposalVideo[] for the client
+  const proposalVideos = (proposalProjects ?? []).map((pp: Record<string, unknown>) => {
+    const project = pp.project as Record<string, unknown> | null;
+    const videos = (project?.project_videos ?? []) as Array<Record<string, unknown>>;
+    // Pick the first video (lowest sort_order)
+    const mainVideo = videos.sort((a, b) => ((a.sort_order as number) ?? 0) - ((b.sort_order as number) ?? 0))[0] ?? null;
+    // Move project_videos off the project object so it matches ProposalVideo shape
+    const { project_videos: _, ...projectWithout } = (project ?? {}) as Record<string, unknown>;
+    return {
+      id: pp.id,
+      proposal_id: pp.proposal_id,
+      sort_order: pp.sort_order,
+      proposal_blurb: pp.blurb ?? null,
+      project_video: mainVideo ? {
+        id: mainVideo.id,
+        bunny_video_id: mainVideo.bunny_video_id,
+        title: mainVideo.title,
+        video_type: mainVideo.video_type,
+        aspect_ratio: mainVideo.aspect_ratio,
+        project: projectWithout,
+      } : null,
+    };
+  });
 
   const { data: quotes } = await supabase
     .from('proposal_quotes')

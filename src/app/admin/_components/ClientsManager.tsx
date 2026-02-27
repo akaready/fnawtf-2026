@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useCallback, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Download, Building2 } from 'lucide-react';
+import { Plus, Download, Building2, LayoutGrid, Table2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
+import { AdminTable, type ColumnDef } from './AdminTable';
 import {
   type ClientRow,
   createClientRecord,
@@ -17,10 +18,13 @@ import {
   type ClientProject,
   type ClientTestimonial,
   type CompanyType,
+  type CompanyStatus,
   TYPE_CONFIG,
   STATUS_CONFIG,
   getCardBorderBg,
 } from './companyUtils';
+
+type ViewMode = 'cards' | 'table';
 
 interface Props {
   initialClients: ClientRow[];
@@ -38,6 +42,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -149,6 +154,80 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     });
   }, [clientOnly, search, localProjects]);
 
+  // ── Table columns ────────────────────────────────────────────────────────────
+  const tableColumns: ColumnDef<ClientRow>[] = useMemo(() => [
+    {
+      key: 'logo_url',
+      label: '',
+      width: 'w-10',
+      render: (row) =>
+        row.logo_url ? (
+          <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
+        ) : (
+          <div className="w-8 h-8 rounded-md bg-white/[0.04] flex items-center justify-center">
+            <Building2 size={12} className="text-[#202022]" />
+          </div>
+        ),
+    },
+    {
+      key: 'name',
+      label: 'Name',
+      sortable: true,
+      render: (row) => <span className="font-medium text-foreground/80">{row.name}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => {
+        const cfg = STATUS_CONFIG[(row.status ?? 'active') as CompanyStatus] ?? STATUS_CONFIG['active'];
+        return <span className={`text-xs ${cfg.color}`}>{cfg.label}</span>;
+      },
+    },
+    {
+      key: 'industry',
+      label: 'Industry',
+      render: (row) =>
+        row.industry ? (
+          <span className="text-xs text-[#515155]">{row.industry}</span>
+        ) : (
+          <span className="text-xs text-[#202022]">—</span>
+        ),
+    },
+    {
+      key: '_contacts',
+      label: 'Contacts',
+      render: (row) => {
+        const count = localContacts.filter((ct) => ct.client_id === row.id).length;
+        return count > 0 ? (
+          <span className="text-xs text-[#515155]">{count}</span>
+        ) : (
+          <span className="text-xs text-[#202022]">—</span>
+        );
+      },
+    },
+    {
+      key: '_projects',
+      label: 'Projects',
+      render: (row) => {
+        const count = localProjects.filter((p) => p.client_id === row.id).length;
+        return count > 0 ? (
+          <span className="text-xs text-[#515155]">{count}</span>
+        ) : (
+          <span className="text-xs text-[#202022]">—</span>
+        );
+      },
+    },
+    {
+      key: 'created_at',
+      label: 'Added',
+      render: (row) => (
+        <span className="text-xs text-[#404044]">
+          {new Date(row.created_at).toLocaleDateString()}
+        </span>
+      ),
+    },
+  ], [localContacts, localProjects]);
+
   const handleExportCsv = useCallback(() => {
     const header = ['Name', 'Types', 'Status', 'Notes', 'Logo URL', 'Projects', 'Testimonials', 'Created'];
     const rows = filtered.map((c) => {
@@ -174,6 +253,24 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search clients…"
+        rightContent={
+          <div className="flex items-center rounded-lg border border-yellow-500/30 overflow-hidden">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`px-3 py-[9px] transition-colors ${viewMode === 'cards' ? 'bg-yellow-500/20 text-yellow-400' : 'text-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10'}`}
+              title="Card view"
+            >
+              <LayoutGrid size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-[9px] transition-colors ${viewMode === 'table' ? 'bg-yellow-500/20 text-yellow-400' : 'text-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10'}`}
+              title="Table view"
+            >
+              <Table2 size={14} />
+            </button>
+          </div>
+        }
         actions={
           <>
             <button
@@ -196,64 +293,76 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         }
       />
 
-      {/* Compact grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {filtered.map((c) => {
-            const companyTypes = (c.company_types ?? []) as CompanyType[];
-            const cContacts = localContacts.filter((ct) => ct.client_id === c.id);
-            const cProjects = localProjects.filter((p) => p.client_id === c.id);
-            const countParts = [
-              cContacts.length > 0 && `${cContacts.length} contact${cContacts.length !== 1 ? 's' : ''}`,
-              cProjects.length > 0 && `${cProjects.length} project${cProjects.length !== 1 ? 's' : ''}`,
-            ].filter(Boolean) as string[];
-            const isFocused = activeId === c.id;
-            const statusCfg = STATUS_CONFIG[(c.status ?? 'active') as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG['active'];
+      {viewMode === 'cards' ? (
+        /* Card grid */
+        <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filtered.map((c) => {
+              const companyTypes = (c.company_types ?? []) as CompanyType[];
+              const cContacts = localContacts.filter((ct) => ct.client_id === c.id);
+              const cProjects = localProjects.filter((p) => p.client_id === c.id);
+              const countParts = [
+                cContacts.length > 0 && `${cContacts.length} contact${cContacts.length !== 1 ? 's' : ''}`,
+                cProjects.length > 0 && `${cProjects.length} project${cProjects.length !== 1 ? 's' : ''}`,
+              ].filter(Boolean) as string[];
+              const isFocused = activeId === c.id;
+              const statusCfg = STATUS_CONFIG[(c.status ?? 'active') as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG['active'];
 
-            return (
-              <div
-                key={c.id}
-                onClick={() => setActiveId(c.id)}
-                className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
-              >
-                <div className={`rounded-[11px] px-4 py-3.5 flex items-center gap-3 transition-colors ${isFocused ? 'bg-[#151515]' : 'bg-[#111] hover:bg-[#131313]'}`}>
-                  {c.logo_url ? (
-                    <img src={c.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain flex-shrink-0" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                      <Building2 size={14} className="text-[#202022]" />
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setActiveId(c.id)}
+                  className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
+                >
+                  <div className={`rounded-[11px] px-4 py-3.5 flex items-center gap-3 transition-colors ${isFocused ? 'bg-[#151515]' : 'bg-[#111] hover:bg-[#131313]'}`}>
+                    {c.logo_url ? (
+                      <img src={c.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+                        <Building2 size={14} className="text-[#202022]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                      <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
+                        <span className={statusCfg.color}>{statusCfg.label}</span>
+                        {countParts.length > 0 && <span className="text-muted-foreground/25">·</span>}
+                        <span className="text-[#404044]">{countParts.join(' · ')}</span>
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                    <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
-                      <span className={statusCfg.color}>{statusCfg.label}</span>
-                      {countParts.length > 0 && <span className="text-muted-foreground/25">·</span>}
-                      <span className="text-[#404044]">{countParts.join(' · ')}</span>
-                    </p>
+                    {companyTypes.length > 0 && (
+                      <div className="flex flex-col gap-1 flex-shrink-0">
+                        {companyTypes.map((type) => (
+                          <span
+                            key={type}
+                            className={`w-2 h-2 rounded-full ${TYPE_CONFIG[type].dotBg}`}
+                            title={TYPE_CONFIG[type].label}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {companyTypes.length > 0 && (
-                    <div className="flex flex-col gap-1 flex-shrink-0">
-                      {companyTypes.map((type) => (
-                        <span
-                          key={type}
-                          className={`w-2 h-2 rounded-full ${TYPE_CONFIG[type].dotBg}`}
-                          title={TYPE_CONFIG[type].label}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        {clientOnly.length === 0 && (
-          <div className="text-center py-12 text-[#404044] text-sm">
-            No clients yet. Click &quot;Add Client&quot; to create one.
+              );
+            })}
           </div>
-        )}
-      </div>
+          {clientOnly.length === 0 && (
+            <div className="text-center py-12 text-[#404044] text-sm">
+              No clients yet. Click &quot;Add Client&quot; to create one.
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Table view */
+        <AdminTable
+          data={filtered}
+          columns={tableColumns}
+          onRowClick={(row) => setActiveId(row.id)}
+          selectedId={activeId ?? undefined}
+          emptyMessage="No clients yet."
+          emptyAction={{ label: 'Add your first client', onClick: handleCreate }}
+        />
+      )}
 
       <CompanyPanel
         company={activeCompany}

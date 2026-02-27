@@ -36,7 +36,7 @@ export const STATUS_CONFIG: Record<CompanyStatus, { label: string; color: string
   past:      { label: 'Past',     color: 'text-muted-foreground/40',    dot: 'bg-white/20' },
 };
 
-import { Briefcase, Target, Link2 } from 'lucide-react';
+import { Building2, Target, Link2 } from 'lucide-react';
 
 export const TYPE_CONFIG: Record<CompanyType, {
   label: string;
@@ -50,7 +50,7 @@ export const TYPE_CONFIG: Record<CompanyType, {
   filterActiveText: string;
 }> = {
   client: {
-    label: 'Client', Icon: Briefcase,
+    label: 'Client', Icon: Building2,
     dotBg: 'bg-emerald-500',
     activeBg: 'bg-emerald-500/15', activeText: 'text-emerald-400', activeBorder: 'border-emerald-500/30',
     filterActiveBg: 'bg-emerald-500/10', filterActiveBorder: 'border-emerald-500/40', filterActiveText: 'text-emerald-400',

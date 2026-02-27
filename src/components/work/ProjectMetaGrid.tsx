@@ -34,27 +34,28 @@ export function ProjectMetaGrid({
     cameraTechniques.length > 0 ||
     scopeTags.length > 0;
 
-  if (!hasAnyData) return null;
+  const visibleCount = [styleTags.length > 0, premiumAddons.length > 0, cameraTechniques.length > 0, scopeTags.length > 0].filter(Boolean).length;
+
+  if (visibleCount === 0) return null;
+
+  const gridCols =
+    visibleCount === 1 ? 'grid-cols-1' :
+    visibleCount === 2 ? 'sm:grid-cols-2' :
+    visibleCount === 3 ? 'sm:grid-cols-3' :
+    'sm:grid-cols-2 lg:grid-cols-4';
 
   return (
     <section className="py-10 px-6 lg:px-16">
       <div className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {/* Style */}
-          <LinkedTagZone label="Style" items={styleTags} param="tags" />
-
-          {/* Add-Ons */}
-          <LinkedTagZone label="Add-Ons" items={premiumAddons} param="addons" />
-
-          {/* Techniques */}
-          <LinkedTagZone label="Techniques" items={cameraTechniques} param="techniques" />
-
-          {/* Scope */}
-          <div>
-            <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-6">
-              Scope
-            </p>
-            {scopeTags.length > 0 ? (
+        <div className={`grid grid-cols-1 ${gridCols} gap-10`}>
+          {styleTags.length > 0 && <LinkedTagZone label="Style" items={styleTags} param="tags" />}
+          {premiumAddons.length > 0 && <LinkedTagZone label="Add-Ons" items={premiumAddons} param="addons" />}
+          {cameraTechniques.length > 0 && <LinkedTagZone label="Techniques" items={cameraTechniques} param="techniques" />}
+          {scopeTags.length > 0 && (
+            <div>
+              <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-6">
+                Scope
+              </p>
               <div className="flex flex-wrap gap-2">
                 {scopeTags.map((tag) => (
                   <Link
@@ -66,10 +67,8 @@ export function ProjectMetaGrid({
                   </Link>
                 ))}
               </div>
-            ) : (
-              <p className="text-white/20 text-base italic">—</p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

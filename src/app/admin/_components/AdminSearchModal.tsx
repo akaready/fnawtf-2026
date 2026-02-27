@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, ArrowRight, Briefcase, Users, LayoutGrid, Tag, MessageSquare, FileText, BookOpen, type LucideIcon } from 'lucide-react';
+import { Search, X, ArrowRight, Building2, Users, Rocket, Tag, MessageSquare, FileText, BookOpen, type LucideIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -31,9 +31,9 @@ const TYPE_META: Record<TypeKey, { label: string; plural: string; color: string 
 };
 
 const TYPE_ICON: Record<TypeKey, LucideIcon> = {
-  companies:    Briefcase,
+  companies:    Building2,
   people:       Users,
-  projects:     LayoutGrid,
+  projects:     Rocket,
   tags:         Tag,
   testimonials: MessageSquare,
   proposals:    FileText,

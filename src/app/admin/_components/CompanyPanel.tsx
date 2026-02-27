@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback, useEffect } from 'react';
 import {
   Check, Loader2, Upload, Film,
-  Trash2, X, UserPlus, Briefcase, Target, Link2,
+  Trash2, X, UserPlus, Building2, Target, Link2,
   Globe, Linkedin, Search, MapPin, Calendar, Users as UsersIcon, Tag, RefreshCw,
 } from 'lucide-react';
 import { SaveButton } from './SaveButton';
@@ -60,7 +60,7 @@ const TYPE_CONFIG: Record<CompanyType, {
   activeBorder: string;
 }> = {
   client: {
-    label: 'Client', Icon: Briefcase,
+    label: 'Client', Icon: Building2,
     activeBg: 'bg-emerald-500/15', activeText: 'text-emerald-400', activeBorder: 'border-emerald-500/30',
   },
   lead: {
@@ -179,6 +179,13 @@ export function CompanyPanel({
       return current;
     });
   }, []);
+
+  const handleLogoRemove = useCallback(async () => {
+    if (!localCompany) return;
+    setLocalCompany((p) => p ? { ...p, logo_url: null } : p);
+    await updateClientRecord(localCompany.id, { logo_url: null });
+    onCompanyUpdated({ ...localCompany, logo_url: null });
+  }, [localCompany, onCompanyUpdated]);
 
   const handleClose = useCallback(() => {
     if (dirty) {
@@ -322,6 +329,7 @@ export function CompanyPanel({
             logoUrl={localCompany.logo_url}
             uploading={uploadingId === localCompany.id}
             onDrop={handleLogoDrop}
+            onRemove={handleLogoRemove}
           />
           <div className="flex-1 min-w-0">
             <input
@@ -813,12 +821,15 @@ function LogoDropzone({
   logoUrl,
   uploading,
   onDrop,
+  onRemove,
 }: {
   logoUrl: string | null;
   uploading: boolean;
   onDrop: (file: File) => void;
+  onRemove?: () => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -838,27 +849,63 @@ function LogoDropzone({
     input.click();
   };
 
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirming) {
+      onRemove?.();
+      setConfirming(false);
+    } else {
+      setConfirming(true);
+    }
+  };
+
+  // Reset confirm state if user clicks away
+  useEffect(() => {
+    if (!confirming) return;
+    const timer = setTimeout(() => setConfirming(false), 3000);
+    return () => clearTimeout(timer);
+  }, [confirming]);
+
   return (
-    <div
-      onClick={handleClick}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={handleDrop}
-      className={`w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer transition-colors border-2 border-dashed ${
-        dragOver
-          ? 'border-white/40 bg-white/10'
-          : logoUrl
-          ? 'border-transparent'
-          : 'border-border/40 bg-white/[0.02] hover:border-white/20'
-      }`}
-      title="Drop logo or click to upload"
-    >
-      {uploading ? (
-        <Loader2 size={16} className="animate-spin text-[#515155]" />
-      ) : logoUrl ? (
-        <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
-      ) : (
-        <Upload size={16} className="text-[#303033]" />
+    <div className="relative group/logo flex-shrink-0">
+      <div
+        onClick={handleClick}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={`w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors border-2 border-dashed ${
+          dragOver
+            ? 'border-white/40 bg-white/10'
+            : logoUrl
+            ? 'border-transparent'
+            : 'border-border/40 bg-white/[0.02] hover:border-white/20'
+        }`}
+        title="Drop logo or click to upload"
+      >
+        {uploading ? (
+          <Loader2 size={16} className="animate-spin text-[#515155]" />
+        ) : logoUrl ? (
+          <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
+        ) : (
+          <Upload size={16} className="text-[#303033]" />
+        )}
+      </div>
+      {logoUrl && onRemove && !uploading && (
+        <button
+          onClick={handleRemoveClick}
+          className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+            confirming
+              ? 'bg-red-500 border border-red-400'
+              : 'bg-[#2a2a2a] border border-[#3a3a3a] hover:bg-red-500/30 hover:border-red-500/40'
+          }`}
+          title={confirming ? 'Click again to confirm' : 'Remove logo'}
+        >
+          {confirming ? (
+            <Check size={9} className="text-white" />
+          ) : (
+            <Trash2 size={9} className="text-[#808080]" />
+          )}
+        </button>
       )}
     </div>
   );

@@ -483,7 +483,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
-        <div className="flex flex-col gap-4 max-w-6xl">
+        <div className="flex flex-col gap-4">
           {/* Top row — Project Types + Deliverables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             {CATEGORIES.slice(0, 2).map((category) => {

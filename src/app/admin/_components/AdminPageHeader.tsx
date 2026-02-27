@@ -49,6 +49,7 @@ export function AdminPageHeader({
         </div>
         {hasInlineControls && (
           <div className="flex-1 flex items-center justify-end gap-3 ml-auto min-w-0">
+            {rightContent}
             {onSearchChange !== undefined && (
               <div className="relative w-64">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
@@ -69,7 +70,6 @@ export function AdminPageHeader({
                 )}
               </div>
             )}
-            {rightContent}
             {actions && <div className="flex items-center gap-2 flex-shrink-0 [&_button]:py-1.5 [&_a]:py-1.5">{actions}</div>}
           </div>
         )}

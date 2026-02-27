@@ -46,7 +46,20 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
   // Determine the starting month for the mini-calendars
   const firstMilestone = localMilestones[0];
   const baseMonth = firstOfMonth(parseLocal(firstMilestone.start_date));
-  const visibleMonths = [0, 1, 2].map((n) => addMonths(baseMonth, n));
+  const visibleMonths: Date[] = (() => {
+    const latest = localMilestones.reduce((best, m) => {
+      const end = m.end_date || m.start_date;
+      return end > (best.end_date || best.start_date) ? m : best;
+    }, localMilestones[0]);
+    const endMonth = firstOfMonth(parseLocal(latest.end_date || latest.start_date));
+    const months: Date[] = [];
+    let cursor = baseMonth;
+    while (cursor <= endMonth) {
+      months.push(cursor);
+      cursor = addMonths(cursor, 1);
+    }
+    return months;
+  })();
 
   // Compute phase date ranges for calendar outlines (includes end_date)
   const phaseRanges = localMilestones

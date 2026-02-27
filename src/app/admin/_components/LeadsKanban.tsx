@@ -270,9 +270,9 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
       />
 
       {/* Kanban board — horizontal scroll */}
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden admin-scrollbar px-8 pt-4 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-hidden admin-scrollbar px-8 pt-4 pb-6">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 h-full" style={{ minWidth: 'max-content' }}>
+          <div className="flex gap-4 h-full">
             {PIPELINE_COLUMNS.map((col) => {
               const cards = byStage[col.value];
               const column = (
@@ -292,7 +292,7 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
               );
               if (col.value === 'closed') {
                 return (
-                  <div key={col.value} className="flex flex-col gap-3 w-[220px] flex-shrink-0 h-full">
+                  <div key={col.value} className="flex flex-col gap-3 flex-1 min-w-0 h-full">
                     <div className="flex-1 min-h-0 flex flex-col">{column}</div>
                     <LostZone
                       animatingCard={animatingCard}
@@ -372,7 +372,7 @@ function KanbanColumn({
 
   return (
     <div
-      className={`flex flex-col w-[220px] flex-shrink-0 h-full rounded-xl border transition-colors ${col.accent} ${
+      className={`flex flex-col flex-1 min-w-0 h-full rounded-xl border transition-colors ${col.accent} ${
         isOver ? col.overColor : 'bg-white/[0.02]'
       }`}
     >

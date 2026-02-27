@@ -270,7 +270,7 @@ export function ProcessSlide({ slideRef }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-20 pb-20 w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-20 pb-[50vh] w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         {/* SlideHeader */}
         <SlideHeader
           eyebrow="HOW WE WORK"

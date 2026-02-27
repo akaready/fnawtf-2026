@@ -3,7 +3,7 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, AppWindow, Clapperboard, GitFork, Video } from 'lucide-react';
+import { Rocket, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Building2, Target, AppWindow, Clapperboard, GitFork, Video } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
@@ -42,12 +42,12 @@ export function AdminShell({ children }: Props) {
   const navItems = [
     { href: '/admin/search',       label: 'Search',       icon: Search },        // 0
     // --- CRM ---
-    { href: '/admin/clients',      label: 'Clients',      icon: Briefcase },     // 1
+    { href: '/admin/clients',      label: 'Clients',      icon: Building2 },     // 1
     { href: '/admin/leads',        label: 'Leads',        icon: Target },        // 2
     { href: '/admin/partners',     label: 'Pipelines',    icon: GitFork },       // 3
     { href: '/admin/contacts',     label: 'People',       icon: Users },         // 4
     // --- Production ---
-    { href: '/admin/projects',     label: 'Projects',     icon: LayoutGrid },    // 5
+    { href: '/admin/projects',     label: 'Projects',     icon: Rocket },        // 5
     { href: '/admin/meetings',     label: 'Meetings',     icon: Video },         // 6
     // --- Proposals ---
     { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },      // 7
