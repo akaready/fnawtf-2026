@@ -113,7 +113,6 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
   const handleSelectCompany = useCallback((client: ClientRow) => {
     setContactCompany(client.name);
-    setCompanySearch('');
   }, []);
 
   const handleAddNewCompany = useCallback(async () => {
@@ -314,14 +313,13 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                 value={contactCompany}
                 onChange={(e) => {
                   setContactCompany(e.target.value);
-                  setCompanySearch(e.target.value);
                 }}
                 placeholder="Search companies…"
                 className={inputCls + (contactCompany ? ' pr-8' : '')}
               />
               {contactCompany && (
                 <button
-                  onClick={() => { setContactCompany(''); setCompanySearch(''); }}
+                  onClick={() => { setContactCompany(''); }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                   title="Clear company"
                 >

@@ -1480,8 +1480,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
     const onMouseMove = (e: MouseEvent) => {
       if (!tableRef.current) return;
       const tableRect = tableRef.current.getBoundingClientRect();
-      const scrollLeft = tableRef.current.scrollLeft;
-      const relativeX = e.clientX - tableRect.left + scrollLeft;
+      const relativeX = e.clientX - tableRect.left;
 
       // Calculate which column boundary is closest
       // Start after the fixed checkbox column

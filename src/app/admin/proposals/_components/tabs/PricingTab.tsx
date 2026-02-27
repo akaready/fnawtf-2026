@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Star, TrendingUp, TrendingDown, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Megaphone, Coins, Layers, type LucideIcon } from 'lucide-react';
-import { saveProposalQuote, deleteProposalQuote } from '@/app/admin/actions';
+import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
@@ -31,6 +31,7 @@ interface PricingTabProps {
   proposalId: string;
   proposalType: ProposalType;
   initialQuotes: ProposalQuoteRow[];
+  onProposalTypeChange?: (type: ProposalType) => void;
 }
 
 // Fixed config — 5 slots: Recommended, Premium, Affordable, Option B, Option C
@@ -58,7 +59,7 @@ const inputCls =
   'w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, onProposalTypeChange }: PricingTabProps,
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
@@ -78,11 +79,17 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
   useImperativeHandle(ref, () => ({
     get isDirty() { return isDirtyRef.current; },
-    save: async () => { await embedSaveRef.current?.saveNow(); },
+    save: async () => {
+      await Promise.all([
+        embedSaveRef.current?.saveNow(),
+        updateProposal(proposalId, { proposal_type: selectedType }),
+      ]);
+    },
   }));
 
   const handleTypeChange = (type: PricingType) => {
     setSelectedType(type);
+    onProposalTypeChange?.(type as ProposalType);
     if (type === 'fundraising' || type === 'scale') setCrowdfundingEnabled(false);
   };
 

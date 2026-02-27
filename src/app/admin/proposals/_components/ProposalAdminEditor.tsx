@@ -247,6 +247,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             proposalId={proposal.id}
             proposalType={proposalType}
             initialQuotes={activeQuotes}
+            onProposalTypeChange={(type) => setProposalType(type)}
           />
         </div>
       </div>

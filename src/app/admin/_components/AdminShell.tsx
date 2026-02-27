@@ -48,7 +48,6 @@ export function AdminShell({ children }: Props) {
     { href: '/admin/contacts',     label: 'People',       icon: Users },         // 4
     // --- Production ---
     { href: '/admin/projects',     label: 'Projects',     icon: LayoutGrid },    // 5
-    // --- Meetings ---
     { href: '/admin/meetings',     label: 'Meetings',     icon: Video },         // 6
     // --- Proposals ---
     { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },      // 7
@@ -88,9 +87,9 @@ export function AdminShell({ children }: Props) {
               <React.Fragment key={href}>
                 {i === 1 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
                 {i === 5 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
-                {i === 6 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
                 {i === 7 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
                 {i === 9 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 12 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
                 {label === 'Search' ? (
                   <button
                     onClick={() => setSearchOpen(true)}

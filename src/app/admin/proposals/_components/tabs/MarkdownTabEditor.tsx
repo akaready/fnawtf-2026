@@ -49,6 +49,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
   const linkInputRef                    = useRef<HTMLInputElement>(null);
   const sectionRef                      = useRef<ProposalSectionRow | null>(section);
   const isDirtyRef                      = useRef(false);
+  const initializedRef                  = useRef(false);
   const currentMarkdownRef              = useRef<string>(section?.custom_content ?? '');
   const titleTimerRef                   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,11 +126,15 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
       Markdown.configure({ html: false, tightLists: true, transformPastedText: true }),
     ],
     content: section?.custom_content ?? '',
+    onCreate() {
+      // Skip the first onUpdate that fires when Tiptap renders initial content
+      setTimeout(() => { initializedRef.current = true; }, 0);
+    },
     onUpdate({ editor: e }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const md = (e.storage as any).markdown.getMarkdown();
       currentMarkdownRef.current = md;
-      isDirtyRef.current = true;
+      if (initializedRef.current) isDirtyRef.current = true;
     },
     editorProps: {
       attributes: { class: 'outline-none min-h-[320px] prose-snippet' },
