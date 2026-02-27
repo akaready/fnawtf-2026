@@ -38,6 +38,7 @@ const config: Config = {
         muted: '#171717',
         'muted-foreground': '#a1a1aa',
         border: '#262626',
+        'border-subtle': '#1f1f1f',
         accent: '#a14dfd',
         'accent-foreground': '#ffffff',
       },

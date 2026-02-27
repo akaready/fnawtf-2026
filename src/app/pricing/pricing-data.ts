@@ -104,7 +104,7 @@ export const launchAddOns: AddOn[] = [
   {
     id: 'launch-production-days',
     name: 'Production',
-    description: 'incl. Director and Cinematographer',
+    description: 'includes Director and Cinematographer',
     price: 3000,
     priceDisplay: '$3,000/day',
     tier: 'launch',
@@ -113,7 +113,8 @@ export const launchAddOns: AddOn[] = [
   },
   {
     id: 'launch-post-production',
-    name: 'Post Production: Editorial, Color Correction, Sound Mix',
+    name: 'Post Production',
+    description: 'includes edit, color, and sound mix',
     price: 0,
     priceDisplay: 'Included',
     tier: 'launch',
@@ -121,8 +122,7 @@ export const launchAddOns: AddOn[] = [
   },
   {
     id: 'launch-stills-social',
-    name: '\u21B3 4K stills + social cutdowns',
-    description: 'up to 3',
+    name: '\u21B3 4K stills + 3x social cutdowns',
     price: 0,
     priceDisplay: 'Included',
     tier: 'launch',
@@ -172,7 +172,7 @@ export const launchAddOns: AddOn[] = [
   {
     id: 'launch-drone',
     name: 'Drone Operator',
-    description: 'includes 4K drone and FAA license',
+    description: 'includes FAA Part 107 License',
     price: 2500,
     priceSuffix: '/day',
     priceDisplay: '$2,500/day',

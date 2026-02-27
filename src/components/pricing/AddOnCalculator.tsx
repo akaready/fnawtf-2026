@@ -69,6 +69,7 @@ export function CollapsibleSection({
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-surface">
       <button
+        data-no-intercept
         onClick={onToggle}
         className="w-full flex items-center justify-between p-5 group"
         aria-expanded={isOpen}
@@ -104,12 +105,10 @@ function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: A
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-medium text-muted-foreground">{addOn.name}</span>
-          {addOn.description && (
-            <span className="text-xs text-muted-foreground">{addOn.description}</span>
-          )}
-        </div>
+        <span className="text-sm font-medium text-muted-foreground">{addOn.name}</span>
+        {addOn.description && (
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{addOn.description}</span>
+        )}
       </div>
       {hasQuantity ? (
         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -202,7 +201,7 @@ function SliderRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
@@ -221,7 +220,7 @@ function SliderRow({
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'}`}>{addOn.name}</span>
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
         {enabled && !isLocked && (
           <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
             <span className="text-xs text-muted-foreground">${slider.min.toLocaleString()}</span>
@@ -326,7 +325,7 @@ function MultiSliderRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
@@ -345,12 +344,12 @@ function MultiSliderRow({
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'} flex-1`}>{addOn.name}</span>
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'} flex-1`}>{addOn.name}</span>
         <div className="flex items-center gap-3 flex-shrink-0">
           {enabled && !isLocked && (
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <button
-                onClick={(e) => { e.stopPropagation(); if (count > 1) onCountChange(addOn.id, count - 1); }}
+                onClick={(e) => { e.stopPropagation(); if (isLocked) return; if (count > 1) onCountChange(addOn.id, count - 1); else onToggle(addOn.id); }}
                 className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
               >-</button>
               <span className="text-sm text-foreground w-4 text-center">{count}</span>
@@ -493,7 +492,7 @@ function PhotoSliderRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
@@ -512,9 +511,9 @@ function PhotoSliderRow({
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'} whitespace-nowrap`}>{addOn.name}</span>
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'} whitespace-nowrap`}>{addOn.name}</span>
         {!enabled && !isLocked && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Includes {ps.included} photos, add&apos;l at ${ps.extraPrice}/ea</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">includes {ps.included} photos, add&apos;l at ${ps.extraPrice}/ea</span>
         )}
         {enabled && !isLocked && (
           <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
@@ -608,7 +607,7 @@ function AddOnRow({
             <X className="w-3 h-3 text-background" strokeWidth={3} />
           </div>
         ) : compareRemoved ? (
-          <div className="w-5 h-5 rounded border-2 border-red-700/50 bg-transparent flex items-center justify-center flex-shrink-0" />
+          <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center flex-shrink-0" />
         ) : (
           <div
             className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
@@ -626,24 +625,22 @@ function AddOnRow({
             )}
           </div>
         )}
-        <div className="flex flex-col min-w-0">
-          <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'}`}>
-            {addOn.name}
-            {selected && perDayDisplay && (
-              <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
-            )}
-          </span>
-          {addOn.description && (
-            <span className={`text-xs ${lockedNotIncluded ? 'text-white/10' : 'text-muted-foreground'}`}>{addOn.description}</span>
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>
+          {addOn.name}
+          {selected && perDayDisplay && (
+            <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
           )}
-        </div>
+        </span>
+        {addOn.description && (
+          <span className={`text-xs whitespace-nowrap ${lockedNotIncluded ? 'text-white/10' : 'text-muted-foreground'}`}>{addOn.description}</span>
+        )}
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
         {addOn.quantity && (
           <div className={`flex items-center gap-2 ${selected && !isLocked ? 'visible' : 'invisible'}`} onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); }}
+              onClick={(e) => { e.stopPropagation(); if (isLocked) return; if (quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); else onToggle(addOn.id); }}
               className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
             >-</button>
             <span className="text-sm text-foreground w-4 text-center">{quantity}</span>
@@ -717,7 +714,7 @@ function TierToggleRow({
               <X className="w-3 h-3 text-background" strokeWidth={3} />
             </div>
           ) : compareRemoved ? (
-            <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 bg-transparent flex items-center justify-center" />
+            <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center" />
           ) : (
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
@@ -735,7 +732,7 @@ function TierToggleRow({
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-white/40' : 'text-foreground'}`}>
+        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>
           {addOn.name}
           {selected && perDayDisplay && (
             <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
@@ -758,7 +755,7 @@ function TierToggleRow({
             ))}
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-white/20' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {selected ? `$${activePrice.toLocaleString()}/day` : addOn.priceDisplay}
         </span>
       </div>

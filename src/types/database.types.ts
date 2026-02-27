@@ -91,7 +91,7 @@ export type Database = {
         Row: {
           id: string;
           name: string;
-          category: 'style' | 'technique' | 'addon';
+          category: 'style' | 'technique' | 'addon' | 'deliverable';
           color: string | null;
         };
         Insert: Omit<Database['public']['Tables']['tags']['Row'], 'id'>;

@@ -2,13 +2,13 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
-import { motion } from 'framer-motion';
-import { Plus, Pencil, Trash2, X, Check, Star, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Trash2, Check, Star, User } from 'lucide-react';
 import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
-import { saveClientQuote, renameClientQuote, deleteClientQuote } from '@/app/p/[slug]/actions';
+import { saveClientQuote, deleteClientQuote } from '@/app/p/[slug]/actions';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
 // ── Icon reveal variants (matches site-wide pattern) ─────────────────────────
@@ -40,6 +40,7 @@ interface Props {
   quotes: ProposalQuoteRow[];
   crowdfundingApproved?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
+  viewerName?: string | null;
 }
 
 export function InvestmentSlide({
@@ -48,6 +49,7 @@ export function InvestmentSlide({
   quotes: initialQuotes,
   crowdfundingApproved,
   slideRef,
+  viewerName,
 }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -88,16 +90,26 @@ export function InvestmentSlide({
   const isLocked = !!activeQuote?.is_fna_quote;
 
   // New quote creation
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [saveLabel, setSaveLabel] = useState('');
   const [savingQuote, setSavingQuote] = useState(false);
-
-  // Rename state
-  const [renamingQuoteId, setRenamingQuoteId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
+  const [justUnlocked, setJustUnlocked] = useState(false);
 
   // Delete confirm state
   const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
+  const [hoveredIconId, setHoveredIconId] = useState<string | null>(null);
+  const [dimmedIconId, setDimmedIconId] = useState<string | null>(null);
+  const deletingIconRef = useRef<HTMLSpanElement>(null);
+
+  // Click outside deleting icon cancels delete confirm
+  useEffect(() => {
+    if (!deletingQuoteId) return;
+    const handler = (e: MouseEvent) => {
+      if (deletingIconRef.current && !deletingIconRef.current.contains(e.target as Node)) {
+        setDeletingQuoteId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [deletingQuoteId]);
 
   // Sync local quotes state after any auto-save
   const handleQuoteUpdated = useCallback((payload: CalculatorStateSnapshot) => {
@@ -155,15 +167,15 @@ export function InvestmentSlide({
 
   // ── Save new quote handler ──
   const MAX_SAVED_QUOTES = 1;
-  const handleSaveQuote = useCallback(async () => {
-    if (!saveLabel.trim()) return;
+  const handleNewQuote = useCallback(async () => {
     if (clientQuotes.length >= MAX_SAVED_QUOTES) return;
     const currentState = calcSaveRef.current?.getState();
     if (!currentState) return;
+    const label = viewerName ? `${viewerName}'s Adjusted Quote` : 'My Adjusted Quote';
     setSavingQuote(true);
     try {
       const newQuote = await saveClientQuote(proposalId, {
-        label: saveLabel.trim(),
+        label,
         ...currentState,
         defer_payment: false,
         total_amount: null,
@@ -171,29 +183,14 @@ export function InvestmentSlide({
       });
       setQuotes((prev) => [...prev, newQuote]);
       setActiveQuoteId(newQuote.id);
-      setShowSaveModal(false);
-      setSaveLabel('');
+      setJustUnlocked(true);
+      setTimeout(() => setJustUnlocked(false), 800);
     } catch (err) {
       console.error('Failed to save quote:', err);
     } finally {
       setSavingQuote(false);
     }
-  }, [saveLabel, proposalId, clientQuotes.length]);
-
-  // ── Rename handler ──
-  const handleRename = useCallback(async (quoteId: string) => {
-    if (!renameValue.trim()) return;
-    try {
-      await renameClientQuote(quoteId, renameValue.trim());
-      setQuotes((prev) =>
-        prev.map((q) => (q.id === quoteId ? { ...q, label: renameValue.trim() } : q))
-      );
-      setRenamingQuoteId(null);
-      setRenameValue('');
-    } catch (err) {
-      console.error('Failed to rename quote:', err);
-    }
-  }, [renameValue]);
+  }, [viewerName, proposalId, clientQuotes.length]);
 
   // ── Delete handler ──
   const handleDelete = useCallback(async (quoteId: string) => {
@@ -211,9 +208,6 @@ export function InvestmentSlide({
     }
   }, [activeQuoteId, recommendedQuote]);
 
-  // Active quote is the currently selected client quote (for toolbox)
-  const isClientQuoteActive = activeQuote && !activeQuote.is_fna_quote;
-  const isDeleting = isClientQuoteActive && deletingQuoteId === activeQuote?.id;
 
   return (
     <section
@@ -274,39 +268,45 @@ export function InvestmentSlide({
               <div className="inline-flex rounded-lg border border-cyan-700/60 overflow-hidden">
                 {comparisonQuotes.map((q, idx) => {
                   const isFna = q.is_fna_quote;
-                  const isRenaming = !isFna && renamingQuoteId === q.id;
                   const isActive = activeQuoteId === q.id;
+                  const isThisDeleting = deletingQuoteId === q.id;
+                  const isIconHovered = hoveredIconId === q.id;
+                  const isIconDimmed = dimmedIconId === q.id;
 
-                  return isRenaming ? (
-                    <form
-                      key={q.id}
-                      onSubmit={(e) => { e.preventDefault(); handleRename(q.id); }}
-                      className={`flex items-center ${idx > 0 ? 'border-l border-cyan-700/30' : ''}`}
-                    >
-                      <input
-                        autoFocus
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={() => { if (renameValue.trim()) handleRename(q.id); else { setRenamingQuoteId(null); setRenameValue(''); } }}
-                        onKeyDown={(e) => { if (e.key === 'Escape') { setRenamingQuoteId(null); setRenameValue(''); } }}
-                        className="px-4 py-2.5 text-sm font-medium bg-cyan-700 text-white outline-none w-28 placeholder:text-white/50 ring-2 ring-cyan-400/60 ring-inset"
-                        placeholder={q.label}
-                      />
-                    </form>
-                  ) : (
+                  return (
                     <button
                       key={q.id}
                       onClick={() => setActiveQuoteId(q.id)}
-                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors duration-200 cursor-pointer ${
+                      onMouseEnter={() => !isFna && setHoveredIconId(q.id)}
+                      onMouseLeave={() => setHoveredIconId(null)}
+                      className={`flex items-center gap-2 pl-3 pr-4 py-2.5 text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         isActive
                           ? 'bg-cyan-600 text-white'
                           : 'bg-cyan-950/40 text-cyan-300/60 hover:text-white/80 hover:bg-cyan-900/40'
                       } ${idx > 0 ? 'border-l border-cyan-700/30' : ''}`}
                     >
                       {isFna ? (
-                        <Star size={16} className="flex-shrink-0 text-current opacity-70" />
+                        <span className="flex-shrink-0 p-1 rounded">
+                          <Star size={16} className="text-current opacity-70" />
+                        </span>
                       ) : (
-                        <User size={16} className="flex-shrink-0 text-current opacity-70" />
+                        <span
+                          ref={isThisDeleting ? deletingIconRef : null}
+                          onMouseEnter={() => setDimmedIconId(q.id)}
+                          onMouseLeave={() => setDimmedIconId(null)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isThisDeleting) handleDelete(q.id);
+                            else setDeletingQuoteId(q.id);
+                          }}
+                          className={`flex-shrink-0 p-1 rounded transition-colors cursor-pointer ${isIconDimmed || isThisDeleting ? 'bg-white/15' : 'bg-transparent'} text-white`}
+                        >
+                          {isThisDeleting
+                            ? <Check size={16} />
+                            : isIconHovered
+                              ? <Trash2 size={16} />
+                              : <User size={16} className="opacity-70" />}
+                        </span>
                       )}
                       {q.label}
                     </button>
@@ -315,74 +315,13 @@ export function InvestmentSlide({
               </div>
             )}
 
-            {/* Pencil + Trash toolbox — only for client (non-FNA) quotes */}
-            {isClientQuoteActive && (
-              <div className="inline-flex items-center gap-1">
-                {renamingQuoteId === activeQuoteId ? (
-                  <>
-                    <button
-                      onClick={() => handleRename(activeQuote!.id)}
-                      className="h-[28px] w-[28px] flex items-center justify-center rounded transition-colors text-green-400 hover:text-green-300 hover:bg-green-400/10"
-                      title="Confirm rename"
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      onClick={() => { setRenamingQuoteId(null); setRenameValue(''); }}
-                      className="h-[28px] w-[28px] flex items-center justify-center rounded transition-colors text-white/40 hover:text-white hover:bg-white/10"
-                      title="Cancel rename"
-                    >
-                      <X size={16} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        if (isDeleting) {
-                          handleDelete(activeQuote!.id);
-                        } else {
-                          setRenamingQuoteId(activeQuote!.id);
-                          setRenameValue(activeQuote!.label);
-                        }
-                      }}
-                      className={`h-[28px] w-[28px] flex items-center justify-center rounded transition-colors ${
-                        isDeleting
-                          ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                          : 'text-white/40 hover:text-white hover:bg-white/10'
-                      }`}
-                      title={isDeleting ? 'Confirm delete' : 'Rename'}
-                    >
-                      {isDeleting ? <Check size={16} /> : <Pencil size={16} />}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (isDeleting) {
-                          setDeletingQuoteId(null);
-                        } else {
-                          setDeletingQuoteId(activeQuote!.id);
-                        }
-                      }}
-                      className={`h-[28px] w-[28px] flex items-center justify-center rounded transition-colors ${
-                        isDeleting
-                          ? 'text-white/40 hover:text-white hover:bg-white/10'
-                          : 'text-white/40 hover:text-red-400 hover:bg-red-400/10'
-                      }`}
-                      title={isDeleting ? 'Cancel' : 'Delete'}
-                    >
-                      {isDeleting ? <X size={16} /> : <Trash2 size={16} />}
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-
             {/* Comparison Quote button — hidden once one exists */}
             {clientQuotes.length === 0 && (
               <button
                 ref={newBtnRef}
-                onClick={() => setShowSaveModal(true)}
-                className="relative ml-auto py-2.5 px-4 font-medium border rounded-lg overflow-hidden text-black bg-white border-white"
+                onClick={handleNewQuote}
+                disabled={savingQuote}
+                className="relative ml-auto py-2.5 px-4 font-medium border rounded-lg overflow-hidden text-black bg-white border-white disabled:opacity-50"
               >
                 <div
                   ref={newFillRef}
@@ -398,54 +337,15 @@ export function InvestmentSlide({
                   >
                     <Plus size={16} strokeWidth={2} />
                   </motion.span>
-                  Comparison Quote
+                  Adjust Quote
                 </span>
               </button>
             )}
           </div>
 
 
-          {/* Save name modal (inline popover) */}
-          {showSaveModal && (
-            <div className="mb-6 p-4 rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-sm">
-              <p className="text-white/60 text-sm mb-3">Name your comparison quote</p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSaveQuote();
-                }}
-                className="flex items-center gap-3"
-              >
-                <input
-                  autoFocus
-                  value={saveLabel}
-                  onChange={(e) => setSaveLabel(e.target.value)}
-                  placeholder="e.g. Budget Option"
-                  className="flex-1 bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-500 transition-colors placeholder:text-white/20"
-                />
-                <button
-                  type="submit"
-                  disabled={!saveLabel.trim() || savingQuote}
-                  className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-40 hover:brightness-110 transition-all"
-                >
-                  {savingQuote ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSaveModal(false);
-                    setSaveLabel('');
-                  }}
-                  className="text-white/40 hover:text-white/60 p-1 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </form>
-            </div>
-          )}
-
           {/* Calculator content */}
-          <div>
+          <div className="relative">
             <ProposalCalculatorEmbed
               isLocked={isLocked}
               proposalId={proposalId}
@@ -458,7 +358,21 @@ export function InvestmentSlide({
               onQuoteUpdated={handleQuoteUpdated}
               allQuotes={quotes.filter((q) => !q.deleted_at)}
               onActiveQuoteChange={(id) => setActiveQuoteId(id)}
+              onLockedInteract={isLocked && clientQuotes.length === 0 ? handleNewQuote : undefined}
             />
+            {/* Unlock glow burst */}
+            <AnimatePresence>
+              {justUnlocked && (
+                <motion.div
+                  className="absolute inset-0 rounded-lg pointer-events-none"
+                  style={{ background: 'radial-gradient(ellipse at center, rgba(34,211,238,0.18) 0%, transparent 70%)' }}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.04 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 // ── Proposal System Types ─────────────────────────────────────────────────
 
 export type SnippetType = 'build' | 'launch' | 'scale' | 'build-launch' | 'fundraising' | 'general';
-export type SnippetCategory = 'intro' | 'process' | 'deliverables' | 'team' | 'closing' | 'custom';
+export type SnippetCategory = string;
 export type ProposalType = 'build' | 'launch' | 'scale' | 'build-launch' | 'fundraising';
 export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'accepted';
 export type SectionType = 'text' | 'video' | 'projects' | 'quote' | 'calendar' | 'custom_text';
@@ -13,6 +13,7 @@ export interface ContactRow {
   phone: string | null;
   role: string | null;
   company: string | null;
+  client_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -111,6 +112,27 @@ export interface ProposalProjectRow {
   section_id: string | null;
   project_id: string;
   sort_order: number;
+  blurb: string | null;
+}
+
+export interface BrowserProject {
+  id: string;
+  title: string;
+  slug: string;
+  thumbnail_url: string | null;
+  style_tags: string[] | null;
+  premium_addons: string[] | null;
+  camera_techniques: string[] | null;
+}
+
+export interface ProposalProjectWithProject {
+  id: string;
+  proposal_id: string;
+  project_id: string;
+  section_id: string | null;
+  sort_order: number;
+  blurb: string | null;
+  project: BrowserProject;
 }
 
 export interface ProposalQuoteRow {

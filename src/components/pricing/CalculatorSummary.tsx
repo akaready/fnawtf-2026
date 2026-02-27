@@ -979,6 +979,7 @@ export function CalculatorSummary({
       {showFriendlyDiscount && (
         <div className="mb-4 rounded-lg border border-green-900 overflow-hidden bg-green-950/25">
           <button
+            data-no-intercept
             onClick={() => setDiscountsOpen((o) => !o)}
             className="w-full flex items-center justify-between p-5 group"
             aria-expanded={discountsOpen}

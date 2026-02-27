@@ -62,9 +62,13 @@ interface Props {
   allQuotes?: ProposalQuoteRow[];
   /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
   onActiveQuoteChange?: (quoteId: string) => void;
+  /** Called when user clicks anywhere in a locked calculator that has no personal quote yet */
+  onLockedInteract?: () => void;
+  /** When provided, overrides the default saveClientQuote call (used in admin context to call saveProposalQuote) */
+  onFnaSave?: (payload: CalculatorStateSnapshot) => Promise<string>;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave }: Props) {
   const visibleTabs = getVisibleTabs(proposalType);
 
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -196,17 +200,22 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
       saveNow: async () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         const payload = buildSavePayload();
-        await updateClientQuote(proposalId, payload, activeQuoteId);
+        if (onFnaSave) {
+          await onFnaSave(payload as CalculatorStateSnapshot);
+        } else {
+          await updateClientQuote(proposalId, payload, activeQuoteId);
+        }
         onQuoteUpdated?.(payload as CalculatorStateSnapshot);
       },
       getState: () => buildSavePayload() as CalculatorStateSnapshot,
     };
     return () => { if (saveRef) saveRef.current = null; };
-  }, [saveRef, proposalId, activeQuoteId, buildSavePayload, onQuoteUpdated]);
+  }, [saveRef, proposalId, activeQuoteId, buildSavePayload, onQuoteUpdated, onFnaSave]);
 
-  // Auto-save: only for unlocked (client) quotes
+  // Auto-save: only for unlocked (client) quotes; skipped in admin context (onFnaSave present = admin mode)
   useEffect(() => {
     if (isLocked) return;
+    if (onFnaSave) return; // admin mode — saves explicitly, not on auto-save
     if (!activeQuoteId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
@@ -217,7 +226,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     }, 1500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLocked, proposalId, buildSavePayload, activeQuoteId, onQuoteUpdated]);
+  }, [isLocked, onFnaSave, proposalId, buildSavePayload, activeQuoteId, onQuoteUpdated]);
 
   const totalDays = selectedAddOns.get('launch-production-days') ?? 1;
   const showBuild = activeTab === 'build';
@@ -403,8 +412,14 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
       )}
 
       {/* Calculator body */}
-      <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth: 'none' }}>
-        <div className="grid grid-cols-1 gap-8 pb-8">
+      <div
+        className={`flex-1 overflow-y-auto min-h-0${isLocked && onLockedInteract ? ' cursor-pointer [&_*]:!cursor-pointer' : ''}`}
+        style={{ scrollbarWidth: 'none' }}
+        onClick={isLocked && onLockedInteract ? (e) => {
+          if (!(e.target as HTMLElement).closest('[data-no-intercept]')) onLockedInteract();
+        } : undefined}
+      >
+        <div className="grid grid-cols-1 gap-4 pb-8">
           <div className="space-y-4">
             {showBuild && (
               <CollapsibleSection

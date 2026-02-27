@@ -1,9 +1,15 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo, useRef, useCallback } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TiptapLink from '@tiptap/extension-link';
+import { Markdown } from 'tiptap-markdown';
+import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Trash2, Save, Check, Loader2, Download,
-  Hammer, Rocket, TrendingUp, Globe, ArrowUpDown, Tag, FileText, Layers, Megaphone,
+  Pencil, Bold, Heading1, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink,
+  FolderOpen, Maximize2, Minimize2,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import {
@@ -12,84 +18,253 @@ import {
   updateContentSnippet,
   deleteContentSnippet,
 } from '../actions';
-import type { SnippetType, SnippetCategory } from '@/types/proposal';
+import type { SnippetCategory } from '@/types/proposal';
 
 interface Props {
   initialSnippets: ContentSnippetRow[];
 }
 
-const SNIPPET_TYPES: { value: SnippetType; label: string; icon: typeof Hammer }[] = [
-  { value: 'build', label: 'Build', icon: Hammer },
-  { value: 'launch', label: 'Launch', icon: Rocket },
-  { value: 'scale', label: 'Scale', icon: TrendingUp },
-  { value: 'build-launch', label: 'Build + Launch', icon: Layers },
-  { value: 'fundraising', label: 'Fundraising', icon: Megaphone },
-  { value: 'general', label: 'General', icon: Globe },
-];
+const MIN_LEFT = 130;
+const MAX_LEFT = 300;
+const MIN_MID  = 200;
+const MAX_MID  = 480;
 
-const SNIPPET_CATEGORIES: { value: SnippetCategory; label: string }[] = [
-  { value: 'intro', label: 'Introduction' },
-  { value: 'process', label: 'Process' },
-  { value: 'deliverables', label: 'Deliverables' },
-  { value: 'team', label: 'Team' },
-  { value: 'closing', label: 'Closing' },
-  { value: 'custom', label: 'Custom' },
-];
+const stripMd = (s: string) => s.replace(/[*_`#>]/g, '').replace(/\n/g, ' ').trim();
+
+const SEL = 'bg-[#1c1c1c]';
+const HOV = 'hover:bg-[#141414]';
+
+// ── Snippet WYSIWYG Editor ─────────────────────────────────────────────────
+
+function SnippetEditor({
+  body,
+  onChange,
+}: {
+  body: string;
+  onChange: (md: string) => void;
+}) {
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl]             = useState('');
+  const linkInputRef                      = useRef<HTMLInputElement>(null);
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      TiptapLink.configure({ openOnClick: false }),
+      Markdown.configure({ html: false, tightLists: true, transformPastedText: true }),
+    ],
+    content: body,
+    onUpdate({ editor }) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onChange((editor.storage as any).markdown.getMarkdown());
+    },
+    onSelectionUpdate({ editor }) {
+      // Skip if the URL input already has focus — user is typing
+      if (document.activeElement === linkInputRef.current) return;
+      if (editor.isActive('link')) {
+        setLinkUrl(editor.getAttributes('link').href ?? '');
+        setShowLinkInput(true);
+      } else {
+        setShowLinkInput(false);
+        setLinkUrl('');
+      }
+    },
+    editorProps: {
+      attributes: { class: 'outline-none min-h-[200px] prose-snippet' },
+    },
+  });
+
+  // Open URL bar for creating a new link (cursor not already on a link)
+  const openLink = useCallback(() => {
+    if (!editor) return;
+    if (!editor.isActive('link')) {
+      setLinkUrl('');
+      setShowLinkInput(true);
+    }
+    setTimeout(() => linkInputRef.current?.focus(), 50);
+  }, [editor]);
+
+  // Apply the typed URL then let onSelectionUpdate manage visibility
+  const applyLink = useCallback(() => {
+    if (!editor) return;
+    const url = linkUrl.trim();
+    if (url) editor.chain().focus().setLink({ href: url }).run();
+    else     editor.chain().focus().unsetLink().run();
+  }, [editor, linkUrl]);
+
+  if (!editor) return null;
+
+  const isLink = editor.isActive('link');
+
+  const formatTools: { key: string; I: LucideIcon; lbl: string; fn: () => void; isActive: boolean }[] = [
+    { key: 'bold', I: Bold,        lbl: 'Bold (⌘B)',     fn: () => editor.chain().focus().toggleBold().run(),               isActive: editor.isActive('bold') },
+    { key: 'h1',   I: Heading1,    lbl: 'Heading 1',     fn: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive('heading', { level: 1 }) },
+    { key: 'h2',   I: Heading2,    lbl: 'Heading 2',     fn: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive('heading', { level: 2 }) },
+    { key: 'h3',   I: Heading3,    lbl: 'Heading 3',     fn: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), isActive: editor.isActive('heading', { level: 3 }) },
+    { key: 'ul',   I: List,        lbl: 'Bullet list',   fn: () => editor.chain().focus().toggleBulletList().run(),          isActive: editor.isActive('bulletList') },
+    { key: 'ol',   I: ListOrdered, lbl: 'Numbered list', fn: () => editor.chain().focus().toggleOrderedList().run(),         isActive: editor.isActive('orderedList') },
+  ];
+
+  return (
+    <>
+      {/* Toolbar — URL input lives inline here, no layout shift */}
+      <div className="flex items-center gap-0.5 px-8 pt-3 pb-2 min-h-[36px]">
+        {formatTools.map(({ key, I, lbl, fn, isActive }) => (
+          <button
+            key={key}
+            onMouseDown={e => { e.preventDefault(); fn(); }}
+            title={lbl}
+            className={`p-1.5 rounded transition-colors flex-shrink-0 ${isActive ? 'text-foreground bg-white/[0.1]' : 'text-white/30 hover:text-foreground hover:bg-white/[0.06]'}`}
+          >
+            <I size={14} />
+          </button>
+        ))}
+
+        <span className="w-px h-3.5 bg-white/10 mx-1 flex-shrink-0" />
+
+        {/* Link icon — toggles URL input inline */}
+        <button
+          onMouseDown={e => { e.preventDefault(); openLink(); }}
+          title="Link (⌘⇧U)"
+          className={`p-1.5 rounded transition-colors flex-shrink-0 ${isLink || showLinkInput ? 'text-foreground bg-white/[0.1]' : 'text-white/30 hover:text-foreground hover:bg-white/[0.06]'}`}
+        >
+          <Link2 size={14} />
+        </button>
+
+        {/* Inline URL input — shown when on a link or creating one */}
+        {showLinkInput && (
+          <>
+            <input
+              ref={linkInputRef}
+              value={linkUrl}
+              onChange={e => setLinkUrl(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter')  { e.preventDefault(); applyLink(); }
+                if (e.key === 'Escape') { editor.chain().focus().run(); }
+              }}
+              placeholder="https://"
+              className="flex-1 min-w-0 ml-1 bg-transparent text-sm text-white/70 placeholder:text-white/20 outline-none"
+            />
+            {linkUrl && (
+              <a
+                href={linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                tabIndex={-1}
+                onMouseDown={e => e.preventDefault()}
+                title="Open link"
+                className="text-white/25 hover:text-white/60 transition-colors p-1 flex-shrink-0"
+              >
+                <ExternalLink size={12} />
+              </a>
+            )}
+            {isLink && (
+              <button
+                onMouseDown={e => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
+                title="Remove link"
+                className="text-white/25 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Editor — only ⌘⇧U is intercepted; all native OS shortcuts pass through */}
+      <div
+        className="px-8 py-3 min-h-[200px]"
+        onKeyDown={e => {
+          if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'u') {
+            e.preventDefault();
+            openLink();
+          }
+        }}
+      >
+        <EditorContent editor={editor} />
+      </div>
+    </>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
 
 export function ContentSnippetsManager({ initialSnippets }: Props) {
-  const [snippets, setSnippets] = useState(initialSnippets);
-  const [saving, startSave] = useTransition();
-  const [savedId, setSavedId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<SnippetType | 'all'>('all');
+  const [snippets, setSnippets]                 = useState(initialSnippets);
+  const [saving, startSave]                     = useTransition();
+  const [savedId, setSavedId]                   = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId]   = useState<string | null>(null);
+  const [confirmDeleteCat, setConfirmDeleteCat] = useState<string | null>(null);
+  const [creating, setCreating]                 = useState(false);
+  const [activeId, setActiveId]                 = useState<string | null>(null);
+  const [search, setSearch]                     = useState('');
+  const [filterCat, setFilterCat]               = useState<string>('all');
+  const [focusMode, setFocusMode]               = useState(false);
 
-  const handleChange = (id: string, field: string, value: unknown) => {
-    setSnippets((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
-    );
+  // Category management
+  const [editingCat, setEditingCat]       = useState<string | null>(null);
+  const [editingCatVal, setEditingCatVal] = useState('');
+  const [addingCat, setAddingCat]         = useState(false);
+  const [newCatName, setNewCatName]       = useState('');
+
+  // Column widths
+  const [leftWidth, setLeftWidth] = useState(176);
+  const [midWidth, setMidWidth]   = useState(288);
+
+  // Autosave
+  const autoSaveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const snippetsRef    = useRef(initialSnippets);
+
+  // ── Derived ──────────────────────────────────────────────────────────────
+
+  const categories = useMemo(() =>
+    Array.from(new Set(snippets.map(s => s.category).filter(Boolean))).sort(),
+  [snippets]);
+
+  const filtered = useMemo(() => {
+    let r = snippets;
+    if (filterCat !== 'all') r = r.filter(s => s.category === filterCat);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      r = r.filter(s => s.title.toLowerCase().includes(q) || s.body.toLowerCase().includes(q));
+    }
+    return r;
+  }, [snippets, filterCat, search]);
+
+  const active = useMemo(() => snippets.find(s => s.id === activeId) ?? null, [snippets, activeId]);
+
+  // ── Core handlers ─────────────────────────────────────────────────────────
+
+  const mutate = (id: string, field: string, value: unknown) => {
+    setSnippets(prev => {
+      const next = prev.map(s => s.id === id ? { ...s, [field]: value } : s);
+      snippetsRef.current = next;
+      return next;
+    });
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      const row = snippetsRef.current.find(s => s.id === id);
+      if (row) handleSave(row);
+    }, 1000);
   };
 
   const handleSave = (row: ContentSnippetRow) => {
     startSave(async () => {
-      await updateContentSnippet(row.id, {
-        title: row.title,
-        body: row.body,
-        snippet_type: row.snippet_type,
-        category: row.category,
-        sort_order: row.sort_order,
-      });
+      await updateContentSnippet(row.id, { title: row.title, body: row.body, snippet_type: row.snippet_type, category: row.category, sort_order: row.sort_order });
       setSavedId(row.id);
       setTimeout(() => setSavedId(null), 2000);
     });
   };
 
-  const handleCreate = () => {
+  const handleCreate = (catOverride?: string) => {
+    const cat = catOverride ?? (filterCat === 'all' ? 'general' : filterCat);
     startSave(async () => {
       setCreating(true);
-      const id = await createContentSnippet({
-        title: 'New Snippet',
-        body: '',
-        snippet_type: filterType === 'all' ? 'general' : filterType,
-        category: 'custom',
-        sort_order: snippets.length,
-      });
-      setSnippets((prev) => [
-        ...prev,
-        {
-          id,
-          title: 'New Snippet',
-          body: '',
-          snippet_type: (filterType === 'all' ? 'general' : filterType) as SnippetType,
-          category: 'custom' as SnippetCategory,
-          sort_order: snippets.length,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ]);
+      const id = await createContentSnippet({ title: 'New Snippet', body: '', snippet_type: 'general', category: cat, sort_order: snippets.length });
+      setSnippets(prev => [...prev, { id, title: 'New Snippet', body: '', snippet_type: 'general', category: cat as SnippetCategory, sort_order: prev.length, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       setActiveId(id);
+      setFilterCat(cat);
       setCreating(false);
     });
   };
@@ -97,260 +272,271 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
   const handleDelete = (id: string) => {
     startSave(async () => {
       await deleteContentSnippet(id);
-      setSnippets((prev) => prev.filter((s) => s.id !== id));
+      setSnippets(prev => prev.filter(s => s.id !== id));
       setConfirmDeleteId(null);
+      if (activeId === id) setActiveId(null);
     });
   };
 
-  const filteredSnippets = useMemo(() => {
-    let result = snippets;
-    if (filterType !== 'all') {
-      result = result.filter((s) => s.snippet_type === filterType);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.body.toLowerCase().includes(q) ||
-          s.category.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [snippets, search, filterType]);
+  // ── Category management ───────────────────────────────────────────────────
 
-  // Group by snippet_type for display
-  const grouped = useMemo(() => {
-    const groups: Record<string, ContentSnippetRow[]> = {};
-    for (const s of filteredSnippets) {
-      const key = s.snippet_type;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(s);
-    }
-    return groups;
-  }, [filteredSnippets]);
-
-  const handleExportCsv = () => {
-    const header = ['Title', 'Body', 'Type', 'Category', 'Order'];
-    const rows = filteredSnippets.map((s) => [s.title, s.body, s.snippet_type, s.category, s.sort_order]);
-    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `content-snippets-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleRename = (oldName: string, newName: string) => {
+    setEditingCat(null);
+    const n = newName.trim();
+    if (!n || n === oldName) return;
+    const affected = snippets.filter(s => s.category === oldName);
+    setSnippets(prev => prev.map(s => s.category === oldName ? { ...s, category: n as SnippetCategory } : s));
+    if (filterCat === oldName) setFilterCat(n);
+    startSave(async () => { await Promise.all(affected.map(s => updateContentSnippet(s.id, { category: n }))); });
   };
+
+  const handleDeleteCat = (cat: string) => {
+    const fallback = categories.find(c => c !== cat) ?? 'general';
+    const affected = snippets.filter(s => s.category === cat);
+    setSnippets(prev => prev.map(s => s.category === cat ? { ...s, category: fallback as SnippetCategory } : s));
+    if (filterCat === cat) setFilterCat('all');
+    setConfirmDeleteCat(null);
+    startSave(async () => { await Promise.all(affected.map(s => updateContentSnippet(s.id, { category: fallback }))); });
+  };
+
+  const handleAddCat = () => {
+    const n = newCatName.trim();
+    setAddingCat(false); setNewCatName('');
+    if (n) handleCreate(n);
+  };
+
+  // ── Column resize ─────────────────────────────────────────────────────────
+
+  const startResize = (side: 'left' | 'mid') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const x0 = e.clientX, w0 = side === 'left' ? leftWidth : midWidth;
+    const [lo, hi] = side === 'left' ? [MIN_LEFT, MAX_LEFT] : [MIN_MID, MAX_MID];
+    const set = side === 'left' ? setLeftWidth : setMidWidth;
+    const mv = (ev: MouseEvent) => set(Math.max(lo, Math.min(hi, w0 + ev.clientX - x0)));
+    const up = () => {
+      window.removeEventListener('mousemove', mv);
+      window.removeEventListener('mouseup', up);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', mv);
+    window.addEventListener('mouseup', up);
+  };
+
+  // ── CSV ───────────────────────────────────────────────────────────────────
+
+  const exportCsv = () => {
+    const csv = [['Title', 'Body', 'Category', 'Order'], ...filtered.map(s => [s.title, s.body, s.category, s.sort_order])]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+      download: `snippets-${new Date().toISOString().slice(0, 10)}.csv`,
+    });
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Content Library"
-        subtitle={`${snippets.length} snippet${snippets.length !== 1 ? 's' : ''} — Pre-written content blocks for proposals.`}
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search snippets…"
-        actions={
-          <>
-            <button
-              onClick={handleExportCsv}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1f1f1f] bg-black text-sm text-muted-foreground hover:text-foreground hover:border-[#333] hover:bg-white/5 transition-colors"
-              title="Export as CSV"
-            >
-              <Download size={14} />
-              CSV
-            </button>
-            <button
-              onClick={handleCreate}
-              disabled={creating}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors"
-            >
-              <Plus size={16} />
-              Add Snippet
-            </button>
-          </>
-        }
-        below={
-          <div className="flex items-center gap-1 bg-[#111] rounded-lg p-1 border border-white/[0.08] w-fit">
-            <button
-              onClick={() => setFilterType('all')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                filterType === 'all' ? 'bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              All
-            </button>
-            {SNIPPET_TYPES.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setFilterType(t.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  filterType === t.value ? 'bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        }
+        subtitle={`${filtered.length} snippet${filtered.length !== 1 ? 's' : ''} — Pre-written content blocks for proposals.`}
+        search={search} onSearchChange={setSearch} searchPlaceholder="Search snippets…"
+        actions={<>
+          <button onClick={exportCsv} className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1f1f1f] text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"><Download size={14} />CSV</button>
+          <button onClick={() => handleCreate()} disabled={creating} className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-50"><Plus size={16} />Add Snippet</button>
+        </>}
       />
 
-      {/* Scrollable content */}
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
-        {Object.entries(grouped).length === 0 && (
-          <div className="text-center py-12 text-muted-foreground/40 text-sm">
-            No snippets yet. Click &quot;Add Snippet&quot; to create one.
-          </div>
-        )}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
 
-        {SNIPPET_TYPES.filter((t) => grouped[t.value]).map((type) => {
-          const TypeIcon = type.icon;
-          return (
-            <div key={type.value} className="mb-8">
-              {/* Group header */}
-              {filterType === 'all' && (
-                <div className="flex items-center gap-2.5 mb-3 px-1">
-                  <TypeIcon size={14} className="text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {type.label}
-                  </span>
-                  <span className="text-xs text-muted-foreground/40">
-                    {grouped[type.value].length}
-                  </span>
-                </div>
-              )}
+        {/* ── LEFT sidebar ── */}
+        {!focusMode && (<>
+          <aside className="flex-shrink-0 flex flex-col" style={{ width: leftWidth }}>
+            <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar py-3">
 
-              <div className="space-y-3">
-                {grouped[type.value].map((s) => {
-                  const isActive = activeId === s.id;
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => setActiveId(s.id)}
-                      className={`rounded-xl p-5 space-y-4 transition-colors cursor-pointer ${
-                        isActive
-                          ? 'border border-white/20 bg-[#151515]'
-                          : 'border border-border/40 bg-[#111]'
-                      }`}
-                    >
-                      {/* Title */}
+              <button onClick={() => setFilterCat('all')} className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${filterCat === 'all' ? `${SEL} text-foreground` : `text-muted-foreground ${HOV} hover:text-foreground`}`}>
+                <span className="flex items-center gap-2.5 min-w-0 truncate"><FolderOpen size={13} className="flex-shrink-0" />All</span>
+                <span className="text-xs text-white/30 flex-shrink-0 ml-1">{snippets.length}</span>
+              </button>
+
+              {categories.length > 0 && <div className="my-2 mx-4 border-t border-white/[0.06]" />}
+
+              {categories.map(cat => {
+                const isActive  = filterCat === cat;
+                const isEditing = editingCat === cat;
+                const count     = snippets.filter(s => s.category === cat).length;
+                return (
+                  <div
+                    key={cat}
+                    className={`group flex items-center gap-1 px-4 py-2 transition-colors cursor-pointer ${isActive ? SEL : HOV}`}
+                    onClick={() => !isEditing && setFilterCat(cat)}
+                  >
+                    {isEditing ? (
                       <input
-                        type="text"
-                        value={s.title}
-                        onChange={(e) => handleChange(s.id, 'title', e.target.value)}
-                        placeholder="Snippet title…"
-                        className="w-full text-base font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/30 focus:ring-0"
-                      />
-
-                      {/* Body */}
-                      <textarea
-                        value={s.body}
-                        onChange={(e) => {
-                          handleChange(s.id, 'body', e.target.value);
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
+                        autoFocus
+                        value={editingCatVal}
+                        onChange={e => setEditingCatVal(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter')  handleRename(cat, editingCatVal);
+                          if (e.key === 'Escape') setEditingCat(null);
                         }}
-                        ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
-                        placeholder="Snippet content…"
-                        className="w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none overflow-hidden"
+                        onBlur={() => handleRename(cat, editingCatVal)}
+                        onClick={e => e.stopPropagation()}
+                        className="flex-1 min-w-0 text-sm bg-transparent border-b border-white/30 outline-none text-foreground pb-0.5"
                       />
-
-                      {/* Metadata row */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                            <FileText size={12} /> Type
-                          </label>
-                          <select
-                            value={s.snippet_type}
-                            onChange={(e) => handleChange(s.id, 'snippet_type', e.target.value)}
-                            className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20"
-                          >
-                            {SNIPPET_TYPES.map((t) => (
-                              <option key={t.value} value={t.value}>{t.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                            <Tag size={12} /> Category
-                          </label>
-                          <select
-                            value={s.category}
-                            onChange={(e) => handleChange(s.id, 'category', e.target.value)}
-                            className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20"
-                          >
-                            {SNIPPET_CATEGORIES.map((c) => (
-                              <option key={c.value} value={c.value}>{c.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                            <ArrowUpDown size={12} /> Order
-                          </label>
-                          <input
-                            type="number"
-                            value={s.sort_order}
-                            onChange={(e) => handleChange(s.id, 'sort_order', parseInt(e.target.value) || 0)}
-                            className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20"
-                          />
-                        </div>
+                    ) : (
+                      <span className={`flex-1 min-w-0 text-sm truncate ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{cat}</span>
+                    )}
+                    {!isEditing && <>
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <button onClick={e => { e.stopPropagation(); setEditingCat(cat); setEditingCatVal(cat); }} className="p-0.5 rounded text-white/30 hover:text-white/70 transition-colors"><Pencil size={11} /></button>
+                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteCat(cat); }} className="p-0.5 rounded text-white/30 hover:text-red-400 transition-colors"><Trash2 size={11} /></button>
                       </div>
+                      <span className="text-xs text-white/30 flex-shrink-0">{count}</span>
+                    </>}
+                  </div>
+                );
+              })}
+            </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/20">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(s.id); }}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSave(s); }}
-                          disabled={saving}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium transition-colors disabled:opacity-50"
-                        >
-                          {saving && savedId !== s.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : savedId === s.id ? (
-                            <Check size={14} className="text-green-400" />
-                          ) : (
-                            <Save size={14} />
-                          )}
-                          {savedId === s.id ? 'Saved' : 'Save'}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="flex-shrink-0 border-t border-white/[0.06] p-3">
+              {addingCat ? (
+                <input
+                  autoFocus
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter')  handleAddCat();
+                    if (e.key === 'Escape') { setAddingCat(false); setNewCatName(''); }
+                  }}
+                  onBlur={handleAddCat}
+                  placeholder="Category name…"
+                  className="w-full text-xs bg-transparent border-b border-white/30 outline-none text-foreground placeholder:text-white/20 pb-0.5"
+                />
+              ) : (
+                <button onClick={() => setAddingCat(true)} className="w-full flex items-center gap-2 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors py-1"><Plus size={12} />New Category</button>
+              )}
+            </div>
+          </aside>
+
+          <div onMouseDown={startResize('left')} className="w-px flex-shrink-0 bg-white/[0.08] cursor-col-resize hover:bg-white/20 active:bg-white/30 transition-colors" />
+        </>)}
+
+        {/* ── MIDDLE list ── */}
+        {!focusMode && (<>
+          <div className="flex-shrink-0 flex flex-col" style={{ width: midWidth }}>
+            <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
+              {filtered.length === 0 ? (
+                <div className="flex items-center justify-center h-full px-6 text-center">
+                  <p className="text-xs text-muted-foreground/40">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
+                </div>
+              ) : filtered.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setActiveId(s.id)}
+                  className={`w-full text-left px-4 py-3.5 border-b border-white/[0.05] transition-colors ${activeId === s.id ? SEL : HOV}`}
+                >
+                  <div className="text-sm font-medium text-foreground truncate leading-snug">{s.title || <span className="text-white/30 italic">Untitled</span>}</div>
+                  {s.body && <div className="text-xs text-white/35 mt-1 line-clamp-2 leading-relaxed">{stripMd(s.body)}</div>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div onMouseDown={startResize('mid')} className="w-px flex-shrink-0 bg-white/[0.08] cursor-col-resize hover:bg-white/20 active:bg-white/30 transition-colors" />
+        </>)}
+
+        {/* ── RIGHT editor ── */}
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {!active ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-sm text-muted-foreground/30">Select a snippet to edit</p>
+            </div>
+          ) : (<>
+            <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
+              <div className={`flex flex-col ${focusMode ? 'max-w-2xl mx-auto' : 'w-full'}`}>
+
+                <div className="flex items-start">
+                  <input
+                    type="text"
+                    value={active.title}
+                    onChange={e => mutate(active.id, 'title', e.target.value)}
+                    placeholder="Snippet title…"
+                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-foreground placeholder:text-white/20 focus:ring-0"
+                  />
+                  <button
+                    onClick={() => setFocusMode(v => !v)}
+                    title={focusMode ? 'Exit focus mode' : 'Focus mode (hide sidebars)'}
+                    className="mt-[2.1rem] mr-5 p-1.5 rounded text-white/20 hover:text-white/60 transition-colors flex-shrink-0"
+                  >
+                    {focusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  </button>
+                </div>
+
+                <div className="mx-8 border-b border-white/[0.06]" />
+
+                <SnippetEditor
+                  key={activeId}
+                  body={active.body}
+                  onChange={v => mutate(active.id, 'body', v)}
+                />
               </div>
             </div>
-          );
-        })}
+
+            <div className="flex-shrink-0 border-t border-[#1f1f1f] px-8 py-4 flex items-center justify-between gap-4">
+              <select
+                value={active.category}
+                onChange={e => mutate(active.id, 'category', e.target.value)}
+                className="text-xs bg-black/50 border border-white/[0.12] rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-white/20 transition-colors"
+              >
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                {!categories.includes(active.category) && <option value={active.category}>{active.category}</option>}
+              </select>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setConfirmDeleteId(active.id)} title="Delete snippet" className="p-2 rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"><Trash2 size={14} /></button>
+                <button onClick={() => handleSave(active)} disabled={saving} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium transition-colors disabled:opacity-50">
+                  {saving && savedId !== active.id ? <Loader2 size={13} className="animate-spin" /> : savedId === active.id ? <Check size={13} className="text-green-400" /> : <Save size={13} />}
+                  {savedId === active.id ? 'Saved' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </>)}
+        </div>
       </div>
 
-      {/* Delete confirmation modal */}
+      {/* ── Modals ── */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-[#111] border border-border/40 rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
             <h3 className="font-medium">Delete snippet?</h3>
             <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
             <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-5 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDeleteId)}
-                className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
+              <button onClick={() => setConfirmDeleteId(null)} className="px-5 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={() => handleDelete(confirmDeleteId)} className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteCat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#111] border border-border/40 rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
+            <h3 className="font-medium">Delete &ldquo;{confirmDeleteCat}&rdquo;?</h3>
+            <p className="text-sm text-muted-foreground">
+              {(() => {
+                const n  = snippets.filter(s => s.category === confirmDeleteCat).length;
+                const fb = categories.find(c => c !== confirmDeleteCat) ?? 'general';
+                return n > 0 ? `${n} snippet${n !== 1 ? 's' : ''} will be moved to "${fb}".` : 'This category is empty.';
+              })()}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDeleteCat(null)} className="px-5 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={() => handleDeleteCat(confirmDeleteCat)} className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
             </div>
           </div>
         </div>

@@ -8,6 +8,8 @@ interface Props {
   subtitle?: string;
   /** Optional content rendered before the title (e.g. a back button) */
   leftContent?: ReactNode;
+  /** Optional content on the left side of the controls row (below title) */
+  leftActions?: ReactNode;
   /** Search input state */
   search?: string;
   onSearchChange?: (value: string) => void;
@@ -22,42 +24,48 @@ export function AdminPageHeader({
   title,
   subtitle,
   leftContent,
+  leftActions,
   search,
   onSearchChange,
   searchPlaceholder = 'Search…',
   actions,
   below,
 }: Props) {
+  const hasControls = leftActions !== undefined || onSearchChange !== undefined || actions;
+
   return (
     <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-white/[0.12]">
-      <div className="flex items-center justify-between min-h-[48px]">
-        <div className="flex items-center gap-4">
-          {leftContent}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-            {/* Reserve subtitle space so header height stays consistent */}
-            <p className={`text-sm mt-1 ${subtitle ? 'text-muted-foreground' : 'text-transparent select-none'}`}>
-              {subtitle || '\u00A0'}
-            </p>
-          </div>
+      {/* Title row */}
+      <div className="flex items-center gap-4">
+        {leftContent}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          {subtitle && (
+            <p className="text-sm mt-1 text-muted-foreground">{subtitle}</p>
+          )}
         </div>
+      </div>
 
-        <div className="flex items-center gap-3">
+      {/* Controls row: leftActions + search + actions */}
+      {hasControls && (
+        <div className="flex items-center gap-3 mt-4">
+          {leftActions && <div className="flex items-center gap-2">{leftActions}</div>}
           {onSearchChange !== undefined && (
-            <div className="relative">
+            <div className="relative flex-1">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
               <input
                 type="text"
                 value={search ?? ''}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-56 rounded-lg border border-[#1f1f1f] bg-black pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30"
+                className="admin-input w-full pl-9 pr-3 py-2.5 text-sm"
               />
             </div>
           )}
-          {actions}
+          {actions && <div className="flex items-center gap-3 ml-auto">{actions}</div>}
         </div>
-      </div>
+      )}
+
       {below && <div className="mt-4">{below}</div>}
     </div>
   );

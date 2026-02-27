@@ -10,14 +10,16 @@ import {
   createContact,
   updateContact,
   deleteContact,
+  type ClientRow,
 } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 
 interface Props {
   initialContacts: ContactRow[];
+  companies: ClientRow[];
 }
 
-export function ContactsManager({ initialContacts }: Props) {
+export function ContactsManager({ initialContacts, companies }: Props) {
   const [contacts, setContacts] = useState(initialContacts);
   const [saving, startSave] = useTransition();
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -40,6 +42,7 @@ export function ContactsManager({ initialContacts }: Props) {
         phone: row.phone,
         role: row.role,
         company: row.company,
+        client_id: row.client_id ?? null,
         notes: row.notes,
       });
       setSavedId(row.id);
@@ -62,6 +65,7 @@ export function ContactsManager({ initialContacts }: Props) {
           phone: null,
           role: null,
           company: null,
+          client_id: null,
           notes: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -128,7 +132,7 @@ export function ContactsManager({ initialContacts }: Props) {
           <>
             <button
               onClick={handleExportCsv}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1f1f1f] bg-black text-sm text-muted-foreground hover:text-foreground hover:border-[#333] hover:bg-white/5 transition-colors"
+              className="btn-secondary px-4 py-2.5 text-sm"
               title="Export as CSV"
             >
               <Download size={14} />
@@ -137,7 +141,7 @@ export function ContactsManager({ initialContacts }: Props) {
             <button
               onClick={handleCreate}
               disabled={creating}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors"
+              className="btn-primary px-5 py-2.5 text-sm"
             >
               <Plus size={16} />
               Add Contact
@@ -184,13 +188,21 @@ export function ContactsManager({ initialContacts }: Props) {
                     <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                       <Building2 size={12} /> Company
                     </label>
-                    <input
-                      type="text"
-                      value={c.company ?? ''}
-                      onChange={(e) => handleChange(c.id, 'company', e.target.value || null)}
-                      placeholder="Acme Corp"
-                      className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
-                    />
+                    <select
+                      value={c.client_id ?? ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value || null;
+                        const selectedCompany = companies.find((co) => co.id === selectedId);
+                        handleChange(c.id, 'client_id', selectedId);
+                        handleChange(c.id, 'company', selectedCompany?.name ?? null);
+                      }}
+                      className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20"
+                    >
+                      <option value="">None</option>
+                      {companies.map((co) => (
+                        <option key={co.id} value={co.id}>{co.name}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

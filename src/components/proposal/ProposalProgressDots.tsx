@@ -158,7 +158,7 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
 
       {/* Desktop icon-based dots bar — hidden on mobile */}
       <div ref={barRef} className="fixed bottom-7 left-1/2 -translate-x-1/2 z-[200] hidden sm:flex flex-row items-center">
-        <div className="flex flex-row items-center gap-3 bg-white/[0.12] border border-white/[0.18] rounded-xl px-4 py-2.5 backdrop-blur-lg" style={{ transform: 'scale(0.9)', transformOrigin: 'center bottom' }}>
+        <div className="flex flex-row items-center gap-3 bg-white/[0.08] border border-white/[0.14] rounded-xl px-4 py-2.5 backdrop-blur-lg" style={{ transform: 'scale(0.9)', transformOrigin: 'center bottom' }}>
           {Array.from({ length: slideCount }).map((_, i) => {
             const Icon = getIcon(i);
             const isActive = i === activeIndex;

@@ -279,6 +279,9 @@ export type ClientRow = {
   email: string;
   notes: string | null;
   logo_url: string | null;
+  company_types: string[];
+  status: string;
+  pipeline_stage: string;
   created_at: string;
 };
 
@@ -306,7 +309,7 @@ export async function createClientRecord(data: {
     .select('id')
     .single();
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/clients');
+  revalidatePath('/admin/companies');
   return (row as { id: string }).id;
 }
 
@@ -317,14 +320,14 @@ export async function updateClientRecord(id: string, data: Record<string, unknow
     .update(data as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/clients');
+  revalidatePath('/admin/companies');
 }
 
 export async function deleteClientRecord(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('clients').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/clients');
+  revalidatePath('/admin/companies');
 }
 
 // ── Content Snippets ────────────────────────────────────────────────────
@@ -803,26 +806,220 @@ export async function getTagSuggestions(): Promise<{
   assets_delivered: string[];
 }> {
   const { supabase } = await requireAuth();
-  const { data } = await supabase
-    .from('projects')
-    .select('style_tags, premium_addons, camera_techniques, assets_delivered');
-
-  type TagRow = { style_tags: string[] | null; premium_addons: string[] | null; camera_techniques: string[] | null; assets_delivered: string[] | null };
-  const rows = (data ?? []) as TagRow[];
-
-  const collect = (field: keyof TagRow) => {
-    const set = new Set<string>();
-    for (const row of rows) {
-      const arr = row[field];
-      if (Array.isArray(arr)) arr.forEach((t) => set.add(t));
-    }
-    return Array.from(set).sort();
-  };
-
+  const { data } = await supabase.from('tags').select('name, category').order('name');
+  const rows = (data ?? []) as Array<{ name: string; category: string }>;
   return {
-    style_tags: collect('style_tags'),
-    premium_addons: collect('premium_addons'),
-    camera_techniques: collect('camera_techniques'),
-    assets_delivered: collect('assets_delivered'),
+    style_tags: rows.filter((t) => t.category === 'style').map((t) => t.name),
+    premium_addons: rows.filter((t) => t.category === 'addon').map((t) => t.name),
+    camera_techniques: rows.filter((t) => t.category === 'technique').map((t) => t.name),
+    assets_delivered: rows.filter((t) => t.category === 'deliverable').map((t) => t.name),
   };
+}
+
+// ── Tag CRUD ──────────────────────────────────────────────────────────────
+
+type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable';
+
+const CATEGORY_COLUMN: Record<TagCategory, string> = {
+  style: 'style_tags',
+  technique: 'camera_techniques',
+  addon: 'premium_addons',
+  deliverable: 'assets_delivered',
+};
+
+export type TagWithCount = {
+  id: string;
+  name: string;
+  category: TagCategory;
+  color: string | null;
+  projectCount: number;
+};
+
+type TagRow = { id: string; name: string; category: string; color: string | null };
+type ProjTagRow = { id: string; style_tags: string[] | null; premium_addons: string[] | null; camera_techniques: string[] | null; assets_delivered: string[] | null };
+
+export async function getTags(): Promise<TagWithCount[]> {
+  const { supabase } = await requireAuth();
+  const [{ data: tagsRaw }, { data: projectsRaw }] = await Promise.all([
+    supabase.from('tags').select('*').order('category').order('name'),
+    supabase.from('projects').select('style_tags, premium_addons, camera_techniques, assets_delivered'),
+  ]);
+
+  const tags = (tagsRaw ?? []) as TagRow[];
+  const rows = (projectsRaw ?? []) as Omit<ProjTagRow, 'id'>[];
+
+  const countMap = new Map<string, number>();
+  for (const row of rows) {
+    (row.style_tags ?? []).forEach((t) => countMap.set(`style:${t}`, (countMap.get(`style:${t}`) ?? 0) + 1));
+    (row.premium_addons ?? []).forEach((t) => countMap.set(`addon:${t}`, (countMap.get(`addon:${t}`) ?? 0) + 1));
+    (row.camera_techniques ?? []).forEach((t) => countMap.set(`technique:${t}`, (countMap.get(`technique:${t}`) ?? 0) + 1));
+    (row.assets_delivered ?? []).forEach((t) => countMap.set(`deliverable:${t}`, (countMap.get(`deliverable:${t}`) ?? 0) + 1));
+  }
+
+  return tags.map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+    category: tag.category as TagCategory,
+    color: tag.color,
+    projectCount: countMap.get(`${tag.category}:${tag.name}`) ?? 0,
+  }));
+}
+
+export async function createTag(name: string, category: TagCategory) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('tags').insert({ name: name.trim(), category } as never);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/tags');
+  revalidatePath('/admin/projects');
+}
+
+export async function renameTag(id: string, newName: string) {
+  const { supabase } = await requireAuth();
+  const { data: tagRaw } = await supabase.from('tags').select('name, category').eq('id', id).single();
+  const tag = tagRaw as { name: string; category: string } | null;
+  if (!tag) throw new Error('Tag not found');
+
+  const col = CATEGORY_COLUMN[tag.category as TagCategory];
+  const oldName = tag.name;
+  const trimmed = newName.trim();
+
+  const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [oldName]);
+  const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+  if (affected.length > 0) {
+    await Promise.all(
+      affected.map((p) => {
+        const arr = ((p[col] as string[]) ?? []).map((t) => (t === oldName ? trimmed : t));
+        return supabase.from('projects').update({ [col]: arr } as never).eq('id', p.id as string);
+      })
+    );
+  }
+
+  const { error } = await supabase.from('tags').update({ name: trimmed } as never).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/tags');
+  revalidatePath('/work');
+  revalidatePath('/');
+}
+
+export async function deleteTag(id: string) {
+  const { supabase } = await requireAuth();
+  const { data: tagRaw } = await supabase.from('tags').select('name, category').eq('id', id).single();
+  const tag = tagRaw as { name: string; category: string } | null;
+  if (!tag) throw new Error('Tag not found');
+
+  const col = CATEGORY_COLUMN[tag.category as TagCategory];
+
+  const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [tag.name]);
+  const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+  if (affected.length > 0) {
+    await Promise.all(
+      affected.map((p) => {
+        const arr = ((p[col] as string[]) ?? []).filter((t) => t !== tag.name);
+        return supabase.from('projects').update({ [col]: arr.length > 0 ? arr : null } as never).eq('id', p.id as string);
+      })
+    );
+  }
+
+  const { error } = await supabase.from('tags').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/tags');
+  revalidatePath('/work');
+  revalidatePath('/');
+}
+
+export async function mergeTags(sourceIds: string[], targetId: string) {
+  const { supabase } = await requireAuth();
+  const { data: targetRaw } = await supabase.from('tags').select('name, category').eq('id', targetId).single();
+  const target = targetRaw as { name: string; category: string } | null;
+  if (!target) throw new Error('Target tag not found');
+
+  const col = CATEGORY_COLUMN[target.category as TagCategory];
+
+  for (const sourceId of sourceIds) {
+    if (sourceId === targetId) continue;
+    const { data: sourceRaw } = await supabase.from('tags').select('name').eq('id', sourceId).single();
+    const source = sourceRaw as { name: string } | null;
+    if (!source) continue;
+
+    const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [source.name]);
+    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    if (affected.length > 0) {
+      await Promise.all(
+        affected.map((p) => {
+          let arr = (p[col] as string[]) ?? [];
+          if (arr.includes(target.name)) {
+            arr = arr.filter((t) => t !== source.name);
+          } else {
+            arr = arr.map((t) => (t === source.name ? target.name : t));
+          }
+          return supabase.from('projects').update({ [col]: arr } as never).eq('id', p.id as string);
+        })
+      );
+    }
+    await supabase.from('tags').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/tags');
+  revalidatePath('/work');
+  revalidatePath('/');
+}
+
+export async function getProjectsForTag(
+  tagName: string,
+  category: TagCategory
+): Promise<Array<{ id: string; title: string; published: boolean; client_name: string }>> {
+  const { supabase } = await requireAuth();
+  const col = CATEGORY_COLUMN[category];
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, title, published, client_name')
+    .contains(col, [tagName])
+    .order('title');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; title: string; published: boolean; client_name: string }>;
+}
+
+// ── Proposal Projects (samples) ──────────────────────────────────────────
+
+export async function getProposalProjects(proposalId: string): Promise<import('@/types/proposal').ProposalProjectWithProject[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('proposal_projects')
+    .select('id, proposal_id, project_id, section_id, sort_order, blurb, project:projects(id, title, slug, thumbnail_url, style_tags, premium_addons, camera_techniques)')
+    .eq('proposal_id', proposalId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('@/types/proposal').ProposalProjectWithProject[];
+}
+
+export async function reorderProposalProjects(updates: { id: string; sort_order: number }[]): Promise<void> {
+  const { supabase } = await requireAuth();
+  const promises = updates.map(({ id, sort_order }) =>
+    supabase.from('proposal_projects').update({ sort_order } as never).eq('id', id)
+  );
+  const results = await Promise.all(promises);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
+  revalidatePath('/admin/proposals');
+}
+
+export async function updateProposalProjectBlurb(id: string, blurb: string | null): Promise<void> {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposal_projects')
+    .update({ blurb } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+}
+
+export async function getProjectsForBrowser(): Promise<import('@/types/proposal').BrowserProject[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, title, slug, thumbnail_url, style_tags, premium_addons, camera_techniques')
+    .eq('published', true)
+    .order('title');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('@/types/proposal').BrowserProject[];
 }

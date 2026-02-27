@@ -146,7 +146,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
           <>
             <button
               onClick={handleExportCsv}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1f1f1f] bg-black text-sm text-muted-foreground hover:text-foreground hover:border-[#333] hover:bg-white/5 transition-colors"
+              className="btn-secondary px-4 py-2.5 text-sm"
               title="Export filtered list as CSV"
             >
               <Download size={14} />
@@ -155,7 +155,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
             <button
               onClick={handleCreate}
               disabled={creating}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors"
+              className="btn-primary px-5 py-2.5 text-sm"
             >
               <Plus size={16} />
               Add Testimonial

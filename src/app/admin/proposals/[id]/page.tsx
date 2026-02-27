@@ -1,33 +1,53 @@
+import { notFound } from 'next/navigation';
 import {
-  getProposal, getProposalSections, getContentSnippets, getVideoLibrary,
-  getProposalVideos, getProposalQuotes, getProposalMilestones,
+  getProposal,
+  getProposalSections,
+  getProposalMilestones,
+  getProposalQuotes,
+  getContentSnippets,
+  getContacts,
 } from '../../actions';
-import { ProposalBuilderClient } from '../../_components/proposal/ProposalBuilderClient';
+import {
+  getProposalProjects,
+  getProjectsForBrowser,
+} from '../../actions';
+import { ProposalAdminEditor } from '../_components/ProposalAdminEditor';
 
-export const dynamic = 'force-dynamic';
+interface Props {
+  params: Promise<{ id: string }>;
+}
 
-export default async function ProposalBuilderPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProposalEditorPage({ params }: Props) {
   const { id } = await params;
 
-  const [proposal, sections, snippets, videos, proposalVideos, proposalQuotes, milestones] = await Promise.all([
-    getProposal(id),
-    getProposalSections(id),
-    getContentSnippets(),
-    getVideoLibrary(),
-    getProposalVideos(id),
-    getProposalQuotes(id),
-    getProposalMilestones(id),
-  ]);
+  try {
+    const [proposal, sections, milestones, quotesRaw, proposalProjects, snippets, contacts, allProjects] =
+      await Promise.all([
+        getProposal(id),
+        getProposalSections(id),
+        getProposalMilestones(id),
+        getProposalQuotes(id),
+        getProposalProjects(id),
+        getContentSnippets(),
+        getContacts(),
+        getProjectsForBrowser(),
+      ]);
 
-  return (
-    <ProposalBuilderClient
-      proposal={proposal}
-      initialSections={sections}
-      snippets={snippets}
-      videos={videos as never}
-      proposalVideos={proposalVideos as never}
-      proposalQuotes={proposalQuotes}
-      initialMilestones={milestones}
-    />
-  );
+    const quotes = quotesRaw.filter(q => !q.deleted_at);
+
+    return (
+      <ProposalAdminEditor
+        proposal={proposal}
+        contacts={contacts}
+        snippets={snippets}
+        sections={sections}
+        milestones={milestones}
+        quotes={quotes}
+        allProjects={allProjects}
+        proposalProjects={proposalProjects}
+      />
+    );
+  } catch {
+    notFound();
+  }
 }

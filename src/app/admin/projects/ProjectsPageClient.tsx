@@ -27,7 +27,7 @@ export function ProjectsPageClient({ projects, tagSuggestions }: Props) {
           <>
             <button
               onClick={() => exportRef.current?.()}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#1f1f1f] bg-black text-sm text-muted-foreground hover:text-foreground hover:border-[#333] hover:bg-white/5 transition-colors"
+              className="btn-secondary px-4 py-2.5 text-sm"
               title="Export filtered list as CSV"
             >
               <Download size={14} />
@@ -35,7 +35,7 @@ export function ProjectsPageClient({ projects, tagSuggestions }: Props) {
             </button>
             <Link
               href="/admin/projects/new"
-              className="flex items-center gap-2 px-4 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-black hover:text-white border border-white transition-colors"
+              className="btn-primary px-4 py-2.5 text-sm"
             >
               <Plus size={15} />
               New Project
