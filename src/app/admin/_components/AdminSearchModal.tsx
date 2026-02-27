@@ -189,7 +189,7 @@ export function AdminSearchModal({ open, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/70 backdrop-blur-sm"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-xl mx-4 bg-[#111] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-2xl mx-4 bg-[#111] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden">
 
         {/* Input row */}
         <div className="flex items-center gap-3 px-3 py-2 border-b border-white/[0.07]">
@@ -204,19 +204,18 @@ export function AdminSearchModal({ open, onClose }: Props) {
               className="w-full bg-black rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-white/30 outline-none border border-white/[0.08] focus:border-white/20"
             />
           </div>
-          <span className="text-[10px] text-white/20 tracking-wide flex-shrink-0">⌘+K</span>
           <button onClick={onClose} className="flex-shrink-0 text-white/30 hover:text-white/70 transition-colors">
             <X size={14} />
           </button>
         </div>
 
         {/* Type filter pills */}
-        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-white/[0.07] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex items-center gap-0.5 px-2 py-2 border-b border-white/[0.07] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {(['all', ...ALL_TYPES] as const).map((t) => (
             <button
               key={t}
               onClick={() => setActiveType(t)}
-              className={`flex-shrink-0 px-2.5 py-1 rounded-md text-xs transition-colors ${
+              className={`flex-shrink-0 px-3 py-1 rounded-md text-xs transition-colors ${
                 activeType === t
                   ? 'bg-white/10 text-foreground'
                   : 'text-white/40 hover:text-white/70 hover:bg-white/5'
