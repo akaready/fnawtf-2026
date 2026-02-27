@@ -90,7 +90,6 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
   // Company search state
   const [clients, setClients] = useState(initialClients);
-  const [companySearch, setCompanySearch] = useState('');
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newCompanyEmail, setNewCompanyEmail] = useState('');
