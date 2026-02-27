@@ -12,7 +12,6 @@ import {
   updateClientRecord,
   deleteClientRecord,
   updateTestimonial,
-  updateContact,
 } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { PanelDrawer } from './PanelDrawer';
@@ -70,10 +69,10 @@ const TYPE_CONFIG: Record<CompanyType, {
 
 const PIPELINE_STAGES: { value: PipelineStage; label: string; color: string }[] = [
   { value: 'new',         label: 'New',         color: 'text-white/40' },
-  { value: 'qualified',   label: 'Qualified',   color: 'text-sky-400' },
-  { value: 'proposal',    label: 'Proposal',    color: 'text-amber-400' },
+  { value: 'qualified',   label: 'Qualified',   color: 'text-amber-400' },
+  { value: 'proposal',    label: 'Proposal',    color: 'text-sky-400' },
   { value: 'negotiating', label: 'Negotiating', color: 'text-violet-400' },
-  { value: 'closed',      label: 'Closed',      color: 'text-emerald-400' },
+  { value: 'closed',      label: 'Won',         color: 'text-emerald-400' },
 ];
 
 const ALL_TYPES: CompanyType[] = ['client', 'lead', 'partner'];
@@ -120,7 +119,39 @@ export function CompanyPanel({
     }
   }, [company?.id]);
 
-  if (!localCompany) return <PanelDrawer open={false} onClose={onClose} />;
+  // ALL hooks must be declared before any conditional return
+  const handleChange = useCallback((field: string, value: unknown) => {
+    setLocalCompany((prev) => prev ? { ...prev, [field]: value } : prev);
+  }, []);
+
+  const handleLogoDrop = useCallback(async (file: File) => {
+    setLocalCompany((current) => {
+      if (!current) return current;
+      setUploadingId(current.id);
+      const id = current.id;
+      (async () => {
+        try {
+          const supabase = createClient();
+          const ext = file.name.split('.').pop() ?? 'png';
+          const path = `${id}.${ext}`;
+          const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+          if (error) throw error;
+          const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+          setLocalCompany((p) => p ? { ...p, logo_url: publicUrl } : p);
+          await updateClientRecord(id, { logo_url: publicUrl });
+          setSavedId(id);
+          setTimeout(() => setSavedId(null), 2000);
+        } catch (err) {
+          console.error('Logo upload failed:', err);
+        } finally {
+          setUploadingId(null);
+        }
+      })();
+      return current;
+    });
+  }, []);
+
+  if (!localCompany) return <PanelDrawer open={false} onClose={onClose}>{null}</PanelDrawer>;
 
   const companyTypes = (localCompany.company_types ?? []) as CompanyType[];
   const isLead = companyTypes.includes('lead');
@@ -136,10 +167,6 @@ export function CompanyPanel({
     return true;
   });
   const hasLinks = clientProjects.length > 0 || clientTestimonials.length > 0;
-
-  const handleChange = (field: string, value: unknown) => {
-    setLocalCompany((prev) => prev ? { ...prev, [field]: value } : prev);
-  };
 
   const toggleCompanyType = (type: CompanyType) => {
     const types = localCompany.company_types ?? [];
@@ -172,27 +199,6 @@ export function CompanyPanel({
       onClose();
     });
   };
-
-  const handleLogoDrop = useCallback(async (file: File) => {
-    if (!localCompany) return;
-    setUploadingId(localCompany.id);
-    try {
-      const supabase = createClient();
-      const ext = file.name.split('.').pop() ?? 'png';
-      const path = `${localCompany.id}.${ext}`;
-      const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
-      handleChange('logo_url', publicUrl);
-      await updateClientRecord(localCompany.id, { logo_url: publicUrl });
-      setSavedId(localCompany.id);
-      setTimeout(() => setSavedId(null), 2000);
-    } catch (err) {
-      console.error('Logo upload failed:', err);
-    } finally {
-      setUploadingId(null);
-    }
-  }, [localCompany?.id]);
 
   const handleTestimonialSave = async (t: ClientTestimonial) => {
     setSavingTestimonialId(t.id);

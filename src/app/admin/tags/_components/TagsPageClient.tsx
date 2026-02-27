@@ -268,10 +268,13 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
 
           return (
             <React.Fragment key={tag.id}>
-              <div className={`flex items-center gap-3 px-5 py-2.5 group transition-colors ${isSelected ? 'bg-white/[0.03]' : isExpanded ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}>
+              <div
+                onClick={() => tag.projectCount > 0 && !isEditing && !isDeleting && handleToggleExpand(tag)}
+                className={`flex items-center gap-3 px-5 py-2.5 group transition-colors ${tag.projectCount > 0 && !isEditing && !isDeleting ? 'cursor-pointer' : ''} ${isSelected ? 'bg-white/[0.03]' : isExpanded ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}
+              >
                 {/* Checkbox */}
                 <button
-                  onClick={() => onToggleSelect(tag.id)}
+                  onClick={(e) => { e.stopPropagation(); onToggleSelect(tag.id); }}
                   disabled={isPending}
                   className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? 'bg-white border-white' : 'border-white/20 group-hover:border-white/40'}`}
                 >
@@ -297,7 +300,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                     <span className="flex-1 min-w-0 text-sm text-foreground truncate">{tag.name}</span>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <button
-                        onClick={() => { setEditingId(tag.id); setPendingDeleteId(null); }}
+                        onClick={(e) => { e.stopPropagation(); setEditingId(tag.id); setPendingDeleteId(null); }}
                         disabled={isPending}
                         className="p-1 rounded text-muted-foreground/50 hover:text-foreground hover:bg-white/[0.06] transition-colors"
                         title="Rename"
@@ -305,7 +308,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                         <Pencil size={11} />
                       </button>
                       <button
-                        onClick={() => { setPendingDeleteId(tag.id); setEditingId(null); }}
+                        onClick={(e) => { e.stopPropagation(); setPendingDeleteId(tag.id); setEditingId(null); }}
                         disabled={isPending}
                         className="p-1 rounded text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                         title="Delete"
@@ -315,14 +318,10 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                     </div>
                     {/* Project count — clickable if > 0 */}
                     {tag.projectCount > 0 ? (
-                      <button
-                        onClick={() => handleToggleExpand(tag)}
-                        className="flex items-center gap-1 text-xs tabular-nums flex-shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                        title={isExpanded ? 'Hide projects' : 'Show projects'}
-                      >
+                      <span className="flex items-center gap-1 text-xs tabular-nums flex-shrink-0 text-muted-foreground/50">
                         {tag.projectCount}
                         <ChevronRight size={10} className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
-                      </button>
+                      </span>
                     ) : (
                       <span className="text-xs tabular-nums flex-shrink-0 text-muted-foreground/20">0</span>
                     )}
@@ -332,21 +331,21 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
 
               {/* Expanded project list */}
               {isExpanded && (
-                <div className="border-l-2 border-white/[0.06] ml-8 mr-5 mb-1 rounded-sm">
+                <div className="py-2">
                   {isLoadingProjects ? (
-                    <div className="px-3 py-3 text-xs text-muted-foreground/40">Loading…</div>
+                    <div className="px-5 py-3 text-xs text-muted-foreground/40">Loading…</div>
                   ) : cachedProjects && cachedProjects.length > 0 ? (
-                    <div className="divide-y divide-white/[0.04]">
+                    <div>
                       {cachedProjects.map((project) => (
                         <Link
                           key={project.id}
                           href={`/admin/projects/${project.id}`}
-                          className="flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.03] transition-colors group/proj"
+                          className="flex items-center gap-3 px-5 py-1.5 hover:bg-white/[0.03] transition-colors group/proj"
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${project.published ? 'bg-green-500' : 'bg-white/20'}`} />
-                          <span className="text-xs text-muted-foreground/60 flex-shrink-0 truncate max-w-[80px]">{project.client_name}</span>
-                          <span className="text-xs text-foreground/80 flex-1 min-w-0 truncate">{project.title}</span>
-                          <ArrowUpRight size={11} className="flex-shrink-0 text-muted-foreground/30 group-hover/proj:text-muted-foreground transition-colors" />
+                          <span className={`w-4 flex items-center justify-center flex-shrink-0`}><span className={`w-1.5 h-1.5 rounded-full ${project.published ? 'bg-green-500' : 'bg-white/20'}`} /></span>
+                          <span className="text-xs text-foreground/80 flex-shrink-0 truncate max-w-[200px]">{project.title}</span>
+                          <span className="text-xs text-muted-foreground/60 flex-1 min-w-0 truncate">{project.client_name}</span>
+                          <span className="flex-shrink-0 w-8 flex justify-center"><ArrowUpRight size={11} className="text-muted-foreground/30 group-hover/proj:text-muted-foreground transition-colors" /></span>
                         </Link>
                       ))}
                     </div>

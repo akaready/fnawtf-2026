@@ -1,72 +1,79 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface Props {
   title: string;
   subtitle?: string;
   /** Optional content rendered before the title (e.g. a back button) */
   leftContent?: ReactNode;
-  /** Optional content on the left side of the controls row (below title) */
-  leftActions?: ReactNode;
-  /** Search input state */
+  /** Optional breadcrumb/nav link rendered above the title row; reduces top padding to compensate */
+  topContent?: ReactNode;
+  /** Optional content rendered on the right side of the title row */
+  rightContent?: ReactNode;
+  /** Inline search state — renders a search bar in the title row */
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  /** Buttons / controls rendered on the right side */
+  /** Action buttons rendered after the search bar in the title row */
   actions?: ReactNode;
-  /** Extra content rendered below the title row (e.g. filter pills) */
-  below?: ReactNode;
 }
 
 export function AdminPageHeader({
   title,
   subtitle,
   leftContent,
-  leftActions,
+  topContent,
+  rightContent,
   search,
   onSearchChange,
   searchPlaceholder = 'Search…',
   actions,
-  below,
 }: Props) {
-  const hasControls = leftActions !== undefined || onSearchChange !== undefined || actions;
+  const hasInlineControls = onSearchChange !== undefined || actions || rightContent;
 
   return (
-    <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-white/[0.12]">
+    <div className={`flex-shrink-0 px-8 pb-4 border-b border-white/[0.12] ${topContent ? 'pt-5' : 'pt-[45px]'}`}>
+      {/* Breadcrumb row */}
+      {topContent && <div className="mb-3">{topContent}</div>}
+
       {/* Title row */}
       <div className="flex items-center gap-4">
         {leftContent}
-        <div>
+        <div className="flex-shrink-0">
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           {subtitle && (
             <p className="text-sm mt-1 text-muted-foreground">{subtitle}</p>
           )}
         </div>
+        {hasInlineControls && (
+          <div className="flex-1 flex items-center justify-end gap-3 ml-auto min-w-0">
+            {onSearchChange !== undefined && (
+              <div className="relative w-64">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+                <input
+                  type="text"
+                  value={search ?? ''}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="admin-input w-full pl-9 pr-9 py-1.5 text-sm"
+                />
+                {search && (
+                  <button
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+            {rightContent}
+            {actions && <div className="flex items-center gap-2 flex-shrink-0 [&_button]:py-1.5 [&_a]:py-1.5">{actions}</div>}
+          </div>
+        )}
       </div>
-
-      {/* Controls row: leftActions + search + actions */}
-      {hasControls && (
-        <div className="flex items-center gap-3 mt-4">
-          {leftActions && <div className="flex items-center gap-2">{leftActions}</div>}
-          {onSearchChange !== undefined && (
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
-              <input
-                type="text"
-                value={search ?? ''}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="admin-input w-full pl-9 pr-3 py-2.5 text-sm"
-              />
-            </div>
-          )}
-          {actions && <div className="flex items-center gap-3 ml-auto">{actions}</div>}
-        </div>
-      )}
-
-      {below && <div className="mt-4">{below}</div>}
     </div>
   );
 }

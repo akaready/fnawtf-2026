@@ -120,6 +120,7 @@ export interface BrowserProject {
   title: string;
   slug: string;
   thumbnail_url: string | null;
+  client_name: string | null;
   style_tags: string[] | null;
   premium_addons: string[] | null;
   camera_techniques: string[] | null;

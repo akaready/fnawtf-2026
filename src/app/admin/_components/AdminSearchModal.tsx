@@ -42,7 +42,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, name, notes')
         .or(`name.ilike.${like},notes.ilike.${like}`)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.name, secondary: r.notes ?? undefined, href: '/admin/companies',
       }));
     }
@@ -52,7 +52,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, name, email, company, role')
         .or(`name.ilike.${like},email.ilike.${like},company.ilike.${like},role.ilike.${like}`)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.name,
         secondary: [r.role, r.company].filter(Boolean).join(' · ') || r.email || undefined,
         href: '/admin/contacts',
@@ -64,7 +64,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, title, client_name')
         .or(`title.ilike.${like},client_name.ilike.${like}`)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.title, secondary: r.client_name ?? undefined, href: '/admin/projects',
       }));
     }
@@ -74,7 +74,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, name, category')
         .ilike('name', like)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.name, secondary: r.category ?? undefined, href: '/admin/tags',
       }));
     }
@@ -84,7 +84,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, person_name, company, quote')
         .or(`person_name.ilike.${like},company.ilike.${like},quote.ilike.${like}`)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.person_name,
         secondary: r.company ?? (r.quote ? `"${r.quote.slice(0, 60)}…"` : undefined),
         href: '/admin/testimonials',
@@ -96,7 +96,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, title, contact_name, contact_company')
         .or(`title.ilike.${like},contact_name.ilike.${like},contact_company.ilike.${like}`)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.title,
         secondary: [r.contact_name, r.contact_company].filter(Boolean).join(' · ') || undefined,
         href: `/admin/proposals/${r.id}`,
@@ -108,7 +108,7 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         .select('id, title, category')
         .ilike('title', like)
         .limit(5);
-      return (data ?? []).map((r) => ({
+      return ((data ?? []) as any[]).map((r) => ({
         id: r.id, type, primary: r.title, secondary: r.category ?? undefined, href: '/admin/snippets',
       }));
     }

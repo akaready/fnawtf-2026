@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Plus, ExternalLink, Trash2 } from 'lucide-react';
 import { deleteProposal } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
+import {
+  AdminTable,
+  AdminDeleteModal,
+  StatusBadge,
+  relativeTime,
+  type ColumnDef,
+  type RowAction,
+} from '@/app/admin/_components/AdminTable';
 import type { ProposalRow, ProposalStatus } from '@/types/proposal';
 
 interface ProposalListClientProps {
@@ -20,13 +28,6 @@ const STATUS_TABS: { value: ProposalStatus | 'all'; label: string }[] = [
   { value: 'accepted', label: 'Accepted' },
 ];
 
-const STATUS_BADGE: Record<ProposalStatus, string> = {
-  draft: 'bg-white/10 text-white/50',
-  sent: 'bg-blue-500/20 text-blue-300',
-  viewed: 'bg-yellow-500/20 text-yellow-300',
-  accepted: 'bg-green-500/20 text-green-300',
-};
-
 const TYPE_LABELS: Record<string, string> = {
   build: 'Build',
   launch: 'Launch',
@@ -34,20 +35,6 @@ const TYPE_LABELS: Record<string, string> = {
   'build-launch': 'Build + Launch',
   fundraising: 'Fundraising',
 };
-
-function relativeTime(isoString: string | null): string {
-  if (!isoString) return '—';
-  const diff = Date.now() - new Date(isoString).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-}
 
 export function ProposalListClient({ proposals: initialProposals, viewCounts }: ProposalListClientProps) {
   const router = useRouter();
@@ -81,11 +68,78 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     }
   };
 
+  const columns: ColumnDef<ProposalRow>[] = [
+    {
+      key: 'proposal_number',
+      label: '#',
+      width: 'w-12',
+      render: (row) => (
+        <span className="text-white/25 font-mono text-xs">{row.proposal_number}</span>
+      ),
+    },
+    {
+      key: 'contact_company',
+      label: 'Company',
+      sortable: true,
+      render: (row) => <span className="font-medium text-white">{row.contact_company}</span>,
+    },
+    {
+      key: 'contact_name',
+      label: 'Contact',
+      render: (row) => <span className="text-white/60">{row.contact_name}</span>,
+    },
+    {
+      key: 'proposal_type',
+      label: 'Type',
+      render: (row) => (
+        <span className="text-white/50 text-xs">
+          {TYPE_LABELS[row.proposal_type] ?? row.proposal_type}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => <StatusBadge value={row.status} />,
+    },
+    {
+      key: '_activity',
+      label: 'Activity',
+      width: 'w-36',
+      render: (row) => {
+        const vc = viewCounts[row.id];
+        if (!vc?.views) return <span className="text-white/20 text-xs">—</span>;
+        return (
+          <span className="text-white/40 text-xs font-mono whitespace-nowrap">
+            {vc.views} view{vc.views !== 1 ? 's' : ''} · {relativeTime(vc.lastViewed)}
+          </span>
+        );
+      },
+    },
+  ];
+
+  const rowActions: RowAction<ProposalRow>[] = [
+    {
+      icon: <ExternalLink size={13} />,
+      label: 'View proposal',
+      onClick: (row, e) => {
+        e.stopPropagation();
+        window.open(`/p/${row.slug}`, '_blank');
+      },
+    },
+    {
+      icon: <Trash2 size={13} />,
+      label: 'Delete proposal',
+      variant: 'danger',
+      onClick: (row) => setDeleteTarget(row),
+    },
+  ];
+
   return (
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Proposals"
-        subtitle="Manage and send client proposals."
+        subtitle={`${proposals.length} total`}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search proposals…"
@@ -101,12 +155,12 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       />
 
       {/* Status filter bar */}
-      <div className="flex-shrink-0 flex items-center gap-1 px-8 py-3 border-b border-white/[0.08]">
+      <div className="flex-shrink-0 flex items-center gap-1 px-8 py-2 border-b border-white/[0.12]">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => setStatusFilter(tab.value)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === tab.value
                 ? 'bg-white/10 text-white'
                 : 'text-white/40 hover:text-white/70 hover:bg-white/5'
@@ -120,132 +174,43 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             )}
           </button>
         ))}
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-white/30">
-            <p className="text-sm">
-              {search || statusFilter !== 'all' ? 'No proposals match your filters.' : 'No proposals yet.'}
-            </p>
-            {!search && statusFilter === 'all' && (
-              <button
-                onClick={() => router.push('/admin/proposals/new')}
-                className="flex items-center gap-2 text-xs text-white/50 hover:text-white transition-colors"
-              >
-                <Plus size={12} /> Create your first proposal
-              </button>
-            )}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-black z-10">
-              <tr className="border-b border-white/[0.08]">
-                <th className="px-8 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest w-12">#</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest">Company</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest w-16">Views</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest">Last Viewed</th>
-                <th className="px-4 py-3 text-left text-xs font-mono text-white/25 uppercase tracking-widest w-20">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((proposal) => {
-                const vc = viewCounts[proposal.id];
-                return (
-                  <tr
-                    key={proposal.id}
-                    onClick={() => router.push(`/admin/proposals/${proposal.id}?tab=details`)}
-                    className="border-b border-white/[0.05] hover:bg-white/[0.03] cursor-pointer transition-colors group"
-                  >
-                    <td className="px-8 py-3.5 text-white/25 font-mono text-xs">
-                      {proposal.proposal_number}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="font-medium text-white">{proposal.contact_company}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-white/60">{proposal.contact_name}</td>
-                    <td className="px-4 py-3.5 text-white/50 text-xs">
-                      {TYPE_LABELS[proposal.proposal_type] ?? proposal.proposal_type}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_BADGE[proposal.status]}`}
-                      >
-                        {proposal.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-white/40 text-xs font-mono">
-                      {vc?.views ?? 0}
-                    </td>
-                    <td className="px-4 py-3.5 text-white/40 text-xs">
-                      {relativeTime(vc?.lastViewed ?? null)}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div
-                        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <a
-                          href={`/p/${proposal.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="View proposal"
-                          className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-                        >
-                          <ExternalLink size={13} />
-                        </a>
-                        <button
-                          onClick={() => setDeleteTarget(proposal)}
-                          title="Delete proposal"
-                          className="p-1.5 rounded text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {(search || statusFilter !== 'all') && filtered.length !== proposals.length && (
+          <span className="ml-auto text-xs text-white/25 font-mono pr-1">
+            {filtered.length} of {proposals.length}
+          </span>
         )}
       </div>
 
-      {/* Delete confirm modal */}
+      <AdminTable
+        data={filtered}
+        columns={columns}
+        rowActions={rowActions}
+        onRowClick={(row) => router.push(`/admin/proposals/${row.id}?tab=details`)}
+        emptyMessage={
+          search || statusFilter !== 'all'
+            ? 'No proposals match your filters.'
+            : 'No proposals yet.'
+        }
+        emptyAction={
+          !search && statusFilter === 'all'
+            ? { label: 'Create your first proposal', onClick: () => router.push('/admin/proposals/new') }
+            : undefined
+        }
+      />
+
       {deleteTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-          onClick={() => !isDeleting && setDeleteTarget(null)}
-        >
-          <div
-            className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-base font-semibold text-white mb-2">Delete proposal?</h3>
-            <p className="text-sm text-white/50 mb-6">
-              <span className="text-white/80">{deleteTarget.contact_company}</span> — this action cannot be undone.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-lg bg-red-500/90 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-40"
-              >
-                {isDeleting ? 'Deleting…' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AdminDeleteModal
+          title="Delete proposal?"
+          description={
+            <>
+              <span className="text-white/80">{deleteTarget.contact_company}</span> — this action
+              cannot be undone.
+            </>
+          }
+          isDeleting={isDeleting}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   );

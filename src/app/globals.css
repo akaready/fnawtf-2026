@@ -72,9 +72,6 @@ html::-webkit-scrollbar {
 .admin-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-.admin-scrollbar-table::-webkit-scrollbar-track {
-  margin-top: 42px; /* push scrollbar track below sticky header row */
-}
 .admin-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 6px;
@@ -94,12 +91,12 @@ html::-webkit-scrollbar {
 @layer components {
   /* Primary: white fill → black on hover */
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-lg border border-white bg-white text-black font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50;
+    @apply inline-flex items-center gap-2 rounded-lg border border-white bg-white text-black font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap;
   }
 
   /* Secondary: ghost with subtle border → bg fill on hover */
   .btn-secondary {
-    @apply inline-flex items-center gap-2 rounded-lg border border-border-subtle text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-40;
+    @apply inline-flex items-center gap-2 rounded-lg border border-border-subtle text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-40 whitespace-nowrap;
   }
 
   /* Danger: used for inline delete confirmations */
@@ -272,6 +269,19 @@ a[data-btn-hover]:hover {
 
 .go-live-cell {
   animation: go-live-pulse 2.2s ease-in-out infinite;
+}
+
+/* Lost lead removal — blaze red, pop, collapse to nothing */
+@keyframes card-remove {
+  0%   { opacity: 1; transform: scale(1);    filter: none; }
+  20%  { opacity: 1; transform: scale(1);    filter: brightness(2.5) saturate(8) hue-rotate(-25deg); }
+  48%  { opacity: 1; transform: scale(1.08); filter: brightness(3.5) saturate(12) hue-rotate(-40deg); }
+  100% { opacity: 0; transform: scale(0);    filter: brightness(1) saturate(1); }
+}
+
+.card-remove {
+  animation: card-remove 0.48s cubic-bezier(0.55, 0, 1, 1) forwards;
+  pointer-events: none;
 }
 
 /* Proposal deck — hide scrollbar cross-browser */

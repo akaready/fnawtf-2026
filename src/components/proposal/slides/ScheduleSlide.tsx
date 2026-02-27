@@ -11,7 +11,7 @@ import {
   parseLocal, ymd, firstOfMonth,
   addMonths, formatDate,
 } from '@/lib/proposal/milestoneColors';
-import { MiniCalendar, getDayInfo, type DragState } from '@/components/proposal/MiniCalendar';
+import { MiniCalendar, type DragState } from '@/components/proposal/MiniCalendar';
 
 interface Props {
   milestones: ProposalMilestoneRow[];

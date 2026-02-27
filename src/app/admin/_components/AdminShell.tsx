@@ -3,7 +3,7 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, Link2 } from 'lucide-react';
+import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, Link2, AppWindow } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
@@ -51,6 +51,7 @@ export function AdminShell({ children }: Props) {
     { href: '/admin/proposals', label: 'Proposals', icon: FileText },
     { href: '/admin/snippets', label: 'Snippets', icon: BookOpen },
     { href: '/admin/seo',      label: 'SEO',      icon: Globe },
+    { href: '/admin/website',  label: 'Website',  icon: AppWindow },
   ];
 
   return (

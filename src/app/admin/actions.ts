@@ -55,17 +55,6 @@ export async function batchSetPublished(ids: string[], published: boolean) {
   revalidatePath('/work');
 }
 
-export async function batchUpdateProjects(ids: string[], data: Record<string, unknown>) {
-  const { supabase, userId } = await requireAuth();
-  const { error } = await supabase
-    .from('projects')
-    .update({ ...data, updated_by: userId, updated_at: new Date().toISOString() } as never)
-    .in('id', ids);
-  if (error) throw new Error(error.message);
-  revalidatePath('/admin/projects');
-  revalidatePath('/work');
-}
-
 export async function batchDeleteProjects(ids: string[]) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('projects').delete().in('id', ids);
@@ -74,20 +63,50 @@ export async function batchDeleteProjects(ids: string[]) {
   revalidatePath('/work');
 }
 
-export async function updateProjectOrder(
-  column: 'home_order' | 'work_order',
-  updates: { id: string; order: number }[]
-) {
+// ── Project Fetchers (for side panel) ─────────────────────────────────────
+
+export async function getProjectById(id: string) {
   const { supabase } = await requireAuth();
-  const promises = updates.map(({ id, order }) =>
-    supabase.from('projects').update({ [column]: order } as never).eq('id', id)
-  );
-  const results = await Promise.all(promises);
-  const failed = results.find((r) => r.error);
-  if (failed?.error) throw new Error(failed.error.message);
-  revalidatePath('/admin/projects');
-  revalidatePath('/');
-  revalidatePath('/work');
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown> & { id: string };
+}
+
+export async function getProjectVideos(projectId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('project_videos')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<Record<string, unknown> & { id: string; bunny_video_id: string; title: string; video_type: 'flagship' | 'cutdown' | 'bts'; sort_order: number }>;
+}
+
+export async function getProjectCredits(projectId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('project_credits')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id?: string; role: string; name: string; sort_order: number }>;
+}
+
+export async function getProjectBTSImages(projectId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('project_bts_images')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id?: string; image_url: string; caption: string | null; sort_order: number }>;
 }
 
 // ── Videos ────────────────────────────────────────────────────────────────
@@ -1017,9 +1036,90 @@ export async function getProjectsForBrowser(): Promise<import('@/types/proposal'
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('projects')
-    .select('id, title, slug, thumbnail_url, style_tags, premium_addons, camera_techniques')
+    .select('id, title, slug, thumbnail_url, client_name, style_tags, premium_addons, camera_techniques')
     .eq('published', true)
+    .order('client_name')
     .order('title');
   if (error) throw new Error(error.message);
   return (data ?? []) as import('@/types/proposal').BrowserProject[];
+}
+
+// ── Website Project Placements ─────────────────────────────────────────────────
+
+import type { PlacementPage, PlacementWithProject } from '@/types/placement';
+
+export async function getPlacementsForPage(page: PlacementPage): Promise<PlacementWithProject[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('website_project_placements')
+    .select('*, project:projects(id, title, slug, thumbnail_url, client_name, published)')
+    .eq('page', page)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as PlacementWithProject[];
+}
+
+export async function addPlacement(input: {
+  project_id: string;
+  page: PlacementPage;
+  sort_order: number;
+  full_width?: boolean;
+}): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('website_project_placements')
+    .insert(input as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePlacements(input.page);
+  return (data as { id: string }).id;
+}
+
+export async function removePlacement(id: string, page: PlacementPage) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('website_project_placements')
+    .delete()
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePlacements(page);
+}
+
+export async function updatePlacement(
+  id: string,
+  data: Partial<{ sort_order: number; full_width: boolean }>,
+  page: PlacementPage,
+) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('website_project_placements')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePlacements(page);
+}
+
+export async function reorderPlacements(
+  updates: { id: string; sort_order: number }[],
+  page: PlacementPage,
+) {
+  const { supabase } = await requireAuth();
+  const promises = updates.map(({ id, sort_order }) =>
+    supabase
+      .from('website_project_placements')
+      .update({ sort_order } as never)
+      .eq('id', id),
+  );
+  const results = await Promise.all(promises);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
+  revalidatePlacements(page);
+}
+
+function revalidatePlacements(page: PlacementPage) {
+  revalidatePath('/admin/website');
+  if (page === 'homepage') revalidatePath('/');
+  else if (page === 'work') revalidatePath('/work');
+  else revalidatePath('/services');
 }

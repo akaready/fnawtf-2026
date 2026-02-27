@@ -1,20 +1,30 @@
 import { createClient } from '@/lib/supabase/server';
-import { getTagSuggestions } from '../actions';
+import { getTagSuggestions, getTestimonials } from '../actions';
 import { ProjectsPageClient } from './ProjectsPageClient';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminProjectsPage() {
   const supabase = await createClient();
-  const [{ data: projects }, tagSuggestions] = await Promise.all([
+  const [{ data: projects }, tagSuggestions, allTestimonials] = await Promise.all([
     supabase.from('projects').select('*').order('updated_at', { ascending: false }),
     getTagSuggestions(),
+    getTestimonials(),
   ]);
+
+  const testimonials = allTestimonials.map((t) => ({
+    id: t.id,
+    quote: t.quote,
+    person_name: t.person_name,
+    project_id: t.project_id,
+    client_id: t.client_id ?? null,
+  }));
 
   return (
     <ProjectsPageClient
       projects={projects ?? []}
       tagSuggestions={tagSuggestions}
+      testimonials={testimonials}
     />
   );
 }

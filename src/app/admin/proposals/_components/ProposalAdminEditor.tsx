@@ -1,12 +1,12 @@
 'use client';
 
-import { Suspense, useState, useTransition } from 'react';
+import React, { Suspense, useState, useTransition, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Home, Hand, GitBranch, Calendar, Play, DollarSign } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Check, Loader2, Save, Send, Home, Hand, GitBranch, Calendar, Play, DollarSign } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { updateProposal } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
+import type { DetailsTabHandle } from './tabs/DetailsTab';
 import { WelcomeTab } from './tabs/WelcomeTab';
 import { ApproachTab } from './tabs/ApproachTab';
 import { TimelineTab } from './tabs/TimelineTab';
@@ -59,6 +59,9 @@ function EditorInner({
   const [sections, setSections] = useState(initialSections);
   const [status, setStatus] = useState(initialProposal.status);
   const [isPublishing, startPublish] = useTransition();
+  const detailsRef = useRef<DetailsTabHandle>(null);
+  const [detailsSaving, setDetailsSaving] = useState(false);
+  const [detailsSaved, setDetailsSaved] = useState(false);
 
   const activeTab = (searchParams.get('tab') as TabId | null) ?? 'details';
   const isLive = status !== 'draft';
@@ -87,61 +90,104 @@ function EditorInner({
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <AdminPageHeader
-        title={proposal.title}
-        subtitle={`/p/${proposal.slug} · #${proposal.proposal_number}`}
-        leftActions={
-          <a href="/admin/proposals" className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors">
-            <ArrowLeft size={16} />
+      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-white/[0.12]">
+
+        {/* Row 1: back button + status indicators */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <a
+            href="/admin/proposals"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] text-sm font-medium text-white/50 hover:text-white transition-all whitespace-nowrap"
+          >
+            <ArrowLeft size={14} />
+            to Proposals
           </a>
-        }
-        actions={
-          <div className="flex items-center gap-4 pl-2">
-            <span className="flex items-center gap-1.5 text-xs text-white/40">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 text-xs text-white/40 whitespace-nowrap">
               <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-400' : 'bg-white/25'}`} />
               {isLive ? 'Live' : 'Draft'}
             </span>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
               {status}
             </span>
+          </div>
+        </div>
+
+        {/* Row 2: title + subtitle (left) | action buttons (right) — buttons wrap below on narrow screens */}
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-3 mt-6">
+          <div className="flex-1 min-w-[240px]">
+            <h1 className="text-2xl font-bold tracking-tight truncate">{proposal.title}</h1>
+            <p className="text-sm mt-1 text-muted-foreground font-mono truncate">
+              /p/{proposal.slug} · #{proposal.proposal_number}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
             <a
               href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary px-4 py-2 text-sm"
+              className="btn-secondary px-4 py-2.5 text-sm"
             >
               <ExternalLink size={13} />
               View
             </a>
+            {activeTab === 'details' && (
+              <button
+                onClick={() => detailsRef.current?.save()}
+                disabled={detailsSaving}
+                className="btn-primary px-5 py-2.5 text-sm"
+              >
+                {detailsSaving ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : detailsSaved ? (
+                  <Check size={14} className="text-green-600" />
+                ) : (
+                  <Save size={14} />
+                )}
+                {detailsSaving ? 'Saving…' : detailsSaved ? 'Saved!' : 'Save Changes'}
+              </button>
+            )}
             <button
               onClick={handlePublish}
               disabled={isPublishing || isLive}
-              className="btn-primary px-5 py-2 text-sm"
+              className="btn-primary px-5 py-2.5 text-sm"
             >
+              {isPublishing ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : isLive ? (
+                <Check size={14} />
+              ) : (
+                <Send size={14} />
+              )}
               {isPublishing ? 'Publishing…' : isLive ? 'Published' : 'Publish'}
             </button>
           </div>
-        }
-      />
+        </div>
+
+      </div>
 
       {/* Tabs */}
-      <div className="flex-shrink-0 px-8 py-3">
-        <nav className="inline-flex gap-1.5 bg-white/[0.04] rounded-xl p-2">
+      <div className="flex-shrink-0 px-8 py-3 border-b border-white/[0.12]">
+        <nav className="inline-flex flex-wrap gap-1.5">
           {TABS.map(tab => {
             const Icon = TAB_ICONS[tab];
             return (
-              <button
-                key={tab}
-                onClick={() => setTab(tab)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
-                  activeTab === tab
-                    ? 'bg-white/10 text-foreground'
-                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground/80'
-                }`}
-              >
-                <Icon size={13} className="flex-shrink-0" />
-                {tab}
-              </button>
+              <React.Fragment key={tab}>
+                <button
+                  onClick={() => setTab(tab)}
+                  title={tab}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+                    activeTab === tab
+                      ? 'bg-white/10 text-foreground'
+                      : 'text-muted-foreground hover:bg-white/5 hover:text-foreground/80'
+                  }`}
+                >
+                  <Icon size={13} className="flex-shrink-0" />
+                  <span className="hidden md:inline">{tab}</span>
+                </button>
+                {tab === 'details' && (
+                  <div className="w-px bg-white/10 mx-0.5 my-1" />
+                )}
+              </React.Fragment>
             );
           })}
         </nav>
@@ -150,7 +196,16 @@ function EditorInner({
       {/* Tab content */}
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
         {activeTab === 'details' && (
-          <DetailsTab proposal={proposal} contacts={contacts} onUpdated={handleUpdated} />
+          <DetailsTab
+            ref={detailsRef}
+            proposal={proposal}
+            contacts={contacts}
+            onUpdated={handleUpdated}
+            onSaveStateChange={(pending, saved) => {
+              setDetailsSaving(pending);
+              setDetailsSaved(saved);
+            }}
+          />
         )}
         {activeTab === 'welcome' && (
           <WelcomeTab

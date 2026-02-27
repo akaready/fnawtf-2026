@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Check, Loader2 } from 'lucide-react';
+import { Search, Loader2, Check, X } from 'lucide-react';
 import type { BrowserProject } from '@/types/proposal';
 
 interface ProjectBrowserProps {
@@ -12,6 +12,18 @@ interface ProjectBrowserProps {
   projectIdToProposalProjectId: Map<string, string>;
 }
 
+const selectCls =
+  'bg-white/[0.04] border border-white/[0.10] rounded-md px-2 py-1.5 text-xs text-white/50 focus:outline-none focus:border-white/20 transition-colors cursor-pointer min-w-0';
+
+function uniqueSorted(projects: BrowserProject[], field: keyof Pick<BrowserProject, 'style_tags' | 'premium_addons' | 'camera_techniques'>): string[] {
+  const set = new Set<string>();
+  for (const p of projects) {
+    const arr = p[field];
+    if (arr) for (const v of arr) set.add(v);
+  }
+  return Array.from(set).sort();
+}
+
 export function ProjectBrowser({
   projects,
   selectedProjectIds,
@@ -20,199 +32,133 @@ export function ProjectBrowser({
   projectIdToProposalProjectId,
 }: ProjectBrowserProps) {
   const [search, setSearch] = useState('');
-  const [activeStyleTags, setActiveStyleTags] = useState<string[]>([]);
-  const [activeTechniques, setActiveTechniques] = useState<string[]>([]);
+  const [styleTag, setStyleTag] = useState('');
+  const [addon, setAddon] = useState('');
+  const [technique, setTechnique] = useState('');
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
 
-  const allStyleTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of projects) {
-      if (p.style_tags) {
-        for (const tag of p.style_tags) set.add(tag);
-      }
-    }
-    return Array.from(set).sort();
-  }, [projects]);
+  const allStyleTags  = useMemo(() => uniqueSorted(projects, 'style_tags'),       [projects]);
+  const allAddons     = useMemo(() => uniqueSorted(projects, 'premium_addons'),    [projects]);
+  const allTechniques = useMemo(() => uniqueSorted(projects, 'camera_techniques'), [projects]);
 
-  const allTechniques = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of projects) {
-      if (p.camera_techniques) {
-        for (const t of p.camera_techniques) set.add(t);
-      }
-    }
-    return Array.from(set).sort();
-  }, [projects]);
-
-  const filteredProjects = useMemo(() => {
+  const filtered = useMemo(() => {
     let result = projects;
-
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      result = result.filter((p) => p.title.toLowerCase().includes(q));
-    }
-
-    if (activeStyleTags.length > 0) {
-      result = result.filter((p) =>
-        activeStyleTags.every((tag) => p.style_tags?.includes(tag))
+      result = result.filter(
+        (p) => p.title.toLowerCase().includes(q) || (p.client_name?.toLowerCase().includes(q) ?? false)
       );
     }
-
-    if (activeTechniques.length > 0) {
-      result = result.filter((p) =>
-        activeTechniques.every((t) => p.camera_techniques?.includes(t))
-      );
-    }
-
+    if (styleTag)  result = result.filter((p) => p.style_tags?.includes(styleTag));
+    if (addon)     result = result.filter((p) => p.premium_addons?.includes(addon));
+    if (technique) result = result.filter((p) => p.camera_techniques?.includes(technique));
     return result;
-  }, [projects, search, activeStyleTags, activeTechniques]);
-
-  const toggleStyleTag = (tag: string) => {
-    setActiveStyleTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const toggleTechnique = (technique: string) => {
-    setActiveTechniques((prev) =>
-      prev.includes(technique)
-        ? prev.filter((t) => t !== technique)
-        : [...prev, technique]
-    );
-  };
+  }, [projects, search, styleTag, addon, technique]);
 
   const handleClick = async (project: BrowserProject) => {
     if (loadingIds.has(project.id)) return;
-
     setLoadingIds((prev) => new Set(prev).add(project.id));
     try {
       if (selectedProjectIds.has(project.id)) {
-        const proposalProjectId = projectIdToProposalProjectId.get(project.id);
-        if (proposalProjectId) {
-          await onRemove(proposalProjectId);
-        }
+        const ppId = projectIdToProposalProjectId.get(project.id);
+        if (ppId) await onRemove(ppId);
       } else {
         await onAdd(project.id);
       }
     } finally {
-      setLoadingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(project.id);
-        return next;
-      });
+      setLoadingIds((prev) => { const n = new Set(prev); n.delete(project.id); return n; });
     }
   };
 
-  const hasPills = allStyleTags.length > 0 || allTechniques.length > 0;
-
   return (
     <div className="flex flex-col h-full">
-      {/* Search bar */}
-      <div className="px-4 pt-4 pb-3 flex-shrink-0">
+
+      {/* Search + filter dropdowns */}
+      <div className="px-3 py-3 border-b border-white/[0.12] space-y-2 flex-shrink-0">
         <div className="relative">
-          <Search
-            size={14}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none"
-          />
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects..."
-            className="w-full bg-white/[0.05] border border-white/[0.08] rounded-md pl-8 pr-3 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
+            placeholder="Search projects…"
+            className="w-full bg-white/[0.04] border border-white/[0.10] rounded-md pl-8 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
           />
+        </div>
+        <div className="flex gap-2">
+          {allStyleTags.length > 0 && (
+            <select value={styleTag} onChange={(e) => setStyleTag(e.target.value)} className={selectCls + ' flex-1'}>
+              <option value="">Style</option>
+              {allStyleTags.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          )}
+          {allAddons.length > 0 && (
+            <select value={addon} onChange={(e) => setAddon(e.target.value)} className={selectCls + ' flex-1'}>
+              <option value="">Scope</option>
+              {allAddons.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          )}
+          {allTechniques.length > 0 && (
+            <select value={technique} onChange={(e) => setTechnique(e.target.value)} className={selectCls + ' flex-1'}>
+              <option value="">Technique</option>
+              {allTechniques.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          )}
         </div>
       </div>
 
-      {/* Filter pills */}
-      {hasPills && (
-        <div className="px-4 pb-3 flex-shrink-0 overflow-x-auto scrollbar-none">
-          <div className="flex gap-1.5 w-max">
-            {allStyleTags.map((tag) => (
-              <button
-                key={`style-${tag}`}
-                onClick={() => toggleStyleTag(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs border transition-colors whitespace-nowrap ${
-                  activeStyleTags.includes(tag)
-                    ? 'border-white/40 text-white bg-white/[0.08]'
-                    : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-            {allStyleTags.length > 0 && allTechniques.length > 0 && (
-              <span className="w-px bg-white/10 mx-0.5 self-stretch" />
-            )}
-            {allTechniques.map((technique) => (
-              <button
-                key={`technique-${technique}`}
-                onClick={() => toggleTechnique(technique)}
-                className={`px-2.5 py-1 rounded-full text-xs border transition-colors whitespace-nowrap ${
-                  activeTechniques.includes(technique)
-                    ? 'border-white/40 text-white bg-white/[0.08]'
-                    : 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
-                }`}
-              >
-                {technique}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Project grid */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {filteredProjects.length === 0 ? (
-          <p className="text-xs text-white/25 text-center pt-8">No projects match your filters.</p>
+      {/* Project list */}
+      <div className="flex-1 overflow-y-auto admin-scrollbar p-2">
+        {filtered.length === 0 ? (
+          <p className="text-center text-xs text-white/20 py-8">No matching projects.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {filteredProjects.map((project) => {
+          <div className="flex flex-col gap-0.5">
+            {filtered.map((project) => {
               const isSelected = selectedProjectIds.has(project.id);
-              const isLoading = loadingIds.has(project.id);
+              const isLoading  = loadingIds.has(project.id);
 
               return (
-                <div
+                <button
                   key={project.id}
                   onClick={() => handleClick(project)}
-                  className={`relative rounded-lg overflow-hidden cursor-pointer hover:ring-1 hover:ring-white/20 transition-all ${
-                    isSelected ? 'ring-2 ring-[var(--accent)]' : ''
+                  disabled={isLoading}
+                  className={`flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition-colors disabled:opacity-50 group/item w-full ${
+                    isSelected ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04]'
                   }`}
                 >
-                  {/* Thumbnail */}
-                  <div className="aspect-video bg-white/[0.06]">
+                  {/* Thumbnail — exactly matches website sidebar: w-9 h-9 square */}
+                  <div className="flex-shrink-0 w-9 h-9 rounded overflow-hidden bg-white/[0.04]">
                     {project.thumbnail_url ? (
-                      <img
-                        src={project.thumbnail_url}
-                        alt={project.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={project.thumbnail_url} alt={project.title} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-white/[0.04]" />
+                      <div className="w-full h-full" />
                     )}
                   </div>
 
-                  {/* Selected overlay */}
-                  {isSelected && !isLoading && (
-                    <div className="absolute inset-0 bg-[var(--accent)]/20 flex items-center justify-center">
-                      <div className="bg-[var(--accent)] rounded-full p-0.5">
-                        <Check size={12} className="text-white" strokeWidth={3} />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Loading overlay */}
-                  {isLoading && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <Loader2 size={16} className="text-white animate-spin" />
-                    </div>
-                  )}
-
-                  {/* Title */}
-                  <div className="px-1.5 py-1.5">
-                    <p className="text-xs text-white/70 truncate leading-tight">{project.title}</p>
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${isSelected ? 'text-white/70' : 'text-white/50'}`}>
+                      {project.title}
+                    </p>
+                    {project.client_name && (
+                      <p className="text-xs text-white/25 truncate">{project.client_name}</p>
+                    )}
                   </div>
-                </div>
+
+                  {/* State indicator */}
+                  {isLoading ? (
+                    <Loader2 size={14} className="text-white/30 animate-spin flex-shrink-0" />
+                  ) : isSelected ? (
+                    <>
+                      <span className="flex-shrink-0 text-green-400/60 group-hover/item:hidden">
+                        <Check size={14} />
+                      </span>
+                      <span className="flex-shrink-0 text-red-400/60 hidden group-hover/item:block">
+                        <X size={14} />
+                      </span>
+                    </>
+                  ) : null}
+                </button>
               );
             })}
           </div>

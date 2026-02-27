@@ -59,22 +59,23 @@ export default async function WorkPage({
   const initialSearchParams = await searchParams;
   const supabase = await createClient();
 
-  const { data: rawProjects, error } = await supabase
-    .from('projects')
-    .select('*, project_videos(bunny_video_id, video_type, sort_order)')
-    .eq('published', true)
-    .eq('hidden_from_work', false)
-    .order('work_order', { ascending: true, nullsFirst: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rawPlacements, error } = await (supabase as any)
+    .from('website_project_placements')
+    .select('sort_order, full_width, project:projects(*, project_videos(bunny_video_id, video_type, sort_order))')
+    .eq('page', 'work')
+    .order('sort_order', { ascending: true });
 
   if (error) {
-    console.error('Error fetching projects:', error.message, error.details, error.hint, error.code);
+    console.error('Error fetching work placements:', error.message, error.details, error.hint, error.code);
   }
 
   type VideoJoin = { bunny_video_id: string; video_type: string; sort_order: number };
-  const allProjects: FeaturedProject[] = ((rawProjects ?? []) as unknown as (FeaturedProject & { project_videos: VideoJoin[] })[]).map((p) => {
+  const allProjects: FeaturedProject[] = ((rawPlacements ?? []) as { sort_order: number; full_width: boolean; project: FeaturedProject & { project_videos: VideoJoin[] } }[]).map((placement) => {
+    const p = placement.project;
     const videos = p.project_videos || [];
     const flagship = videos.find((v) => v.video_type === 'flagship') ?? videos.sort((a, b) => a.sort_order - b.sort_order)[0];
-    return { ...p, flagship_video_id: flagship?.bunny_video_id };
+    return { ...p, fullWidth: placement.full_width, flagship_video_id: flagship?.bunny_video_id };
   });
   const availableTags = extractUniqueTags(allProjects);
 

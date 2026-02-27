@@ -28,21 +28,17 @@ type ProjectRow = Record<string, unknown> & {
   crew_count: number | null;
   talent_count: number | null;
   location_count: number | null;
-  featured: boolean;
   published: boolean;
-  full_width: boolean;
-  hidden_from_work: boolean;
-  featured_services_build: boolean;
-  featured_services_launch: boolean;
-  featured_services_scale: boolean;
-  featured_services_crowdfunding: boolean;
-  featured_services_fundraising: boolean;
 };
 
 interface Props {
   project: ProjectRow | null;
   tagSuggestions?: TagSuggestions;
   testimonials?: TestimonialOption[];
+  onSaved?: () => void;
+  onCreated?: (newId: string) => void;
+  /** Which sections to show: 'project' = core + visibility, 'metadata' = tags + scope + testimonial, undefined = all */
+  visibleSections?: 'project' | 'metadata';
 }
 
 const inputClass =
@@ -102,7 +98,7 @@ function slugify(text: string) {
     .trim();
 }
 
-export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
+export function MetadataTab({ project, tagSuggestions, testimonials, onSaved, onCreated, visibleSections }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -130,15 +126,7 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
     crew_count: project?.crew_count ?? '',
     talent_count: project?.talent_count ?? '',
     location_count: project?.location_count ?? '',
-    featured: project?.featured ?? false,
     published: project?.published ?? false,
-    full_width: project?.full_width ?? false,
-    hidden_from_work: project?.hidden_from_work ?? false,
-    featured_services_build: project?.featured_services_build ?? false,
-    featured_services_launch: project?.featured_services_launch ?? false,
-    featured_services_scale: project?.featured_services_scale ?? false,
-    featured_services_crowdfunding: project?.featured_services_crowdfunding ?? false,
-    featured_services_fundraising: project?.featured_services_fundraising ?? false,
   });
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
@@ -176,6 +164,7 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
           }
 
           setStatus('saved');
+          onSaved?.();
           setTimeout(() => setStatus('idle'), 2500);
         } else {
           const newId = await createProject(data);
@@ -185,7 +174,11 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
             await updateTestimonial(linkedTestimonialId, { project_id: newId });
           }
 
-          router.push(`/admin/projects/${newId}`);
+          if (onCreated) {
+            onCreated(newId);
+          } else {
+            router.push(`/admin/projects/${newId}`);
+          }
         }
       } catch (err) {
         setErrorMsg(err instanceof Error ? err.message : 'Save failed');
@@ -194,10 +187,13 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
     });
   };
 
+  const showProject = !visibleSections || visibleSections === 'project';
+  const showMetadata = !visibleSections || visibleSections === 'metadata';
+
   return (
     <div className="space-y-8">
       {/* Core */}
-      <section className="space-y-4">
+      {showProject && (<section className="space-y-4">
         <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
           Core
         </h3>
@@ -300,78 +296,10 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
             className={`${textareaClass} overflow-hidden`}
           />
         </Field>
-        <Field>
-          <Label>Testimonial</Label>
-          {testimonials && testimonials.length > 0 ? (
-            <div className="space-y-2">
-              <div className="relative">
-                <select
-                  value={linkedTestimonialId}
-                  onChange={(e) => setLinkedTestimonialId(e.target.value)}
-                  className={`${inputClass} appearance-none pr-9 cursor-pointer`}
-                >
-                  <option value="">No testimonial linked</option>
-                  {testimonials
-                    .filter((t) => {
-                      // Show testimonials already linked to this project
-                      if (t.project_id === project?.id) return true;
-                      // Hide testimonials linked to other projects
-                      if (t.project_id) return false;
-                      // Filter by client match if the project has a client_id
-                      if (project?.client_id && t.client_id) return t.client_id === project.client_id;
-                      // Show unlinked testimonials
-                      return true;
-                    })
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.person_name ? `${t.person_name}: ` : ''}&ldquo;{t.quote.slice(0, 60)}{t.quote.length > 60 ? '…' : ''}&rdquo;
-                      </option>
-                    ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
-              </div>
-              {linkedTestimonialId && (
-                <p className="text-xs text-muted-foreground/50 italic">
-                  &ldquo;{testimonials.find((t) => t.id === linkedTestimonialId)?.quote.slice(0, 120)}…&rdquo;
-                </p>
-              )}
-              <p className="text-[10px] text-muted-foreground/40">
-                Manage testimonials in the <a href="/admin/testimonials" className="underline hover:text-foreground">Testimonials</a> section.
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground/40">
-              No testimonials available. <a href="/admin/testimonials" className="underline hover:text-foreground">Create one</a> first.
-            </p>
-          )}
-        </Field>
-      </section>
+      </section>)}
 
-      {/* Media */}
-      <section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
-          Media
-        </h3>
-        <Field>
-          <Label>Thumbnail URL</Label>
-          <input
-            type="url"
-            value={form.thumbnail_url}
-            onChange={(e) => set('thumbnail_url', e.target.value)}
-            placeholder="https://…"
-            className={inputClass}
-          />
-          <p className="text-[10px] text-muted-foreground/50 mt-1">Or use the Thumbnail tab to pick a frame from video</p>
-        </Field>
-        {form.thumbnail_url && (
-          <div className="w-40 h-24 rounded-lg overflow-hidden border border-border/40">
-            <img src={form.thumbnail_url} alt="Thumbnail preview" className="w-full h-full object-cover" />
-          </div>
-        )}
-      </section>
-
-      {/* Tags */}
-      <section className="space-y-4">
+      {/* Tags & Deliverables */}
+      {showMetadata && (<><section className="space-y-4">
         <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
           Tags &amp; Deliverables
         </h3>
@@ -424,32 +352,62 @@ export function MetadataTab({ project, tagSuggestions, testimonials }: Props) {
         </div>
       </section>
 
-      {/* Flags */}
+      {/* Testimonial */}
       <section className="space-y-4">
         <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
-          Display Flags
+          Testimonial
+        </h3>
+        <Field>
+          {testimonials && testimonials.length > 0 ? (
+            <div className="space-y-2">
+              <div className="relative">
+                <select
+                  value={linkedTestimonialId}
+                  onChange={(e) => setLinkedTestimonialId(e.target.value)}
+                  className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+                >
+                  <option value="">No testimonial linked</option>
+                  {testimonials
+                    .filter((t) => {
+                      if (t.project_id === project?.id) return true;
+                      if (t.project_id) return false;
+                      if (project?.client_id && t.client_id) return t.client_id === project.client_id;
+                      return true;
+                    })
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.person_name ? `${t.person_name}: ` : ''}&ldquo;{t.quote.slice(0, 60)}{t.quote.length > 60 ? '…' : ''}&rdquo;
+                      </option>
+                    ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none" />
+              </div>
+              {linkedTestimonialId && (
+                <p className="text-xs text-muted-foreground/50 italic">
+                  &ldquo;{testimonials.find((t) => t.id === linkedTestimonialId)?.quote.slice(0, 120)}…&rdquo;
+                </p>
+              )}
+              <p className="text-[10px] text-muted-foreground/40">
+                Manage testimonials in the <a href="/admin/testimonials" className="underline hover:text-foreground">Testimonials</a> section.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground/40">
+              No testimonials available. <a href="/admin/testimonials" className="underline hover:text-foreground">Create one</a> first.
+            </p>
+          )}
+        </Field>
+      </section></>)}
+
+      {/* Published */}
+      {showProject && (<section className="space-y-4">
+        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
+          Visibility
         </h3>
         <div className="grid grid-cols-2 gap-x-8 gap-y-3">
           <CheckField label="Published" checked={form.published} onChange={(v) => set('published', v)} />
-          <CheckField label="Show on Homepage" checked={form.featured} onChange={(v) => set('featured', v)} />
-          <CheckField label="Full Width" checked={form.full_width} onChange={(v) => set('full_width', v)} />
-          <CheckField label="Hide from Work Page" checked={form.hidden_from_work} onChange={(v) => set('hidden_from_work', v)} />
         </div>
-      </section>
-
-      {/* Services */}
-      <section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-muted-foreground/50 font-medium border-b border-border/30 pb-2">
-          Featured on Services Pages
-        </h3>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-          <CheckField label="Build" checked={form.featured_services_build} onChange={(v) => set('featured_services_build', v)} />
-          <CheckField label="Launch" checked={form.featured_services_launch} onChange={(v) => set('featured_services_launch', v)} />
-          <CheckField label="Scale" checked={form.featured_services_scale} onChange={(v) => set('featured_services_scale', v)} />
-          <CheckField label="Crowdfunding" checked={form.featured_services_crowdfunding} onChange={(v) => set('featured_services_crowdfunding', v)} />
-          <CheckField label="Fundraising" checked={form.featured_services_fundraising} onChange={(v) => set('featured_services_fundraising', v)} />
-        </div>
-      </section>
+      </section>)}
 
       {/* Save */}
       <div className="flex items-center gap-3 pt-2">

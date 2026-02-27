@@ -1,14 +1,19 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { RefreshCw, Check, Loader2, ExternalLink, X } from 'lucide-react';
+import { useState, useTransition, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { RefreshCw, ExternalLink, X } from 'lucide-react';
 import { updateProposal } from '@/app/admin/actions';
 import type { ProposalRow, ContactRow, ProposalType, ProposalStatus } from '@/types/proposal';
+
+export interface DetailsTabHandle {
+  save: () => void;
+}
 
 interface DetailsTabProps {
   proposal: ProposalRow;
   contacts: ContactRow[];
   onUpdated: () => void;
+  onSaveStateChange?: (isPending: boolean, saved: boolean) => void;
 }
 
 function slugify(text: string): string {
@@ -45,7 +50,10 @@ const inputCls =
   'w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-white/20';
 const sectionHeadingCls = 'text-xs font-mono text-white/25 uppercase tracking-widest mb-4';
 
-export function DetailsTab({ proposal, contacts, onUpdated }: DetailsTabProps) {
+export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
+  { proposal, contacts, onUpdated, onSaveStateChange },
+  ref,
+) {
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -95,6 +103,12 @@ export function DetailsTab({ proposal, contacts, onUpdated }: DetailsTabProps) {
       setTimeout(() => setSaved(false), 2500);
     });
   };
+
+  useImperativeHandle(ref, () => ({ save: handleSave }));
+
+  useEffect(() => {
+    onSaveStateChange?.(isPending, saved);
+  }, [isPending, saved]);
 
   return (
     <div className="px-8 py-8">
@@ -259,22 +273,7 @@ export function DetailsTab({ proposal, contacts, onUpdated }: DetailsTabProps) {
         </div>
       </section>
 
-      {/* Save */}
-      <div className="pt-2">
-        <button
-          onClick={handleSave}
-          disabled={isPending}
-          className="btn-primary px-6 py-2.5 text-sm"
-        >
-          {isPending ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : saved ? (
-            <Check size={14} className="text-green-600" />
-          ) : null}
-          {isPending ? 'Saving…' : saved ? 'Saved!' : 'Save Changes'}
-        </button>
-      </div>
     </div>
     </div>
   );
-}
+});

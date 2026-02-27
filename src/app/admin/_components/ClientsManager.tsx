@@ -16,7 +16,6 @@ import {
   type CompanyType,
   TYPE_CONFIG,
   STATUS_CONFIG,
-  ALL_TYPES,
   getCardBorderBg,
 } from './companyUtils';
 

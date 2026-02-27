@@ -11,9 +11,7 @@ export default async function SeoPage() {
         title="SEO Settings"
         subtitle="Manage meta titles, descriptions, and Open Graph data for each page."
       />
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
-        <SeoManager initialSettings={settings} />
-      </div>
+      <SeoManager initialSettings={settings} />
     </div>
   );
 }

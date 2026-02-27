@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import {
   Edit2, Trash2, Eye, EyeOff, CheckSquare, Square, Minus,
   Search, ChevronDown, ChevronUp, SlidersHorizontal, X,
-  Star, StarOff, ArrowUpDown, Filter, Layers, Plus,
-  ChevronRight, GripVertical, Home, Briefcase, Columns,
+  ArrowUpDown, Filter, Layers, Plus,
+  ChevronRight, GripVertical, Columns,
 } from 'lucide-react';
 import {
-  batchSetPublished, batchUpdateProjects, batchDeleteProjects,
-  deleteProject, updateProject, updateProjectOrder,
+  batchSetPublished, batchDeleteProjects,
+  deleteProject, updateProject,
 } from '../actions';
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
@@ -36,17 +36,7 @@ interface ProjectRow {
   crew_count: number | null;
   talent_count: number | null;
   location_count: number | null;
-  featured: boolean;
   published: boolean;
-  full_width: boolean;
-  hidden_from_work: boolean;
-  home_order: number;
-  work_order: number;
-  featured_services_build: boolean;
-  featured_services_launch: boolean;
-  featured_services_scale: boolean;
-  featured_services_crowdfunding: boolean;
-  featured_services_fundraising: boolean;
   client_id: string | null;
   updated_by: string | null;
   created_at: string;
@@ -79,11 +69,6 @@ const COLUMN_DEFS: ColDef[] = [
   { key: 'client_quote', label: 'Quote', sortable: false, defaultVisible: false, type: 'text', maxWidth: 250 },
   { key: 'type', label: 'Type', sortable: true, defaultVisible: true, type: 'select', options: [{ value: 'video', label: 'Video' }, { value: 'design', label: 'Design' }] },
   { key: 'category', label: 'Category', sortable: true, defaultVisible: false, type: 'text' },
-  { key: 'featured', label: 'Homepage', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Homepage', '—'], toggleColors: ['bg-amber-500/10 text-amber-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'full_width', label: 'Full Width', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-purple-500/10 text-purple-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'hidden_from_work', label: 'Hide on /work', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Hidden', '—'], toggleColors: ['bg-red-500/10 text-red-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'home_order', label: 'Home #', sortable: true, defaultVisible: true, type: 'number', group: 'Page Sort' },
-  { key: 'work_order', label: 'Work #', sortable: true, defaultVisible: true, type: 'number', group: 'Page Sort' },
   { key: 'style_tags', label: 'Style', sortable: false, defaultVisible: false, type: 'tags' },
   { key: 'premium_addons', label: 'Add-ons', sortable: false, defaultVisible: false, type: 'tags' },
   { key: 'camera_techniques', label: 'Techniques', sortable: false, defaultVisible: false, type: 'tags' },
@@ -92,11 +77,6 @@ const COLUMN_DEFS: ColDef[] = [
   { key: 'crew_count', label: 'Crew', sortable: true, defaultVisible: false, type: 'number' },
   { key: 'talent_count', label: 'Talent', sortable: true, defaultVisible: false, type: 'number' },
   { key: 'location_count', label: 'Locations', sortable: true, defaultVisible: false, type: 'number' },
-  { key: 'featured_services_build', label: 'Svc: Build', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'featured_services_launch', label: 'Svc: Launch', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'featured_services_scale', label: 'Svc: Scale', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'featured_services_crowdfunding', label: 'Svc: Crowd', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
-  { key: 'featured_services_fundraising', label: 'Svc: Fund', sortable: true, defaultVisible: false, type: 'toggle', toggleLabels: ['Yes', '—'], toggleColors: ['bg-cyan-500/10 text-cyan-400', 'bg-white/5 text-muted-foreground/30'] },
   { key: 'thumbnail_url', label: 'Thumb URL', sortable: false, defaultVisible: false, type: 'text', mono: true },
   { key: 'client_id', label: 'Client ID', sortable: false, defaultVisible: false, type: 'text', mono: true },
   { key: 'updated_by', label: 'Updated By', sortable: false, defaultVisible: false, type: 'text', mono: true },
@@ -163,8 +143,9 @@ function EditableTextCell({
   if (!editing) {
     return (
       <span
+        onClick={(e) => e.stopPropagation()}
         onDoubleClick={() => setEditing(true)}
-        className={`cursor-text hover:bg-white/5 rounded px-1 -mx-1 py-0.5 transition-colors inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
+        className={`cursor-text hover:ring-1 hover:ring-white/15 rounded px-1 -mx-1 py-0.5 transition-all inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
         title={value || 'Double-click to edit'}
       >
         {value || <span className="text-muted-foreground/30 italic">—</span>}
@@ -178,6 +159,7 @@ function EditableTextCell({
       type="text"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
       onBlur={save}
       onKeyDown={(e) => {
         e.stopPropagation();
@@ -225,8 +207,9 @@ function EditableNumberCell({
   if (!editing) {
     return (
       <span
+        onClick={(e) => e.stopPropagation()}
         onDoubleClick={() => setEditing(true)}
-        className="cursor-text hover:bg-white/5 rounded px-1 -mx-1 py-0.5 transition-colors text-muted-foreground tabular-nums"
+        className="cursor-text hover:ring-1 hover:ring-white/15 rounded px-1 -mx-1 py-0.5 transition-all text-muted-foreground tabular-nums"
         title="Double-click to edit"
       >
         {value ?? <span className="text-muted-foreground/30">—</span>}
@@ -240,6 +223,7 @@ function EditableNumberCell({
       type="number"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
       onBlur={save}
       onKeyDown={(e) => {
         e.stopPropagation();
@@ -281,7 +265,7 @@ function ToggleCell({
   };
 
   return (
-    <button onClick={toggle} className="group">
+    <button onClick={(e) => { e.stopPropagation(); toggle(); }} className="group">
       <span
         className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
           value ? colorTrue : colorFalse
@@ -318,7 +302,7 @@ function SelectCell({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
       <select
         value={value}
         onChange={(e) => handleChange(e.target.value)}
@@ -408,7 +392,7 @@ function EditableTagsCell({
 
   if (!editing) {
     return (
-      <div onClick={() => setEditing(true)} className="cursor-pointer min-h-[24px] flex flex-wrap gap-1 w-full">
+      <div onClick={(e) => { e.stopPropagation(); setEditing(true); }} className="cursor-pointer min-h-[24px] flex flex-wrap gap-1 w-full rounded px-1 -mx-1 py-0.5 hover:ring-1 hover:ring-white/15 transition-all">
         {(!tags || tags.length === 0) ? (
           <span className="text-muted-foreground/30 text-xs">—</span>
         ) : tags.map((t) => (
@@ -419,7 +403,7 @@ function EditableTagsCell({
   }
 
   return (
-    <div ref={containerRef} className="relative min-w-[180px]">
+    <div ref={containerRef} className="relative min-w-[180px]" onClick={(e) => e.stopPropagation()}>
       <div className="flex flex-wrap gap-1 items-center border border-border/60 rounded-lg bg-black/60 px-2 py-1">
         {value.map((t) => (
           <span key={t} className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-foreground/80">
@@ -462,16 +446,12 @@ function renderCell(col: ColDef, project: ProjectRow, tagSuggestions?: Record<st
 
   switch (col.type) {
     case 'thumbnail':
-      return (
-        <Link href={`/admin/projects/${project.id}`} className="block">
-          {project.thumbnail_url ? (
-            <div className="w-9 h-6 rounded overflow-hidden bg-white/5 flex-shrink-0 hover:ring-1 hover:ring-white/30 transition-shadow">
-              <img src={project.thumbnail_url} alt="" className="w-full h-full object-cover" />
-            </div>
-          ) : (
-            <div className="w-9 h-6 rounded bg-white/5 flex-shrink-0 hover:ring-1 hover:ring-white/30 transition-shadow" />
-          )}
-        </Link>
+      return project.thumbnail_url ? (
+        <div className="w-9 h-6 rounded overflow-hidden bg-white/5 flex-shrink-0">
+          <img src={project.thumbnail_url} alt="" className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="w-9 h-6 rounded bg-white/5 flex-shrink-0" />
       );
 
     case 'text':
@@ -597,10 +577,10 @@ function ToolbarButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors whitespace-nowrap ${
+      className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
         active
-          ? 'border-accent/40 text-accent bg-accent/5'
-          : 'border-[#1f1f1f] text-muted-foreground hover:text-foreground hover:border-white/20'
+          ? 'bg-accent/10 text-accent'
+          : 'text-white/40 hover:text-white/70 hover:bg-white/5'
       }`}
     >
       <Icon size={14} strokeWidth={1.75} />
@@ -1065,7 +1045,7 @@ function saveTableState(state: PersistedTableState) {
 
 /* ── Main table ─────────────────────────────────────────────────────────── */
 
-export function ProjectsTable({ projects, tagSuggestions, exportRef, search: searchProp, onSearchChange }: { projects: ProjectRow[]; tagSuggestions?: Record<string, string[]>; exportRef?: React.MutableRefObject<(() => void) | null>; search?: string; onSearchChange?: (v: string) => void }) {
+export function ProjectsTable({ projects, tagSuggestions, exportRef, search: searchProp, onSearchChange, onRowClick }: { projects: ProjectRow[]; tagSuggestions?: Record<string, string[]>; exportRef?: React.MutableRefObject<(() => void) | null>; search?: string; onSearchChange?: (v: string) => void; onRowClick?: (project: ProjectRow) => void }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -1082,7 +1062,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [visibleCols, setVisibleCols] = useState<Set<ColumnKey>>(defaultVisibleCols);
   const [openPanel, setOpenPanel] = useState<'sort' | 'filter' | 'group' | 'fields' | null>(null);
-  const [orderMode, setOrderMode] = useState<'home_order' | 'work_order'>('home_order');
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const [colOrder, setColOrder] = useState<string[]>(() => COLUMN_DEFS.map((c) => c.key));
   const [freezeCount, setFreezeCount] = useState(0);
@@ -1133,6 +1112,8 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
 
   const closePanel = useCallback(() => setOpenPanel(null), []);
 
+  const fieldsModified = visibleCols.size < COLUMN_DEFS.length;
+
   /* ── Ordered visible columns ────────────────────────────────────── */
 
   const orderedVisibleCols = useMemo(() => {
@@ -1142,11 +1123,12 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
 
   /* ── Freeze column offsets ────────────────────────────────────────── */
 
-  // The first 2 columns (grip + checkbox) are always frozen.
-  // freezeCount = how many data columns after those are also frozen.
+  // The first column (checkbox) is always frozen.
+  // freezeCount = how many data columns after it are also frozen.
   // All widths are measured from the DOM to avoid gaps.
   const tableRef = useRef<HTMLDivElement>(null);
   const [measuredHeaderWidths, setMeasuredHeaderWidths] = useState<number[]>([]);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   // Measure ALL header column widths from the DOM after render
   const prevMeasuredRef = useRef<string>('');
@@ -1161,26 +1143,26 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       prevMeasuredRef.current = key;
       setMeasuredHeaderWidths(widths);
     }
+    const h = Math.round(headerRow.getBoundingClientRect().height);
+    if (h !== headerHeight) setHeaderHeight(h);
   });
 
   // Get width for a data column (by key)
   const getColWidth = useCallback((key: string) => {
     if (colWidths[key]) return colWidths[key];
-    // Find index in orderedVisibleCols, then offset by 2 (grip + checkbox)
+    // Find index in orderedVisibleCols, then offset by 1 (checkbox)
     const idx = orderedVisibleCols.findIndex((c) => c.key === key);
-    if (idx >= 0 && measuredHeaderWidths[idx + 2]) return measuredHeaderWidths[idx + 2];
+    if (idx >= 0 && measuredHeaderWidths[idx + 1]) return measuredHeaderWidths[idx + 1];
     return 120;
   }, [colWidths, orderedVisibleCols, measuredHeaderWidths]);
 
-  // gripWidth and checkboxWidth from measured DOM (fallback to reasonable defaults)
-  const gripWidth = measuredHeaderWidths[0] ?? 34;
-  const checkboxWidth = measuredHeaderWidths[1] ?? 47;
+  // checkboxWidth from measured DOM (fallback to reasonable default)
+  const checkboxWidth = measuredHeaderWidths[0] ?? 47;
 
   const frozenOffsets = useMemo(() => {
     const offsets: number[] = [];
     let left = 0;
-    // Fixed columns first
-    offsets.push(left); left += gripWidth;
+    // Fixed checkbox column first
     offsets.push(left); left += checkboxWidth;
     // Then frozen data columns
     for (let i = 0; i < freezeCount && i < orderedVisibleCols.length; i++) {
@@ -1188,7 +1170,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       left += getColWidth(orderedVisibleCols[i].key);
     }
     return offsets;
-  }, [freezeCount, orderedVisibleCols, getColWidth, gripWidth, checkboxWidth]);
+  }, [freezeCount, orderedVisibleCols, getColWidth, checkboxWidth]);
 
   const freezeLineLeft = useMemo(() => {
     if (frozenOffsets.length === 0) return 0;
@@ -1263,11 +1245,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
     });
   }, [orderedVisibleCols]);
 
-  /* ── Drag-and-drop state ────────────────────────────────────────── */
-
-  const dragRowId = useRef<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-
   /* ── Derived data ──────────────────────────────────────────────── */
 
   const filtered = useMemo(() => {
@@ -1328,51 +1305,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
     return map;
   }, [filtered, groupField]);
 
-  /* ── Drag-and-drop handlers ─────────────────────────────────────── */
-
-  const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
-    dragRowId.current = id;
-    e.dataTransfer.effectAllowed = 'move';
-    const row = (e.currentTarget as HTMLElement).closest('tr');
-    if (row) row.style.opacity = '0.4';
-  }, []);
-
-  const handleDragEnd = useCallback((e: React.DragEvent) => {
-    const row = (e.currentTarget as HTMLElement).closest('tr');
-    if (row) row.style.opacity = '1';
-    dragRowId.current = null;
-    setDragOverId(null);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
-    if (!dragRowId.current) return; // ignore column drags
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverId(id);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent, targetId: string) => {
-    if (!dragRowId.current) return; // ignore column drags
-    e.preventDefault();
-    setDragOverId(null);
-    const sourceId = dragRowId.current;
-    if (!sourceId || sourceId === targetId) return;
-
-    const ids = filtered.map((p) => p.id);
-    const fromIndex = ids.indexOf(sourceId);
-    const toIndex = ids.indexOf(targetId);
-    if (fromIndex === -1 || toIndex === -1) return;
-
-    ids.splice(fromIndex, 1);
-    ids.splice(toIndex, 0, sourceId);
-
-    const updates = ids.map((id, i) => ({ id, order: i }));
-    startTransition(async () => {
-      await updateProjectOrder(orderMode, updates);
-      router.refresh();
-    });
-  }, [filtered, router, startTransition, orderMode]);
-
   const allSelected = filtered.length > 0 && selected.size === filtered.length;
   const someSelected = selected.size > 0 && !allSelected;
 
@@ -1421,13 +1353,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
     });
   };
 
-  const handleBatchUpdate = (data: Record<string, unknown>) => {
-    startTransition(async () => {
-      await batchUpdateProjects(Array.from(selected), data);
-      setSelected(new Set());
-      router.refresh();
-    });
-  };
 
   const handleBatchDelete = () => {
     startTransition(async () => {
@@ -1559,8 +1484,8 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       const relativeX = e.clientX - tableRect.left + scrollLeft;
 
       // Calculate which column boundary is closest
-      // Start after the fixed cols (grip + checkbox)
-      let cumLeft = gripWidth + checkboxWidth;
+      // Start after the fixed checkbox column
+      let cumLeft = checkboxWidth;
       let bestCount = 0;
       for (let i = 0; i < orderedVisibleCols.length; i++) {
         const colW = getColWidth(orderedVisibleCols[i].key);
@@ -1582,43 +1507,32 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [orderedVisibleCols, getColWidth, gripWidth, checkboxWidth]);
+  }, [orderedVisibleCols, getColWidth, checkboxWidth]);
 
   const thClass =
     'text-left px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground/60 font-medium select-none whitespace-nowrap relative overflow-hidden';
   const thSortClass = `${thClass} cursor-pointer group hover:text-muted-foreground transition-colors`;
 
-  const visibleColCount = 3 + visibleCols.size;
+  const visibleColCount = 2 + visibleCols.size;
 
   /* ── Render row ──────────────────────────────────────────────── */
 
   const renderRow = (project: ProjectRow) => (
     <tr
       key={project.id}
-      onDragOver={(e) => handleDragOver(e, project.id)}
-      onDrop={(e) => handleDrop(e, project.id)}
-      className={`border-b border-border/20 last:border-0 hover:bg-white/[0.02] transition-colors ${
-        selected.has(project.id) ? 'bg-black' : ''
-      } ${dragOverId === project.id ? 'border-t-2 border-t-accent' : ''}`}
+      onClick={() => onRowClick?.(project)}
+      className={`border-b border-white/[0.05] transition-colors group ${
+        onRowClick ? 'cursor-pointer' : ''
+      } ${selected.has(project.id) ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'}`}
     >
-      <td className="w-8 px-1 py-3" style={stickyStyle(0)}>
-        <div
-          draggable
-          onDragStart={(e) => handleDragStart(e, project.id)}
-          onDragEnd={handleDragEnd}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors flex items-center justify-center"
-        >
-          <GripVertical size={14} />
-        </div>
-      </td>
-      <td className="px-4 py-3 align-middle" style={stickyStyle(1)}>
-        <button onClick={() => toggleOne(project.id)} className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+      <td className="px-4 py-3 align-middle" style={stickyStyle(0)}>
+        <button onClick={(e) => { e.stopPropagation(); toggleOne(project.id); }} className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
           {selected.has(project.id) ? <CheckSquare size={15} className="text-accent" /> : <Square size={15} />}
         </button>
       </td>
       {orderedVisibleCols.map((col, idx) => {
         const isFrozen = idx < freezeCount;
-        const frozenStyle = isFrozen ? stickyStyle(2 + idx) : undefined;
+        const frozenStyle = isFrozen ? stickyStyle(1 + idx) : undefined;
         const widthStyle = colWidths[col.key]
           ? { width: colWidths[col.key], minWidth: colWidths[col.key], maxWidth: colWidths[col.key] }
           : col.maxWidth ? { maxWidth: col.maxWidth } : undefined;
@@ -1635,14 +1549,14 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       })}
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 justify-end">
-          <Link
-            href={`/admin/projects/${project.id}`}
+          <button
+            onClick={(e) => { e.stopPropagation(); onRowClick?.(project); }}
             className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground bg-white/5 hover:bg-white/10 transition-colors"
           >
             <Edit2 size={13} />
-          </Link>
+          </button>
           <button
-            onClick={() => setConfirmDelete(project.id)}
+            onClick={(e) => { e.stopPropagation(); setConfirmDelete(project.id); }}
             className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400/60 bg-red-500/5 hover:text-red-400 hover:bg-red-500/15 transition-colors"
           >
             <Trash2 size={13} />
@@ -1655,7 +1569,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar — never scrolls */}
-      <div className="flex-shrink-0 py-3 flex items-center gap-2 flex-wrap border-b border-white/[0.12]">
+      <div className="flex-shrink-0 py-2 px-8 flex items-center gap-1 flex-wrap border-b border-white/[0.12]">
         {/* Toolbar buttons */}
         <div className="relative">
           <ToolbarButton
@@ -1701,7 +1615,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
             icon={SlidersHorizontal}
             label="Fields"
             badge={visibleCols.size}
-            active={openPanel === 'fields'}
+            active={fieldsModified}
             onClick={() => togglePanel('fields')}
           />
           {openPanel === 'fields' && (
@@ -1715,50 +1629,24 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           )}
         </div>
 
-        {/* Order mode toggle */}
-        <div className="flex items-center border border-yellow-500/40 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setOrderMode('home_order')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
-              orderMode === 'home_order'
-                ? 'bg-yellow-500/20 text-yellow-400'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Home size={14} strokeWidth={1.75} />
-            Home
-          </button>
-          <button
-            onClick={() => setOrderMode('work_order')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors whitespace-nowrap ${
-              orderMode === 'work_order'
-                ? 'bg-yellow-500/20 text-yellow-400'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Briefcase size={14} strokeWidth={1.75} />
-            Work
-          </button>
-        </div>
+        {(search || filters.length > 0) && (
+          <span className="text-xs text-muted-foreground/40 ml-1">
+            {filtered.length} of {projects.length}
+          </span>
+        )}
 
         <button
           onClick={() => setColWidths({})}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors whitespace-nowrap ${
+          className={`ml-auto flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
             Object.keys(colWidths).length > 0
-              ? 'border-accent/40 text-accent bg-accent/5'
-              : 'border-[#1f1f1f] text-muted-foreground hover:text-foreground hover:border-white/20'
+              ? 'bg-accent/10 text-accent'
+              : 'text-white/40 hover:text-white/70 hover:bg-white/5'
           }`}
           title="Reset all column widths to auto-fit"
         >
           <Columns size={14} strokeWidth={1.75} />
           Auto-fit
         </button>
-
-        {(search || filters.length > 0) && (
-          <span className="text-xs text-muted-foreground/40 ml-1">
-            {filtered.length} of {projects.length}
-          </span>
-        )}
       </div>
 
       {/* Batch action bar */}
@@ -1770,13 +1658,6 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           </button>
           <button onClick={() => handleBatchPublish(false)} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
             <EyeOff size={13} /> Unpublish
-          </button>
-          <div className="w-px h-5 bg-border/40 mx-1" />
-          <button onClick={() => handleBatchUpdate({ featured: true })} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
-            <Star size={13} /> Homepage
-          </button>
-          <button onClick={() => handleBatchUpdate({ featured: false })} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/8 hover:bg-white/12 text-foreground transition-colors disabled:opacity-40">
-            <StarOff size={13} /> Remove
           </button>
           <div className="w-px h-5 bg-border/40 mx-1" />
           <button onClick={() => setConfirmDelete('batch')} disabled={isPending} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-40">
@@ -1815,7 +1696,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
       )}
 
       {/* Table — scrollable area fills remaining height */}
-      <div className="flex-1 min-h-0 relative mt-3">
+      <div className="flex-1 min-h-0 relative">
         {/* Purple freeze line — positioned outside scroll wrapper so it doesn't scroll */}
         <div
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFreezeDrag(e.clientX); }}
@@ -1826,14 +1707,15 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
           <div className="absolute top-[4px] left-[2px] w-[9px] h-[34px] rounded bg-purple-500 group-hover/freeze:bg-purple-400 transition-colors" />
         </div>
 <div className="relative h-full">
-        {/* 1px border to the left of the scrollbar */}
-        <div className="absolute top-0 bottom-0 right-[12px] w-px bg-[#1f1f1f] z-30 pointer-events-none" />
-        <div ref={tableRef} className={`h-full overflow-auto admin-scrollbar admin-scrollbar-table rounded-xl border ${selected.size > 0 ? 'border-[#333]' : 'border-[#1f1f1f]'} transition-colors`}>
+        {/* Cover scrollbar behind sticky header */}
+        {headerHeight > 0 && (
+          <div className="absolute top-0 right-0 w-3 bg-[#141414] z-40 pointer-events-none border-b border-[#1f1f1f]" style={{ height: headerHeight - 0.5 }} />
+        )}
+        <div ref={tableRef} className="h-full overflow-auto admin-scrollbar">
         <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
           <thead className="bg-[#141414]">
             <tr>
-              <th className="w-8 px-1 py-3" style={stickyStyle(0, true)} />
-              <th className="w-10 px-4 py-3 align-middle" style={stickyStyle(1, true)}>
+              <th className="w-10 px-4 py-3 align-middle" style={stickyStyle(0, true)}>
                 <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
                   {allSelected ? <CheckSquare size={15} /> : someSelected ? <Minus size={15} /> : <Square size={15} />}
                 </button>
@@ -1879,7 +1761,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
                   </span>
                 );
 
-                const frozenStyle = stickyStyle(2 + idx, true);
+                const frozenStyle = stickyStyle(1 + idx, true);
                 const mergedStyle = { ...style, ...frozenStyle };
 
                 return col.sortable ? (
