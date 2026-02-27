@@ -10,7 +10,8 @@ export type ContactType = 'contact' | 'crew' | 'staff' | 'partner' | 'cast';
 
 export interface ContactRow {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string | null;
   phone: string | null;
   role: string | null;
@@ -19,6 +20,10 @@ export interface ContactRow {
   notes: string | null;
   type: ContactType;
   headshot_url: string | null;
+  website_url: string | null;
+  linkedin_url: string | null;
+  instagram_url: string | null;
+  imdb_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,6 +54,7 @@ export interface ProposalRow {
   schedule_start_date: string | null;
   schedule_end_date: string | null;
   crowdfunding_approved: boolean;
+  crowdfunding_deferred: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -128,6 +134,12 @@ export interface BrowserProject {
   style_tags: string[] | null;
   premium_addons: string[] | null;
   camera_techniques: string[] | null;
+  assets_delivered: string[] | null;
+  category: string | null;
+  production_days: number | null;
+  crew_count: number | null;
+  talent_count: number | null;
+  location_count: number | null;
 }
 
 export interface ProposalProjectWithProject {
@@ -160,6 +172,7 @@ export interface ProposalQuoteRow {
   total_amount: number | null;
   down_amount: number | null;
   sort_order: number;
+  visible: boolean;
   description: string | null;
   created_at: string;
   updated_at: string;
@@ -175,6 +188,13 @@ export interface ProposalMilestoneRow {
   end_date: string;
   sort_order: number;
   phase: string | null;
+  created_at: string;
+}
+
+export interface ProposalContactRow {
+  id: string;
+  proposal_id: string;
+  contact_id: string;
   created_at: string;
 }
 

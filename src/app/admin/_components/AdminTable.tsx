@@ -67,6 +67,14 @@ export const STATUS_COLORS: Record<string, string> = {
   prospect:      'bg-amber-500/20 text-amber-400',
   'on hold':     'bg-slate-500/20 text-slate-400',
   past:          'bg-white/5 text-white/30',
+  // Meetings
+  upcoming:       'bg-sky-500/20 text-sky-300',
+  bot_scheduled:  'bg-indigo-500/20 text-indigo-300',
+  in_progress:    'bg-green-500/20 text-green-300',
+  completed:      'bg-emerald-500/20 text-emerald-300',
+  failed:         'bg-red-500/20 text-red-300',
+  no_video_link:  'bg-white/5 text-white/30',
+  cancelled:      'bg-white/5 text-white/30',
 };
 
 export function StatusBadge({ value }: { value: string }) {
@@ -139,7 +147,7 @@ export function AdminDeleteModal({
       onClick={() => !isDeleting && onCancel()}
     >
       <div
-        className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
+        className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-white mb-2">{title}</h3>
@@ -148,7 +156,7 @@ export function AdminDeleteModal({
           <button
             onClick={onCancel}
             disabled={isDeleting}
-            className="px-4 py-2 rounded-lg border border-white/10 text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
+            className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
           >
             Cancel
           </button>
@@ -276,7 +284,7 @@ export function AdminTable<T extends { id: string }>({
               key={row.id}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={[
-                'border-b border-white/[0.05] transition-colors group',
+                'border-b border-[#2a2a2a] transition-colors group',
                 isClickable ? 'cursor-pointer' : '',
                 selectedId === row.id
                   ? 'bg-white/[0.04]'

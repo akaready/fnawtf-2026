@@ -5,7 +5,7 @@ import gsap from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Trash2, Check, Star, User } from 'lucide-react';
 import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
-import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
+import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot, PricingType } from '@/components/proposal/ProposalCalculatorEmbed';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { saveClientQuote, deleteClientQuote } from '@/app/p/[slug]/actions';
@@ -39,6 +39,7 @@ interface Props {
   proposalType: ProposalType;
   quotes: ProposalQuoteRow[];
   crowdfundingApproved?: boolean;
+  crowdfundingDeferred?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
 }
@@ -48,6 +49,7 @@ export function InvestmentSlide({
   proposalType,
   quotes: initialQuotes,
   crowdfundingApproved,
+  crowdfundingDeferred,
   slideRef,
   viewerName,
 }: Props) {
@@ -75,8 +77,8 @@ export function InvestmentSlide({
 
   const [quotes, setQuotes] = useState(initialQuotes);
 
-  // Derived quote lists
-  const allActive = quotes.filter((q) => !q.deleted_at);
+  // Derived quote lists — apply admin visibility filter
+  const allActive = quotes.filter((q) => !q.deleted_at && q.visible !== false);
   const recommendedQuote = allActive.find((q) => q.is_fna_quote) ?? null; // First FNA = recommended
   const comparisonQuotes = allActive.filter((q) => q !== recommendedQuote); // Everything else
   const clientQuotes = comparisonQuotes.filter((q) => !q.is_fna_quote);
@@ -350,13 +352,15 @@ export function InvestmentSlide({
               isLocked={isLocked}
               proposalId={proposalId}
               proposalType={proposalType}
+              typeOverride={proposalType as PricingType}
               initialQuote={activeQuote ?? undefined}
               prefillQuote={recommendedQuote ?? undefined}
               crowdfundingApproved={crowdfundingApproved}
+              crowdfundingDeferred={crowdfundingDeferred}
               activeQuoteId={activeQuoteId ?? undefined}
               saveRef={calcSaveRef}
               onQuoteUpdated={handleQuoteUpdated}
-              allQuotes={quotes.filter((q) => !q.deleted_at)}
+              allQuotes={allActive}
               onActiveQuoteChange={(id) => setActiveQuoteId(id)}
               onLockedInteract={isLocked && clientQuotes.length === 0 ? handleNewQuote : undefined}
             />

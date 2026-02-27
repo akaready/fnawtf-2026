@@ -1521,7 +1521,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
     <tr
       key={project.id}
       onClick={() => onRowClick?.(project)}
-      className={`border-b border-white/[0.05] transition-colors group ${
+      className={`border-b border-[#2a2a2a] transition-colors group ${
         onRowClick ? 'cursor-pointer' : ''
       } ${selected.has(project.id) ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'}`}
     >
@@ -1553,7 +1553,7 @@ export function ProjectsTable({ projects, tagSuggestions, exportRef, search: sea
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar — never scrolls */}
-      <div className="flex-shrink-0 py-2 px-8 flex items-center gap-1 flex-wrap border-b border-white/[0.12]">
+      <div className="flex-shrink-0 py-2 px-8 flex items-center gap-1 flex-wrap border-b border-[#2a2a2a]">
         {/* Toolbar buttons */}
         <div className="relative">
           <ToolbarButton

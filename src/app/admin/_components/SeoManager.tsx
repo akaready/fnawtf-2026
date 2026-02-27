@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Save, Globe, Home, Play, ClipboardList, DollarSign, Info, Check, Loader2, EyeOff } from 'lucide-react';
+import { useState } from 'react';
+import { Globe, Home, Play, ClipboardList, DollarSign, Info, EyeOff } from 'lucide-react';
+import { SaveButton } from './SaveButton';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { type SeoRow, updateSeoSetting } from '../actions';
 import { AdminTabBar } from './AdminTabBar';
 
@@ -23,8 +25,7 @@ interface Props {
 export function SeoManager({ initialSettings }: Props) {
   const [settings, setSettings] = useState<SeoRow[]>(initialSettings);
   const [activeSlug, setActiveSlug] = useState<string>('_global');
-  const [saving, startSave] = useTransition();
-  const [savedId, setSavedId] = useState<string | null>(null);
+  const { saving, saved, wrap: wrapSave } = useSaveState(2000);
 
   const handleChange = (id: string, field: keyof SeoRow, value: string | boolean) => {
     setSettings((prev) =>
@@ -32,21 +33,17 @@ export function SeoManager({ initialSettings }: Props) {
     );
   };
 
-  const handleSave = (row: SeoRow) => {
-    startSave(async () => {
-      await updateSeoSetting(row.id, {
-        meta_title: row.meta_title,
-        meta_description: row.meta_description,
-        og_title: row.og_title,
-        og_description: row.og_description,
-        og_image_url: row.og_image_url,
-        canonical_url: row.canonical_url,
-        no_index: row.no_index,
-      });
-      setSavedId(row.id);
-      setTimeout(() => setSavedId(null), 2000);
+  const handleSave = (row: SeoRow) => wrapSave(async () => {
+    await updateSeoSetting(row.id, {
+      meta_title: row.meta_title,
+      meta_description: row.meta_description,
+      og_title: row.og_title,
+      og_description: row.og_description,
+      og_image_url: row.og_image_url,
+      canonical_url: row.canonical_url,
+      no_index: row.no_index,
     });
-  };
+  });
 
   const sorted = [...settings].sort((a, b) => {
     const ai = PAGE_ORDER.indexOf(a.page_slug);
@@ -142,20 +139,7 @@ export function SeoManager({ initialSettings }: Props) {
                 </span>
               </label>
 
-              <button
-                onClick={() => handleSave(activeRow)}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {saving && savedId !== activeRow.id ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : savedId === activeRow.id ? (
-                  <Check size={14} className="text-green-400" />
-                ) : (
-                  <Save size={14} />
-                )}
-                {savedId === activeRow.id ? 'Saved' : 'Save'}
-              </button>
+              <SaveButton saving={saving} saved={saved} onClick={() => handleSave(activeRow)} className="px-4 py-2 text-sm" />
             </div>
           </div>
         )}

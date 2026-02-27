@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useTransition, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { SaveButton } from './SaveButton';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Plus, Trash2, Save, Check, X, Loader2, Download, ChevronDown,
+  Plus, Trash2, Check, X, Download, ChevronDown,
   Pencil, Bold, Heading1, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink,
   FolderOpen, Maximize2, Minimize2,
 } from 'lucide-react';
@@ -192,8 +194,7 @@ function SnippetEditor({
 
 export function ContentSnippetsManager({ initialSnippets }: Props) {
   const [snippets, setSnippets]                 = useState(initialSnippets);
-  const [saving, startSave]                     = useTransition();
-  const [savedId, setSavedId]                   = useState<string | null>(null);
+  const { saving, saved, wrap: wrapSave }        = useSaveState(2000);
   const [confirmDeleteId, setConfirmDeleteId]   = useState<string | null>(null);
   const [confirmDeleteCat, setConfirmDeleteCat] = useState<string | null>(null);
   const [creating, setCreating]                 = useState(false);
@@ -252,32 +253,30 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
   };
 
   const handleSave = (row: ContentSnippetRow) => {
-    startSave(async () => {
+    wrapSave(async () => {
       await updateContentSnippet(row.id, { title: row.title, body: row.body, snippet_type: row.snippet_type, category: row.category, sort_order: row.sort_order });
-      setSavedId(row.id);
-      setTimeout(() => setSavedId(null), 2000);
     });
   };
 
   const handleCreate = (catOverride?: string) => {
     const cat = catOverride ?? (filterCat === 'all' ? 'general' : filterCat);
-    startSave(async () => {
+    void (async () => {
       setCreating(true);
       const id = await createContentSnippet({ title: 'New Snippet', body: '', snippet_type: 'general', category: cat, sort_order: snippets.length });
       setSnippets(prev => [...prev, { id, title: 'New Snippet', body: '', snippet_type: 'general', category: cat as SnippetCategory, sort_order: prev.length, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
       setActiveId(id);
       setFilterCat(cat);
       setCreating(false);
-    });
+    })();
   };
 
   const handleDelete = (id: string) => {
-    startSave(async () => {
+    void (async () => {
       await deleteContentSnippet(id);
       setSnippets(prev => prev.filter(s => s.id !== id));
       setConfirmDeleteId(null);
       if (activeId === id) setActiveId(null);
-    });
+    })();
   };
 
   // ── Category management ───────────────────────────────────────────────────
@@ -289,7 +288,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
     const affected = snippets.filter(s => s.category === oldName);
     setSnippets(prev => prev.map(s => s.category === oldName ? { ...s, category: n as SnippetCategory } : s));
     if (filterCat === oldName) setFilterCat(n);
-    startSave(async () => { await Promise.all(affected.map(s => updateContentSnippet(s.id, { category: n }))); });
+    void Promise.all(affected.map(s => updateContentSnippet(s.id, { category: n })));
   };
 
   const handleDeleteCat = (cat: string) => {
@@ -298,7 +297,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
     setSnippets(prev => prev.map(s => s.category === cat ? { ...s, category: fallback as SnippetCategory } : s));
     if (filterCat === cat) setFilterCat('all');
     setConfirmDeleteCat(null);
-    startSave(async () => { await Promise.all(affected.map(s => updateContentSnippet(s.id, { category: fallback }))); });
+    void Promise.all(affected.map(s => updateContentSnippet(s.id, { category: fallback })));
   };
 
   const handleAddCat = () => {
@@ -494,10 +493,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
 
             <div className="flex-shrink-0 border-t border-border px-8 py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <button onClick={() => handleSave(active)} disabled={saving} className="flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black text-sm font-medium border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-50">
-                  {saving && savedId !== active.id ? <Loader2 size={13} className="animate-spin" /> : savedId === active.id ? <Check size={13} className="text-green-400" /> : <Save size={13} />}
-                  {savedId === active.id ? 'Saved' : 'Save'}
-                </button>
+                <SaveButton saving={saving} saved={saved} onClick={() => handleSave(active)} className="px-5 py-2 text-sm" />
                 <div className="relative">
                   <button
                     onClick={() => setCatDropOpen(v => !v)}

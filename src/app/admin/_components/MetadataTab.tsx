@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect, useTransition, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, RefreshCw, Link2 } from 'lucide-react';
+import { SaveButton } from './SaveButton';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { ChipInput } from './ChipInput';
 import { updateProject, createProject, updateTestimonial, createClientRecord } from '../actions';
 import type { TagSuggestions, TestimonialOption } from './ProjectForm';
@@ -208,7 +210,7 @@ function ClientCombobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-white/[0.06]"
+              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-[#2a2a2a]"
             >
               {creating ? 'Creating…' : `Create "${query.trim()}"`}
             </button>
@@ -224,8 +226,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
   ref
 ) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const { saving: isPending, saved: isSaved, wrap: wrapSave } = useSaveState(2500);
   const [errorMsg, setErrorMsg] = useState('');
   const [isDirty, setIsDirty] = useState(false);
 
@@ -261,7 +262,6 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
     setIsDirty(true);
-    if (status !== 'idle') setStatus('idle');
   };
 
   async function doSave(): Promise<void> {
@@ -291,10 +291,8 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
         await updateTestimonial(linkedTestimonialId, { project_id: project.id });
       }
 
-      setStatus('saved');
       setIsDirty(false);
       onSaved?.();
-      setTimeout(() => setStatus('idle'), 2500);
     } else {
       const newId = await createProject(data);
 
@@ -311,16 +309,15 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
     }
   }
 
-  const handleSave = () => {
-    startTransition(async () => {
-      try {
-        await doSave();
-      } catch (err) {
-        setErrorMsg(err instanceof Error ? err.message : 'Save failed');
-        setStatus('error');
-      }
-    });
-  };
+  const handleSave = () => wrapSave(async () => {
+    try {
+      await doSave();
+      setErrorMsg('');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Save failed');
+      throw err;
+    }
+  });
 
   useImperativeHandle(ref, () => ({ save: doSave, isDirty }));
 
@@ -401,7 +398,6 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
               onChange={(name, id) => {
                 setForm((f) => ({ ...f, client_name: name, client_id: id }));
                 setIsDirty(true);
-                if (status !== 'idle') setStatus('idle');
               }}
               onCreate={async (name) => {
                 const id = await createClientRecord({ name, email: '' });
@@ -561,23 +557,17 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
       {/* Save — only shown for new projects or when parent doesn't own the save */}
       {!hideInlineSave && (
         <div className="flex items-center gap-3 pt-2">
-          <button
-            type="button"
+          <SaveButton
+            saving={isPending}
+            saved={isSaved}
             onClick={handleSave}
-            disabled={isPending}
-            className="px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {isPending ? 'Saving…' : project ? 'Save Changes' : 'Create Project'}
-          </button>
-          {status === 'saved' && (
-            <span className="text-sm text-green-400">Saved</span>
-          )}
-          {status === 'error' && (
-            <span className="text-sm text-red-400">{errorMsg}</span>
-          )}
+            label={project ? 'Save' : 'Create Project'}
+            className="px-5 py-2.5 text-sm"
+          />
+          {errorMsg && <span className="text-sm text-red-400">{errorMsg}</span>}
         </div>
       )}
-      {hideInlineSave && status === 'error' && (
+      {hideInlineSave && errorMsg && (
         <p className="text-sm text-red-400 pt-2">{errorMsg}</p>
       )}
     </div>

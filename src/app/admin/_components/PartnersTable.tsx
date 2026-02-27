@@ -5,7 +5,7 @@ import { useTransition } from 'react';
 import { Plus, Building2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { AdminTable, type ColumnDef } from './AdminTable';
-import { type ClientRow, createClientRecord, updateContact } from '../actions';
+import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
 import {
@@ -27,6 +27,8 @@ interface Props {
 export function PartnersTable({ initialPartners, projects, testimonials, contacts: initialContacts }: Props) {
   const [partners, setPartners] = useState(initialPartners);
   const [localContacts, setLocalContacts] = useState(initialContacts);
+  const [localTestimonials, setLocalTestimonials] = useState(testimonials);
+  const [localProjects, setLocalProjects] = useState(projects);
   const [, startSave] = useTransition();
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
@@ -48,6 +50,15 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
         company_types: ['partner'],
         status: 'active',
         pipeline_stage: 'new',
+        website_url: null,
+        linkedin_url: null,
+        description: null,
+        industry: null,
+        location: null,
+        founded_year: null,
+        company_size: null,
+        twitter_url: null,
+        instagram_url: null,
         created_at: new Date().toISOString(),
       };
       setPartners((prev) => [...prev, newRecord]);
@@ -76,6 +87,34 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
     await updateContact(contactId, { client_id: null });
     setLocalContacts((prev) =>
       prev.map((ct) => ct.id === contactId ? { ...ct, client_id: null } : ct)
+    );
+  }, []);
+
+  const handleTestimonialLinked = useCallback(async (testimonialId: string, companyId: string) => {
+    await updateTestimonial(testimonialId, { client_id: companyId });
+    setLocalTestimonials((prev) =>
+      prev.map((t) => t.id === testimonialId ? { ...t, client_id: companyId } : t)
+    );
+  }, []);
+
+  const handleTestimonialUnlinked = useCallback(async (testimonialId: string) => {
+    await updateTestimonial(testimonialId, { client_id: null });
+    setLocalTestimonials((prev) =>
+      prev.map((t) => t.id === testimonialId ? { ...t, client_id: null } : t)
+    );
+  }, []);
+
+  const handleProjectLinked = useCallback(async (projectId: string, companyId: string) => {
+    await updateProject(projectId, { client_id: companyId });
+    setLocalProjects((prev) =>
+      prev.map((p) => p.id === projectId ? { ...p, client_id: companyId } : p)
+    );
+  }, []);
+
+  const handleProjectUnlinked = useCallback(async (projectId: string) => {
+    await updateProject(projectId, { client_id: null });
+    setLocalProjects((prev) =>
+      prev.map((p) => p.id === projectId ? { ...p, client_id: null } : p)
     );
   }, []);
 
@@ -207,13 +246,17 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       <CompanyPanel
         company={activeCompany}
         contacts={localContacts}
-        projects={projects}
-        testimonials={testimonials}
+        projects={localProjects}
+        testimonials={localTestimonials}
         onClose={() => setActiveId(null)}
         onCompanyUpdated={handleCompanyUpdated}
         onCompanyDeleted={handleCompanyDeleted}
         onContactLinked={handleContactLinked}
         onContactUnlinked={handleContactUnlinked}
+        onTestimonialLinked={handleTestimonialLinked}
+        onTestimonialUnlinked={handleTestimonialUnlinked}
+        onProjectLinked={handleProjectLinked}
+        onProjectUnlinked={handleProjectUnlinked}
       />
     </div>
   );

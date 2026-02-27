@@ -23,7 +23,7 @@ interface AdminTabBarProps {
 
 export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfter }: AdminTabBarProps) {
   return (
-    <div className="flex-shrink-0 flex items-center gap-1 px-8 py-2 border-b border-white/[0.12]">
+    <div className="flex-shrink-0 flex items-center gap-1 px-8 py-2 border-b border-[#2a2a2a]">
       {tabs.map((tab) => (
         <Fragment key={tab.value}>
           <button

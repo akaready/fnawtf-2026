@@ -13,6 +13,7 @@ export type ClientProject = {
   slug: string;
   thumbnail_url: string | null;
   client_id: string | null;
+  category: string | null;
 };
 
 export type ClientTestimonial = {

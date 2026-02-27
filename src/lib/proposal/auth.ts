@@ -3,10 +3,9 @@ import { cookies } from 'next/headers';
 const COOKIE_PREFIX = 'proposal_auth_';
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
-export async function setProposalAuthCookie(slug: string, email: string, name?: string) {
+export async function setProposalAuthCookie(slug: string, email: string) {
   const cookieStore = await cookies();
-  const value = name ? `${name}\n${email}` : email;
-  cookieStore.set(`${COOKIE_PREFIX}${slug}`, value, {
+  cookieStore.set(`${COOKIE_PREFIX}${slug}`, email, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',

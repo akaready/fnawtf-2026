@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useTransition, useEffect, useRef } from 'react';
-import { Hammer, Rocket, Megaphone } from 'lucide-react';
+import { Hammer, Rocket, Megaphone, TrendingUp, Coins, Layers, type LucideIcon } from 'lucide-react';
 import {
   buildAddOns,
   launchAddOns,
@@ -13,18 +13,7 @@ import { CalculatorSummary } from '@/components/pricing/CalculatorSummary';
 import { saveClientQuote, updateClientQuote } from '@/app/p/[slug]/actions';
 import type { ProposalType, ProposalQuoteRow } from '@/types/proposal';
 
-type TabId = 'build' | 'launch' | 'fundraising';
-
-function getVisibleTabs(proposalType: ProposalType): TabId[] {
-  switch (proposalType) {
-    case 'build':        return ['build'];
-    case 'launch':       return ['launch'];
-    case 'build-launch': return ['build', 'launch'];
-    case 'fundraising':  return ['fundraising'];
-    case 'scale':        return ['build', 'launch'];
-    default:             return ['build'];
-  }
-}
+export type PricingType = 'build' | 'build-launch' | 'launch' | 'scale' | 'fundraising';
 
 export interface CalculatorStateSnapshot {
   quote_type: string;
@@ -51,6 +40,7 @@ interface Props {
   proposalType: ProposalType;
   initialQuote?: ProposalQuoteRow;
   crowdfundingApproved?: boolean;
+  crowdfundingDeferred?: boolean;
   isReadOnly?: boolean;
   prefillQuote?: ProposalQuoteRow;
   isLocked?: boolean;
@@ -66,13 +56,36 @@ interface Props {
   onLockedInteract?: () => void;
   /** When provided, overrides the default saveClientQuote call (used in admin context to call saveProposalQuote) */
   onFnaSave?: (payload: CalculatorStateSnapshot) => Promise<string>;
+  /** Controlled type override from parent (admin PricingTab). Hides the internal type bar. */
+  typeOverride?: PricingType;
+  /** Controlled crowdfunding override from parent (admin PricingTab). */
+  crowdfundingOverride?: boolean;
+  /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
+  onAnyChange?: () => void;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave }: Props) {
-  const visibleTabs = getVisibleTabs(proposalType);
+function initSelectedType(proposalType: ProposalType, savedQuoteType?: string): PricingType {
+  if (savedQuoteType && ['build','build-launch','launch','scale','fundraising'].includes(savedQuoteType)) {
+    return savedQuoteType as PricingType;
+  }
+  if (proposalType === 'build-launch') return 'build-launch';
+  if (proposalType === 'scale') return 'scale';
+  if (proposalType === 'fundraising') return 'fundraising';
+  if (proposalType === 'launch') return 'launch';
+  return 'build';
+}
 
-  const [activeTab, setActiveTab] = useState<TabId>(
-    (initialQuote?.quote_type as TabId) ?? visibleTabs[0]
+function sectionsForType(type: PricingType): Set<string> {
+  const s = new Set<string>();
+  if (['build','build-launch','scale'].includes(type)) s.add('build');
+  if (['launch','build-launch','scale'].includes(type)) s.add('launch');
+  if (type === 'fundraising') s.add('fundraising');
+  return s;
+}
+
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAnyChange }: Props) {
+  const [selectedType, setSelectedType] = useState<PricingType>(
+    () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
   const [selectedAddOns, setSelectedAddOns] = useState<Map<string, number>>(
     initialQuote?.selected_addons
@@ -97,14 +110,23 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   );
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(initialQuote?.crowdfunding_enabled ?? false);
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(initialQuote?.crowdfunding_tier ?? 0);
-  const [fundraisingEnabled, setFundraisingEnabled] = useState(initialQuote?.fundraising_enabled ?? false);
   const [friendlyDiscountPct, setFriendlyDiscountPct] = useState(initialQuote?.friendly_discount_pct ?? 0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set([(initialQuote?.quote_type as TabId) ?? visibleTabs[0]])
+    () => sectionsForType(initSelectedType(proposalType, initialQuote?.quote_type))
   );
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['ADD-ONS', 'CAST + CREW', 'RENTALS + TECHNIQUES', 'POST PRODUCTION'])
   );
+
+  // When controlled from parent (admin PricingTab), override internal type/crowdfunding
+  const effectiveType = typeOverride ?? selectedType;
+  const effectiveCrowdfunding = crowdfundingOverride !== undefined ? crowdfundingOverride : crowdfundingEnabled;
+
+  // Sync expandedSections when parent changes the type override
+  useEffect(() => {
+    if (typeOverride === undefined) return;
+    setExpandedSections(sectionsForType(typeOverride));
+  }, [typeOverride]);
 
   const [saving, startSave] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -126,11 +148,21 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
       setLocationDays(new Map(Object.entries(prefillQuote.location_days).map(([k, v]) => [k, v as number[]])));
     }
     setCrowdfundingEnabled(prefillQuote.crowdfunding_enabled ?? false);
-    setFundraisingEnabled(prefillQuote.fundraising_enabled ?? false);
+    if (prefillQuote.quote_type) {
+      const qt = prefillQuote.quote_type;
+      if (['build','build-launch','launch','scale','fundraising'].includes(qt)) {
+        const t = qt as PricingType;
+        setSelectedType(t);
+        setExpandedSections(sectionsForType(t));
+      }
+    }
   }, [prefillQuote]);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevQuoteId = useRef<string | undefined>(initialQuote?.id);
+  // Dirty tracking: suppress onAnyChange during initial mount and quote reloads
+  const hasMountedRef = useRef(false);
+  const suppressDirtyRef = useRef(false);
 
   // Keep a ref to the recommended quote so toggle handlers can read it without stale closures
   const recommendedDataRef = useRef<ProposalQuoteRow | undefined>(allQuotes?.find((q) => q.is_fna_quote));
@@ -141,16 +173,27 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   const selectedAddOnsRef = useRef(selectedAddOns);
   selectedAddOnsRef.current = selectedAddOns;
 
+  // Fire onAnyChange when the user edits per-quote fields — skip initial mount and reloads
+  useEffect(() => {
+    if (!hasMountedRef.current) { hasMountedRef.current = true; return; }
+    if (suppressDirtyRef.current) { suppressDirtyRef.current = false; return; }
+    onAnyChange?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingTierIndex, friendlyDiscountPct]);
+
   // When activeQuoteId changes (user switched to a different quote tab),
   // reload all calculator state from the new initialQuote — in place, no remount.
   useEffect(() => {
     if (!initialQuote || initialQuote.id === prevQuoteId.current) return;
+    suppressDirtyRef.current = true; // prevent reload from triggering dirty
     prevQuoteId.current = initialQuote.id;
 
-    // Restore the tab the quote was saved on
-    const savedTab = (initialQuote.quote_type as TabId) ?? visibleTabs[0];
-    setActiveTab(savedTab);
-    setExpandedSections(new Set([savedTab]));
+    // Restore the type the quote was saved on.
+    // When typeOverride is set (e.g. public proposal slide or admin preview),
+    // use it for section expansion so the locked type always wins.
+    const savedType = initSelectedType(proposalType, initialQuote.quote_type);
+    setSelectedType(savedType);
+    setExpandedSections(sectionsForType(typeOverride ?? savedType));
 
     if (initialQuote.selected_addons) {
       setSelectedAddOns(new Map(Object.entries(initialQuote.selected_addons)));
@@ -175,23 +218,23 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     setPhotoCount(initialQuote.photo_count ?? 25);
     setCrowdfundingEnabled(initialQuote.crowdfunding_enabled ?? false);
     setCrowdfundingTierIndex(initialQuote.crowdfunding_tier ?? 0);
-    setFundraisingEnabled(initialQuote.fundraising_enabled ?? false);
     setFriendlyDiscountPct(initialQuote.friendly_discount_pct ?? 0);
-  }, [initialQuote, visibleTabs]);
+  }, [initialQuote, proposalType, typeOverride]);
 
   // Build the current state payload (shared by auto-save and manual save)
   const buildSavePayload = useCallback(() => ({
-    quote_type: activeTab,
+    quote_type: effectiveType,
     selected_addons: Object.fromEntries(selectedAddOns),
     slider_values: Object.fromEntries(sliderValues),
     tier_selections: Object.fromEntries(tierSelections),
     location_days: Object.fromEntries(Array.from(locationDays.entries()).map(([k, v]) => [k, v])),
     photo_count: photoCount,
-    crowdfunding_enabled: crowdfundingEnabled,
+    crowdfunding_enabled: effectiveCrowdfunding,
     crowdfunding_tier: crowdfundingTierIndex,
-    fundraising_enabled: fundraisingEnabled,
+    fundraising_enabled: effectiveType === 'fundraising',
     friendly_discount_pct: friendlyDiscountPct,
-  }), [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled, friendlyDiscountPct]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [effectiveType, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, effectiveCrowdfunding, crowdfundingTierIndex, friendlyDiscountPct]);
 
   // Expose imperative save handle so parent can trigger an immediate persist
   useEffect(() => {
@@ -229,9 +272,10 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   }, [isLocked, onFnaSave, proposalId, buildSavePayload, activeQuoteId, onQuoteUpdated]);
 
   const totalDays = selectedAddOns.get('launch-production-days') ?? 1;
-  const showBuild = activeTab === 'build';
-  const showLaunch = activeTab === 'launch';
-  const showFundraising = activeTab === 'fundraising';
+  const showBuild       = effectiveType === 'build' || effectiveType === 'build-launch' || effectiveType === 'scale';
+  const showLaunch      = effectiveType === 'launch' || effectiveType === 'build-launch' || effectiveType === 'scale';
+  const showFundraising = effectiveType === 'fundraising';
+  const fundraisingEnabled = effectiveType === 'fundraising';
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
@@ -318,48 +362,53 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     });
   }, []);
 
-  const handleTabChange = useCallback((tab: TabId) => {
-    setActiveTab(tab);
-    setExpandedSections(new Set([tab]));
-    if (tab !== 'fundraising') {
-      setFundraisingEnabled(false);
-    } else {
-      setFundraisingEnabled(true);
-    }
+  const handleTypeChange = useCallback((type: PricingType) => {
+    setSelectedType(type);
+    setExpandedSections(sectionsForType(type));
+    if (type === 'fundraising' || type === 'scale') setCrowdfundingEnabled(false);
   }, []);
 
   const handleSave = useCallback(() => {
     startSave(async () => {
-      await saveClientQuote(proposalId, {
-        label: 'My Quote',
-        quote_type: activeTab,
-        selected_addons: Object.fromEntries(selectedAddOns),
-        slider_values: Object.fromEntries(sliderValues),
-        tier_selections: Object.fromEntries(tierSelections),
-        location_days: Object.fromEntries(locationDays),
-        photo_count: photoCount,
-        crowdfunding_enabled: crowdfundingEnabled,
-        crowdfunding_tier: crowdfundingTierIndex,
-        fundraising_enabled: fundraisingEnabled,
-        defer_payment: false,
-        friendly_discount_pct: 0,
-        total_amount: null,
-        down_amount: null,
-      });
+      if (onFnaSave) {
+        // Admin mode: save via onFnaSave and notify parent
+        const payload = buildSavePayload() as CalculatorStateSnapshot;
+        await onFnaSave(payload);
+        onQuoteUpdated?.(payload);
+      } else {
+        await saveClientQuote(proposalId, {
+          label: 'My Quote',
+          quote_type: effectiveType,
+          selected_addons: Object.fromEntries(selectedAddOns),
+          slider_values: Object.fromEntries(sliderValues),
+          tier_selections: Object.fromEntries(tierSelections),
+          location_days: Object.fromEntries(locationDays),
+          photo_count: photoCount,
+          crowdfunding_enabled: effectiveCrowdfunding,
+          crowdfunding_tier: crowdfundingTierIndex,
+          fundraising_enabled: effectiveType === 'fundraising',
+          defer_payment: false,
+          friendly_discount_pct: 0,
+          total_amount: null,
+          down_amount: null,
+        });
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     });
   }, [
     proposalId,
-    activeTab,
+    effectiveType,
     selectedAddOns,
     sliderValues,
     tierSelections,
     locationDays,
     photoCount,
-    crowdfundingEnabled,
+    effectiveCrowdfunding,
     crowdfundingTierIndex,
-    fundraisingEnabled,
+    onFnaSave,
+    onQuoteUpdated,
+    buildSavePayload,
   ]);
 
   const allAddOns = [...buildAddOns, ...launchAddOns, ...fundraisingIncluded, ...fundraisingAddOns];
@@ -386,30 +435,42 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
           ? "flex flex-col h-full min-h-0 pointer-events-none"
           : "flex flex-col h-full min-h-0"
     }>
-      {/* Tab selector — only when multiple tabs visible */}
-      {visibleTabs.length > 1 && (
-        <div className="flex mb-6 flex-shrink-0">
-          <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-1">
-            {visibleTabs.map((tabId) => {
-              const label =
-                tabId === 'build' ? 'Build' : tabId === 'launch' ? 'Launch' : 'Fundraising';
-              return (
-                <button
-                  key={tabId}
-                  onClick={() => handleTabChange(tabId)}
-                  className={`relative px-4 py-2 rounded text-sm font-medium transition-colors duration-200 ${
-                    activeTab === tabId
-                      ? 'text-white bg-white/10'
-                      : 'text-white/40 hover:text-white/60'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Type + crowdfunding action bar — only shown when not controlled by parent */}
+      {typeOverride === undefined && <div className="flex flex-wrap items-center gap-1.5 mb-6 flex-shrink-0">
+        {([
+          { type: 'build',        label: 'Build',        Icon: Hammer },
+          { type: 'build-launch', label: 'Build+Launch',  Icon: Layers },
+          { type: 'launch',       label: 'Launch',        Icon: Rocket },
+          { type: 'scale',        label: 'Scale',         Icon: TrendingUp },
+          { type: 'fundraising',  label: 'Fundraising',   Icon: Megaphone },
+        ] as { type: PricingType; label: string; Icon: LucideIcon }[]).map(({ type, label, Icon }) => (
+          <button
+            key={type}
+            disabled={!!isLocked}
+            onClick={() => handleTypeChange(type)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 disabled:pointer-events-none ${
+              selectedType === type ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+        {(selectedType === 'build' || selectedType === 'build-launch' || selectedType === 'launch') && (
+          <button
+            disabled={!!isLocked}
+            onClick={() => setCrowdfundingEnabled((p) => !p)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ml-1 disabled:pointer-events-none ${
+              crowdfundingEnabled
+                ? 'bg-white/10 text-white'
+                : 'text-white/40 hover:text-white/60'
+            }`}
+          >
+            <Coins size={14} />
+            Crowdfunding?
+          </button>
+        )}
+      </div>}
 
       {/* Calculator body */}
       <div
@@ -510,12 +571,12 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               allAddOns={allAddOns}
               buildActive={showBuild}
               launchActive={showLaunch}
-              crowdfundingEnabled={crowdfundingEnabled}
+              crowdfundingEnabled={effectiveCrowdfunding}
               onCrowdfundingToggle={() => setCrowdfundingEnabled((p) => !p)}
               crowdfundingTierIndex={crowdfundingTierIndex}
               onCrowdfundingTierChange={setCrowdfundingTierIndex}
               fundraisingEnabled={fundraisingEnabled}
-              onFundraisingToggle={() => setFundraisingEnabled((p) => !p)}
+              onFundraisingToggle={() => {}}
               totalDays={totalDays}
               photoCount={photoCount}
               tierSelections={tierSelections}
@@ -524,9 +585,10 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               saving={saving}
               saved={saved}
               hideGetStarted
-              hideSaveQuote
+              hideSaveQuote={!onFnaSave}
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
               crowdfundingApproved={crowdfundingApproved}
+              crowdfundingDeferred={crowdfundingDeferred}
               isReadOnly={isReadOnly}
               isLocked={isLocked}
               allQuotes={allQuotes}

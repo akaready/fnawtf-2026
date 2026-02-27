@@ -168,7 +168,7 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
               <button
                 key={preset}
                 onClick={() => handlePresetClick(preset)}
-                className="px-2 py-0.5 rounded text-[10px] text-white/25 hover:text-white/50 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] transition-colors"
+                className="px-2 py-0.5 rounded text-[10px] text-white/25 hover:text-white/50 bg-white/[0.02] hover:bg-white/[0.05] border border-[#2a2a2a] transition-colors"
               >
                 + {preset}
               </button>

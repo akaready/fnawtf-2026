@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
-import { X, Trash2, Loader2, Save, Check } from 'lucide-react';
+import { X, Trash2, Loader2 } from 'lucide-react';
+import { SaveButton } from './SaveButton';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { MetadataTab } from './MetadataTab';
@@ -74,8 +76,7 @@ export function ProjectPanel({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [deleting, startDelete] = useTransition();
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const { saving: isSaving, saved: isSaved, wrap: wrapSave } = useSaveState(2500);
 
   // Refs for tabs that expose save/isDirty
   const projectTabRef = useRef<MetadataTabHandle>(null);
@@ -94,7 +95,6 @@ export function ProjectPanel({
     setBtsImages([]);
     setConfirmDelete(false);
     setConfirmClose(false);
-    setSaveStatus('idle');
 
     if (projectId) {
       setLoadingRelated(true);
@@ -112,7 +112,7 @@ export function ProjectPanel({
           setCredits(c);
           setBtsImages(b);
           setAllRoles(roles);
-          setAllPeople(contacts.map((p) => ({ id: p.id, name: p.name })));
+          setAllPeople(contacts.map((p) => ({ id: p.id, name: `${p.first_name} ${p.last_name}`.trim() })));
           if (tags) setLocalTagSuggestions(tags);
           if (tests) setLocalTestimonials(tests.map((t: any) => ({ id: t.id, person_name: t.person_name, company: t.company, quote: t.quote ?? null, project_id: t.project_id ?? null, client_id: t.client_id ?? null })));
         })
@@ -142,24 +142,14 @@ export function ProjectPanel({
   }, [onProjectCreated]);
 
   // Universal save — commits all dirty tabs
-  const handleSaveAll = async () => {
-    setIsSaving(true);
-    setSaveStatus('idle');
-    try {
-      const saves: Promise<void>[] = [];
-      if (projectTabRef.current?.isDirty) saves.push(projectTabRef.current.save());
-      if (metadataTabRef.current?.isDirty) saves.push(metadataTabRef.current.save());
-      if (!loadingRelated && creditsRef.current?.isDirty) saves.push(creditsRef.current.save());
-      if (!loadingRelated && btsRef.current?.isDirty) saves.push(btsRef.current.save());
-      await Promise.all(saves);
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2500);
-    } catch {
-      setSaveStatus('error');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const handleSaveAll = () => wrapSave(async () => {
+    const saves: Promise<void>[] = [];
+    if (projectTabRef.current?.isDirty) saves.push(projectTabRef.current.save());
+    if (metadataTabRef.current?.isDirty) saves.push(metadataTabRef.current.save());
+    if (!loadingRelated && creditsRef.current?.isDirty) saves.push(creditsRef.current.save());
+    if (!loadingRelated && btsRef.current?.isDirty) saves.push(btsRef.current.save());
+    await Promise.all(saves);
+  });
 
   // Close guard — warn if unsaved changes exist
   // Check refs at call-time (not render-time) because ref changes don't trigger re-renders
@@ -187,7 +177,7 @@ export function ProjectPanel({
       />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-white/[0.08] flex-shrink-0">
+      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-[#2a2a2a] flex-shrink-0">
         {project?.thumbnail_url ? (
           <div className="w-14 h-9 rounded overflow-hidden bg-white/5 flex-shrink-0">
             <img src={String(project.thumbnail_url)} alt="" className="w-full h-full object-cover" />
@@ -210,7 +200,7 @@ export function ProjectPanel({
       </div>
 
       {/* Tab strip */}
-      <div className="flex items-center gap-1 border-b border-white/[0.08] px-6 py-2 flex-shrink-0 bg-white/[0.02]">
+      <div className="flex items-center gap-1 border-b border-[#2a2a2a] px-6 py-2 flex-shrink-0 bg-white/[0.02]">
         {TABS.map((tab) => {
           const disabled = isNew && tab.id !== 'project';
           return (
@@ -300,25 +290,9 @@ export function ProjectPanel({
 
       {/* Footer: save (left) | delete (right) */}
       {!isNew && projectId && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08] flex-shrink-0 bg-white/[0.02]">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[#2a2a2a] flex-shrink-0 bg-white/[0.02]">
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleSaveAll}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40"
-            >
-              {isSaving ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : saveStatus === 'saved' ? (
-                <Check size={14} className="text-green-600" />
-              ) : (
-                <Save size={14} />
-              )}
-              {isSaving ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
-            </button>
-            {saveStatus === 'error' && (
-              <span className="text-sm text-red-400">Save failed</span>
-            )}
+            <SaveButton saving={isSaving} saved={isSaved} onClick={handleSaveAll} className="px-5 py-2.5 text-sm" />
           </div>
           <div className="flex items-center gap-2">
             {confirmDelete ? (
@@ -326,7 +300,7 @@ export function ProjectPanel({
                 <span className="text-xs text-red-400 mr-1">Delete this project?</span>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-white/[0.08] text-muted-foreground hover:text-foreground transition-colors"
+                  className="px-3 py-1.5 text-xs rounded-lg border border-[#2a2a2a] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>

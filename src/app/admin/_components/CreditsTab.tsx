@@ -145,7 +145,7 @@ function Combobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-white/[0.06]"
+              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-[#2a2a2a]"
             >
               {creating ? 'Creating...' : `${createLabel} "${query.trim()}"`}
             </button>
@@ -200,7 +200,10 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
   };
 
   const handleCreatePerson = async (name: string): Promise<string> => {
-    const id = await createContact({ name, type: 'crew' });
+    const parts = name.split(' ');
+    const first_name = parts[0] || '';
+    const last_name = parts.slice(1).join(' ') || '';
+    const id = await createContact({ first_name, last_name, type: 'crew' });
     setPeople((prev) => [...prev, { id, name }].sort((a, b) => a.name.localeCompare(b.name)));
     return id;
   };

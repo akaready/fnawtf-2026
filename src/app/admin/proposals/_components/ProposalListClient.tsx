@@ -170,7 +170,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       />
 
       {/* Status filter bar */}
-      <div className="flex-shrink-0 flex items-center gap-1 px-8 py-2 border-b border-white/[0.12]">
+      <div className="flex-shrink-0 flex items-center gap-1 px-8 py-2 border-b border-[#2a2a2a]">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}

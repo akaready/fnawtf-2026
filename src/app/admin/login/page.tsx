@@ -37,10 +37,10 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl p-8 shadow-2xl">
           {/* Header */}
           <div className="mb-7">
-            <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center mb-5">
+            <div className="w-9 h-9 rounded-lg bg-white/5 border border-[#2a2a2a] flex items-center justify-center mb-5">
               <Lock size={16} className="text-muted-foreground" />
             </div>
             <h1 className="font-display text-xl font-bold text-foreground leading-tight">Admin Login</h1>

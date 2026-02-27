@@ -87,7 +87,7 @@ function QuoteForm({
   };
 
   return (
-    <div className="border border-white/[0.08] rounded-xl overflow-hidden">
+    <div className="border border-[#2a2a2a] rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/[0.02] transition-colors"
@@ -106,7 +106,7 @@ function QuoteForm({
       </button>
 
       {open && (
-        <div className="px-6 pb-6 space-y-5 border-t border-white/[0.06]">
+        <div className="px-6 pb-6 space-y-5 border-t border-[#2a2a2a]">
           {/* Label */}
           <div className="pt-5">
             <label className="block text-xs font-mono tracking-wider uppercase text-white/25 mb-2">
@@ -117,7 +117,7 @@ function QuoteForm({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Recommended, Budget Option"
-              className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+              className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
             />
           </div>
 
@@ -131,7 +131,7 @@ function QuoteForm({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explain the choices in this quote..."
               rows={3}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors resize-none"
+              className="w-full bg-white/[0.04] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors resize-none"
             />
           </div>
 
@@ -146,7 +146,7 @@ function QuoteForm({
                   className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     quoteType === qt.value
                       ? 'bg-accent text-white'
-                      : 'bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/70'
+                      : 'bg-white/[0.04] border border-[#2a2a2a] text-white/40 hover:text-white/70'
                   }`}
                 >
                   {qt.label}
@@ -166,7 +166,7 @@ function QuoteForm({
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+                className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
               />
             </div>
             <div>
@@ -178,7 +178,7 @@ function QuoteForm({
                 value={downAmount}
                 onChange={(e) => setDownAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
+                className="w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/15 outline-none focus:border-white/20 transition-colors"
               />
             </div>
           </div>
@@ -194,7 +194,7 @@ function QuoteForm({
               max="100"
               value={discountPct}
               onChange={(e) => setDiscountPct(e.target.value)}
-              className="w-32 bg-black/40 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white/80 outline-none focus:border-white/20 transition-colors"
+              className="w-32 bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white/80 outline-none focus:border-white/20 transition-colors"
             />
           </div>
 

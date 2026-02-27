@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
@@ -12,6 +12,11 @@ import type { ProposalSectionRow, ContentSnippetRow, ProposalType } from '@/type
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+export interface MarkdownTabEditorHandle {
+  save: () => Promise<void>;
+  isDirty: boolean;
+}
+
 interface MarkdownTabEditorProps {
   proposalId: string;
   proposalType: ProposalType;
@@ -20,77 +25,95 @@ interface MarkdownTabEditorProps {
   section: ProposalSectionRow | null;
   onSectionUpdated: (s: ProposalSectionRow) => void;
   label: string;
+  defaultSnippetCategory?: string;
+  titlePlaceholder?: string;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function MarkdownTabEditor({
-  proposalId,
-  proposalType,
-  sortOrder,
-  snippets,
-  section,
-  onSectionUpdated,
-  label: _label,
-}: MarkdownTabEditorProps) {
+export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTabEditorProps>(
+  function MarkdownTabEditor({
+    proposalId,
+    proposalType,
+    sortOrder,
+    snippets,
+    section,
+    onSectionUpdated,
+    label: _label,
+    defaultSnippetCategory,
+    titlePlaceholder,
+  }, ref) {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl]           = useState('');
+  const [title, setTitle]               = useState(section?.custom_title ?? '');
   const linkInputRef                    = useRef<HTMLInputElement>(null);
   const sectionRef                      = useRef<ProposalSectionRow | null>(section);
-  const debounceTimer                   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [, startTransition]             = useTransition();
+  const isDirtyRef                      = useRef(false);
+  const currentMarkdownRef              = useRef<string>(section?.custom_content ?? '');
+  const titleTimerRef                   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep sectionRef in sync so the autosave closure always has the latest value
-  useEffect(() => { sectionRef.current = section; }, [section]);
+  // ── Save ────────────────────────────────────────────────────────────────
 
-  // ── Autosave ────────────────────────────────────────────────────────────
-
-  const persist = useCallback((markdownContent: string) => {
-    startTransition(async () => {
-      try {
-        const current = sectionRef.current;
-        if (current) {
-          await updateProposalSection(current.id, { custom_content: markdownContent });
-        } else {
-          const id = await addProposalSection({
-            proposal_id: proposalId,
-            section_type: 'text',
-            sort_order: sortOrder,
-            custom_content: markdownContent,
-            layout_columns: 1,
-            layout_position: 'full',
-          });
-          const created: ProposalSectionRow = {
-            id,
-            proposal_id: proposalId,
-            section_type: 'text',
-            snippet_id: null,
-            custom_content: markdownContent,
-            custom_title: null,
-            layout_columns: 1,
-            layout_position: 'full',
-            sort_order: sortOrder,
-            created_at: new Date().toISOString(),
-          };
-          sectionRef.current = created;
-          onSectionUpdated(created);
-        }
-      } catch {
+  const save = useCallback(async () => {
+    const markdownContent = currentMarkdownRef.current;
+    const current = sectionRef.current;
+    try {
+      if (current) {
+        await updateProposalSection(current.id, { custom_content: markdownContent, custom_title: title || null });
+        const updated = { ...current, custom_content: markdownContent, custom_title: title || null };
+        sectionRef.current = updated;
+        onSectionUpdated(updated);
+      } else {
+        const id = await addProposalSection({
+          proposal_id: proposalId,
+          section_type: 'text',
+          sort_order: sortOrder,
+          custom_content: markdownContent,
+          custom_title: title || null,
+          layout_columns: 1,
+          layout_position: 'full',
+        });
+        const created: ProposalSectionRow = {
+          id,
+          proposal_id: proposalId,
+          section_type: 'text',
+          snippet_id: null,
+          custom_content: markdownContent,
+          custom_title: title || null,
+          layout_columns: 1,
+          layout_position: 'full',
+          sort_order: sortOrder,
+          created_at: new Date().toISOString(),
+        };
+        sectionRef.current = created;
+        onSectionUpdated(created);
       }
-    });
-  }, [proposalId, sortOrder, onSectionUpdated]);
+      isDirtyRef.current = false;
+    } catch {
+      // swallow — caller may show error via saving state
+    }
+  }, [proposalId, sortOrder, onSectionUpdated, title]);
 
-  const scheduleAutosave = useCallback((md: string) => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => persist(md), 1500);
-  }, [persist]);
+  useImperativeHandle(ref, () => ({
+    save,
+    get isDirty() { return isDirtyRef.current; },
+  }), [save]);
 
-  // Flush on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, []);
+  // ── Title change with debounced persist ────────────────────────────────
+
+  const handleTitleChange = useCallback((value: string) => {
+    setTitle(value);
+    if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
+    titleTimerRef.current = setTimeout(() => {
+      const current = sectionRef.current;
+      if (current) {
+        void updateProposalSection(current.id, { custom_title: value || null });
+        const updated = { ...current, custom_title: value || null };
+        sectionRef.current = updated;
+        onSectionUpdated(updated);
+      }
+    }, 600);
+  }, [onSectionUpdated]);
 
   // ── Editor ──────────────────────────────────────────────────────────────
 
@@ -105,7 +128,8 @@ export function MarkdownTabEditor({
     onUpdate({ editor: e }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const md = (e.storage as any).markdown.getMarkdown();
-      scheduleAutosave(md);
+      currentMarkdownRef.current = md;
+      isDirtyRef.current = true;
     },
     editorProps: {
       attributes: { class: 'outline-none min-h-[320px] prose-snippet' },
@@ -140,13 +164,14 @@ export function MarkdownTabEditor({
     editor.commands.setContent(combined);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const md = (editor.storage as any).markdown.getMarkdown();
-    scheduleAutosave(md);
-  }, [editor, scheduleAutosave]);
+    currentMarkdownRef.current = md;
+    isDirtyRef.current = true;
+  }, [editor]);
 
   // ── Filtered snippets ────────────────────────────────────────────────────
 
   const [snippetSearch, setSnippetSearch] = useState('');
-  const [snippetCategory, setSnippetCategory] = useState('');
+  const [snippetCategory, setSnippetCategory] = useState(defaultSnippetCategory ?? '');
 
   const matchingSnippets = useMemo(
     () => snippets.filter((s) => s.snippet_type === proposalType || s.snippet_type === 'general'),
@@ -227,9 +252,23 @@ export function MarkdownTabEditor({
         {/* Editor column */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
 
-          {/* Toolbar — normal bg, fixed height */}
+          {/* Page title */}
+          {titlePlaceholder && (
+            <div className="flex-shrink-0 max-w-3xl w-full px-8 pt-5 pb-2">
+              <label className="text-[10px] uppercase tracking-widest text-white/30 mb-1.5 block">Slide Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder={titlePlaceholder}
+                className="w-full bg-transparent text-xl font-semibold text-white placeholder:text-white/20 outline-none border-b border-white/[0.06] pb-2 focus:border-white/20 transition-colors"
+              />
+            </div>
+          )}
+
+          {/* Toolbar — normal bg, fixed height, aligned with snippet sidebar header */}
           <div className="flex-shrink-0 max-w-3xl w-full">
-            <div className="flex items-center gap-0.5 px-8 pt-4 pb-2 border-b border-white/[0.06]">
+            <div className="flex items-center gap-0.5 px-8 py-3 border-b border-[#2a2a2a]">
               {formatTools.map(({ key, Icon, label, fn, isActive }) => (
                 <button
                   key={key}
@@ -318,7 +357,7 @@ export function MarkdownTabEditor({
               {/* BubbleMenu — appears on text selection */}
               <BubbleMenu
                 editor={editor}
-                className="flex items-center gap-0.5 bg-[#1a1a1a] border border-white/[0.12] rounded-lg p-1 shadow-xl"
+                className="flex items-center gap-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg p-1 shadow-xl"
               >
                 {formatTools.map(({ key, Icon, label, fn, isActive }) => (
                   <button
@@ -364,8 +403,8 @@ export function MarkdownTabEditor({
         </div>
 
         {/* Snippet sidebar */}
-        <div className="w-64 flex-shrink-0 border-l border-white/[0.12] flex flex-col">
-          <div className="px-3 pt-3 pb-3 border-b border-white/[0.12] flex-shrink-0 flex items-center gap-2">
+        <div className="w-64 flex-shrink-0 border-l border-[#2a2a2a] flex flex-col">
+          <div className="px-3 h-[51px] border-b border-[#2a2a2a] flex-shrink-0 flex items-center gap-2">
             <div className="relative flex-1">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
               <input
@@ -373,7 +412,7 @@ export function MarkdownTabEditor({
                 value={snippetSearch}
                 onChange={(e) => setSnippetSearch(e.target.value)}
                 placeholder="Search snippets…"
-                className="w-full bg-black/40 border border-white/[0.12] rounded-md pl-8 pr-3 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                className="w-full h-8 bg-black/40 border border-[#2a2a2a] rounded-md pl-8 pr-3 text-xs text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
               />
             </div>
             {snippetCategories.length > 0 && (
@@ -381,7 +420,7 @@ export function MarkdownTabEditor({
                 className={`relative flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
                   snippetCategory
                     ? 'border-white/30 text-white/70 bg-white/[0.08]'
-                    : 'border-white/[0.12] text-white/30 hover:text-white/60 hover:border-white/25'
+                    : 'border-[#2a2a2a] text-white/30 hover:text-white/60 hover:border-white/25'
                 }`}
                 title={snippetCategory ? `Filter: ${snippetCategory}` : 'Filter by category'}
               >
@@ -408,7 +447,7 @@ export function MarkdownTabEditor({
                   key={snippet.id}
                   type="button"
                   onClick={() => handleSnippetInsert(snippet.body)}
-                  className="w-full text-left p-3 rounded-lg border border-white/[0.12] hover:border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.05] transition-colors group"
+                  className="w-full text-left p-3 rounded-lg border border-[#2a2a2a] hover:border-white/[0.14] bg-white/[0.02] hover:bg-white/[0.05] transition-colors group"
                 >
                   <p className="text-sm font-medium text-white/70 group-hover:text-white/90 transition-colors leading-tight">
                     {snippet.title}
@@ -426,4 +465,4 @@ export function MarkdownTabEditor({
 
     </div>
   );
-}
+});

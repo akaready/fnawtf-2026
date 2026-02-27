@@ -227,6 +227,7 @@ export type TestimonialRow = {
   id: string;
   project_id: string | null;
   client_id: string | null;
+  contact_id: string | null;
   quote: string;
   person_name: string | null;
   person_title: string | null;
@@ -237,13 +238,14 @@ export type TestimonialRow = {
   created_at: string;
   project?: { title: string } | null;
   client?: { name: string; logo_url: string | null } | null;
+  contact?: { id: string; first_name: string; last_name: string; role: string | null; headshot_url: string | null } | null;
 };
 
 export async function getTestimonials(): Promise<TestimonialRow[]> {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('testimonials')
-    .select('*, project:projects(title), client:clients(name, logo_url)')
+    .select('*, project:projects(title), client:clients(name, logo_url), contact:contacts(id, first_name, last_name, role, headshot_url)')
     .order('display_order', { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as TestimonialRow[];
@@ -251,6 +253,7 @@ export async function getTestimonials(): Promise<TestimonialRow[]> {
 
 export async function createTestimonial(data: {
   quote: string;
+  contact_id?: string | null;
   person_name?: string | null;
   person_title?: string | null;
   display_title?: string | null;
@@ -303,6 +306,15 @@ export type ClientRow = {
   company_types: string[];
   status: string;
   pipeline_stage: string;
+  website_url: string | null;
+  linkedin_url: string | null;
+  description: string | null;
+  industry: string | null;
+  location: string | null;
+  founded_year: number | null;
+  company_size: string | null;
+  twitter_url: string | null;
+  instagram_url: string | null;
   created_at: string;
 };
 
@@ -349,6 +361,67 @@ export async function deleteClientRecord(id: string) {
   const { error } = await supabase.from('clients').delete().eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/companies');
+}
+
+// ── Company Info Scraper ────────────────────────────────────────────────
+
+export type ScrapedCompanyInfo = {
+  description?: string;
+  website_url?: string;
+  linkedin_url?: string;
+  twitter_url?: string;
+  instagram_url?: string;
+  industry?: string;
+  location?: string;
+  founded_year?: number;
+  company_size?: string;
+};
+
+export async function scrapeCompanyInfo(_companyName: string, websiteUrl?: string | null): Promise<ScrapedCompanyInfo> {
+  await requireAuth();
+  const result: ScrapedCompanyInfo = {};
+
+  // Helper to extract meta content
+  const getMeta = (html: string, name: string): string | undefined => {
+    const patterns = [
+      new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i'),
+      new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, 'i'),
+    ];
+    for (const p of patterns) {
+      const m = html.match(p);
+      if (m?.[1]) return m[1].trim();
+    }
+    return undefined;
+  };
+
+  // Helper to find social links
+  const findSocialLinks = (html: string) => {
+    const linkedinMatch = html.match(/href=["'](https?:\/\/(?:www\.)?linkedin\.com\/company\/[^"'\s]+)["']/i);
+    const twitterMatch = html.match(/href=["'](https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^"'\s]+)["']/i);
+    const instagramMatch = html.match(/href=["'](https?:\/\/(?:www\.)?instagram\.com\/[^"'\s]+)["']/i);
+    if (linkedinMatch?.[1]) result.linkedin_url = linkedinMatch[1];
+    if (twitterMatch?.[1]) result.twitter_url = twitterMatch[1];
+    if (instagramMatch?.[1]) result.instagram_url = instagramMatch[1];
+  };
+
+  // If we have a website URL, scrape it
+  if (websiteUrl) {
+    try {
+      const url = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
+      const resp = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FNA-Admin/1.0)' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (resp.ok) {
+        const html = await resp.text();
+        result.description = getMeta(html, 'description') ?? getMeta(html, 'og:description');
+        result.website_url = url;
+        findSocialLinks(html);
+      }
+    } catch { /* timeout or fetch error — skip */ }
+  }
+
+  return result;
 }
 
 // ── Content Snippets ────────────────────────────────────────────────────
@@ -682,6 +755,8 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
   friendly_discount_pct: number;
   total_amount: number | null;
   down_amount: number | null;
+  sort_order?: number;
+  visible?: boolean;
   description?: string | null;
 }, quoteId?: string): Promise<string> {
   const { supabase } = await requireAuth();
@@ -783,6 +858,29 @@ export async function deleteProposalMilestone(id: string): Promise<void> {
   revalidatePath('/admin/proposals');
 }
 
+export async function deleteAllProposalMilestones(proposalId: string): Promise<void> {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposal_milestones')
+    .delete()
+    .eq('proposal_id', proposalId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+}
+
+export async function batchCreateProposalMilestones(
+  milestones: Array<{ proposal_id: string; label: string; start_date: string; end_date: string; sort_order: number; description?: string | null }>
+): Promise<string[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('proposal_milestones')
+    .insert(milestones as never)
+    .select('id');
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+  return (data ?? []).map((r: { id: string }) => r.id);
+}
+
 // ── Proposal Analytics ───────────────────────────────────────────────────
 
 export async function getProposalViewCounts(): Promise<Record<string, { views: number; lastViewed: string | null }>> {
@@ -811,7 +909,8 @@ export async function getContacts(): Promise<import('@/types/proposal').ContactR
   const { data, error } = await supabase
     .from('contacts')
     .select('*')
-    .order('name');
+    .order('last_name')
+    .order('first_name');
   if (error) throw new Error(error.message);
   const contacts = (data ?? []) as import('@/types/proposal').ContactRow[];
 
@@ -878,13 +977,15 @@ export async function getContacts(): Promise<import('@/types/proposal').ContactR
 }
 
 export async function createContact(data: {
-  name: string;
+  first_name: string;
+  last_name: string;
   email?: string | null;
   phone?: string | null;
   role?: string | null;
   company?: string | null;
   notes?: string | null;
   type?: string;
+  client_id?: string | null;
 }): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: row, error } = await supabase
@@ -912,6 +1013,44 @@ export async function deleteContact(id: string) {
   const { error } = await supabase.from('contacts').delete().eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/contacts');
+}
+
+// ── Proposal Contacts (access list) ──────────────────────────────────────
+
+export async function getProposalContacts(proposalId: string): Promise<(import('@/types/proposal').ContactRow & { pivot_id: string })[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('proposal_contacts')
+    .select('id, contact_id, contacts(*)')
+    .eq('proposal_id', proposalId);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Array<{ id: string; contact_id: string; contacts: Record<string, unknown> }>).map((row) => ({
+    ...(row.contacts as unknown as import('@/types/proposal').ContactRow),
+    pivot_id: row.id,
+  }));
+}
+
+export async function addProposalContact(proposalId: string, contactId: string): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('proposal_contacts')
+    .insert({ proposal_id: proposalId, contact_id: contactId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+  return (row as { id: string }).id;
+}
+
+export async function removeProposalContact(proposalId: string, contactId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposal_contacts')
+    .delete()
+    .eq('proposal_id', proposalId)
+    .eq('contact_id', contactId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
 }
 
 // ── Roles ────────────────────────────────────────────────────────────────
@@ -1045,18 +1184,19 @@ export async function mergeRoles(sourceIds: string[], targetId: string) {
   revalidatePath('/');
 }
 
-export async function getPeopleForRole(roleId: string): Promise<Array<{ id: string; name: string; type: string }>> {
+export async function getPeopleForRole(roleId: string): Promise<Array<{ id: string; first_name: string; last_name: string; type: string }>> {
   const { supabase } = await requireAuth();
   const { data: crRaw } = await supabase.from('contact_roles').select('contact_id').eq('role_id', roleId);
   const contactIds = ((crRaw ?? []) as Array<{ contact_id: string }>).map((cr) => cr.contact_id);
   if (contactIds.length === 0) return [];
   const { data, error } = await supabase
     .from('contacts')
-    .select('id, name, type')
+    .select('id, first_name, last_name, type')
     .in('id', contactIds)
-    .order('name');
+    .order('last_name')
+    .order('first_name');
   if (error) throw new Error(error.message);
-  return (data ?? []) as Array<{ id: string; name: string; type: string }>;
+  return (data ?? []) as Array<{ id: string; first_name: string; last_name: string; type: string }>;
 }
 
 // ── Contact Roles (junction) ──────────────────────────────────────────────
@@ -1097,6 +1237,46 @@ export async function getContactProjects(contactId: string): Promise<Array<{ id:
     .order('title');
   if (error) throw new Error(error.message);
   return (data ?? []) as Array<{ id: string; title: string; client_name: string; thumbnail_url: string | null }>;
+}
+
+export async function getProjectList(): Promise<Array<{ id: string; title: string; client_name: string }>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, title, client_name')
+    .order('client_name')
+    .order('title');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; title: string; client_name: string }>;
+}
+
+export async function getContactRoleMap(): Promise<Record<string, string[]>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('contact_roles')
+    .select('contact_id, role_id');
+  if (error) throw new Error(error.message);
+  const map: Record<string, string[]> = {};
+  for (const row of (data ?? []) as Array<{ contact_id: string; role_id: string }>) {
+    if (!map[row.contact_id]) map[row.contact_id] = [];
+    if (!map[row.contact_id].includes(row.role_id)) map[row.contact_id].push(row.role_id);
+  }
+  return map;
+}
+
+export async function getContactProjectMap(): Promise<Record<string, string[]>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('project_credits')
+    .select('contact_id, project_id');
+  if (error) throw new Error(error.message);
+  const map: Record<string, string[]> = {};
+  for (const row of (data ?? []) as Array<{ contact_id: string | null; project_id: string }>) {
+    if (!row.contact_id) continue;
+    if (!map[row.contact_id]) map[row.contact_id] = [];
+    if (!map[row.contact_id].includes(row.project_id)) map[row.contact_id].push(row.project_id);
+  }
+  return map;
 }
 
 // ── Tag Suggestions ──────────────────────────────────────────────────────
@@ -1341,7 +1521,7 @@ export async function getProjectsForBrowser(): Promise<import('@/types/proposal'
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('projects')
-    .select('id, title, slug, thumbnail_url, client_name, style_tags, premium_addons, camera_techniques')
+    .select('id, title, slug, thumbnail_url, client_name, style_tags, premium_addons, camera_techniques, assets_delivered, category, production_days, crew_count, talent_count, location_count')
     .eq('published', true)
     .order('client_name')
     .order('title');
@@ -1464,7 +1644,8 @@ export async function getContactsWithHeadshots(): Promise<
   const { data: contacts, error } = await supabase
     .from('contacts')
     .select('*')
-    .order('name');
+    .order('last_name')
+    .order('first_name');
   if (error) throw new Error(error.message);
 
   // Get featured headshots for all contacts in one query
@@ -1511,4 +1692,241 @@ export async function deleteHeadshot(headshotId: string) {
   const { error } = await supabase.from('headshots').delete().eq('id', headshotId);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/contacts');
+}
+
+// ── Meetings ──────────────────────────────────────────────────────────────
+
+export async function getMeetings(filters?: {
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+}) {
+  const { supabase } = await requireAuth();
+  let query = supabase
+    .from('meetings')
+    .select(`
+      *,
+      meeting_attendees (*),
+      meeting_transcripts (*),
+      meeting_relationships (
+        *,
+        clients:client_id (id, name, logo_url),
+        contacts:contact_id (id, first_name, last_name, email)
+      )
+    `)
+    .order('start_time', { ascending: false });
+
+  if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.dateFrom) query = query.gte('start_time', filters.dateFrom);
+  if (filters?.dateTo) query = query.lte('start_time', filters.dateTo);
+  if (filters?.search) query = query.ilike('title', `%${filters.search}%`);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getMeeting(id: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('meetings')
+    .select(`
+      *,
+      meeting_attendees (*),
+      meeting_transcripts (*),
+      meeting_relationships (
+        *,
+        clients:client_id (id, name, logo_url),
+        contacts:contact_id (id, first_name, last_name, email)
+      )
+    `)
+    .eq('id', id)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getMeetingsConfig() {
+  const { supabase } = await requireAuth();
+  const { data } = await supabase
+    .from('meetings_config')
+    .select('*')
+    .limit(1)
+    .single();
+  return data;
+}
+
+export async function saveMeetingsConfig(icalUrl: string) {
+  const { supabase } = await requireAuth();
+  // Check if config exists
+  const { data: existing } = await supabase
+    .from('meetings_config')
+    .select('id')
+    .limit(1)
+    .single();
+
+  if (existing) {
+    const { error } = await supabase
+      .from('meetings_config')
+      .update({ ical_url: icalUrl, updated_at: new Date().toISOString() } as never)
+      .eq('id', (existing as { id: string }).id);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase
+      .from('meetings_config')
+      .insert({ ical_url: icalUrl } as never);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath('/admin/meetings');
+}
+
+export async function triggerCalendarSync() {
+  const { supabase } = await requireAuth();
+
+  // Get config
+  const { data: config } = await supabase
+    .from('meetings_config')
+    .select('ical_url')
+    .limit(1)
+    .single();
+
+  const icalUrl = (config as { ical_url?: string } | null)?.ical_url || process.env.GOOGLE_ICAL_URL;
+  if (!icalUrl) throw new Error('No iCal URL configured');
+
+  // Import and run sync logic directly (server action context)
+  const { fetchAndParseCalendar } = await import('@/lib/calendar');
+  const { createRecallBot } = await import('@/lib/recall');
+  const { matchAttendeesForMeeting } = await import('@/lib/meetings/matchAttendees');
+
+  const events = await fetchAndParseCalendar(icalUrl);
+  const now = new Date();
+  const tenMinFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+
+  let synced = 0;
+  let botsScheduled = 0;
+
+  for (const event of events) {
+    if (event.endTime < new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
+      continue;
+
+    const status = event.meetingUrl
+      ? event.startTime < now
+        ? 'completed'
+        : 'upcoming'
+      : 'no_video_link';
+
+    const { data: meeting } = await supabase
+      .from('meetings')
+      .upsert(
+        {
+          ical_uid: event.uid,
+          title: event.title,
+          description: event.description,
+          start_time: event.startTime.toISOString(),
+          end_time: event.endTime.toISOString(),
+          meeting_url: event.meetingUrl,
+          location: event.location,
+          organizer_email: event.organizerEmail,
+          status,
+          raw_event: event.raw,
+          updated_at: new Date().toISOString(),
+        } as never,
+        { onConflict: 'ical_uid' },
+      )
+      .select('id, recall_bot_id, status')
+      .single();
+
+    const m = meeting as { id: string; recall_bot_id: string | null; status: string } | null;
+    if (!m) continue;
+    synced++;
+
+    if (event.attendees.length > 0) {
+      await supabase.from('meeting_attendees').upsert(
+        event.attendees.map((att) => ({
+          meeting_id: m.id,
+          email: att.email,
+          display_name: att.name,
+          response_status: att.status,
+          is_organizer: att.email === event.organizerEmail,
+        })) as never,
+        { onConflict: 'meeting_id,email' },
+      );
+    }
+
+    if (
+      event.meetingUrl &&
+      event.startTime > tenMinFromNow &&
+      !m.recall_bot_id
+    ) {
+      try {
+        const bot = await createRecallBot({
+          meeting_url: event.meetingUrl,
+          join_at: event.startTime.toISOString(),
+        });
+        await supabase
+          .from('meetings')
+          .update({
+            recall_bot_id: bot.id,
+            status: 'bot_scheduled',
+            updated_at: new Date().toISOString(),
+          } as never)
+          .eq('id', m.id);
+        botsScheduled++;
+      } catch (err) {
+        console.error(`Failed to schedule bot for ${event.uid}:`, err);
+      }
+    }
+
+    await matchAttendeesForMeeting(supabase, m.id);
+  }
+
+  // Update last synced
+  if (config) {
+    await supabase
+      .from('meetings_config')
+      .update({
+        last_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq('ical_url', icalUrl);
+  }
+
+  revalidatePath('/admin/meetings');
+  return { synced, botsScheduled };
+}
+
+export async function linkMeetingToCompany(meetingId: string, clientId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('meeting_relationships').insert({
+    meeting_id: meetingId,
+    client_id: clientId,
+    contact_id: null,
+    match_type: 'manual',
+  } as never);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/meetings');
+}
+
+export async function linkMeetingToContact(meetingId: string, contactId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('meeting_relationships').insert({
+    meeting_id: meetingId,
+    contact_id: contactId,
+    client_id: null,
+    match_type: 'manual',
+  } as never);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/meetings');
+}
+
+export async function unlinkMeetingRelationship(relationshipId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('meeting_relationships')
+    .delete()
+    .eq('id', relationshipId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/meetings');
 }

@@ -1,7 +1,10 @@
 'use client';
 
-import { MarkdownTabEditor } from './MarkdownTabEditor';
+import { forwardRef } from 'react';
+import { MarkdownTabEditor, type MarkdownTabEditorHandle } from './MarkdownTabEditor';
 import type { ProposalSectionRow, ContentSnippetRow, ProposalType } from '@/types/proposal';
+
+export type { MarkdownTabEditorHandle as WelcomeTabHandle };
 
 interface Props {
   proposalId: string;
@@ -11,16 +14,21 @@ interface Props {
   onSectionUpdated: (s: ProposalSectionRow) => void;
 }
 
-export function WelcomeTab({ proposalId, proposalType, section, snippets, onSectionUpdated }: Props) {
-  return (
-    <MarkdownTabEditor
-      proposalId={proposalId}
-      proposalType={proposalType}
-      sortOrder={0}
-      snippets={snippets}
-      section={section}
-      onSectionUpdated={onSectionUpdated}
-      label="Welcome"
-    />
-  );
-}
+export const WelcomeTab = forwardRef<MarkdownTabEditorHandle, Props>(
+  function WelcomeTab({ proposalId, proposalType, section, snippets, onSectionUpdated }, ref) {
+    return (
+      <MarkdownTabEditor
+        ref={ref}
+        proposalId={proposalId}
+        proposalType={proposalType}
+        sortOrder={0}
+        snippets={snippets}
+        section={section}
+        onSectionUpdated={onSectionUpdated}
+        label="Welcome"
+        defaultSnippetCategory="Welcome"
+        titlePlaceholder="A Note for You"
+      />
+    );
+  }
+);

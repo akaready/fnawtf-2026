@@ -13,13 +13,10 @@ import type { ProposalMilestoneRow } from '@/types/proposal';
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const PRESET_LABELS = [
-  'Pre-Production',
   'Script Due',
   'Casting',
   'Location Scout',
   'Production Days',
-  'Post-Production',
-  'Rough Cut',
   'Final Delivery',
   'Launch',
 ];
@@ -37,12 +34,12 @@ const inputCls =
   'bg-transparent text-sm text-white focus:outline-none min-w-0';
 
 const dateInputCls =
-  'text-xs bg-black/40 border border-white/10 rounded px-2 py-1 text-white/60 ' +
+  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-2 py-1 text-white/60 ' +
   'focus:outline-none focus:border-white/20 focus:text-white/80 transition-colors ' +
   '[color-scheme:dark]';
 
 const selectCls =
-  'text-xs bg-black/40 border border-white/10 rounded px-2 py-1 text-white/50 ' +
+  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-2 py-1 text-white/50 ' +
   'focus:outline-none focus:border-white/20 cursor-pointer [color-scheme:dark]';
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -304,7 +301,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
               return (
                 <div
                   key={m.id}
-                  className="flex items-center gap-3 py-2 border-b border-white/[0.04]"
+                  className="flex items-center gap-3 py-2 border-b border-[#2a2a2a]"
                 >
                   {/* Color swatch */}
                   <div

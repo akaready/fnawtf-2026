@@ -55,11 +55,11 @@ export function AddProjectModal({
       onClick={onClose}
     >
       <div
-        className="bg-[#111] border border-white/[0.1] rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[60vh] flex flex-col"
+        className="bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[60vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.07]">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2a2a2a]">
           <Search size={15} className="text-white/30 flex-shrink-0" />
           <input
             type="text"

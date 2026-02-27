@@ -34,7 +34,7 @@ export function AdminPageHeader({
   const hasInlineControls = onSearchChange !== undefined || actions || rightContent;
 
   return (
-    <div className={`flex-shrink-0 px-8 pb-4 border-b border-white/[0.12] ${topContent ? 'pt-5' : 'pt-[45px]'}`}>
+    <div className={`flex-shrink-0 px-8 pb-4 border-b border-[#2a2a2a] ${topContent ? 'pt-5' : 'pt-[45px]'}`}>
       {/* Breadcrumb row */}
       {topContent && <div className="mb-3">{topContent}</div>}
 

@@ -3,7 +3,7 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, AppWindow, Clapperboard, GitFork } from 'lucide-react';
+import { LayoutGrid, LogOut, ChevronRight, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Briefcase, Target, AppWindow, Clapperboard, GitFork, Video } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
@@ -40,19 +40,25 @@ export function AdminShell({ children }: Props) {
   };
 
   const navItems = [
-    { href: '/admin/search',   label: 'Search',   icon: Search },
-    { href: '/admin/clients',  label: 'Clients',  icon: Briefcase },
-    { href: '/admin/leads',    label: 'Leads',    icon: Target },
-    { href: '/admin/partners', label: 'Pipelines', icon: GitFork },
-    { href: '/admin/contacts', label: 'People',   icon: Users },
-    { href: '/admin/projects', label: 'Projects', icon: LayoutGrid },
-    { href: '/admin/tags',     label: 'Tags',     icon: Tag },
-    { href: '/admin/roles',    label: 'Roles',    icon: Clapperboard },
-    { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
-    { href: '/admin/proposals', label: 'Proposals', icon: FileText },
-    { href: '/admin/snippets', label: 'Snippets', icon: BookOpen },
-    { href: '/admin/seo',      label: 'SEO',      icon: Globe },
-    { href: '/admin/website',  label: 'Website',  icon: AppWindow },
+    { href: '/admin/search',       label: 'Search',       icon: Search },        // 0
+    // --- CRM ---
+    { href: '/admin/clients',      label: 'Clients',      icon: Briefcase },     // 1
+    { href: '/admin/leads',        label: 'Leads',        icon: Target },        // 2
+    { href: '/admin/partners',     label: 'Pipelines',    icon: GitFork },       // 3
+    { href: '/admin/contacts',     label: 'People',       icon: Users },         // 4
+    // --- Production ---
+    { href: '/admin/projects',     label: 'Projects',     icon: LayoutGrid },    // 5
+    // --- Meetings ---
+    { href: '/admin/meetings',     label: 'Meetings',     icon: Video },         // 6
+    // --- Proposals ---
+    { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },      // 7
+    { href: '/admin/snippets',     label: 'Snippets',     icon: BookOpen },      // 8
+    // --- Config ---
+    { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare }, // 9
+    { href: '/admin/tags',         label: 'Tags',         icon: Tag },           // 10
+    { href: '/admin/roles',        label: 'Roles',        icon: Clapperboard },  // 11
+    { href: '/admin/seo',          label: 'SEO',          icon: Globe },         // 12
+    { href: '/admin/website',      label: 'Website',      icon: AppWindow },     // 13
   ];
 
   return (
@@ -61,7 +67,7 @@ export function AdminShell({ children }: Props) {
       <aside
         className={`${
           collapsed ? 'w-14' : 'w-52'
-        } flex-shrink-0 flex flex-col border-r border-white/[0.12] bg-[#0a0a0a] h-full transition-[width] duration-200 overflow-hidden hover:bg-[#0e0e0e] cursor-pointer`}
+        } flex-shrink-0 flex flex-col border-r border-[#2a2a2a] bg-[#0a0a0a] h-full transition-[width] duration-200 overflow-hidden hover:bg-[#0e0e0e] cursor-pointer`}
         onClick={(e) => {
           // Don't toggle if clicking a link, button, or the logo
           const target = e.target as HTMLElement;
@@ -80,10 +86,11 @@ export function AdminShell({ children }: Props) {
             const active = pathname.startsWith(href);
             return (
               <React.Fragment key={href}>
-                {i === 1 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
-                {i === 5 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
-                {i === 9 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
-                {i === 11 && <div className="border-t border-white/[0.08] -mx-2 !mt-2 !mb-2" />}
+                {i === 1 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 5 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 6 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 7 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 9 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
                 {label === 'Search' ? (
                   <button
                     onClick={() => setSearchOpen(true)}
@@ -121,7 +128,7 @@ export function AdminShell({ children }: Props) {
         </nav>
 
         {/* User / sign out */}
-        <div className="border-t border-white/[0.12] space-y-1 px-2 py-3">
+        <div className="border-t border-[#2a2a2a] space-y-1 px-2 py-3">
           <button
             onClick={handleSignOut}
             disabled={signingOut}

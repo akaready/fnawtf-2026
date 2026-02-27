@@ -7,7 +7,7 @@ import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { createRole, renameRole, deleteRole, mergeRoles, getPeopleForRole } from '../../actions';
 import type { RoleWithCounts } from '../../actions';
 
-type PersonRef = { id: string; name: string; type: string };
+type PersonRef = { id: string; first_name: string; last_name: string; type: string };
 
 /* ── Merge Dialog ───────────────────────────────────────────────────────── */
 
@@ -30,7 +30,7 @@ function MergeDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[#0f0f0f] border border-white/[0.12] rounded-xl w-full max-w-md mx-4 shadow-2xl">
+      <div className="relative z-10 bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl w-full max-w-md mx-4 shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f1f1f]">
           <h2 className="text-lg font-semibold text-foreground">Merge Roles</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -43,7 +43,7 @@ function MergeDialog({
             <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-2">Merging</p>
             <div className="flex flex-wrap gap-1.5">
               {sourceTags.map((r) => (
-                <span key={r.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/[0.1] text-sm text-foreground">
+                <span key={r.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-[#2a2a2a] text-sm text-foreground">
                   {r.name}
                   <span className="text-xs text-muted-foreground">{r.projectCount}</span>
                 </span>
@@ -250,7 +250,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
         <div className="max-w-2xl">
           <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl">
-            <div className="divide-y divide-white/[0.04]">
+            <div className="divide-y divide-[#2a2a2a]">
               {filtered.length === 0 && !addingNew && (
                 <div className="px-5 py-8 text-center text-xs text-muted-foreground/40">
                   {search ? 'No matching roles' : 'No roles yet'}
@@ -348,7 +348,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                                 <span className="w-4 flex items-center justify-center flex-shrink-0">
                                   <span className={`w-1.5 h-1.5 rounded-full ${person.type === 'cast' ? 'bg-purple-400' : 'bg-blue-400'}`} />
                                 </span>
-                                <span className="text-xs text-foreground/80 flex-1 min-w-0 truncate">{person.name}</span>
+                                <span className="text-xs text-foreground/80 flex-1 min-w-0 truncate">{person.first_name} {person.last_name}</span>
                                 <span className="text-xs text-muted-foreground/40 capitalize">{person.type}</span>
                               </div>
                             ))}

@@ -1,25 +1,146 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
-import { Plus, Trash2, Save, Check, Loader2, LayoutGrid, User, Building2, Briefcase, ArrowUpDown, PenLine, Download } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { Plus, Trash2, LayoutGrid, User, Building2, ArrowUpDown, PenLine, Download } from 'lucide-react';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { SaveButton } from './SaveButton';
 import { AdminPageHeader } from './AdminPageHeader';
 import {
   type TestimonialRow,
   createTestimonial,
   updateTestimonial,
   deleteTestimonial,
+  createContact,
 } from '../actions';
+
+/* ── Combobox ───────────────────────────────────────────────────────────── */
+
+const inputClass =
+  'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
+
+function Combobox({
+  value,
+  options,
+  onChange,
+  placeholder,
+  createLabel,
+  onCreate,
+}: {
+  value: string;
+  options: Array<{ id: string; name: string }>;
+  onChange: (name: string, id: string | null) => void;
+  placeholder: string;
+  createLabel: string;
+  onCreate?: (name: string) => Promise<string>;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = query.trim()
+    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
+    : options;
+
+  const exactMatch = options.find((o) => o.name.toLowerCase() === query.trim().toLowerCase());
+
+  const handleSelect = (option: { id: string; name: string }) => {
+    setQuery(option.name);
+    onChange(option.name, option.id);
+    setOpen(false);
+  };
+
+  const handleCreate = async () => {
+    if (!onCreate || !query.trim()) return;
+    setCreating(true);
+    try {
+      const id = await onCreate(query.trim());
+      onChange(query.trim(), id);
+      setOpen(false);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      if (!ref.current?.contains(document.activeElement)) {
+        setOpen(false);
+        if (query.trim() && !exactMatch) {
+          onChange(query.trim(), null);
+        }
+      }
+    }, 150);
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!open) setOpen(true);
+          if (!e.target.value.trim()) onChange('', null);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={inputClass}
+      />
+      {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-[#111] border border-white/15 rounded-lg shadow-xl">
+          {filtered.slice(0, 20).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => handleSelect(opt)}
+              className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-white/[0.06] transition-colors truncate"
+            >
+              {opt.name}
+            </button>
+          ))}
+          {query.trim() && !exactMatch && onCreate && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleCreate}
+              disabled={creating}
+              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-[#2a2a2a]"
+            >
+              {creating ? 'Creating…' : `${createLabel} "${query.trim()}"`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── TestimonialsManager ────────────────────────────────────────────────── */
 
 interface Props {
   initialTestimonials: TestimonialRow[];
   clients: { id: string; name: string; logo_url: string | null }[];
   projects: { id: string; title: string; client_id?: string | null }[];
+  contacts: { id: string; first_name: string; last_name: string; role: string | null }[];
 }
 
-export function TestimonialsManager({ initialTestimonials, clients, projects }: Props) {
+export function TestimonialsManager({ initialTestimonials, clients, projects, contacts: initialContacts }: Props) {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
-  const [saving, startSave] = useTransition();
-  const [savedId, setSavedId] = useState<string | null>(null);
+  const [contacts, setContacts] = useState(initialContacts);
+  const { saving, saved, wrap: wrapSave } = useSaveState(2000);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -42,10 +163,36 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
     );
   };
 
+  const handleContactSelect = (testimonialId: string, contactName: string, contactId: string | null) => {
+    const contact = contactId ? contacts.find((c) => c.id === contactId) : null;
+    setTestimonials((prev) =>
+      prev.map((t) => {
+        if (t.id !== testimonialId) return t;
+        return {
+          ...t,
+          contact_id: contactId,
+          person_name: contactName || null,
+          person_title: contact?.role ?? t.person_title,
+          contact: contact ? { id: contact.id, first_name: contact.first_name, last_name: contact.last_name, role: contact.role, headshot_url: null } : null,
+        };
+      })
+    );
+  };
+
+  const handleCreateContact = async (name: string): Promise<string> => {
+    const parts = name.split(' ');
+    const first_name = parts[0] || '';
+    const last_name = parts.slice(1).join(' ') || '';
+    const id = await createContact({ first_name, last_name, type: 'contact' });
+    setContacts((prev) => [...prev, { id, first_name, last_name, role: null }]);
+    return id;
+  };
+
   const handleSave = (row: TestimonialRow) => {
-    startSave(async () => {
+    wrapSave(async () => {
       await updateTestimonial(row.id, {
         quote: row.quote,
+        contact_id: row.contact_id,
         person_name: row.person_name,
         person_title: row.person_title,
         display_title: row.display_title,
@@ -55,13 +202,11 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
         client_id: row.client_id,
         display_order: row.display_order,
       });
-      setSavedId(row.id);
-      setTimeout(() => setSavedId(null), 2000);
     });
   };
 
   const handleCreate = () => {
-    startSave(async () => {
+    void (async () => {
       setCreating(true);
       const id = await createTestimonial({
         quote: 'New testimonial…',
@@ -79,20 +224,21 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
           profile_picture_url: null,
           project_id: null,
           client_id: null,
+          contact_id: null,
           display_order: testimonials.length,
           created_at: new Date().toISOString(),
         },
       ]);
       setCreating(false);
-    });
+    })();
   };
 
   const handleDelete = (id: string) => {
-    startSave(async () => {
+    void (async () => {
       await deleteTestimonial(id);
       setTestimonials((prev) => prev.filter((t) => t.id !== id));
       setConfirmDeleteId(null);
-    });
+    })();
   };
 
   const filteredTestimonials = useMemo(() => {
@@ -102,13 +248,12 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
       if (t.quote.toLowerCase().includes(q)) return true;
       if (t.person_name?.toLowerCase().includes(q)) return true;
       if (t.person_title?.toLowerCase().includes(q)) return true;
+      if (t.contact && `${t.contact.first_name} ${t.contact.last_name}`.toLowerCase().includes(q)) return true;
       if (t.company?.toLowerCase().includes(q)) return true;
-      // Match by client name
       if (t.client_id) {
         const client = clients.find((c) => c.id === t.client_id);
         if (client?.name.toLowerCase().includes(q)) return true;
       }
-      // Match by project title
       if (t.project_id) {
         const project = projects.find((p) => p.id === t.project_id);
         if (project?.title.toLowerCase().includes(q)) return true;
@@ -207,30 +352,19 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
               className="w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none overflow-hidden"
             />
 
-            {/* Attribution row — all with icons */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Attribution row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <User size={12} /> Person Name
+                  <User size={12} /> Contact
                 </label>
-                <input
-                  type="text"
-                  value={t.person_name ?? ''}
-                  onChange={(e) => handleChange(t.id, 'person_name', e.target.value || null)}
-                  placeholder="Jane Smith"
-                  className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <Briefcase size={12} /> Person Title
-                </label>
-                <input
-                  type="text"
-                  value={t.person_title ?? ''}
-                  onChange={(e) => handleChange(t.id, 'person_title', e.target.value || null)}
-                  placeholder="VP of Marketing"
-                  className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                <Combobox
+                  value={t.contact ? `${t.contact.first_name} ${t.contact.last_name}`.trim() : t.person_name ?? ''}
+                  options={contacts.map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`.trim() }))}
+                  onChange={(name, id) => handleContactSelect(t.id, name, id)}
+                  placeholder="Search contacts…"
+                  createLabel="Add contact"
+                  onCreate={handleCreateContact}
                 />
               </div>
               <div className="space-y-1.5">
@@ -242,7 +376,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
                   value={t.display_title ?? ''}
                   onChange={(e) => handleChange(t.id, 'display_title', e.target.value || null)}
                   placeholder="Optional override"
-                  className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -301,20 +435,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects }: 
                 <Trash2 size={14} />
                 Delete
               </button>
-              <button
-                onClick={() => handleSave(t)}
-                disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {saving && savedId !== t.id ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : savedId === t.id ? (
-                  <Check size={14} className="text-green-400" />
-                ) : (
-                  <Save size={14} />
-                )}
-                {savedId === t.id ? 'Saved' : 'Save'}
-              </button>
+              <SaveButton saving={saving} saved={saved} onClick={() => handleSave(t)} className="px-5 py-2.5 text-sm" />
             </div>
           </div>
         );

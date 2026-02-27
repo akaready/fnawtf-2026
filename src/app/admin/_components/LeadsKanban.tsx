@@ -23,7 +23,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import confetti from 'canvas-confetti';
 import { AdminPageHeader } from './AdminPageHeader';
-import { type ClientRow, createClientRecord, updateClientRecord, updateContact } from '../actions';
+import { type ClientRow, createClientRecord, updateClientRecord, updateContact, updateTestimonial, updateProject } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
 import {
@@ -36,7 +36,7 @@ import {
 type PipelineStage = 'new' | 'qualified' | 'proposal' | 'negotiating' | 'closed' | 'lost';
 
 const PIPELINE_COLUMNS: { value: PipelineStage; label: string; accent: string; headerColor: string; overColor: string; cardBg: string; cardBgFocused: string; cardBorder: string; cardBorderFocused: string }[] = [
-  { value: 'new',         label: 'New Lead',    accent: 'border-white/[0.12]',   headerColor: 'text-white/40',    overColor: 'bg-white/[0.04]',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-white/[0.08]',   cardBorderFocused: 'bg-white/20' },
+  { value: 'new',         label: 'New Lead',    accent: 'border-[#2a2a2a]',      headerColor: 'text-white/40',    overColor: 'bg-white/[0.04]',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
   { value: 'qualified',   label: 'Qualified',   accent: 'border-amber-500/30',   headerColor: 'text-amber-400',   overColor: 'bg-amber-500/[0.06]',   cardBg: '#1a1408',   cardBgFocused: '#251c0c',   cardBorder: 'bg-amber-800/50',   cardBorderFocused: 'bg-amber-600/70' },
   { value: 'proposal',    label: 'Proposal',    accent: 'border-sky-500/30',     headerColor: 'text-sky-400',     overColor: 'bg-sky-500/[0.06]',     cardBg: '#0a1520',   cardBgFocused: '#0d1e2e',   cardBorder: 'bg-sky-800/50',     cardBorderFocused: 'bg-sky-600/70' },
   { value: 'negotiating', label: 'Negotiating', accent: 'border-violet-500/30',  headerColor: 'text-violet-400',  overColor: 'bg-violet-500/[0.06]',  cardBg: '#150f1e',   cardBgFocused: '#1d1528',   cardBorder: 'bg-violet-800/50',  cardBorderFocused: 'bg-violet-600/70' },
@@ -53,6 +53,8 @@ interface Props {
 export function LeadsKanban({ initialLeads, projects, testimonials, contacts: initialContacts }: Props) {
   const [leads, setLeads] = useState(initialLeads);
   const [localContacts, setLocalContacts] = useState(initialContacts);
+  const [localTestimonials, setLocalTestimonials] = useState(testimonials);
+  const [localProjects, setLocalProjects] = useState(projects);
   const [, startSave] = useTransition();
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
@@ -82,6 +84,15 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
         company_types: ['lead'],
         status: 'prospect',
         pipeline_stage: 'new',
+        website_url: null,
+        linkedin_url: null,
+        description: null,
+        industry: null,
+        location: null,
+        founded_year: null,
+        company_size: null,
+        twitter_url: null,
+        instagram_url: null,
         created_at: new Date().toISOString(),
       };
       setLeads((prev) => [...prev, newRecord]);
@@ -171,6 +182,34 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
     await updateContact(contactId, { client_id: null });
     setLocalContacts((prev) =>
       prev.map((ct) => ct.id === contactId ? { ...ct, client_id: null } : ct)
+    );
+  }, []);
+
+  const handleTestimonialLinked = useCallback(async (testimonialId: string, companyId: string) => {
+    await updateTestimonial(testimonialId, { client_id: companyId });
+    setLocalTestimonials((prev) =>
+      prev.map((t) => t.id === testimonialId ? { ...t, client_id: companyId } : t)
+    );
+  }, []);
+
+  const handleTestimonialUnlinked = useCallback(async (testimonialId: string) => {
+    await updateTestimonial(testimonialId, { client_id: null });
+    setLocalTestimonials((prev) =>
+      prev.map((t) => t.id === testimonialId ? { ...t, client_id: null } : t)
+    );
+  }, []);
+
+  const handleProjectLinked = useCallback(async (projectId: string, companyId: string) => {
+    await updateProject(projectId, { client_id: companyId });
+    setLocalProjects((prev) =>
+      prev.map((p) => p.id === projectId ? { ...p, client_id: companyId } : p)
+    );
+  }, []);
+
+  const handleProjectUnlinked = useCallback(async (projectId: string) => {
+    await updateProject(projectId, { client_id: null });
+    setLocalProjects((prev) =>
+      prev.map((p) => p.id === projectId ? { ...p, client_id: null } : p)
     );
   }, []);
 
@@ -288,13 +327,17 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
       <CompanyPanel
         company={activeCompany}
         contacts={localContacts}
-        projects={projects}
-        testimonials={testimonials}
+        projects={localProjects}
+        testimonials={localTestimonials}
         onClose={() => setActiveId(null)}
         onCompanyUpdated={handleCompanyUpdated}
         onCompanyDeleted={handleCompanyDeleted}
         onContactLinked={handleContactLinked}
         onContactUnlinked={handleContactUnlinked}
+        onTestimonialLinked={handleTestimonialLinked}
+        onTestimonialUnlinked={handleTestimonialUnlinked}
+        onProjectLinked={handleProjectLinked}
+        onProjectUnlinked={handleProjectUnlinked}
       />
     </div>
   );

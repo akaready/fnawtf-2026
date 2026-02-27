@@ -10,7 +10,7 @@ export default async function LeadsPage() {
     getClients(),
     supabase
       .from('projects')
-      .select('id, title, slug, thumbnail_url, client_id')
+      .select('id, title, slug, thumbnail_url, client_id, category')
       .order('title'),
     getTestimonials(),
     getContacts(),
@@ -27,6 +27,7 @@ export default async function LeadsPage() {
           slug: r.slug as string,
           thumbnail_url: (r.thumbnail_url as string) ?? null,
           client_id: (r.client_id as string) ?? null,
+          category: (r.category as string) ?? null,
         };
       })}
       testimonials={testimonials.map((t) => ({

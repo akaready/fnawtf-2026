@@ -106,9 +106,9 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
   };
 
   return (
-    <div className="flex flex-col h-full border-l border-white/[0.08] bg-[#0a0a0a]">
+    <div className="flex flex-col h-full border-l border-[#2a2a2a] bg-[#0a0a0a]">
       {/* Tab bar */}
-      <div className="flex border-b border-white/[0.08]">
+      <div className="flex border-b border-[#2a2a2a]">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -138,7 +138,7 @@ export function ContentLibrarySidebar({ snippets, videos, onAddSnippet, onAddVid
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`Search ${activeTab}…`}
-            className="w-full rounded-md border border-white/[0.06] bg-black/50 pl-7 pr-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+            className="w-full rounded-md border border-[#2a2a2a] bg-black/50 pl-7 pr-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
           />
         </div>
       </div>

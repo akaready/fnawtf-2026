@@ -237,8 +237,8 @@ export function WebsitePageClient({
                     tabIndex={0}
                     className={`block w-full text-left rounded-xl p-5 border transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-white/[0.04] border-white/[0.1]'
-                        : 'bg-white/[0.015] border-white/[0.05] hover:bg-white/[0.03]'
+                        ? 'bg-white/[0.04] border-[#2a2a2a]'
+                        : 'bg-white/[0.015] border-[#2a2a2a] hover:bg-white/[0.03]'
                     }`}
                     onClick={() => setActiveServicePage(section.page)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveServicePage(section.page); }}
@@ -277,10 +277,10 @@ export function WebsitePageClient({
 
         {/* Right: project sidebar */}
         {sidebarOpen && (
-        <div className="flex-shrink-0 w-72 border-l border-white/[0.12] flex flex-col bg-white/[0.01]">
+        <div className="flex-shrink-0 w-72 border-l border-[#2a2a2a] flex flex-col bg-white/[0.01]">
           <div className="flex-shrink-0">
             {activeTab === 'services' && (
-              <div className="flex flex-wrap items-center gap-1 px-3 py-2.5 border-b border-white/[0.12]">
+              <div className="flex flex-wrap items-center gap-1 px-3 py-2.5 border-b border-[#2a2a2a]">
                 {SERVICE_SECTIONS.map((s) => (
                   <button
                     key={s.page}
@@ -296,7 +296,7 @@ export function WebsitePageClient({
                 ))}
               </div>
             )}
-            <div className="px-3 py-3 border-b border-white/[0.12] space-y-2.5">
+            <div className="px-3 py-3 border-b border-[#2a2a2a] space-y-2.5">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
                 <input
@@ -304,7 +304,7 @@ export function WebsitePageClient({
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
                   placeholder="Search…"
-                  className="w-full bg-white/[0.04] border border-white/[0.12] rounded-md pl-9 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                  className="w-full bg-white/[0.04] border border-[#2a2a2a] rounded-md pl-9 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20"
                 />
               </div>
               <div className="flex items-center">

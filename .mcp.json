@@ -60,6 +60,9 @@
 				"--access-token",
 				"sbp_546df7fc009b0b836151e555991f803030a6b806"
 			]
+		},
+		"recallai": {
+			"url": "https://docs.recall.ai/mcp"
 		}
 	}
 }

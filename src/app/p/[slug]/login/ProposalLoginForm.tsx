@@ -11,13 +11,12 @@ interface Props {
 }
 
 export function ProposalLoginForm({ slug, title, company }: Props) {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
-  const canSubmit = name.trim() && email.trim() && password.trim();
+  const canSubmit = email.trim() && password.trim();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +25,7 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
     if (!canSubmit) return;
 
     startTransition(async () => {
-      const result = await verifyProposalAccess(slug, email.trim(), password.trim(), name.trim());
+      const result = await verifyProposalAccess(slug, email.trim(), password.trim());
       if (!result.success) {
         setError(result.error ?? 'Unable to verify access.');
         return;
@@ -59,21 +58,6 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Your Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jane Smith"
-              autoComplete="name"
-              className={inputCls}
-            />
-          </div>
-
           <div>
             <label htmlFor="email" className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Your Email

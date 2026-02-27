@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { setProposalAuthCookie, verifyProposalPassword } from '@/lib/proposal/auth';
 import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow, ProposalQuoteRow } from '@/types/proposal';
 
-export async function verifyProposalAccess(slug: string, email: string, password: string, name?: string): Promise<{ success: boolean; error?: string }> {
+export async function verifyProposalAccess(slug: string, email: string, password: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
   const { data: proposal } = await supabase
     .from('proposals')
@@ -22,8 +22,23 @@ export async function verifyProposalAccess(slug: string, email: string, password
     return { success: false, error: 'Invalid access code.' };
   }
 
+  // Validate email against proposal_contacts (if any exist)
+  const { data: approvedContacts } = await supabase
+    .from('proposal_contacts')
+    .select('contact_id, contacts(email)')
+    .eq('proposal_id', row.id);
+
+  if (approvedContacts && approvedContacts.length > 0) {
+    const approvedEmails = (approvedContacts as Array<{ contacts: { email: string | null } | null }>)
+      .map((pc) => pc.contacts?.email?.toLowerCase())
+      .filter(Boolean) as string[];
+    if (approvedEmails.length > 0 && !approvedEmails.includes(email.toLowerCase())) {
+      return { success: false, error: 'This email is not authorized for this proposal.' };
+    }
+  }
+
   // Set auth cookie
-  await setProposalAuthCookie(slug, email, name);
+  await setProposalAuthCookie(slug, email);
 
   // Log view
   await supabase.from('proposal_views').insert({

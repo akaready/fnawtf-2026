@@ -133,8 +133,8 @@ export function PlacementCard({
       {...attributes}
       className={`relative flex items-center ${padding} rounded-lg group touch-none ${
         isDragging
-          ? 'border-2 border-dashed border-white/10 bg-white/[0.02] opacity-40'
-          : 'bg-white/[0.03] border border-white/[0.06] cursor-grab active:cursor-grabbing'
+          ? 'border-2 border-dashed border-[#2a2a2a] bg-white/[0.02] opacity-40'
+          : 'bg-white/[0.03] border border-[#2a2a2a] cursor-grab active:cursor-grabbing'
       } ${className}`}
     >
       <CardContent

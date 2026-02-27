@@ -26,15 +26,31 @@ export type DragState = {
 } | null;
 
 export function getDayInfo(day: string, milestones: ProposalMilestoneRow[]): DayInfo {
+  let fallback: DayInfo = null;
   for (let i = 0; i < milestones.length; i++) {
     const m = milestones[i];
     const start = ymd(parseLocal(m.start_date));
     const end   = m.end_date ? ymd(parseLocal(m.end_date)) : start;
     if (day === start && day === end) return { idx: i, role: 'both' };
     if (day === start)                return { idx: i, role: 'start' };
-    if (day === end)                  return { idx: i, role: 'end' };
-    if (day > start && day < end)     return { idx: i, role: 'span' };
+    if (day === end   && !fallback)   fallback = { idx: i, role: 'end' };
+    if (day > start && day < end && !fallback) fallback = { idx: i, role: 'span' };
   }
+  return fallback;
+}
+
+/** When two different milestones both occupy the same day, return both indices + colors. */
+export type OverlapInfo = { leftIdx: number; rightIdx: number } | null;
+export function getOverlapInfo(day: string, milestones: ProposalMilestoneRow[]): OverlapInfo {
+  const hits: number[] = [];
+  for (let i = 0; i < milestones.length; i++) {
+    const m = milestones[i];
+    const start = ymd(parseLocal(m.start_date));
+    const end   = m.end_date ? ymd(parseLocal(m.end_date)) : start;
+    if (day >= start && day <= end) hits.push(i);
+    if (hits.length >= 2) break;
+  }
+  if (hits.length >= 2) return { leftIdx: hits[0], rightIdx: hits[1] };
   return null;
 }
 
@@ -47,9 +63,10 @@ interface MiniCalProps {
   dragState?: DragState;
   setDragState?: React.Dispatch<React.SetStateAction<DragState>>;
   deniedIdx?: number | null;
+  goLiveDate?: string;
 }
 
-export function MiniCalendar({ month, milestones, phaseForDay, dragState, setDragState, deniedIdx }: MiniCalProps) {
+export function MiniCalendar({ month, milestones, phaseForDay, dragState, setDragState, deniedIdx, goLiveDate }: MiniCalProps) {
   const firstDay    = firstOfMonth(month);
   const totalDays   = daysInMonth(month);
   const startOffset = dayOfWeek(firstDay);
@@ -131,25 +148,51 @@ export function MiniCalendar({ month, milestones, phaseForDay, dragState, setDra
 
           const dayInfo          = getDayInfo(dateStr, previewMilestones);
           const committedDayInfo = getDayInfo(dateStr, milestones);
+          const overlap          = getOverlapInfo(dateStr, previewMilestones);
           const isToday          = dateStr === ymd(new Date());
 
           const isPreviewCell = dragState && dayInfo && dayInfo.idx === dragState.milestoneIdx
             && !isInOriginalSpan(dateStr, dragState.milestoneIdx);
 
-          const milestoneColor     = dayInfo ? getRainbowColor(dayInfo.idx, milestones.length) : undefined;
+          const isGoLiveCell       = !!dayInfo && milestones[dayInfo.idx]?.label === 'Go Live';
+          const isProductionCell   = !!dayInfo && milestones[dayInfo.idx]?.label === 'Production';
+
+          const hasGoLiveConflict = !!goLiveDate && milestones.some(s => s.label !== 'Go Live' && (s.start_date > goLiveDate || (s.end_date || s.start_date) > goLiveDate));
+          const isRedCell = (di: DayInfo) => {
+            if (!di) return false;
+            const m = milestones[di.idx];
+            if (!m) return false;
+            // Red if after Go Live
+            if (goLiveDate && m.label !== 'Go Live' && m.start_date > goLiveDate) return true;
+            // Red if out of chronological order (date before a preceding milestone)
+            if (di.idx > 0 && milestones.slice(0, di.idx).some(prev => (prev.end_date || prev.start_date) > m.start_date)) return true;
+            // Red if Go Live has conflicts
+            if (m.label === 'Go Live' && hasGoLiveConflict) return true;
+            return false;
+          };
+          const isPastGoLive       = isRedCell(dayInfo);
+          const milestoneColor     = isPastGoLive ? 'rgb(220,38,38)' : dayInfo ? getRainbowColor(dayInfo.idx, milestones.length) : undefined;
           const isDenied           = deniedIdx !== null && deniedIdx !== undefined && committedDayInfo?.idx === deniedIdx;
           const isInvalidPreview   = isPreviewCell && dragState?.isInvalid;
           const displayColor       = isInvalidPreview ? 'rgba(220,38,38,0.9)' : milestoneColor;
           const inPhase            = !dayInfo && phaseForDay ? phaseForDay(dateStr) !== null : false;
-          const isGoLiveCell       = !!dayInfo && milestones[dayInfo.idx]?.label === 'Go Live';
+
+          // Overlap split colors
+          const overlapLeftColor = overlap
+            ? (isRedCell({ idx: overlap.leftIdx, role: 'end' }) ? 'rgb(220,38,38)' : getRainbowColor(overlap.leftIdx, milestones.length))
+            : undefined;
+          const overlapRightColor = overlap
+            ? (isRedCell({ idx: overlap.rightIdx, role: 'start' }) ? 'rgb(220,38,38)' : getRainbowColor(overlap.rightIdx, milestones.length))
+            : undefined;
 
           const roundingClass =
+            overlap ? '' :
             dayInfo?.role === 'start' ? 'rounded-l-[2px]' :
             dayInfo?.role === 'end'   ? 'rounded-r-[2px]' :
             dayInfo?.role === 'span'  ? '' :
             'rounded-[2px]';
 
-          const bgOpacity = (dayInfo?.role === 'span') ? 0.45 : 0.9;
+          const bgOpacity = overlap ? 0.9 : (dayInfo?.role === 'span') ? 0.45 : 0.9;
 
           const showLeftHandle  = !!committedDayInfo && (committedDayInfo.role === 'start' || committedDayInfo.role === 'both' || committedDayInfo.role === 'end') && !!setDragState && !dragState;
           const showRightHandle = !!committedDayInfo && (committedDayInfo.role === 'end'   || committedDayInfo.role === 'both' || committedDayInfo.role === 'start') && !!setDragState && !dragState;
@@ -170,7 +213,10 @@ export function MiniCalendar({ month, milestones, phaseForDay, dragState, setDra
                 isGoLiveCell ? 'go-live-cell' : '',
                 committedDayInfo && !dragState ? 'cursor-grab' : '',
               ].join(' ')}
-              style={displayColor ? {
+              style={overlap ? {
+                background: `linear-gradient(to top right, ${overlapLeftColor} 50%, ${overlapRightColor} 50%)`,
+                opacity: bgOpacity,
+              } : displayColor ? {
                 backgroundColor: displayColor,
                 opacity: isPreviewCell ? 0.45 : bgOpacity,
               } : undefined}
@@ -193,11 +239,24 @@ export function MiniCalendar({ month, milestones, phaseForDay, dragState, setDra
                   onPointerDown={(e) => startDrag(e, dateStr, committedDayInfo!, 'move')}
                 />
               )}
+              {isPastGoLive && (
+                <div
+                  className="absolute inset-0 pointer-events-none z-[3]"
+                  style={{
+                    backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)',
+                  }}
+                />
+              )}
               <span className={[
                 'text-[11px] leading-none relative z-[5] pointer-events-none',
-                dayInfo ? (isPreviewCell ? 'text-white/60' : 'text-black font-bold') : 'text-white/25',
+                dayInfo ? (isPreviewCell ? 'text-white/60' : isPastGoLive ? 'text-white font-bold' : 'text-black font-bold') : 'text-white/25',
               ].join(' ')}>
-                {day}
+                {isProductionCell ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                ) : day}
               </span>
             </div>
           );

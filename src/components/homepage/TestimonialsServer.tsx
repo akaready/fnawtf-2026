@@ -12,13 +12,14 @@ type TestimonialRow = Pick<Database['public']['Tables']['testimonials']['Row'],
 > & {
   client: { logo_url: string | null } | null;
   projects: { clients: { logo_url: string | null } | null } | null;
+  contact: { name: string; role: string | null } | null;
 };
 
 export async function TestimonialsServer() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('testimonials')
-    .select('id, quote, person_name, person_title, display_title, company, client:clients(logo_url), projects(clients(logo_url))')
+    .select('id, quote, person_name, person_title, display_title, company, client:clients(logo_url), projects(clients(logo_url)), contact:contacts(name, role)')
     .order('display_order', { ascending: true });
 
   const testimonials = ((data ?? []) as TestimonialRow[]).map((t) => {
@@ -27,8 +28,8 @@ export async function TestimonialsServer() {
     return {
       id: t.id,
       quote: `"${t.quote}"`,
-      name: t.person_name ?? 'Anonymous',
-      title: t.display_title ?? t.person_title ?? '',
+      name: t.contact?.name ?? t.person_name ?? 'Anonymous',
+      title: t.display_title ?? t.contact?.role ?? t.person_title ?? '',
       company: t.company ?? '',
       logoUrl,
     };

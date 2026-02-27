@@ -56,7 +56,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
   const handleContactSelect = (contactId: string) => {
     const contact = contacts.find((c) => c.id === contactId);
     if (!contact) return;
-    setContactName(contact.name);
+    setContactName(`${contact.first_name} ${contact.last_name}`.trim());
     setContactEmail(contact.email ?? '');
     setContactCompany(contact.company ?? '');
     if (!slugManual && contact.company) {
@@ -174,7 +174,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
                 <option value="">Choose a contact…</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}{c.company ? ` — ${c.company}` : ''}
+                    {c.first_name} {c.last_name}{c.company ? ` — ${c.company}` : ''}
                   </option>
                 ))}
               </select>

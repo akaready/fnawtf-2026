@@ -7,7 +7,7 @@ import confetti from 'canvas-confetti';
 import type { ProposalMilestoneRow } from '@/types/proposal';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
 import {
-  getRainbowColor,
+  getRainbowColor, groupByPhase, sortMilestones,
   parseLocal, ymd, firstOfMonth,
   addMonths, formatDate,
 } from '@/lib/proposal/milestoneColors';
@@ -18,27 +18,6 @@ interface Props {
   startDate: string | null;
   endDate: string | null;
   slideRef?: React.RefObject<HTMLElement>;
-}
-
-// ── Phase grouping ───────────────────────────────────────────
-type PhaseGroup = { phase: string | null; milestones: ProposalMilestoneRow[] };
-
-function groupByPhase(milestones: ProposalMilestoneRow[]): PhaseGroup[] {
-  const groups: PhaseGroup[] = [];
-  let currentPhase: string | null = undefined as unknown as string | null;
-  let currentGroup: ProposalMilestoneRow[] = [];
-
-  for (const m of milestones) {
-    if (m.phase !== currentPhase) {
-      if (currentGroup.length > 0) groups.push({ phase: currentPhase, milestones: currentGroup });
-      currentPhase = m.phase ?? null;
-      currentGroup = [m];
-    } else {
-      currentGroup.push(m);
-    }
-  }
-  if (currentGroup.length > 0) groups.push({ phase: currentPhase, milestones: currentGroup });
-  return groups;
 }
 
 function PhaseIcon({ phase }: { phase: string }) {
@@ -52,8 +31,8 @@ function PhaseIcon({ phase }: { phase: string }) {
 export function ScheduleSlide({ milestones, slideRef }: Props) {
   const innerRef    = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
-  const [originalMilestones] = useState(milestones);
-  const [customMilestones, setCustomMilestones] = useState<ProposalMilestoneRow[]>(milestones);
+  const [originalMilestones] = useState(() => sortMilestones(milestones));
+  const [customMilestones, setCustomMilestones] = useState<ProposalMilestoneRow[]>(() => sortMilestones(milestones));
   const [activeScheduleTab, setActiveScheduleTab] = useState<'recommended' | 'custom'>('recommended');
   const [dragState, setDragState] = useState<DragState>(null);
   const [deniedIdx, setDeniedIdx] = useState<number | null>(null);

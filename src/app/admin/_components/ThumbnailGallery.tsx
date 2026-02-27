@@ -104,7 +104,7 @@ export function ThumbnailGallery({ projectId, videos, currentThumbnailUrl }: Thu
         </p>
         <div className="flex items-start gap-4">
           <div
-            className="relative w-80 rounded-lg overflow-hidden border border-white/10 bg-black flex-shrink-0"
+            className="relative w-80 rounded-lg overflow-hidden border border-[#2a2a2a] bg-black flex-shrink-0"
             style={{ aspectRatio: '16/9' }}
           >
             {previewSrc ? (

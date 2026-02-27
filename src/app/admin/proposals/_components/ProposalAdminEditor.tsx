@@ -1,17 +1,22 @@
 'use client';
 
 import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Loader2, Save, Home, Hand, GitBranch, Calendar, Play, DollarSign, Trash2 } from 'lucide-react';
+import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign } from 'lucide-react';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
+import { SaveButton } from '@/app/admin/_components/SaveButton';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import type { LucideIcon } from 'lucide-react';
-import { deleteProposal } from '@/app/admin/actions';
+import { deleteProposal, type ClientRow } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
 import type { DetailsTabHandle } from './tabs/DetailsTab';
 import { WelcomeTab } from './tabs/WelcomeTab';
+import type { WelcomeTabHandle } from './tabs/WelcomeTab';
 import { ApproachTab } from './tabs/ApproachTab';
+import type { ApproachTabHandle } from './tabs/ApproachTab';
 import { TimelineTab } from './tabs/TimelineTab';
 import { SamplesTab } from './tabs/SamplesTab';
 import { PricingTab } from './tabs/PricingTab';
+import type { PricingTabHandle } from './tabs/PricingTab';
 import type {
   ProposalRow, ContactRow, ContentSnippetRow, ProposalSectionRow,
   ProposalMilestoneRow, ProposalQuoteRow, BrowserProject, ProposalProjectWithProject,
@@ -36,13 +41,15 @@ export interface ProposalEditorHandle {
 interface Props {
   proposal: ProposalRow;
   contacts: ContactRow[];
+  proposalContacts: (ContactRow & { pivot_id: string })[];
+  clients: ClientRow[];
   snippets: ContentSnippetRow[];
   sections: ProposalSectionRow[];
   milestones: ProposalMilestoneRow[];
   quotes: ProposalQuoteRow[];
   allProjects: BrowserProject[];
   proposalProjects: ProposalProjectWithProject[];
-  onClose: () => void;
+  onClose?: () => void;
   onDelete?: (id: string) => void;
 }
 
@@ -54,16 +61,22 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
-  proposal: initialProposal, contacts, snippets, sections: initialSections,
+  proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
   milestones, quotes, allProjects, proposalProjects, onClose, onDelete,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
+  const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
   const [sections, setSections] = useState(initialSections);
   const [status] = useState(initialProposal.status);
   const [isDeleting, startDelete] = useTransition();
   const detailsRef = useRef<DetailsTabHandle>(null);
+  const welcomeRef = useRef<WelcomeTabHandle>(null);
+  const approachRef = useRef<ApproachTabHandle>(null);
+  const pricingRef = useRef<PricingTabHandle>(null);
   const [detailsSaving, setDetailsSaving] = useState(false);
   const [detailsSaved, setDetailsSaved] = useState(false);
+  const { saving: pricingSaving, saved: pricingSaved, wrap: wrapPricing } = useSaveState();
+  const { saving: markdownSaving, saved: markdownSaved, wrap: wrapMarkdown } = useSaveState();
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -71,12 +84,21 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const isLive = status !== 'draft';
 
   const handleClose = useCallback(() => {
-    if (detailsRef.current?.isDirty) {
+    if (
+      detailsRef.current?.isDirty ||
+      welcomeRef.current?.isDirty ||
+      approachRef.current?.isDirty ||
+      pricingRef.current?.isDirty
+    ) {
       setConfirmClose(true);
     } else {
-      onClose();
+      onClose?.();
     }
   }, [onClose]);
+
+  const handleTabChange = useCallback((tab: TabId) => {
+    setActiveTab(tab);
+  }, []);
 
   useImperativeHandle(editorRef, () => ({ tryClose: handleClose }), [handleClose]);
 
@@ -84,7 +106,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
     startDelete(async () => {
       await deleteProposal(proposal.id);
       onDelete?.(proposal.id);
-      onClose();
+      onClose?.();
     });
   }
 
@@ -101,11 +123,11 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       <DiscardChangesDialog
         open={confirmClose}
         onKeepEditing={() => setConfirmClose(false)}
-        onDiscard={() => { setConfirmClose(false); onClose(); }}
+        onDiscard={() => { setConfirmClose(false); onClose?.(); }}
       />
 
       {/* Header: title + meta (left) | status + X (right) */}
-      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-white/[0.12]">
+      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-[#2a2a2a]">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold tracking-tight truncate">{proposal.title}</h1>
@@ -133,14 +155,14 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       </div>
 
       {/* Tabs */}
-      <div className="flex-shrink-0 px-8 py-3 border-b border-white/[0.12] bg-white/[0.02]">
+      <div className="flex-shrink-0 px-8 py-3 border-b border-[#2a2a2a] bg-white/[0.02]">
         <nav className="inline-flex flex-wrap gap-1.5">
           {TABS.map(tab => {
             const Icon = TAB_ICONS[tab];
             return (
               <Fragment key={tab}>
                 <button
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => handleTabChange(tab)}
                   title={tab}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
                     activeTab === tab
@@ -160,22 +182,26 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         </nav>
       </div>
 
-      {/* Tab content */}
-      <div className={`flex-1 min-h-0 ${['welcome', 'approach', 'samples'].includes(activeTab) ? 'overflow-hidden' : 'overflow-y-auto admin-scrollbar'}`}>
-        {activeTab === 'details' && (
+      {/* Tab content — all tabs stay mounted to preserve editor state */}
+      <div className="flex-1 min-h-0 relative">
+        <div className={activeTab === 'details' ? 'h-full overflow-y-auto admin-scrollbar' : 'hidden'}>
           <DetailsTab
             ref={detailsRef}
             proposal={proposal}
             contacts={contacts}
+            proposalContacts={proposalContacts}
+            clients={clients}
             onUpdated={handleUpdated}
+            onProposalTypeChange={(type) => setProposalType(type)}
             onSaveStateChange={(pending, saved) => {
               setDetailsSaving(pending);
               setDetailsSaved(saved);
             }}
           />
-        )}
-        {activeTab === 'welcome' && (
+        </div>
+        <div className={activeTab === 'welcome' ? 'h-full overflow-hidden' : 'hidden'}>
           <WelcomeTab
+            ref={welcomeRef}
             proposalId={proposal.id}
             proposalType={proposal.proposal_type}
             section={welcomeSection}
@@ -186,9 +212,10 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               return [...prev, s];
             })}
           />
-        )}
-        {activeTab === 'approach' && (
+        </div>
+        <div className={activeTab === 'approach' ? 'h-full overflow-hidden' : 'hidden'}>
           <ApproachTab
+            ref={approachRef}
             proposalId={proposal.id}
             proposalType={proposal.proposal_type}
             section={approachSection}
@@ -199,48 +226,51 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               return [...prev, s];
             })}
           />
-        )}
-        {activeTab === 'timeline' && (
+        </div>
+        <div className={activeTab === 'timeline' ? 'h-full overflow-y-auto admin-scrollbar' : 'hidden'}>
           <TimelineTab
             proposalId={proposal.id}
             proposal={proposal}
             initialMilestones={milestones}
           />
-        )}
-        {activeTab === 'samples' && (
+        </div>
+        <div className={activeTab === 'samples' ? 'h-full overflow-hidden' : 'hidden'}>
           <SamplesTab
             proposalId={proposal.id}
             allProjects={allProjects}
             initialProposalProjects={proposalProjects}
           />
-        )}
-        {activeTab === 'pricing' && (
+        </div>
+        <div className={activeTab === 'pricing' ? 'h-full overflow-y-auto' : 'hidden'}>
           <PricingTab
+            ref={pricingRef}
             proposalId={proposal.id}
-            proposalType={proposal.proposal_type}
-            crowdfundingApproved={proposal.crowdfunding_approved}
+            proposalType={proposalType}
             initialQuotes={activeQuotes}
           />
-        )}
+        </div>
       </div>
 
       {/* Footer: action buttons (left) | delete (right) */}
-      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-white/[0.12] bg-white/[0.02]">
+      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-[#2a2a2a] bg-white/[0.02]">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => detailsRef.current?.save()}
-            disabled={detailsSaving || activeTab !== 'details'}
-            className="btn-primary px-5 py-2.5 text-sm"
-          >
-            {detailsSaving ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : detailsSaved ? (
-              <Check size={14} className="text-green-600" />
-            ) : (
-              <Save size={14} />
-            )}
-            {detailsSaving ? 'Saving…' : detailsSaved ? 'Saved!' : 'Save Changes'}
-          </button>
+          <SaveButton
+            saving={activeTab === 'pricing' ? pricingSaving : activeTab === 'welcome' || activeTab === 'approach' ? markdownSaving : detailsSaving}
+            saved={activeTab === 'pricing' ? pricingSaved : activeTab === 'welcome' || activeTab === 'approach' ? markdownSaved : detailsSaved}
+            disabled={detailsSaving || pricingSaving || markdownSaving}
+            onClick={async () => {
+              if (activeTab === 'pricing') {
+                await wrapPricing(() => pricingRef.current!.save());
+              } else if (activeTab === 'welcome') {
+                await wrapMarkdown(() => welcomeRef.current!.save());
+              } else if (activeTab === 'approach') {
+                await wrapMarkdown(() => approachRef.current!.save());
+              } else {
+                detailsRef.current?.save();
+              }
+            }}
+            className="px-5 py-2.5 text-sm"
+          />
           <a
             href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
             target="_blank"

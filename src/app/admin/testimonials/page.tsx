@@ -1,12 +1,13 @@
-import { getTestimonials, getClients } from '../actions';
+import { getTestimonials, getClients, getContacts } from '../actions';
 import { TestimonialsManager } from '../_components/TestimonialsManager';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TestimonialsPage() {
-  const [testimonials, clients] = await Promise.all([
+  const [testimonials, clients, contacts] = await Promise.all([
     getTestimonials(),
     getClients(),
+    getContacts(),
   ]);
 
   // Also fetch projects for the project selector
@@ -25,6 +26,7 @@ export default async function TestimonialsPage() {
         const r = p as Record<string, unknown>;
         return { id: r.id as string, title: r.title as string, client_id: (r.client_id as string) ?? null };
       })}
+      contacts={contacts.map((c) => ({ id: c.id, first_name: c.first_name, last_name: c.last_name, role: c.role }))}
     />
   );
 }

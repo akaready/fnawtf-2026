@@ -8,6 +8,8 @@ import {
   type ClientRow,
   createClientRecord,
   updateContact,
+  updateTestimonial,
+  updateProject,
 } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
@@ -30,6 +32,8 @@ interface Props {
 export function ClientsManager({ initialClients, projects, testimonials, contacts: initialContacts }: Props) {
   const [clients, setClients] = useState(initialClients);
   const [localContacts, setLocalContacts] = useState(initialContacts);
+  const [localTestimonials, setLocalTestimonials] = useState(testimonials);
+  const [localProjects, setLocalProjects] = useState(projects);
   const [, startSave] = useTransition();
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
@@ -60,6 +64,15 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         company_types: ['client'],
         status: 'prospect',
         pipeline_stage: 'new',
+        website_url: null,
+        linkedin_url: null,
+        description: null,
+        industry: null,
+        location: null,
+        founded_year: null,
+        company_size: null,
+        twitter_url: null,
+        instagram_url: null,
         created_at: new Date().toISOString(),
       };
       setClients((prev) => [...prev, newRecord]);
@@ -91,6 +104,34 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     );
   }, []);
 
+  const handleTestimonialLinked = useCallback(async (testimonialId: string, companyId: string) => {
+    await updateTestimonial(testimonialId, { client_id: companyId });
+    setLocalTestimonials((prev) =>
+      prev.map((t) => t.id === testimonialId ? { ...t, client_id: companyId } : t)
+    );
+  }, []);
+
+  const handleTestimonialUnlinked = useCallback(async (testimonialId: string) => {
+    await updateTestimonial(testimonialId, { client_id: null });
+    setLocalTestimonials((prev) =>
+      prev.map((t) => t.id === testimonialId ? { ...t, client_id: null } : t)
+    );
+  }, []);
+
+  const handleProjectLinked = useCallback(async (projectId: string, companyId: string) => {
+    await updateProject(projectId, { client_id: companyId });
+    setLocalProjects((prev) =>
+      prev.map((p) => p.id === projectId ? { ...p, client_id: companyId } : p)
+    );
+  }, []);
+
+  const handleProjectUnlinked = useCallback(async (projectId: string) => {
+    await updateProject(projectId, { client_id: null });
+    setLocalProjects((prev) =>
+      prev.map((p) => p.id === projectId ? { ...p, client_id: null } : p)
+    );
+  }, []);
+
   // Filter to client-type companies only
   const clientOnly = useMemo(() =>
     clients.filter((c) => (c.company_types ?? []).includes('client')),
@@ -103,15 +144,15 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     return clientOnly.filter((c) => {
       if (c.name.toLowerCase().includes(q)) return true;
       if (c.notes?.toLowerCase().includes(q)) return true;
-      if (projects.some((p) => p.client_id === c.id && p.title.toLowerCase().includes(q))) return true;
+      if (localProjects.some((p) => p.client_id === c.id && p.title.toLowerCase().includes(q))) return true;
       return false;
     });
-  }, [clientOnly, search, projects]);
+  }, [clientOnly, search, localProjects]);
 
   const handleExportCsv = useCallback(() => {
     const header = ['Name', 'Types', 'Status', 'Notes', 'Logo URL', 'Projects', 'Testimonials', 'Created'];
     const rows = filtered.map((c) => {
-      const cProjects = projects.filter((p) => p.client_id === c.id).map((p) => p.title).join('; ');
+      const cProjects = localProjects.filter((p) => p.client_id === c.id).map((p) => p.title).join('; ');
       const cTestimonials = testimonials.filter((t) => t.client_id === c.id).map((t) => t.person_name ?? 'Unknown').join('; ');
       return [c.name, (c.company_types ?? []).join('; '), c.status ?? 'active', c.notes ?? '', c.logo_url ?? '', cProjects, cTestimonials, new Date(c.created_at).toLocaleDateString()];
     });
@@ -123,7 +164,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     a.download = `clients-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [filtered, projects, testimonials]);
+  }, [filtered, localProjects, testimonials]);
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden">
@@ -161,7 +202,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
           {filtered.map((c) => {
             const companyTypes = (c.company_types ?? []) as CompanyType[];
             const cContacts = localContacts.filter((ct) => ct.client_id === c.id);
-            const cProjects = projects.filter((p) => p.client_id === c.id);
+            const cProjects = localProjects.filter((p) => p.client_id === c.id);
             const countParts = [
               cContacts.length > 0 && `${cContacts.length} contact${cContacts.length !== 1 ? 's' : ''}`,
               cProjects.length > 0 && `${cProjects.length} project${cProjects.length !== 1 ? 's' : ''}`,
@@ -217,13 +258,17 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       <CompanyPanel
         company={activeCompany}
         contacts={localContacts}
-        projects={projects}
-        testimonials={testimonials}
+        projects={localProjects}
+        testimonials={localTestimonials}
         onClose={() => setActiveId(null)}
         onCompanyUpdated={handleCompanyUpdated}
         onCompanyDeleted={handleCompanyDeleted}
         onContactLinked={handleContactLinked}
         onContactUnlinked={handleContactUnlinked}
+        onTestimonialLinked={handleTestimonialLinked}
+        onTestimonialUnlinked={handleTestimonialUnlinked}
+        onProjectLinked={handleProjectLinked}
+        onProjectUnlinked={handleProjectUnlinked}
       />
     </div>
   );

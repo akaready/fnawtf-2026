@@ -13,6 +13,9 @@ import {
   getContentSnippets,
   getContacts,
   getProjectsForBrowser,
+  getProposalContacts,
+  getClients,
+  type ClientRow,
 } from '@/app/admin/actions';
 import type {
   ProposalRow,
@@ -28,6 +31,8 @@ import type {
 interface PanelData {
   proposal: ProposalRow;
   contacts: ContactRow[];
+  proposalContacts: (ContactRow & { pivot_id: string })[];
+  clients: ClientRow[];
   snippets: ContentSnippetRow[];
   sections: ProposalSectionRow[];
   milestones: ProposalMilestoneRow[];
@@ -71,7 +76,9 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
       getContentSnippets(),
       getContacts(),
       getProjectsForBrowser(),
-    ]).then(([proposal, sections, milestones, quotes, proposalProjects, snippets, contacts, allProjects]) => {
+      getProposalContacts(proposalId),
+      getClients(),
+    ]).then(([proposal, sections, milestones, quotes, proposalProjects, snippets, contacts, allProjects, proposalContacts, clients]) => {
       setData({
         proposal,
         sections,
@@ -81,6 +88,8 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
         snippets,
         contacts,
         allProjects,
+        proposalContacts,
+        clients,
       });
       setLoadedFor(proposalId);
       if (onProposalUpdated) onProposalUpdated(proposal);
@@ -107,6 +116,8 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
           ref={editorRef}
           proposal={data.proposal}
           contacts={data.contacts}
+          proposalContacts={data.proposalContacts}
+          clients={data.clients}
           snippets={data.snippets}
           sections={data.sections}
           milestones={data.milestones}

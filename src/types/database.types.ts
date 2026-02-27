@@ -56,6 +56,15 @@ export type Database = {
           email: string;
           notes: string | null;
           logo_url: string | null;
+          website_url: string | null;
+          linkedin_url: string | null;
+          description: string | null;
+          industry: string | null;
+          location: string | null;
+          founded_year: number | null;
+          company_size: string | null;
+          twitter_url: string | null;
+          instagram_url: string | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at'>;
@@ -158,6 +167,7 @@ export type Database = {
           id: string;
           project_id: string | null;
           client_id: string | null;
+          contact_id: string | null;
           quote: string;
           person_name: string | null;
           person_title: string | null;
@@ -225,6 +235,8 @@ export type Database = {
           subtitle: string;
           status: string;
           proposal_number: number;
+          crowdfunding_approved: boolean;
+          crowdfunding_deferred: boolean;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -291,6 +303,7 @@ export type Database = {
           total_amount: number | null;
           down_amount: number | null;
           sort_order: number;
+          visible: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -308,6 +321,78 @@ export type Database = {
         };
         Insert: Omit<Database['public']['Tables']['proposal_views']['Row'], 'id' | 'viewed_at'>;
         Update: Partial<Database['public']['Tables']['proposal_views']['Row']>;
+      };
+      meetings_config: {
+        Row: {
+          id: string;
+          ical_url: string;
+          last_synced_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['meetings_config']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['meetings_config']['Row']>;
+      };
+      meetings: {
+        Row: {
+          id: string;
+          ical_uid: string;
+          title: string;
+          description: string | null;
+          start_time: string;
+          end_time: string;
+          meeting_url: string | null;
+          location: string | null;
+          organizer_email: string | null;
+          status: string;
+          recall_bot_id: string | null;
+          recall_bot_status: string | null;
+          transcript_status: string;
+          raw_event: Record<string, unknown> | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['meetings']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['meetings']['Row']>;
+      };
+      meeting_attendees: {
+        Row: {
+          id: string;
+          meeting_id: string;
+          email: string;
+          display_name: string | null;
+          response_status: string | null;
+          is_organizer: boolean;
+        };
+        Insert: Omit<Database['public']['Tables']['meeting_attendees']['Row'], 'id'>;
+        Update: Partial<Database['public']['Tables']['meeting_attendees']['Row']>;
+      };
+      meeting_transcripts: {
+        Row: {
+          id: string;
+          meeting_id: string;
+          raw_transcript: Record<string, unknown>[];
+          formatted_text: string | null;
+          duration_seconds: number | null;
+          word_count: number | null;
+          speaker_count: number | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['meeting_transcripts']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['meeting_transcripts']['Row']>;
+      };
+      meeting_relationships: {
+        Row: {
+          id: string;
+          meeting_id: string;
+          client_id: string | null;
+          contact_id: string | null;
+          matched_email: string | null;
+          match_type: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['meeting_relationships']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['meeting_relationships']['Row']>;
       };
     };
     Views: {};

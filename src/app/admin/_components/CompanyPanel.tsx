@@ -2,16 +2,19 @@
 
 import { useState, useTransition, useCallback, useEffect } from 'react';
 import {
-  Save, Check, Loader2, Upload, Film, ChevronDown, ChevronUp,
+  Check, Loader2, Upload, Film,
   Trash2, X, UserPlus, Briefcase, Target, Link2,
+  Globe, Linkedin, Search, MapPin, Calendar, Users as UsersIcon, Tag, RefreshCw,
 } from 'lucide-react';
+import { SaveButton } from './SaveButton';
+import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { createClient } from '@/lib/supabase/client';
 import {
   type ClientRow,
   updateClientRecord,
   deleteClientRecord,
-  updateTestimonial,
   getProjectById,
+  scrapeCompanyInfo,
 } from '../actions';
 import { ProjectPanel } from './ProjectPanel';
 import type { ContactRow } from '@/types/proposal';
@@ -24,6 +27,7 @@ type ClientProject = {
   slug: string;
   thumbnail_url: string | null;
   client_id: string | null;
+  category: string | null;
 };
 
 type ClientTestimonial = {
@@ -89,6 +93,10 @@ export interface CompanyPanelProps {
   onCompanyDeleted: (id: string) => void;
   onContactLinked: (contactId: string, companyId: string, companyName: string) => void;
   onContactUnlinked: (contactId: string) => void;
+  onTestimonialLinked?: (testimonialId: string, companyId: string) => void;
+  onTestimonialUnlinked?: (testimonialId: string) => void;
+  onProjectLinked?: (projectId: string, companyId: string) => void;
+  onProjectUnlinked?: (projectId: string) => void;
 }
 
 export function CompanyPanel({
@@ -101,19 +109,26 @@ export function CompanyPanel({
   onCompanyDeleted,
   onContactLinked,
   onContactUnlinked,
+  onTestimonialLinked,
+  onTestimonialUnlinked,
+  onProjectLinked,
+  onProjectUnlinked,
 }: CompanyPanelProps) {
   const [localCompany, setLocalCompany] = useState<ClientRow | null>(null);
   const [activeTab, setActiveTab] = useState<TabName>('info');
-  const [expandedTestimonialId, setExpandedTestimonialId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [savedId, setSavedId] = useState<string | null>(null);
-  const [saving, startSave] = useTransition();
-  const [savingTestimonialId, setSavingTestimonialId] = useState<string | null>(null);
+  const { saving, saved: companySaved, wrap: wrapSave } = useSaveState(2000);
+  const [, startSave] = useTransition();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeProjectRow, setActiveProjectRow] = useState<(Record<string, unknown> & { id: string }) | null>(null);
+  const [contactSearch, setContactSearch] = useState('');
+  const [testimonialSearch, setTestimonialSearch] = useState('');
+  const [projectSearch, setProjectSearch] = useState('');
+  const [fetching, setFetching] = useState(false);
+  const [fetchDone, setFetchDone] = useState(false);
 
   const openProject = useCallback(async (id: string) => {
     setActiveProjectId(id);
@@ -126,10 +141,11 @@ export function CompanyPanel({
     if (company) {
       setLocalCompany(company);
       setActiveTab('info');
-      setExpandedTestimonialId(null);
-      setSavedId(null);
       setDirty(false);
       setConfirmClose(false);
+      setContactSearch('');
+      setTestimonialSearch('');
+      setProjectSearch('');
     }
   }, [company?.id]);
 
@@ -154,8 +170,6 @@ export function CompanyPanel({
           const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
           setLocalCompany((p) => p ? { ...p, logo_url: publicUrl } : p);
           await updateClientRecord(id, { logo_url: publicUrl });
-          setSavedId(id);
-          setTimeout(() => setSavedId(null), 2000);
         } catch (err) {
           console.error('Logo upload failed:', err);
         } finally {
@@ -180,7 +194,6 @@ export function CompanyPanel({
   const isLead = companyTypes.includes('lead');
 
   const clientContacts = contacts.filter((ct) => ct.client_id === localCompany.id);
-  const unlinkableContacts = contacts.filter((ct) => ct.client_id !== localCompany.id);
   const clientProjects = projects.filter((p) => p.client_id === localCompany.id);
   const seenQuotes = new Set<string>();
   const clientTestimonials = testimonials.filter((t) => {
@@ -191,29 +204,62 @@ export function CompanyPanel({
   });
   const hasLinks = clientProjects.length > 0 || clientTestimonials.length > 0;
 
+  // Contacts search: filter unlinked contacts by search query
+  const cq = contactSearch.toLowerCase();
+  const filteredUnlinkedContacts = contacts.filter(
+    (ct) => ct.client_id !== localCompany.id && (
+      `${ct.first_name} ${ct.last_name}`.toLowerCase().includes(cq) ||
+      (ct.role ?? '').toLowerCase().includes(cq) ||
+      (ct.email ?? '').toLowerCase().includes(cq)
+    )
+  );
+
+  // Testimonials search: filter unlinked testimonials by search query
+  const tq = testimonialSearch.toLowerCase();
+  const filteredUnlinkedTestimonials = testimonials.filter(
+    (t) => t.client_id !== localCompany.id && (
+      t.quote.toLowerCase().includes(tq) ||
+      (t.person_name ?? '').toLowerCase().includes(tq)
+    )
+  );
+
+  // Projects search: filter unlinked projects by search query
+  const pq = projectSearch.toLowerCase();
+  const filteredUnlinkedProjects = projects.filter(
+    (p) => p.client_id === null && (
+      p.title.toLowerCase().includes(pq) ||
+      (p.category ?? '').toLowerCase().includes(pq)
+    )
+  );
+
   const toggleCompanyType = (type: CompanyType) => {
     const types = localCompany.company_types ?? [];
     const next = types.includes(type) ? types.filter((t) => t !== type) : [...types, type];
     handleChange('company_types', next);
   };
 
-  const handleSave = () => {
-    startSave(async () => {
-      await updateClientRecord(localCompany.id, {
-        name: localCompany.name,
-        company: localCompany.company,
-        notes: localCompany.notes,
-        logo_url: localCompany.logo_url,
-        company_types: localCompany.company_types ?? [],
-        status: localCompany.status ?? 'active',
-        pipeline_stage: localCompany.pipeline_stage ?? 'new',
-      });
-      setDirty(false);
-      setSavedId(localCompany.id);
-      setTimeout(() => setSavedId(null), 2000);
-      onCompanyUpdated(localCompany);
+  const handleSave = () => wrapSave(async () => {
+    await updateClientRecord(localCompany.id, {
+      name: localCompany.name,
+      company: localCompany.company,
+      notes: localCompany.notes,
+      logo_url: localCompany.logo_url,
+      company_types: localCompany.company_types ?? [],
+      status: localCompany.status ?? 'active',
+      pipeline_stage: localCompany.pipeline_stage ?? 'new',
+      website_url: localCompany.website_url,
+      linkedin_url: localCompany.linkedin_url,
+      description: localCompany.description,
+      industry: localCompany.industry,
+      location: localCompany.location,
+      founded_year: localCompany.founded_year,
+      company_size: localCompany.company_size,
+      twitter_url: localCompany.twitter_url,
+      instagram_url: localCompany.instagram_url,
     });
-  };
+    setDirty(false);
+    onCompanyUpdated(localCompany);
+  });
 
   const handleDelete = () => {
     startSave(async () => {
@@ -224,20 +270,42 @@ export function CompanyPanel({
     });
   };
 
-  const handleTestimonialSave = async (t: ClientTestimonial) => {
-    setSavingTestimonialId(t.id);
-    await updateTestimonial(t.id, {
-      quote: t.quote,
-      person_name: t.person_name,
-      person_title: t.person_title,
-    });
-    setSavingTestimonialId(null);
-    setSavedId(t.id);
-    setTimeout(() => setSavedId(null), 2000);
+  const handleFetchInfo = async () => {
+    setFetching(true);
+    setFetchDone(false);
+    try {
+      const info = await scrapeCompanyInfo(localCompany.name, localCompany.website_url);
+      setLocalCompany((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        if (!updated.description && info.description) updated.description = info.description;
+        if (!updated.website_url && info.website_url) updated.website_url = info.website_url;
+        if (!updated.linkedin_url && info.linkedin_url) updated.linkedin_url = info.linkedin_url;
+        if (!updated.twitter_url && info.twitter_url) updated.twitter_url = info.twitter_url;
+        if (!updated.instagram_url && info.instagram_url) updated.instagram_url = info.instagram_url;
+        if (!updated.industry && info.industry) updated.industry = info.industry;
+        if (!updated.location && info.location) updated.location = info.location;
+        if (!updated.founded_year && info.founded_year) updated.founded_year = info.founded_year;
+        if (!updated.company_size && info.company_size) updated.company_size = info.company_size;
+        return updated;
+      });
+      setDirty(true);
+      setFetchDone(true);
+      setTimeout(() => setFetchDone(false), 2000);
+    } catch (err) {
+      console.error('Failed to fetch company info:', err);
+    } finally {
+      setFetching(false);
+    }
   };
 
   const status = (localCompany.status ?? 'active') as CompanyStatus;
   const pipelineStage = (localCompany.pipeline_stage ?? 'new') as PipelineStage;
+  const statusCfg = STATUS_CONFIG[status];
+
+  const inputCls = 'flex-1 rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20';
+
+  const showSearchBar = activeTab === 'contacts' || activeTab === 'testimonials' || activeTab === 'projects';
 
   return (
     <>
@@ -248,20 +316,32 @@ export function CompanyPanel({
           onDiscard={() => { setConfirmClose(false); setDirty(false); onClose(); }}
         />
 
-        {/* Header: logo + name + close */}
-        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-white/[0.08]">
+        {/* Header: logo + name + project count + status pill + close */}
+        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-[#2a2a2a]">
           <LogoDropzone
             logoUrl={localCompany.logo_url}
             uploading={uploadingId === localCompany.id}
             onDrop={handleLogoDrop}
           />
-          <input
-            type="text"
-            value={localCompany.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="Company name"
-            className="flex-1 bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
-          />
+          <div className="flex-1 min-w-0">
+            <input
+              type="text"
+              value={localCompany.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              placeholder="Company name"
+              className="w-full bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground/30 focus:outline-none border-b border-transparent focus:border-white/20 pb-1"
+            />
+            {clientProjects.length > 0 && (
+              <p className="text-xs text-muted-foreground/40 mt-0.5">
+                {clientProjects.length} project{clientProjects.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          {/* Status pill — read-only */}
+          <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap bg-white/[0.04] flex-shrink-0 ${statusCfg.color}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+            {statusCfg.label}
+          </span>
           <button
             onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
@@ -270,12 +350,12 @@ export function CompanyPanel({
           </button>
         </div>
 
-        {/* Tab strip (pill style, right under header) */}
-        <div className="flex items-center gap-1 border-b border-white/[0.08] px-6 py-2 flex-shrink-0">
+        {/* Tab strip */}
+        <div className="flex items-center gap-1 border-b border-[#2a2a2a] px-6 py-2 flex-shrink-0 bg-white/[0.02]">
           {([
             { id: 'info',         label: 'Info',         count: null },
-            { id: 'contacts',     label: 'Contacts',     count: clientContacts.length },
             { id: 'projects',     label: 'Projects',     count: clientProjects.length },
+            { id: 'contacts',     label: 'Contacts',     count: clientContacts.length },
             { id: 'testimonials', label: 'Testimonials', count: clientTestimonials.length },
           ] as { id: TabName; label: string; count: number | null }[]).map(({ id: tabId, label, count }) => (
             <button
@@ -290,11 +370,29 @@ export function CompanyPanel({
             >
               {label}
               {count !== null && count > 0 && (
-                <span className="text-[10px] text-white/30 ml-0.5">{count}</span>
+                <span className="text-xs text-white/30 ml-0.5">{count}</span>
               )}
             </button>
           ))}
         </div>
+
+        {/* Action bar — search for contacts/testimonials tabs */}
+        {showSearchBar && (
+          <div className="flex items-center gap-2 px-6 py-2.5 border-b border-[#2a2a2a] bg-white/[0.02] flex-shrink-0">
+            <Search size={14} className="text-muted-foreground/40 flex-shrink-0" />
+            <input
+              type="text"
+              value={activeTab === 'contacts' ? contactSearch : activeTab === 'projects' ? projectSearch : testimonialSearch}
+              onChange={(e) => {
+                if (activeTab === 'contacts') setContactSearch(e.target.value);
+                else if (activeTab === 'projects') setProjectSearch(e.target.value);
+                else setTestimonialSearch(e.target.value);
+              }}
+              placeholder={activeTab === 'contacts' ? 'Search contacts to link…' : activeTab === 'projects' ? 'Search projects to link…' : 'Search testimonials to link…'}
+              className="flex-1 rounded-lg bg-black/50 border border-border/40 px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+            />
+          </div>
+        )}
 
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-4">
@@ -312,7 +410,7 @@ export function CompanyPanel({
                         key={type}
                         type="button"
                         onClick={() => toggleCompanyType(type)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                           isActive
                             ? `${cfg.activeBg} ${cfg.activeText} ${cfg.activeBorder}`
                             : 'border-border/30 bg-transparent text-muted-foreground/30 hover:text-muted-foreground/60 hover:border-border/50'
@@ -332,7 +430,7 @@ export function CompanyPanel({
                           key={s}
                           type="button"
                           onClick={() => handleChange('status', s)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                             isActive
                               ? `bg-white/8 border-white/20 ${scfg.color}`
                               : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
@@ -355,7 +453,7 @@ export function CompanyPanel({
                           key={stage.value}
                           type="button"
                           onClick={() => handleChange('pipeline_stage', stage.value)}
-                          className={`px-2.5 py-1 rounded-full border text-xs font-medium transition-all ${
+                          className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
                             isActive
                               ? `bg-white/8 border-white/20 ${stage.color}`
                               : 'border-border/20 bg-transparent text-muted-foreground/25 hover:text-muted-foreground/50 hover:border-border/40'
@@ -368,25 +466,106 @@ export function CompanyPanel({
                   </div>
                 )}
               </div>
+
+              {/* Description */}
+              <textarea
+                value={localCompany.description ?? ''}
+                onChange={(e) => handleChange('description', e.target.value || null)}
+                placeholder="Company description…"
+                rows={2}
+                className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                style={{ fieldSizing: 'content' } as React.CSSProperties}
+              />
+
+              {/* URLs + Company details */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Globe size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <input type="url" value={localCompany.website_url ?? ''} onChange={(e) => handleChange('website_url', e.target.value || null)} placeholder="Website URL" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Linkedin size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <input type="url" value={localCompany.linkedin_url ?? ''} onChange={(e) => handleChange('linkedin_url', e.target.value || null)} placeholder="LinkedIn URL" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                  <input type="url" value={localCompany.twitter_url ?? ''} onChange={(e) => handleChange('twitter_url', e.target.value || null)} placeholder="X / Twitter URL" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-muted-foreground/30 flex-shrink-0 fill-current"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+                  <input type="url" value={localCompany.instagram_url ?? ''} onChange={(e) => handleChange('instagram_url', e.target.value || null)} placeholder="Instagram URL" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Tag size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <input type="text" value={localCompany.industry ?? ''} onChange={(e) => handleChange('industry', e.target.value || null)} placeholder="Industry" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <input type="text" value={localCompany.location ?? ''} onChange={(e) => handleChange('location', e.target.value || null)} placeholder="Location" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <input type="number" value={localCompany.founded_year ?? ''} onChange={(e) => handleChange('founded_year', e.target.value ? parseInt(e.target.value, 10) : null)} placeholder="Founded year" className={inputCls} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <UsersIcon size={14} className="text-muted-foreground/30 flex-shrink-0" />
+                  <input type="text" value={localCompany.company_size ?? ''} onChange={(e) => handleChange('company_size', e.target.value || null)} placeholder="Company size" className={inputCls} />
+                </div>
+              </div>
+
+              {/* Notes */}
               <textarea
                 value={localCompany.notes ?? ''}
                 onChange={(e) => handleChange('notes', e.target.value || null)}
                 placeholder="Notes…"
-                rows={5}
+                rows={3}
                 className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-muted-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                style={{ fieldSizing: 'content' } as React.CSSProperties}
               />
             </div>
           )}
 
           {activeTab === 'contacts' && (
             <div className="space-y-2">
-              {clientContacts.length === 0 && (
-                <p className="text-xs text-muted-foreground/30 py-1">No contacts linked yet.</p>
+              {/* Search results — unlinked contacts matching search */}
+              {contactSearch && filteredUnlinkedContacts.length > 0 && (
+                <div className="space-y-1 mb-3">
+                  <p className="text-xs text-muted-foreground/30 mb-1.5">Link a contact</p>
+                  {filteredUnlinkedContacts.slice(0, 8).map((ct) => (
+                    <button
+                      key={ct.id}
+                      type="button"
+                      onClick={() => {
+                        onContactLinked(ct.id, localCompany.id, localCompany.name);
+                        setContactSearch('');
+                      }}
+                      className="w-full text-left flex items-center gap-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[#2a2a2a] hover:border-white/10 px-3 py-2 transition-colors"
+                    >
+                      <UserPlus size={12} className="text-muted-foreground/30 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-muted-foreground/60 truncate">{ct.first_name} {ct.last_name}</p>
+                        {(ct.role || ct.email) && (
+                          <p className="text-xs text-muted-foreground/30 truncate">
+                            {[ct.role, ct.email].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {contactSearch && filteredUnlinkedContacts.length === 0 && (
+                <p className="text-xs text-muted-foreground/20 px-1 mb-3">No matching unlinked contacts.</p>
+              )}
+
+              {/* Linked contacts */}
+              {clientContacts.length === 0 && !contactSearch && (
+                <p className="text-sm text-muted-foreground/30 py-1">No contacts linked yet.</p>
               )}
               {clientContacts.map((ct) => (
-                <div key={ct.id} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+                <div key={ct.id} className="flex items-center gap-2 rounded-lg bg-white/5 border border-[#2a2a2a] px-3 py-2.5">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{ct.name}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{ct.first_name} {ct.last_name}</p>
                     {(ct.role || ct.email) && (
                       <p className="text-xs text-muted-foreground/50 truncate">
                         {[ct.role, ct.email].filter(Boolean).join(' · ')}
@@ -399,118 +578,181 @@ export function CompanyPanel({
                     className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
                     title="Unlink contact"
                   >
-                    <X size={11} />
+                    <X size={12} />
                   </button>
                 </div>
               ))}
-              {unlinkableContacts.length > 0 && (
-                <div className="flex items-center gap-2 mt-1">
-                  <UserPlus size={12} className="text-muted-foreground/30 flex-shrink-0" />
-                  <select
-                    defaultValue=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        onContactLinked(e.target.value, localCompany.id, localCompany.name);
-                        e.target.value = '';
-                      }
-                    }}
-                    className="flex-1 rounded-lg border border-border/40 bg-black/50 px-2 py-1.5 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-white/20"
-                  >
-                    <option value="">Link a contact…</option>
-                    {unlinkableContacts.map((ct) => (
-                      <option key={ct.id} value={ct.id}>
-                        {ct.name}{ct.role ? ` — ${ct.role}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
           )}
 
           {activeTab === 'projects' && (
             <div className="space-y-1.5">
-              {clientProjects.length === 0 && (
-                <p className="text-xs text-muted-foreground/30 py-1">No projects linked.</p>
+              {/* Search results — unlinked projects matching search */}
+              {onProjectLinked && projectSearch && filteredUnlinkedProjects.length > 0 && (
+                <div className="space-y-1 mb-3">
+                  <p className="text-xs text-muted-foreground/30 mb-1.5">Link a project</p>
+                  {filteredUnlinkedProjects.slice(0, 8).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        onProjectLinked(p.id, localCompany.id);
+                        setProjectSearch('');
+                      }}
+                      className="flex items-center gap-2.5 w-full text-left rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[#2a2a2a] hover:border-white/10 px-3 py-2 transition-colors"
+                    >
+                      {p.thumbnail_url ? (
+                        <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-14 h-9 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
+                          <Film size={14} className="text-muted-foreground/30" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-muted-foreground/60 truncate">{p.title}</p>
+                        {p.category && (
+                          <p className="text-xs text-muted-foreground/30 truncate">{p.category}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {projectSearch && filteredUnlinkedProjects.length === 0 && (
+                <p className="text-xs text-muted-foreground/20 px-1 mb-3">No matching unlinked projects.</p>
+              )}
+
+              {/* Linked projects */}
+              {clientProjects.length === 0 && !projectSearch && (
+                <p className="text-sm text-muted-foreground/30 py-1">No projects linked.</p>
               )}
               {clientProjects.map((p) => (
-                <button
+                <div
                   key={p.id}
-                  onClick={() => openProject(p.id)}
-                  className="flex items-center gap-2.5 rounded-lg bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors group w-full text-left"
+                  className="flex items-center gap-2.5 rounded-lg bg-white/5 hover:bg-white/10 px-3 py-2 transition-colors group border border-[#2a2a2a] hover:border-white/15"
                 >
-                  {p.thumbnail_url ? (
-                    <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-14 h-9 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
-                      <Film size={14} className="text-muted-foreground/30" />
+                  <button
+                    type="button"
+                    onClick={() => openProject(p.id)}
+                    className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                  >
+                    {p.thumbnail_url ? (
+                      <img src={p.thumbnail_url} alt="" className="w-14 h-9 rounded object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-14 h-9 rounded bg-white/5 flex items-center justify-center flex-shrink-0">
+                        <Film size={14} className="text-muted-foreground/30" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground group-hover:text-white truncate">{p.title}</p>
+                      {p.category && (
+                        <p className="text-xs text-muted-foreground/40 truncate">{p.category}</p>
+                      )}
                     </div>
+                  </button>
+                  {onProjectUnlinked && (
+                    <button
+                      type="button"
+                      onClick={() => onProjectUnlinked(p.id)}
+                      className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                      title="Unlink project"
+                    >
+                      <X size={12} />
+                    </button>
                   )}
-                  <span className="text-sm text-muted-foreground group-hover:text-foreground truncate">{p.title}</span>
-                </button>
+                </div>
               ))}
             </div>
           )}
 
           {activeTab === 'testimonials' && (
             <div className="space-y-2">
-              {clientTestimonials.length === 0 && (
-                <p className="text-xs text-muted-foreground/30 py-1">No testimonials linked.</p>
-              )}
-              {clientTestimonials.map((t) => {
-                const isExpanded = expandedTestimonialId === t.id;
-                return (
-                  <div key={t.id} className="rounded-lg bg-white/5 overflow-hidden">
+              {/* Search results — unlinked testimonials matching search */}
+              {onTestimonialLinked && testimonialSearch && filteredUnlinkedTestimonials.length > 0 && (
+                <div className="space-y-1 mb-3">
+                  <p className="text-xs text-muted-foreground/30 mb-1.5">Link a testimonial</p>
+                  {filteredUnlinkedTestimonials.slice(0, 10).map((t) => (
                     <button
+                      key={t.id}
                       type="button"
-                      onClick={() => setExpandedTestimonialId(isExpanded ? null : t.id)}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors"
+                      onClick={() => {
+                        onTestimonialLinked(t.id, localCompany.id);
+                        setTestimonialSearch('');
+                      }}
+                      className="w-full text-left rounded-lg bg-white/[0.03] hover:bg-white/[0.06] border border-[#2a2a2a] hover:border-white/10 px-3 py-2.5 transition-colors"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground/60 truncate">
-                          &ldquo;{t.quote.slice(0, 80)}{t.quote.length > 80 ? '…' : ''}&rdquo;
+                      <p className="text-sm text-muted-foreground/50 line-clamp-1">
+                        &ldquo;{t.quote.slice(0, 100)}&rdquo;
+                      </p>
+                      {t.person_name && (
+                        <p className="text-xs text-muted-foreground/30 mt-0.5">
+                          — {t.person_name}
                         </p>
-                        {t.person_name && (
-                          <p className="text-[10px] text-muted-foreground/40 mt-0.5">
-                            — {t.person_name}{t.person_title ? `, ${t.person_title}` : ''}
-                          </p>
-                        )}
-                      </div>
-                      {isExpanded
-                        ? <ChevronUp size={12} className="text-muted-foreground/30 flex-shrink-0" />
-                        : <ChevronDown size={12} className="text-muted-foreground/30 flex-shrink-0" />}
+                      )}
                     </button>
-                    {isExpanded && (
-                      <TestimonialEditor
-                        testimonial={t}
-                        savedId={savedId}
-                        savingId={savingTestimonialId}
-                        onSave={handleTestimonialSave}
-                      />
+                  ))}
+                </div>
+              )}
+              {testimonialSearch && filteredUnlinkedTestimonials.length === 0 && (
+                <p className="text-xs text-muted-foreground/20 px-1 mb-3">No matching unlinked testimonials.</p>
+              )}
+
+              {/* Linked testimonials — read-only with unlink */}
+              {clientTestimonials.length === 0 && !testimonialSearch && (
+                <p className="text-sm text-muted-foreground/30 py-1">No testimonials linked yet.</p>
+              )}
+              {clientTestimonials.map((t) => (
+                <div
+                  key={t.id}
+                  className="rounded-lg bg-white/5 border border-[#2a2a2a] px-3 py-2.5 flex items-center gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground/60 line-clamp-2">
+                      &ldquo;{t.quote}&rdquo;
+                    </p>
+                    {t.person_name && (
+                      <p className="text-xs text-muted-foreground/40 mt-1">
+                        — {t.person_name}{t.person_title ? `, ${t.person_title}` : ''}
+                      </p>
                     )}
                   </div>
-                );
-              })}
+                  {onTestimonialUnlinked && (
+                    <button
+                      type="button"
+                      onClick={() => onTestimonialUnlinked(t.id)}
+                      className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/30 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0"
+                      title="Unlink testimonial"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Footer: save (left) | delete (right) */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08]">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40"
-          >
-            {savedId === localCompany.id ? (
-              <Check size={14} className="text-green-600" />
-            ) : saving ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Save size={14} />
-            )}
-            {savedId === localCompany.id ? 'Saved' : 'Save'}
-          </button>
+        {/* Footer action bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[#2a2a2a] bg-white/[0.02]">
+          <div className="flex items-center gap-2">
+            <SaveButton saving={saving} saved={companySaved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
+            <button
+              type="button"
+              onClick={handleFetchInfo}
+              disabled={fetching}
+              className="flex items-center gap-2 px-4 py-[9px] rounded-lg border border-[#2a2a2a] text-sm text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/5 transition-colors disabled:opacity-40"
+              title="Scrape company info from the web"
+            >
+              {fetchDone ? (
+                <Check size={14} className="text-green-400" />
+              ) : fetching ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <RefreshCw size={14} />
+              )}
+              {fetchDone ? 'Fetched' : fetching ? 'Fetching…' : 'Fetch Data'}
+            </button>
+          </div>
           <button
             onClick={() => { !hasLinks && setConfirmDeleteId(localCompany.id); }}
             disabled={hasLinks}
@@ -562,69 +804,6 @@ export function CompanyPanel({
         onProjectCreated={() => {}}
       />
     </>
-  );
-}
-
-/* ── Testimonial editor (inline) ─────────────────────────────────────── */
-
-function TestimonialEditor({
-  testimonial: t,
-  savedId,
-  savingId,
-  onSave,
-}: {
-  testimonial: ClientTestimonial;
-  savedId: string | null;
-  savingId: string | null;
-  onSave: (t: ClientTestimonial) => void;
-}) {
-  const [local, setLocal] = useState(t);
-  return (
-    <div className="px-3 pb-3 pt-1 space-y-2 border-t border-border/20">
-      <textarea
-        value={local.quote}
-        onChange={(e) => {
-          setLocal((p) => ({ ...p, quote: e.target.value }));
-          e.target.style.height = 'auto';
-          e.target.style.height = e.target.scrollHeight + 'px';
-        }}
-        ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
-        className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20 resize-none overflow-hidden"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          type="text"
-          value={local.person_name ?? ''}
-          onChange={(e) => setLocal((p) => ({ ...p, person_name: e.target.value || null }))}
-          placeholder="Person name"
-          className="rounded-lg border border-border/40 bg-black/50 px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
-        />
-        <input
-          type="text"
-          value={local.person_title ?? ''}
-          onChange={(e) => setLocal((p) => ({ ...p, person_title: e.target.value || null }))}
-          placeholder="Title / role"
-          className="rounded-lg border border-border/40 bg-black/50 px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-white/20"
-        />
-      </div>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => onSave(local)}
-          disabled={savingId === t.id}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-border-subtle border border-border-subtle hover:bg-[#0a0a0a] text-xs font-medium transition-colors disabled:opacity-50"
-        >
-          {savedId === t.id ? (
-            <Check size={10} className="text-green-400" />
-          ) : savingId === t.id ? (
-            <Loader2 size={10} className="animate-spin" />
-          ) : (
-            <Save size={10} />
-          )}
-          {savedId === t.id ? 'Saved' : 'Save'}
-        </button>
-      </div>
-    </div>
   );
 }
 

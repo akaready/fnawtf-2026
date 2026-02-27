@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, ArrowRight } from 'lucide-react';
+import { Search, X, ArrowRight, Briefcase, Users, LayoutGrid, Tag, MessageSquare, FileText, BookOpen, type LucideIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Props {
@@ -18,16 +18,26 @@ interface SearchResult {
   href: string;
 }
 
-type TypeKey = 'companies' | 'contacts' | 'projects' | 'tags' | 'testimonials' | 'proposals' | 'snippets';
+type TypeKey = 'companies' | 'people' | 'projects' | 'tags' | 'testimonials' | 'proposals' | 'snippets';
 
 const TYPE_META: Record<TypeKey, { label: string; plural: string; color: string }> = {
   companies:    { label: 'Company',     plural: 'Companies',    color: 'bg-blue-500' },
-  contacts:     { label: 'Contact',     plural: 'Contacts',     color: 'bg-emerald-500' },
+  people:       { label: 'Person',      plural: 'People',       color: 'bg-emerald-500' },
   projects:     { label: 'Project',     plural: 'Projects',     color: 'bg-violet-500' },
   tags:         { label: 'Tag',         plural: 'Tags',         color: 'bg-yellow-500' },
   testimonials: { label: 'Testimonial', plural: 'Testimonials', color: 'bg-pink-500' },
   proposals:    { label: 'Proposal',    plural: 'Proposals',    color: 'bg-orange-500' },
   snippets:     { label: 'Snippet',     plural: 'Snippets',     color: 'bg-teal-500' },
+};
+
+const TYPE_ICON: Record<TypeKey, LucideIcon> = {
+  companies:    Briefcase,
+  people:       Users,
+  projects:     LayoutGrid,
+  tags:         Tag,
+  testimonials: MessageSquare,
+  proposals:    FileText,
+  snippets:     BookOpen,
 };
 
 const ALL_TYPES = Object.keys(TYPE_META) as TypeKey[];
@@ -46,15 +56,16 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         id: r.id, type, primary: r.name, secondary: r.notes ?? undefined, href: `/admin/clients?open=${r.id}`,
       }));
     }
-    case 'contacts': {
+    case 'people': {
       const { data } = await supabase
         .from('contacts')
-        .select('id, name, email, company, role')
-        .or(`name.ilike.${like},email.ilike.${like},company.ilike.${like},role.ilike.${like}`)
-        .limit(5);
+        .select('id, first_name, last_name, email, company, role, type')
+        .or(`first_name.ilike.${like},last_name.ilike.${like},email.ilike.${like},company.ilike.${like},role.ilike.${like}`)
+        .limit(8);
       return ((data ?? []) as any[]).map((r) => ({
-        id: r.id, type, primary: r.name,
-        secondary: [r.role, r.company].filter(Boolean).join(' · ') || r.email || undefined,
+        id: r.id, type: 'people' as TypeKey,
+        primary: [r.first_name, r.last_name].filter(Boolean).join(' '),
+        secondary: [r.type, r.role, r.company].filter(Boolean).join(' · ') || r.email || undefined,
         href: `/admin/contacts?open=${r.id}`,
       }));
     }
@@ -112,7 +123,66 @@ async function queryType(supabase: ReturnType<typeof createClient>, type: TypeKe
         id: r.id, type, primary: r.title, secondary: r.category ?? undefined, href: '/admin/snippets',
       }));
     }
+    default:
+      return [];
   }
+}
+
+/** Fetch the 10 most recently updated records, optionally filtered to a single type */
+async function fetchRecent(supabase: ReturnType<typeof createClient>, filter: TypeKey | 'all' = 'all'): Promise<SearchResult[]> {
+  const items: (SearchResult & { ts: string })[] = [];
+  const limit = filter === 'all' ? 3 : 10;
+
+  const shouldFetch = (t: TypeKey) => filter === 'all' || filter === t;
+
+  const promises: PromiseLike<void>[] = [];
+
+  if (shouldFetch('companies')) {
+    promises.push(
+      supabase.from('clients').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'companies', primary: r.name, href: `/admin/clients?open=${r.id}`, ts: r.updated_at }); })
+    );
+  }
+  if (shouldFetch('people')) {
+    promises.push(
+      supabase.from('contacts').select('id, first_name, last_name, type, company, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'people', primary: [r.first_name, r.last_name].filter(Boolean).join(' '), secondary: [r.type, r.company].filter(Boolean).join(' · ') || undefined, href: `/admin/contacts?open=${r.id}`, ts: r.updated_at }); })
+    );
+  }
+  if (shouldFetch('projects')) {
+    promises.push(
+      supabase.from('projects').select('id, title, client_name, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'projects', primary: r.title, secondary: r.client_name ?? undefined, href: `/admin/projects?open=${r.id}`, ts: r.updated_at }); })
+    );
+  }
+  if (shouldFetch('proposals')) {
+    promises.push(
+      supabase.from('proposals').select('id, title, contact_name, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'proposals', primary: r.title, secondary: r.contact_name ?? undefined, href: `/admin/proposals?open=${r.id}`, ts: r.updated_at }); })
+    );
+  }
+  if (shouldFetch('tags')) {
+    promises.push(
+      supabase.from('tags').select('id, name, category, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'tags', primary: r.name, secondary: r.category ?? undefined, href: '/admin/tags', ts: r.updated_at }); })
+    );
+  }
+  if (shouldFetch('testimonials')) {
+    promises.push(
+      supabase.from('testimonials').select('id, person_name, company, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'testimonials', primary: r.person_name, secondary: r.company ?? undefined, href: '/admin/testimonials', ts: r.updated_at }); })
+    );
+  }
+  if (shouldFetch('snippets')) {
+    promises.push(
+      supabase.from('content_snippets').select('id, title, category, updated_at').order('updated_at', { ascending: false }).limit(limit)
+        .then(({ data }) => { for (const r of (data ?? []) as any[]) items.push({ id: r.id, type: 'snippets', primary: r.title, secondary: r.category ?? undefined, href: '/admin/snippets', ts: r.updated_at }); })
+    );
+  }
+
+  await Promise.all(promises);
+  items.sort((a, b) => (b.ts > a.ts ? 1 : -1));
+  return items.slice(0, 10);
 }
 
 export function AdminSearchModal({ open, onClose }: Props) {
@@ -123,20 +193,66 @@ export function AdminSearchModal({ open, onClose }: Props) {
   const [query, setQuery] = useState('');
   const [activeType, setActiveType] = useState<TypeKey | 'all'>('all');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [recents, setRecents] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
 
+  // Mount/unmount with exit animation
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
+  // Stagger animation plays at most once per hour
+  const [shouldStagger, setShouldStagger] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+      // Check if we should play the stagger animation (once per hour)
+      const STAGGER_KEY = 'admin-search-last-stagger';
+      const ONE_HOUR = 60 * 60 * 1000;
+      const last = Number(localStorage.getItem(STAGGER_KEY) || '0');
+      if (Date.now() - last > ONE_HOUR) {
+        setShouldStagger(true);
+        localStorage.setItem(STAGGER_KEY, String(Date.now()));
+      } else {
+        setShouldStagger(false);
+      }
+    }
+  }, [open]);
+
+  const handleClose = useCallback(() => {
+    setClosing(true);
+    setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+      onClose();
+    }, 150); // matches exit animation duration
+  }, [onClose]);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset on open
+  // Reset on open + load recents
   useEffect(() => {
     if (open) {
       setQuery('');
       setResults([]);
       setHighlighted(0);
+      setActiveType('all');
       setTimeout(() => inputRef.current?.focus(), 30);
+      const supabase = createClient();
+      fetchRecent(supabase, 'all').then(setRecents).catch(() => {});
     }
   }, [open]);
+
+  // Re-fetch recents when type filter changes
+  useEffect(() => {
+    if (!open) return;
+    const supabase = createClient();
+    fetchRecent(supabase, activeType).then((r) => {
+      setRecents(r);
+      setHighlighted(0);
+    }).catch(() => {});
+  }, [activeType, open]);
 
   const runSearch = useCallback(async (q: string, type: TypeKey | 'all') => {
     if (!q.trim()) { setResults([]); setLoading(false); return; }
@@ -156,18 +272,20 @@ export function AdminSearchModal({ open, onClose }: Props) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, activeType, runSearch]);
 
+  const displayedResults = query.trim() ? results : recents;
+
   // Keyboard nav
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, results.length - 1)); }
+      if (e.key === 'Escape') { handleClose(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted((h) => Math.min(h + 1, displayedResults.length - 1)); }
       if (e.key === 'ArrowUp') { e.preventDefault(); setHighlighted((h) => Math.max(h - 1, 0)); }
-      if (e.key === 'Enter' && results[highlighted]) { navigate(results[highlighted]); }
+      if (e.key === 'Enter' && displayedResults[highlighted]) { navigate(displayedResults[highlighted]); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, results, highlighted]);
+  }, [open, displayedResults, highlighted, handleClose]);
 
   // Scroll highlighted into view
   useEffect(() => {
@@ -177,53 +295,86 @@ export function AdminSearchModal({ open, onClose }: Props) {
 
   function navigate(result: SearchResult) {
     router.push(result.href);
-    onClose();
+    handleClose();
   }
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const typedQuery = query.trim();
+  const showRecents = !typedQuery && recents.length > 0;
+
+  function renderResultRow(result: SearchResult, i: number, stagger: boolean) {
+    return (
+      <button
+        key={`${result.type}-${result.id}`}
+        onMouseEnter={() => setHighlighted(i)}
+        onClick={() => navigate(result)}
+        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+          i === highlighted ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
+        } ${stagger ? 'animate-search-results-in' : ''}`}
+        style={stagger ? { animationDelay: `${60 + i * 30}ms` } : undefined}
+      >
+        <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${TYPE_META[result.type].color}`} />
+        <span className="flex-shrink-0 w-[76px] text-[10px] text-white/30 uppercase tracking-wide">
+          {TYPE_META[result.type].label}
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="text-sm text-foreground truncate block">{result.primary}</span>
+          {result.secondary && (
+            <span className="text-xs text-white/35 truncate block">{result.secondary}</span>
+          )}
+        </span>
+        <ArrowRight size={12} className="flex-shrink-0 text-white/20" />
+      </button>
+    );
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/70 backdrop-blur-sm"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-2xl mx-4 bg-[#111] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
+      {/* Backdrop — click to close */}
+      <div
+        className={`absolute inset-0 bg-black/60 backdrop-blur-[1px] ${closing ? 'animate-search-fade-out' : 'animate-search-fade-in'}`}
+        onClick={handleClose}
+      />
 
-        {/* Input row */}
-        <div className="flex items-center gap-3 px-3 py-2 border-b border-white/[0.07]">
-          <div className="flex-1 relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
-              className="w-full bg-black/40 rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-white/30 outline-none border border-white/[0.08] focus:border-white/20"
-            />
-          </div>
-          <button onClick={onClose} className="flex-shrink-0 text-white/30 hover:text-white/70 transition-colors">
+      {/* Modal — w-fit so it's exactly the width of the pills row */}
+      <div className={`relative w-fit mx-4 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl overflow-hidden ${closing ? 'animate-search-slide-up' : 'animate-search-slide-down'}`}>
+
+        {/* Raycast-style search row — the input IS the row */}
+        <div className="relative border-b border-[#2a2a2a] bg-black/50">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search…"
+            className="w-full bg-transparent px-12 py-3.5 text-[15px] text-foreground placeholder:text-white/30 outline-none"
+          />
+          <button onClick={handleClose} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
             <X size={14} />
           </button>
         </div>
 
-        {/* Type filter pills */}
-        <div className="flex items-center gap-0.5 px-2 py-2 border-b border-white/[0.07] overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {(['all', ...ALL_TYPES] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveType(t)}
-              className={`flex-shrink-0 px-3 py-1 rounded-md text-xs transition-colors ${
-                activeType === t
-                  ? 'bg-white/10 text-foreground'
-                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-              }`}
-            >
-              {t === 'all' ? 'All' : TYPE_META[t].plural}
-            </button>
-          ))}
+        {/* Type filter pills — this row determines the modal width */}
+        <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-[#2a2a2a] bg-white/[0.02]">
+          {(['all', ...ALL_TYPES] as const).map((t) => {
+            const Icon = t !== 'all' ? TYPE_ICON[t] : null;
+            return (
+              <button
+                key={t}
+                onClick={() => setActiveType(t)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-md text-xs whitespace-nowrap transition-colors ${
+                  activeType === t
+                    ? 'bg-white/10 text-foreground'
+                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                }`}
+              >
+                {Icon && <Icon size={12} />}
+                {t === 'all' ? 'All' : TYPE_META[t].plural}
+              </button>
+            );
+          })}
         </div>
 
         {/* Results */}
@@ -232,7 +383,15 @@ export function AdminSearchModal({ open, onClose }: Props) {
             <div className="px-4 py-8 text-center text-xs text-white/30">Searching…</div>
           )}
 
-          {!loading && !typedQuery && (
+          {!loading && showRecents && (
+            <>
+              <div className={`px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-white/25 ${shouldStagger ? 'animate-search-results-in' : ''}`}
+                style={shouldStagger ? { animationDelay: '40ms' } : undefined}>Recent</div>
+              {recents.map((result, i) => renderResultRow(result, i, shouldStagger))}
+            </>
+          )}
+
+          {!loading && !typedQuery && recents.length === 0 && (
             <div className="px-4 py-8 text-center text-xs text-white/30">Type to search across all content</div>
           )}
 
@@ -240,28 +399,7 @@ export function AdminSearchModal({ open, onClose }: Props) {
             <div className="px-4 py-8 text-center text-xs text-white/30">No results for &ldquo;{typedQuery}&rdquo;</div>
           )}
 
-          {!loading && results.length > 0 && results.map((result, i) => (
-            <button
-              key={`${result.type}-${result.id}`}
-              onMouseEnter={() => setHighlighted(i)}
-              onClick={() => navigate(result)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                i === highlighted ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
-              }`}
-            >
-              <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${TYPE_META[result.type].color}`} />
-              <span className="flex-shrink-0 w-[76px] text-[10px] text-white/30 uppercase tracking-wide">
-                {TYPE_META[result.type].label}
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="text-sm text-foreground truncate block">{result.primary}</span>
-                {result.secondary && (
-                  <span className="text-xs text-white/35 truncate block">{result.secondary}</span>
-                )}
-              </span>
-              <ArrowRight size={12} className="flex-shrink-0 text-white/20" />
-            </button>
-          ))}
+          {!loading && typedQuery && results.length > 0 && results.map((result, i) => renderResultRow(result, i, false))}
         </div>
 
       </div>

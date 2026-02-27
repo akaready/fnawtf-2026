@@ -6,7 +6,6 @@ import { setProposalAuthCookie } from '@/lib/proposal/auth';
 export async function loginByAccessCode(
   email: string,
   accessCode: string,
-  name?: string,
 ): Promise<{ success: boolean; slug?: string; error?: string }> {
   const supabase = await createClient();
 
@@ -27,7 +26,7 @@ export async function loginByAccessCode(
   }
 
   // Set auth cookie
-  await setProposalAuthCookie(match.slug, email, name);
+  await setProposalAuthCookie(match.slug, email);
 
   // Log view
   await supabase.from('proposal_views').insert({

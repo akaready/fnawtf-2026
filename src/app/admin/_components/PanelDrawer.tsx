@@ -26,7 +26,7 @@ export function PanelDrawer({ open, onClose, width = 'w-[480px]', children }: Pa
 
       {/* Drawer */}
       <div
-        className={`fixed right-0 top-0 bottom-0 ${width} bg-[#0e0e0e] border-l border-white/[0.12] z-[101] flex flex-col transition-transform duration-200 ${
+        className={`fixed right-0 top-0 bottom-0 ${width} bg-[#0e0e0e] border-l border-[#2a2a2a] z-[101] flex flex-col transition-transform duration-200 ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

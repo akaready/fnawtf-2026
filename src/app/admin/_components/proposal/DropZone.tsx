@@ -43,7 +43,7 @@ export function DropZone({ id, zoneType, zoneId, label, children }: Props) {
             : 'min-h-[64px] border-white/15 bg-white/[0.02]'
           : children
             ? ''
-            : 'min-h-[64px] border-white/[0.06] bg-white/[0.01]'
+            : 'min-h-[64px] border-[#2a2a2a] bg-white/[0.01]'
         }
       `}
     >

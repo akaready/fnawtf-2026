@@ -40,7 +40,7 @@ function MergeDialog({ tags, sourceIds, category, onClose, onMerge, isPending }:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[#0f0f0f] border border-white/[0.12] rounded-xl w-full max-w-md mx-4 shadow-2xl">
+      <div className="relative z-10 bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl w-full max-w-md mx-4 shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f1f1f]">
           <div>
             <h2 className="text-lg font-semibold text-foreground">Merge {CATEGORY_CONFIG[category].label}</h2>
@@ -55,7 +55,7 @@ function MergeDialog({ tags, sourceIds, category, onClose, onMerge, isPending }:
             <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-2">Merging</p>
             <div className="flex flex-wrap gap-1.5">
               {sourceTags.map((t) => (
-                <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/[0.1] text-sm text-foreground">
+                <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-[#2a2a2a] text-sm text-foreground">
                   {t.name}
                   <span className="text-xs text-muted-foreground">{t.projectCount}</span>
                 </span>
@@ -79,7 +79,7 @@ function MergeDialog({ tags, sourceIds, category, onClose, onMerge, isPending }:
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+          <p className="text-xs text-muted-foreground px-3 py-2 rounded-lg bg-white/[0.03] border border-[#2a2a2a]">
             Up to <strong className="text-foreground">{totalProjects} projects</strong> will be updated. All uses of the removed tags will be replaced with the kept tag.
           </p>
         </div>
@@ -225,7 +225,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
   return (
     <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] bg-white/[0.03] rounded-t-xl">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a] bg-white/[0.03] rounded-t-xl">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-foreground tracking-tight">{config.label}</h3>
@@ -255,7 +255,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
       </div>
 
       {/* Tag list */}
-      <div className="flex-1 divide-y divide-white/[0.04]">
+      <div className="flex-1 divide-y divide-[#2a2a2a]">
         {tags.length === 0 && !addingNew && (
           <div className="px-5 py-8 text-center text-xs text-muted-foreground/40">No tags yet</div>
         )}
