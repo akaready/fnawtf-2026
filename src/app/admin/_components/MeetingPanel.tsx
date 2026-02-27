@@ -7,7 +7,6 @@ import {
   Users,
   Building2,
   User,
-  Link2,
   Unlink,
   Bot,
 } from 'lucide-react';
