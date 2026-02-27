@@ -28,12 +28,6 @@ export function ProjectMetaGrid({
     locationCount != null && `Locations: ${locationCount}`,
   ].filter(Boolean) as string[];
 
-  const hasAnyData =
-    styleTags.length > 0 ||
-    premiumAddons.length > 0 ||
-    cameraTechniques.length > 0 ||
-    scopeTags.length > 0;
-
   const visibleCount = [styleTags.length > 0, premiumAddons.length > 0, cameraTechniques.length > 0, scopeTags.length > 0].filter(Boolean).length;
 
   if (visibleCount === 0) return null;

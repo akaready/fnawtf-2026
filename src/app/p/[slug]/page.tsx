@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getProposalAuthCookie } from '@/lib/proposal/auth';
 import { getProposalData } from './actions';
 import { ProposalPageClient } from './ProposalPageClient';
+import type { ProposalVideo } from '@/types/proposal';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,8 +19,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .eq('slug', slug)
     .single();
 
+  const row = data as { title: string } | null;
   return {
-    title: data?.title ? `FNA.wtf • ${data.title}` : 'FNA.wtf • Proposal',
+    title: row?.title ? `FNA.wtf • ${row.title}` : 'FNA.wtf • Proposal',
   };
 }
 
@@ -42,7 +44,7 @@ export default async function ProposalPage({ params }: Props) {
     <ProposalPageClient
       proposal={data.proposal}
       sections={data.sections}
-      videos={data.videos}
+      videos={data.videos as ProposalVideo[]}
       quotes={data.quotes}
       milestones={data.milestones}
       viewerEmail={viewer.email}
