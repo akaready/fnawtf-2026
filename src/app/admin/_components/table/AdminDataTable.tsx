@@ -484,7 +484,7 @@ export function AdminDataTable<T extends { id: string }>({
     <div className={`flex flex-col h-full ${className ?? ''}`}>
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       {showToolbar && (
-        <div className="@container flex flex-wrap items-center gap-1 px-6 @md:px-8 min-h-[53px] py-3 border-b border-[#2a2a2a] flex-shrink-0">
+        <div className="@container flex flex-wrap items-center gap-1 px-6 @md:px-8 min-h-[53px] py-3 border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
           {toolbarSlot}
 
           {/* Right-aligned toolbar buttons — Freeze, Fields, Filter, Group, Sort, Color, Row Height */}
