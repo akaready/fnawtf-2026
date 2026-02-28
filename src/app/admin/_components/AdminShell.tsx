@@ -80,7 +80,7 @@ export function AdminShell({ children }: Props) {
         </div>
 
         {/* Nav — always same padding; sidebar overflow-hidden clips text when collapsed */}
-        <nav className="flex-1 pt-[8px] pb-3 space-y-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+        <nav className="flex-1 pt-[7px] pb-3 space-y-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           {navItems.map(({ href, label, icon: Icon }, i) => {
             const active = pathname.startsWith(href);
             return (
