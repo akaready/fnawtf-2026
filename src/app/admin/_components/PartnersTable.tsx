@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
 import { Plus, Building2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
-import { AdminTable, type ColumnDef } from './AdminTable';
+import { AdminDataTable, type ColDef } from './table';
 import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
@@ -131,11 +131,12 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
     );
   }, [partnersOnly, search]);
 
-  const columns: ColumnDef<ClientRow>[] = [
+  const columns: ColDef<ClientRow>[] = [
     {
       key: 'logo_url',
       label: '',
-      width: 'w-10',
+      type: 'thumbnail',
+      defaultWidth: 44,
       render: (row) =>
         row.logo_url ? (
           <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
@@ -232,11 +233,26 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
             Add Partner
           </button>
         }
+        mobileActions={
+          <button onClick={handleCreate} disabled={creating} className="btn-primary p-2.5 text-sm" title="Add Partner">
+            <Plus size={16} />
+          </button>
+        }
       />
 
-      <AdminTable
+      <AdminDataTable
         data={filtered}
         columns={columns}
+        storageKey="fna-table-partners"
+        toolbar
+        sortable
+        filterable
+        columnVisibility
+        columnReorder
+        columnResize
+        selectable
+        freezePanes
+        exportCsv
         onRowClick={(row) => setActiveId(row.id)}
         selectedId={activeId ?? undefined}
         emptyMessage="No partners yet."

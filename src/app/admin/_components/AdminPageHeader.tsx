@@ -16,8 +16,10 @@ interface Props {
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  /** Action buttons rendered after the search bar in the title row */
+  /** Action buttons rendered after the search bar — full-size with labels */
   actions?: ReactNode;
+  /** Icon-only version of actions for mobile. Falls back to `actions` if not provided. */
+  mobileActions?: ReactNode;
 }
 
 export function AdminPageHeader({
@@ -30,28 +32,31 @@ export function AdminPageHeader({
   onSearchChange,
   searchPlaceholder = 'Search…',
   actions,
+  mobileActions,
 }: Props) {
   const hasInlineControls = onSearchChange !== undefined || actions || rightContent;
 
   return (
-    <div className={`flex-shrink-0 px-8 pb-4 border-b border-[#2a2a2a] ${topContent ? 'pt-5' : 'pt-[45px]'}`}>
+    <div
+      className={`@container flex-shrink-0 px-4 @md:px-8 pb-4 border-b border-[#2a2a2a] ${topContent ? 'pt-5' : 'pt-6 @md:pt-[45px]'}`}
+    >
       {/* Breadcrumb row */}
       {topContent && <div className="mb-3">{topContent}</div>}
 
-      {/* Title row */}
-      <div className="flex items-center gap-4">
+      {/* Wide: single row — title + search + actions (@md = 448px container) */}
+      <div className="hidden @md:flex items-center gap-3 min-w-0">
         {leftContent}
-        <div className="flex-shrink-0">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <div className="min-w-0 shrink-0 max-w-[40%]">
+          <h1 className="text-2xl font-bold tracking-tight truncate">{title}</h1>
           {subtitle && (
-            <p className="text-sm mt-1 text-muted-foreground">{subtitle}</p>
+            <p className="text-sm mt-1 text-muted-foreground truncate">{subtitle}</p>
           )}
         </div>
         {hasInlineControls && (
-          <div className="flex-1 flex items-center justify-end gap-3 ml-auto min-w-0">
+          <div className="flex-1 flex items-center justify-end gap-2 min-w-0">
             {rightContent}
             {onSearchChange !== undefined && (
-              <div className="relative w-64">
+              <div className="relative flex-1 max-w-64 min-w-[100px]">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
                 <input
                   type="text"
@@ -70,7 +75,55 @@ export function AdminPageHeader({
                 )}
               </div>
             )}
-            {actions && <div className="flex items-center gap-2 flex-shrink-0 [&_button]:py-1.5 [&_a]:py-1.5">{actions}</div>}
+            {actions && (
+              <div className="flex items-center gap-2 flex-shrink-0 [&_button]:py-1.5 [&_a]:py-1.5 [&_button]:whitespace-nowrap">
+                {actions}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Narrow: stacked — title row, then controls row (<@md) */}
+      <div className="flex @md:hidden flex-col gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {leftContent}
+          <div className="min-w-0 shrink">
+            <h1 className="text-xl font-bold tracking-tight truncate">{title}</h1>
+            {subtitle && (
+              <p className="text-xs mt-0.5 text-muted-foreground truncate">{subtitle}</p>
+            )}
+          </div>
+          <div className="flex-1" />
+          {rightContent}
+        </div>
+        {(onSearchChange !== undefined || actions) && (
+          <div className="flex items-center gap-2">
+            {onSearchChange !== undefined && (
+              <div className="relative flex-1 min-w-0">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
+                <input
+                  type="text"
+                  value={search ?? ''}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="admin-input w-full pl-9 pr-9 py-1.5 text-sm"
+                />
+                {search && (
+                  <button
+                    onClick={() => onSearchChange('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616166] hover:text-foreground transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+            {actions && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {mobileActions ?? actions}
+              </div>
+            )}
           </div>
         )}
       </div>

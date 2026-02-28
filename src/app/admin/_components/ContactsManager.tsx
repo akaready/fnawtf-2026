@@ -1,21 +1,22 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  Plus, Trash2, Save, Loader2, Download, X, Search, ChevronDown, ChevronUp, ArrowUpDown,
+  Plus, Trash2, Save, Loader2, Download, X,
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
   Wrench, Sparkles, Contact, Star, HeartHandshake, Users, LayoutGrid, Tag,
   Globe, ExternalLink, Linkedin, Instagram, Film, RefreshCw,
-  User, SlidersHorizontal, Columns, GripVertical,
+  User, ListFilter, SlidersHorizontal, Layers, ArrowUpAZ, Palette, Rows,
 } from 'lucide-react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
 import { AdminPageHeader } from './AdminPageHeader';
-import { AdminTabBar } from './AdminTabBar';
+import { ToolbarButton } from './table/TableToolbar';
 import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { ProjectPanel } from './ProjectPanel';
+import { AdminDataTable, FilterDropdown, type ColDef } from './table';
 import { contactFullName } from '@/lib/contacts';
 import {
   createContact,
@@ -67,50 +68,53 @@ const TYPE_CIRCLE_BG: Record<ContactType, string> = {
   partner: 'bg-orange-500/10',
 };
 
-interface ContactColDef {
-  key: string;
-  label: string;
-  defaultVisible: boolean;
-  align?: 'left' | 'right';
-  render: (c: ContactRow) => ReactNode;
-  sortValue?: (c: ContactRow) => string | number;
-}
-
-const CONTACT_COLUMNS: ContactColDef[] = [
-  { key: 'type', label: 'Type', defaultVisible: true, sortValue: (c) => c.type, render: (c) => (
+const CONTACT_COLUMNS: ColDef<ContactRow>[] = [
+  {
+    key: 'first_name', label: 'First Name', sortable: true,
+    sortValue: (c) => c.first_name.toLowerCase(),
+    render: (c) => (
+      <div className="flex items-center gap-2.5">
+        {c.headshot_url ? (
+          <img src={c.headshot_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+        ) : (
+          <div className={`w-7 h-7 rounded-full ${TYPE_CIRCLE_BG[c.type]} flex items-center justify-center flex-shrink-0`}>
+            <User size={14} className={TYPE_ICON_COLORS[c.type]} />
+          </div>
+        )}
+        <span className="font-medium text-foreground">{c.first_name}</span>
+      </div>
+    ),
+  },
+  {
+    key: 'last_name', label: 'Last Name', sortable: true,
+    sortValue: (c) => c.last_name.toLowerCase(),
+    render: (c) => <span className="text-foreground">{c.last_name}</span>,
+  },
+  { key: 'type', label: 'Type', sortable: true, sortValue: (c) => c.type, render: (c) => (
     <span className={`inline-flex px-2 py-0.5 text-xs rounded border capitalize ${TYPE_COLORS[c.type]}`}>{c.type}</span>
   )},
-  { key: 'email', label: 'Email', defaultVisible: true, sortValue: (c) => (c.email ?? '').toLowerCase(), render: (c) => c.email || '—' },
-  { key: 'phone', label: 'Phone', defaultVisible: false, render: (c) => c.phone || '—' },
-  { key: 'company', label: 'Company', defaultVisible: true, sortValue: (c) => (c.company ?? '').toLowerCase(), render: (c) => c.company || '—' },
-  { key: 'title', label: 'Title', defaultVisible: true, sortValue: (c) => (c.role ?? '').toLowerCase(), render: (c) => c.role || '—' },
+  { key: 'email', label: 'Email', sortable: true, sortValue: (c) => (c.email ?? '').toLowerCase(), render: (c) => <span className="text-muted-foreground">{c.email || '—'}</span> },
+  { key: 'phone', label: 'Phone', defaultVisible: false, render: (c) => <span className="text-muted-foreground">{c.phone || '—'}</span> },
+  { key: 'company', label: 'Company', sortable: true, sortValue: (c) => (c.company ?? '').toLowerCase(), render: (c) => <span className="text-muted-foreground">{c.company || '—'}</span> },
+  { key: 'title', label: 'Title', sortable: true, sortValue: (c) => (c.role ?? '').toLowerCase(), render: (c) => <span className="text-muted-foreground">{c.role || '—'}</span> },
   { key: 'website_url', label: 'Website', defaultVisible: false, render: (c) => c.website_url ? (
     <a href={c.website_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">{new URL(c.website_url).hostname}</a>
-  ) : '—' },
+  ) : <span className="text-muted-foreground">—</span> },
   { key: 'linkedin_url', label: 'LinkedIn', defaultVisible: false, render: (c) => c.linkedin_url ? (
     <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">Profile</a>
-  ) : '—' },
+  ) : <span className="text-muted-foreground">—</span> },
   { key: 'instagram_url', label: 'Instagram', defaultVisible: false, render: (c) => c.instagram_url ? (
     <a href={c.instagram_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">@{c.instagram_url.split('/').filter(Boolean).pop()}</a>
-  ) : '—' },
+  ) : <span className="text-muted-foreground">—</span> },
   { key: 'imdb_url', label: 'IMDB', defaultVisible: false, render: (c) => c.imdb_url ? (
     <a href={c.imdb_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">Page</a>
-  ) : '—' },
+  ) : <span className="text-muted-foreground">—</span> },
   { key: 'notes', label: 'Notes', defaultVisible: false, render: (c) => c.notes ? (
-    <span className="truncate block max-w-[200px]" title={c.notes}>{c.notes}</span>
-  ) : '—' },
-  { key: 'created_at', label: 'Added', defaultVisible: true, align: 'right', sortValue: (c) => new Date(c.created_at).getTime(), render: (c) => new Date(c.created_at).toLocaleDateString() },
-  { key: 'updated_at', label: 'Updated', defaultVisible: false, align: 'right', sortValue: (c) => new Date(c.updated_at).getTime(), render: (c) => new Date(c.updated_at).toLocaleDateString() },
+    <span className="truncate block max-w-[200px] text-muted-foreground" title={c.notes}>{c.notes}</span>
+  ) : <span className="text-muted-foreground">—</span> },
+  { key: 'created_at', label: 'Added', align: 'right', sortable: true, sortValue: (c) => new Date(c.created_at).getTime(), render: (c) => <span className="text-xs text-[#515155]">{new Date(c.created_at).toLocaleDateString()}</span> },
+  { key: 'updated_at', label: 'Updated', defaultVisible: false, align: 'right', sortable: true, sortValue: (c) => new Date(c.updated_at).getTime(), render: (c) => <span className="text-xs text-[#515155]">{new Date(c.updated_at).toLocaleDateString()}</span> },
 ];
-
-/* Sort value getters for the built-in name columns */
-const NAME_SORT: Record<string, (c: ContactRow) => string> = {
-  first_name: (c) => c.first_name.toLowerCase(),
-  last_name: (c) => c.last_name.toLowerCase(),
-};
-
-type ContactColKey = string;
-const defaultVisibleCols = new Set<ContactColKey>(CONTACT_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
 
 const TYPE_ICONS: Record<string, typeof Users> = {
   all: Users,
@@ -734,172 +738,6 @@ function PersonPanel({
   );
 }
 
-/* ── Filter Dropdown ───────────────────────────────────────────────────── */
-
-function FilterDropdown({
-  label,
-  searchPlural,
-  icon,
-  items,
-  value,
-  onChange,
-}: {
-  label: string;
-  searchPlural?: string;
-  icon: ReactNode;
-  items: Array<{ id: string; name: string; subtitle?: string }>;
-  value: string | null;
-  onChange: (id: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [open]);
-
-  const filtered = query.trim()
-    ? items.filter((i) => {
-        const q = query.toLowerCase();
-        return i.name.toLowerCase().includes(q) || i.subtitle?.toLowerCase().includes(q);
-      })
-    : items;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 hover:border-white/5 transition-colors border border-transparent"
-      >
-        {icon}
-        {label}
-        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute top-full left-0 mt-[5px] w-72 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in">
-          <div className="flex items-center gap-2 px-3 py-[10px] border-b border-[#2a2a2a] bg-black/30">
-            <Search size={13} className="text-[#4d4d4d] flex-shrink-0" />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${searchPlural ?? `${label.toLowerCase()}s`}...`}
-              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#404040]"
-            />
-          </div>
-          <div className="max-h-56 overflow-y-auto admin-scrollbar py-1">
-            {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-[#404040] text-center">No matches</div>
-            ) : (
-              filtered.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => { onChange(item.id); setOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 transition-colors ${
-                    value === item.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
-                  }`}
-                >
-                  <span className="text-sm truncate block">{item.name}</span>
-                  {item.subtitle && (
-                    <span className="text-xs text-[#4d4d4d] truncate block">{item.subtitle}</span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}
-
-/* ── Fields Picker Panel ───────────────────────────────────────────────── */
-
-function FieldsPickerPanel({
-  visibleCols,
-  onToggle,
-  onShowAll,
-  onHideAll,
-}: {
-  visibleCols: Set<ContactColKey>;
-  onToggle: (key: ContactColKey) => void;
-  onShowAll: () => void;
-  onHideAll: () => void;
-}) {
-  const [fieldSearch, setFieldSearch] = useState('');
-
-  const filteredCols = useMemo(() => {
-    if (!fieldSearch) return CONTACT_COLUMNS;
-    const q = fieldSearch.toLowerCase();
-    return CONTACT_COLUMNS.filter((c) => c.label.toLowerCase().includes(q) || c.key.toLowerCase().includes(q));
-  }, [fieldSearch]);
-
-  return (
-    <div className="absolute right-0 top-full mt-[5px] w-64 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in p-3">
-      <div className="space-y-2">
-        <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404044]" />
-          <input
-            type="text"
-            value={fieldSearch}
-            onChange={(e) => setFieldSearch(e.target.value)}
-            placeholder="Search fields…"
-            className="w-full pl-8 pr-3 py-1.5 bg-black/30 border border-[#2a2a2a] rounded-lg text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:border-white/20"
-            autoFocus
-          />
-        </div>
-        <div className="flex items-center gap-2 pb-1 border-b border-[#2a2a2a]">
-          <button onClick={onShowAll} className="text-[11px] text-[#515155] hover:text-foreground transition-colors">
-            Show all
-          </button>
-          <span className="text-[#202022]">·</span>
-          <button onClick={onHideAll} className="text-[11px] text-[#515155] hover:text-foreground transition-colors">
-            Hide all
-          </button>
-        </div>
-        <div className="max-h-72 overflow-y-auto admin-scrollbar space-y-0.5">
-          {filteredCols.map((col) => (
-            <label
-              key={col.key}
-              className="flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-sm cursor-pointer hover:bg-white/5 transition-colors"
-            >
-              <input
-                type="checkbox"
-                checked={visibleCols.has(col.key)}
-                onChange={() => onToggle(col.key)}
-                className="accent-white rounded"
-              />
-              <span className={visibleCols.has(col.key) ? 'text-foreground' : 'text-[#515155]'}>
-                {col.label}
-              </span>
-            </label>
-          ))}
-          {filteredCols.length === 0 && (
-            <div className="px-2.5 py-3 text-xs text-[#303033] text-center">No matches</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Main People Page ───────────────────────────────────────────────────── */
 
 export function ContactsManager({ initialContacts, companies, projects, contactProjectMap, roles, contactRoleMap }: Props) {
@@ -911,18 +749,6 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
-  const [visibleCols, setVisibleCols] = useState<Set<ContactColKey>>(defaultVisibleCols);
-  const [sortKey, setSortKey] = useState('last_name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
-  const [colOrder, setColOrder] = useState<string[]>(() => CONTACT_COLUMNS.map((c) => c.key));
-  const [fieldsOpen, setFieldsOpen] = useState(false);
-  const fieldsRef = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<HTMLDivElement>(null);
-  const resizingRef = useRef(false);
-  const dragColRef = useRef<string | null>(null);
-  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
-  const fieldsModified = visibleCols.size < CONTACT_COLUMNS.length;
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -934,134 +760,6 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
   }, [searchParams]);
 
   useEffect(() => { setContacts(initialContacts); }, [initialContacts]);
-
-  // Click-outside for fields panel
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (fieldsRef.current && !fieldsRef.current.contains(e.target as Node)) setFieldsOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const handleSort = useCallback((key: string) => {
-    setSortKey((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return prev;
-      }
-      setSortDir('asc');
-      return key;
-    });
-  }, []);
-
-  const toggleCol = useCallback((key: ContactColKey) => {
-    setVisibleCols((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
-
-  /* ── Ordered visible columns ────────────────────────────────────── */
-
-  const orderedVisibleCols = useMemo(() => {
-    const colMap = new Map(CONTACT_COLUMNS.map((c) => [c.key, c]));
-    return colOrder.filter((k) => visibleCols.has(k) && colMap.has(k)).map((k) => colMap.get(k)!);
-  }, [colOrder, visibleCols]);
-
-  /* ── Column resize handler ────────────────────────────────────── */
-
-  const handleColResize = useCallback((colKey: string, nextColKey: string | null, startX: number, startWidth: number, nextStartWidth: number) => {
-    let didMove = false;
-    const onMouseMove = (e: MouseEvent) => {
-      didMove = true;
-      resizingRef.current = true;
-      const delta = e.clientX - startX;
-      const newWidth = Math.max(40, startWidth + delta);
-      setColWidths((prev) => {
-        const next = { ...prev, [colKey]: newWidth };
-        if (nextColKey) {
-          next[nextColKey] = Math.max(40, nextStartWidth - delta);
-        }
-        return next;
-      });
-    };
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      if (didMove) {
-        setTimeout(() => { resizingRef.current = false; }, 0);
-      }
-    };
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  }, []);
-
-  /* ── Column drag-and-drop ───────────────────────────────────────── */
-
-  const handleColDragStart = useCallback((e: React.DragEvent, key: string) => {
-    dragColRef.current = key;
-    e.dataTransfer.effectAllowed = 'move';
-    (e.currentTarget as HTMLElement).style.opacity = '0.4';
-  }, []);
-
-  const handleColDragEnd = useCallback((e: React.DragEvent) => {
-    (e.currentTarget as HTMLElement).style.opacity = '1';
-    dragColRef.current = null;
-    setDragOverColKey(null);
-  }, []);
-
-  const handleColDragOver = useCallback((e: React.DragEvent, key: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverColKey(key);
-  }, []);
-
-  const handleColDrop = useCallback((e: React.DragEvent, targetKey: string) => {
-    e.preventDefault();
-    setDragOverColKey(null);
-    const sourceKey = dragColRef.current;
-    if (!sourceKey || sourceKey === targetKey) return;
-
-    // Capture widths before reorder
-    const tableEl = tableRef.current;
-    if (tableEl) {
-      const headerRow = tableEl.querySelector('thead tr');
-      if (headerRow) {
-        const ths = Array.from(headerRow.querySelectorAll('th'));
-        setColWidths((prev) => {
-          const next = { ...prev };
-          // First two ths are First Name & Last Name (always visible), data cols start at index 2
-          for (let i = 2; i < ths.length; i++) {
-            const colIdx = i - 2;
-            if (colIdx < orderedVisibleCols.length) {
-              const key = orderedVisibleCols[colIdx].key;
-              if (!next[key]) {
-                next[key] = ths[i].getBoundingClientRect().width;
-              }
-            }
-          }
-          return next;
-        });
-      }
-    }
-
-    setColOrder((prev) => {
-      const next = [...prev];
-      const fromIdx = next.indexOf(sourceKey);
-      const toIdx = next.indexOf(targetKey);
-      if (fromIdx === -1 || toIdx === -1) return prev;
-      next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, sourceKey);
-      return next;
-    });
-  }, [orderedVisibleCols]);
 
   const filtered = useMemo(() => {
     let result = contacts;
@@ -1093,20 +791,8 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
           c.role?.toLowerCase().includes(q)
       );
     }
-    // Sort
-    const nameSortFn = NAME_SORT[sortKey];
-    const colSortFn = CONTACT_COLUMNS.find((col) => col.key === sortKey)?.sortValue;
-    const getSortVal = nameSortFn ?? colSortFn;
-    if (getSortVal) {
-      result = [...result].sort((a, b) => {
-        const va = getSortVal(a);
-        const vb = getSortVal(b);
-        const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb));
-        return sortDir === 'asc' ? cmp : -cmp;
-      });
-    }
     return result;
-  }, [contacts, search, typeFilter, companyFilter, projectFilter, contactProjectMap, roleFilter, contactRoleMap, sortKey, sortDir]);
+  }, [contacts, search, typeFilter, companyFilter, projectFilter, contactProjectMap, roleFilter, contactRoleMap]);
 
   const activePerson = activeId ? contacts.find((c) => c.id === activeId) ?? null : null;
 
@@ -1210,311 +896,297 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             </button>
           </>
         }
-      />
-
-      {/* Type filter tabs */}
-      <AdminTabBar
-        tabs={(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
-          const Icon = TYPE_ICONS[t];
-          return {
-            value: t,
-            label: t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1),
-            icon: <Icon size={13} className={TYPE_ICON_COLORS[t]} />,
-            badge: <span className="text-xs text-[#4d4d4d] ml-0.5">{typeCounts[t] ?? 0}</span>,
-            activeClassName: TYPE_ACTIVE_CLASSES[t],
-          };
-        })}
-        activeTab={typeFilter}
-        onTabChange={(v) => setTypeFilter(v as ContactType | 'all')}
-        dividerAfter="all"
-      />
-
-      {/* Filter row */}
-      <div className="flex-shrink-0 flex items-center gap-1 px-8 py-1.5 border-b border-[#2a2a2a]">
-        <FilterDropdown
-          label="Company"
-          searchPlural="companies"
-          icon={<Building2 size={13} />}
-          items={companies.map((co) => ({ id: co.id, name: co.name }))}
-          value={companyFilter}
-          onChange={setCompanyFilter}
-        />
-        <FilterDropdown
-          label="Project"
-          icon={<LayoutGrid size={13} />}
-          items={projects.map((p) => ({ id: p.id, name: p.title, subtitle: p.client_name }))}
-          value={projectFilter}
-          onChange={setProjectFilter}
-        />
-        <FilterDropdown
-          label="Role"
-          icon={<Tag size={13} />}
-          items={roles}
-          value={roleFilter}
-          onChange={setRoleFilter}
-        />
-
-        {/* Active filter chips */}
-        {(companyFilter || projectFilter || roleFilter) && (
-          <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-[#2a2a2a]">
-            {companyFilter && (() => {
-              const name = companies.find((co) => co.id === companyFilter)?.name;
-              return name ? (
-                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                  <Building2 size={13} className="text-[#666]" />
-                  <span className="truncate max-w-[160px]">{name}</span>
-                  <button
-                    onClick={() => setCompanyFilter(null)}
-                    className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ) : null;
-            })()}
-            {projectFilter && (() => {
-              const p = projects.find((p) => p.id === projectFilter);
-              return p ? (
-                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                  <LayoutGrid size={13} className="text-[#666]" />
-                  <span className="truncate max-w-[160px]">{p.title}</span>
-                  <button
-                    onClick={() => setProjectFilter(null)}
-                    className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ) : null;
-            })()}
-            {roleFilter && (() => {
-              const name = roles.find((r) => r.id === roleFilter)?.name;
-              return name ? (
-                <span className="group flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                  <Tag size={13} className="text-[#666]" />
-                  <span className="truncate max-w-[160px]">{name}</span>
-                  <button
-                    onClick={() => setRoleFilter(null)}
-                    className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ) : null;
-            })()}
-          </div>
-        )}
-
-        {/* Fields + Auto-fit (right side) */}
-        <div className="ml-auto flex items-center gap-1">
-          <div ref={fieldsRef} className="relative">
-            <button
-              onClick={() => setFieldsOpen(!fieldsOpen)}
-              className={`flex items-center gap-1.5 px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap border ${
-                fieldsModified
-                  ? 'bg-accent/10 text-accent border-accent/25'
-                  : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
-              }`}
-            >
-              <SlidersHorizontal size={14} strokeWidth={1.75} />
-              Fields
-              {fieldsModified && (
-                <span className="ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent leading-none">
-                  {visibleCols.size}
-                </span>
-              )}
+        mobileActions={
+          <>
+            <button onClick={handleExportCsv} className="btn-secondary p-2.5 text-sm" title="Export CSV">
+              <Download size={14} />
             </button>
-            {fieldsOpen && (
-              <FieldsPickerPanel
-                visibleCols={visibleCols}
-                onToggle={toggleCol}
-                onShowAll={() => setVisibleCols(new Set(CONTACT_COLUMNS.map((c) => c.key)))}
-                onHideAll={() => setVisibleCols(new Set())}
-              />
-            )}
-          </div>
-          <button
-            onClick={() => setColWidths({})}
-            className={`flex items-center gap-1.5 px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${
-              Object.keys(colWidths).length > 0
-                ? 'bg-accent/10 text-accent'
-                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
-            }`}
-            title="Reset all column widths to auto-fit"
-          >
-            <Columns size={14} strokeWidth={1.75} />
-            Auto-fit
-          </button>
-        </div>
-      </div>
+            <button onClick={() => handleCreate()} disabled={creating} className="btn-primary p-2.5 text-sm" title="Add Person">
+              <Plus size={16} />
+            </button>
+          </>
+        }
+      />
 
       {/* Content area */}
-      <div className="flex-1 min-h-0 relative">
-        {/* Cover scrollbar behind sticky header */}
-        <div className="absolute top-0 right-0 w-3 h-[41px] bg-[#141414] z-20 pointer-events-none border-b border-[#2a2a2a]" />
-      <div ref={tableRef} className="h-full overflow-y-auto admin-scrollbar">
-        {filtered.length === 0 ? (
-          <div className="text-center py-12 text-[#404044] text-sm">
-            {contacts.length === 0 ? 'No people yet.' : 'No matching people.'}
-          </div>
-        ) : isCastView ? (
-          /* Cast gallery view */
-          <div className="px-8 py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {filtered.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => setActiveId(c.id)}
-                className={`group cursor-pointer rounded-xl overflow-hidden border transition-colors ${
-                  activeId === c.id ? 'border-white/20' : 'border-[#2a2a2a] hover:border-white/15'
-                }`}
-              >
-                <div className="aspect-[3/4] bg-white/[0.03] flex items-center justify-center">
-                  {c.headshot_url ? (
-                    <img src={c.headshot_url} alt={contactFullName(c)} className="w-full h-full object-cover" />
-                  ) : (
-                    <ImageIcon size={24} className="text-[#202022]" />
-                  )}
-                </div>
-                <div className="px-3 py-2.5">
-                  <p className="text-sm font-medium text-foreground truncate">{contactFullName(c)}</p>
-                  <p className="text-xs text-[#515155] truncate">{c.role || 'Cast'}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Table view */
-          <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
-            <thead className="sticky top-0 z-10">
-              <tr className="text-xs text-[#616166] uppercase tracking-wider">
-                {/* First Name column */}
-                <th
-                  className="text-left px-8 py-3 font-medium bg-[#141414] border-b border-r border-[#2a2a2a] select-none cursor-pointer group/th hover:text-[#999] transition-colors"
-                  onClick={() => handleSort('first_name')}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    First Name
-                    <span className="inline-flex text-[#333]">
-                      {sortKey === 'first_name' ? (
-                        sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />
-                      ) : (
-                        <ArrowUpDown size={10} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />
-                      )}
-                    </span>
-                  </span>
-                </th>
-                {/* Last Name column */}
-                <th
-                  className="text-left px-3 py-3 font-medium bg-[#141414] border-b border-r border-[#2a2a2a] select-none cursor-pointer group/th hover:text-[#999] transition-colors"
-                  onClick={() => handleSort('last_name')}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    Last Name
-                    <span className="inline-flex text-[#333]">
-                      {sortKey === 'last_name' ? (
-                        sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />
-                      ) : (
-                        <ArrowUpDown size={10} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />
-                      )}
-                    </span>
-                  </span>
-                </th>
-                {orderedVisibleCols.map((col, idx) => {
-                  const nextCol = idx < orderedVisibleCols.length - 1 ? orderedVisibleCols[idx + 1] : null;
-                  const isLast = idx === orderedVisibleCols.length - 1;
-                  const isDragOver = dragOverColKey === col.key;
-                  const style = colWidths[col.key]
-                    ? { width: colWidths[col.key], minWidth: colWidths[col.key], maxWidth: colWidths[col.key] }
-                    : undefined;
-                  const isSortable = !!col.sortValue;
+      {isCastView ? (
+        <>
+          {/* Cast gallery toolbar — matches AdminDataTable toolbar style */}
+          <div className="@container flex flex-wrap items-center gap-1 px-4 @md:px-8 min-h-[53px] py-2 border-b border-[#2a2a2a] flex-shrink-0">
+            {/* Type tabs — full buttons on lg+, dropdown on smaller */}
+            <div className="hidden 2xl:flex items-center gap-1 flex-shrink-0">
+              {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
+                const Icon = TYPE_ICONS[t];
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTypeFilter(t)}
+                    className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
+                      typeFilter === t
+                        ? (TYPE_ACTIVE_CLASSES[t] ?? 'bg-white/10 text-white border-transparent')
+                        : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                    }`}
+                  >
+                    <Icon size={14} strokeWidth={1.75} />
+                    {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
+                      typeFilter === t ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                    }`}>{typeCounts[t] ?? 0}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="2xl:hidden">
+              <FilterDropdown
+                label="Type"
+                icon={<Users size={13} />}
+                items={[
+                  { id: 'all', name: 'All' },
+                  { id: 'crew', name: 'Crew' },
+                  { id: 'cast', name: 'Cast' },
+                  { id: 'contact', name: 'Contact' },
+                  { id: 'staff', name: 'Staff' },
+                  { id: 'partner', name: 'Partner' },
+                ]}
+                value={typeFilter as string === 'all' ? null : typeFilter}
+                onChange={(v) => setTypeFilter((v as ContactType) ?? 'all')}
+                allowClear
+                clearLabel="All types"
+              />
+            </div>
 
+            <div className="w-px bg-white/10 mx-1.5 self-stretch" />
+
+            {/* Filter dropdowns */}
+            <FilterDropdown
+              label="Company"
+              searchPlural="companies"
+              icon={<Building2 size={13} />}
+              items={companies.map((co) => ({ id: co.id, name: co.name }))}
+              value={companyFilter}
+              onChange={setCompanyFilter}
+            />
+            <FilterDropdown
+              label="Project"
+              icon={<LayoutGrid size={13} />}
+              items={projects.map((p) => ({ id: p.id, name: p.title, subtitle: p.client_name }))}
+              value={projectFilter}
+              onChange={setProjectFilter}
+            />
+            <FilterDropdown
+              label="Role"
+              icon={<Tag size={13} />}
+              items={roles}
+              value={roleFilter}
+              onChange={setRoleFilter}
+            />
+
+            {/* Active filter chips */}
+            {(companyFilter || projectFilter || roleFilter) && (
+              <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-[#2a2a2a]">
+                {companyFilter && (() => {
+                  const name = companies.find((co) => co.id === companyFilter)?.name;
+                  return name ? (
+                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                      <Building2 size={13} className="text-[#666]" />
+                      <span className="truncate max-w-[160px]">{name}</span>
+                      <button onClick={() => setCompanyFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                    </span>
+                  ) : null;
+                })()}
+                {projectFilter && (() => {
+                  const proj = projects.find((p) => p.id === projectFilter);
+                  return proj ? (
+                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                      <LayoutGrid size={13} className="text-[#666]" />
+                      <span className="truncate max-w-[160px]">{proj.title}</span>
+                      <button onClick={() => setProjectFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                    </span>
+                  ) : null;
+                })()}
+                {roleFilter && (() => {
+                  const name = roles.find((r) => r.id === roleFilter)?.name;
+                  return name ? (
+                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                      <Tag size={13} className="text-[#666]" />
+                      <span className="truncate max-w-[160px]">{name}</span>
+                      <button onClick={() => setRoleFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
+            {/* Right-aligned feature buttons (disabled in gallery view) */}
+            <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+              <ToolbarButton icon={SlidersHorizontal} label="" color="blue" disabled onClick={() => {}} />
+              <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
+              <ToolbarButton icon={Layers} label="" color="purple" disabled onClick={() => {}} />
+              <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
+              <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
+              <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
+            </div>
+          </div>
+
+          {/* Cast gallery grid */}
+          <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
+            {filtered.length === 0 ? (
+              <div className="text-center py-12 text-[#404044] text-sm">
+                {contacts.length === 0 ? 'No people yet.' : 'No matching cast members.'}
+              </div>
+            ) : (
+              <div className="px-8 py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {filtered.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => setActiveId(c.id)}
+                    className={`group cursor-pointer rounded-xl overflow-hidden border transition-colors ${
+                      activeId === c.id ? 'border-white/20' : 'border-[#2a2a2a] hover:border-white/15'
+                    }`}
+                  >
+                    <div className="aspect-[3/4] bg-white/[0.03] flex items-center justify-center">
+                      {c.headshot_url ? (
+                        <img src={c.headshot_url} alt={contactFullName(c)} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon size={24} className="text-[#202022]" />
+                      )}
+                    </div>
+                    <div className="px-3 py-2.5">
+                      <p className="text-sm font-medium text-foreground truncate">{contactFullName(c)}</p>
+                      <p className="text-xs text-[#515155] truncate">{c.role || 'Cast'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <AdminDataTable
+          columns={CONTACT_COLUMNS}
+          data={filtered}
+          storageKey="fna-table-contacts"
+          toolbar
+          sortable
+          filterable
+          columnVisibility
+          columnReorder
+          columnResize
+          selectable
+          freezePanes
+          exportCsv
+          onRowClick={(row) => setActiveId(row.id)}
+          selectedId={activeId ?? undefined}
+          emptyMessage={contacts.length === 0 ? 'No people yet.' : 'No matching people.'}
+          toolbarSlot={
+            <>
+              {/* Type tabs — full buttons on lg+, dropdown on smaller */}
+              <div className="hidden 2xl:flex items-center gap-1">
+                {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
+                  const Icon = TYPE_ICONS[t];
                   return (
-                    <th
-                      key={col.key}
-                      className={`${col.align === 'right' ? 'text-right px-8' : 'text-left px-3'} py-3 font-medium bg-[#141414] border-b ${isLast ? '' : 'border-r'} border-[#2a2a2a] select-none whitespace-nowrap relative overflow-hidden group ${isDragOver ? 'border-l-2 border-l-accent' : ''} ${isSortable ? 'cursor-pointer group/th hover:text-[#999] transition-colors' : ''}`}
-                      style={style}
-                      onClick={isSortable ? () => handleSort(col.key) : undefined}
-                      onDragOver={(e) => handleColDragOver(e, col.key)}
-                      onDrop={(e) => handleColDrop(e, col.key)}
+                    <button
+                      key={t}
+                      onClick={() => setTypeFilter(t)}
+                      className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
+                        typeFilter === t
+                          ? (TYPE_ACTIVE_CLASSES[t] ?? 'bg-white/10 text-white border-transparent')
+                          : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                      }`}
                     >
-                      <span className="inline-flex items-center gap-1">
-                        <span
-                          draggable
-                          onDragStart={(e) => { e.stopPropagation(); handleColDragStart(e, col.key); }}
-                          onDragEnd={handleColDragEnd}
-                          className="opacity-0 group-hover:opacity-30 cursor-grab flex-shrink-0 -ml-1"
-                        >
-                          <GripVertical size={10} />
-                        </span>
-                        {col.label}
-                        {isSortable && (
-                          <span className="inline-flex text-[#333]">
-                            {sortKey === col.key ? (
-                              sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />
-                            ) : (
-                              <ArrowUpDown size={10} className="opacity-0 group-hover/th:opacity-100 transition-opacity" />
-                            )}
-                          </span>
-                        )}
-                      </span>
-                      <span
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          const th = e.currentTarget.closest('th')!;
-                          const nextTh = th.nextElementSibling as HTMLElement | null;
-                          handleColResize(
-                            col.key,
-                            nextCol?.key ?? null,
-                            e.clientX,
-                            th.getBoundingClientRect().width,
-                            nextTh ? nextTh.getBoundingClientRect().width : 0,
-                          );
-                        }}
-                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-white/20 transition-colors z-10"
-                      />
-                    </th>
+                      <Icon size={14} strokeWidth={1.75} />
+                      {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
+                        typeFilter === t ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                      }`}>{typeCounts[t] ?? 0}</span>
+                    </button>
                   );
                 })}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => setActiveId(c.id)}
-                  className={`border-b border-[#2a2a2a] cursor-pointer transition-colors ${
-                    activeId === c.id ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'
-                  }`}
-                >
-                  <td className="px-8 py-3 font-medium text-foreground">
-                    <div className="flex items-center gap-2.5">
-                      {c.headshot_url ? (
-                        <img src={c.headshot_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <div className={`w-7 h-7 rounded-full ${TYPE_CIRCLE_BG[c.type]} flex items-center justify-center flex-shrink-0`}>
-                          <User size={14} className={TYPE_ICON_COLORS[c.type]} />
-                        </div>
-                      )}
-                      {c.first_name}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-foreground">{c.last_name}</td>
-                  {orderedVisibleCols.map((col) => (
-                    <td
-                      key={col.key}
-                      className={`${col.align === 'right' ? 'px-8 text-right text-[#515155] text-xs' : 'px-3 text-muted-foreground'} py-3`}
-                      style={colWidths[col.key] ? { width: colWidths[col.key], minWidth: colWidths[col.key], maxWidth: colWidths[col.key] } : undefined}
-                    >
-                      {col.render(c)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      </div>
+              </div>
+              <div className="2xl:hidden">
+                <FilterDropdown
+                  label="Type"
+                  icon={<Users size={13} />}
+                  items={[
+                    { id: 'all', name: 'All' },
+                    { id: 'crew', name: 'Crew' },
+                    { id: 'cast', name: 'Cast' },
+                    { id: 'contact', name: 'Contact' },
+                    { id: 'staff', name: 'Staff' },
+                    { id: 'partner', name: 'Partner' },
+                  ]}
+                  value={typeFilter === 'all' ? null : typeFilter}
+                  onChange={(v) => setTypeFilter((v as ContactType) ?? 'all')}
+                  allowClear
+                  clearLabel="All types"
+                />
+              </div>
+
+              <div className="w-px bg-white/10 mx-1.5 self-stretch" />
+
+              {/* Filter dropdowns */}
+              <FilterDropdown
+                label="Company"
+                searchPlural="companies"
+                icon={<Building2 size={13} />}
+                items={companies.map((co) => ({ id: co.id, name: co.name }))}
+                value={companyFilter}
+                onChange={setCompanyFilter}
+              />
+              <FilterDropdown
+                label="Project"
+                icon={<LayoutGrid size={13} />}
+                items={projects.map((p) => ({ id: p.id, name: p.title, subtitle: p.client_name }))}
+                value={projectFilter}
+                onChange={setProjectFilter}
+              />
+              <FilterDropdown
+                label="Role"
+                icon={<Tag size={13} />}
+                items={roles}
+                value={roleFilter}
+                onChange={setRoleFilter}
+              />
+
+              {/* Active filter chips */}
+              {(companyFilter || projectFilter || roleFilter) && (
+                <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-[#2a2a2a]">
+                  {companyFilter && (() => {
+                    const name = companies.find((co) => co.id === companyFilter)?.name;
+                    return name ? (
+                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                        <Building2 size={13} className="text-[#666]" />
+                        <span className="truncate max-w-[160px]">{name}</span>
+                        <button onClick={() => setCompanyFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                      </span>
+                    ) : null;
+                  })()}
+                  {projectFilter && (() => {
+                    const proj = projects.find((p) => p.id === projectFilter);
+                    return proj ? (
+                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                        <LayoutGrid size={13} className="text-[#666]" />
+                        <span className="truncate max-w-[160px]">{proj.title}</span>
+                        <button onClick={() => setProjectFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                      </span>
+                    ) : null;
+                  })()}
+                  {roleFilter && (() => {
+                    const name = roles.find((r) => r.id === roleFilter)?.name;
+                    return name ? (
+                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
+                        <Tag size={13} className="text-[#666]" />
+                        <span className="truncate max-w-[160px]">{name}</span>
+                        <button onClick={() => setRoleFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </>
+          }
+        />
+      )}
 
       {/* Side Panel */}
       <PersonPanel

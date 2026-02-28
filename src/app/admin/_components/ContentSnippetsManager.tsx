@@ -351,6 +351,10 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
           <button onClick={exportCsv} className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"><Download size={14} />CSV</button>
           <button onClick={() => handleCreate()} disabled={creating} className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-50"><Plus size={16} />Add Snippet</button>
         </>}
+        mobileActions={<>
+          <button onClick={exportCsv} className="flex items-center justify-center p-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors" title="Export CSV"><Download size={14} /></button>
+          <button onClick={() => handleCreate()} disabled={creating} className="flex items-center justify-center p-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-50" title="Add Snippet"><Plus size={16} /></button>
+        </>}
       />
 
       <div className="flex-1 min-h-0 flex overflow-hidden">

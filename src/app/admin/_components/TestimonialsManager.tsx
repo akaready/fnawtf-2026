@@ -307,6 +307,16 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
             </button>
           </>
         }
+        mobileActions={
+          <>
+            <button onClick={handleExportCsv} className="btn-secondary p-2.5 text-sm" title="Export CSV">
+              <Download size={14} />
+            </button>
+            <button onClick={handleCreate} disabled={creating} className="btn-primary p-2.5 text-sm" title="Add Testimonial">
+              <Plus size={16} />
+            </button>
+          </>
+        }
       />
 
       {/* Scrollable content */}

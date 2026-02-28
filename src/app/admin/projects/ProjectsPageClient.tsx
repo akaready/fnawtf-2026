@@ -83,6 +83,16 @@ export function ProjectsPageClient({ projects: initialProjects, tagSuggestions, 
             </button>
           </>
         }
+        mobileActions={
+          <>
+            <button onClick={() => exportRef.current?.()} className="btn-secondary p-2.5 text-sm" title="Export CSV">
+              <Download size={14} />
+            </button>
+            <button onClick={openNewProject} className="btn-primary p-2.5 text-sm" title="New Project">
+              <Plus size={15} />
+            </button>
+          </>
+        }
       />
 
       {/* Table area — fills remaining height, ProjectsTable manages its own scroll */}

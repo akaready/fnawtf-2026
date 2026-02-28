@@ -11,8 +11,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
-import { AdminTabBar } from './AdminTabBar';
-import { AdminTable, StatusBadge, type ColumnDef } from './AdminTable';
+import { StatusBadge } from './AdminTable';
+import { AdminDataTable, type ColDef } from './table';
 import { MeetingPanel } from './MeetingPanel';
 import {
   saveMeetingsConfig,
@@ -49,8 +49,6 @@ export function MeetingsManager({
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [syncing, startSync] = useTransition();
-  const [sortKey, setSortKey] = useState('start_time');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Setup state
   const [icalUrl, setIcalUrl] = useState('');
@@ -116,41 +114,15 @@ export function MeetingsManager({
       );
     }
 
-    // Sort
-    list = [...list].sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === 'start_time') {
-        cmp =
-          new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
-      } else if (sortKey === 'title') {
-        cmp = a.title.localeCompare(b.title);
-      } else if (sortKey === 'status') {
-        cmp = a.status.localeCompare(b.status);
-      }
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-
     return list;
-  }, [meetings, tab, search, sortKey, sortDir]);
+  }, [meetings, tab, search]);
 
   const selectedMeeting = useMemo(
     () => meetings.find((m) => m.id === selectedId) ?? null,
     [meetings, selectedId],
   );
 
-  const handleSort = useCallback(
-    (key: string) => {
-      if (key === sortKey) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-      } else {
-        setSortKey(key);
-        setSortDir('desc');
-      }
-    },
-    [sortKey],
-  );
-
-  const columns: ColumnDef<MeetingWithRelations>[] = [
+  const columns: ColDef<MeetingWithRelations>[] = [
     {
       key: 'title',
       label: 'Title',
@@ -164,8 +136,9 @@ export function MeetingsManager({
     {
       key: 'start_time',
       label: 'Date',
-      width: 'w-40',
+      defaultWidth: 160,
       sortable: true,
+      sortValue: (row) => new Date(row.start_time).getTime(),
       render: (row) => (
         <div className="text-sm">
           <div className="text-[#b3b3b3]">
@@ -186,7 +159,7 @@ export function MeetingsManager({
     {
       key: 'duration',
       label: 'Duration',
-      width: 'w-20',
+      defaultWidth: 80,
       render: (row) => {
         const mins = Math.round(
           (new Date(row.end_time).getTime() -
@@ -199,7 +172,7 @@ export function MeetingsManager({
     {
       key: 'attendees',
       label: 'Attendees',
-      width: 'w-24',
+      defaultWidth: 96,
       render: (row) => (
         <span className="flex items-center gap-1 text-sm text-[#666]">
           <Users size={12} />
@@ -210,14 +183,14 @@ export function MeetingsManager({
     {
       key: 'status',
       label: 'Status',
-      width: 'w-32',
+      defaultWidth: 128,
       sortable: true,
       render: (row) => <StatusBadge value={row.status} />,
     },
     {
       key: 'transcript',
       label: 'Transcript',
-      width: 'w-28',
+      defaultWidth: 112,
       render: (row) => (
         <span
           className={`inline-flex items-center gap-1 text-xs ${
@@ -345,42 +318,56 @@ export function MeetingsManager({
             {syncing ? 'Syncing…' : 'Sync Now'}
           </button>
         }
+        mobileActions={
+          <button onClick={handleSync} disabled={syncing} className="btn-primary p-2.5 text-sm cursor-pointer" title="Sync Now">
+            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+          </button>
+        }
       />
 
-      <AdminTabBar
-        tabs={TABS.map((t) => ({
-          ...t,
-          badge:
-            t.value !== 'all' ? (
-              <span className="ml-1 text-[10px] text-[#4d4d4d]">
-                {meetings.filter((m) => m.status === t.value).length || ''}
-              </span>
-            ) : (
-              <span className="ml-1 text-[10px] text-[#4d4d4d]">
-                {meetings.length}
-              </span>
-            ),
-        }))}
-        activeTab={tab}
-        onTabChange={setTab}
+      <AdminDataTable
+        data={filtered}
+        columns={columns}
+        storageKey="fna-table-meetings"
+        toolbar
+        sortable
+        filterable
+        columnVisibility
+        columnReorder
+        columnResize
+        selectable
+        freezePanes
+        exportCsv
+        onRowClick={(row) => setSelectedId(row.id)}
+        selectedId={selectedId ?? undefined}
+        emptyMessage={
+          tab === 'all'
+            ? 'No meetings synced yet. Click "Sync Now" to fetch from your calendar.'
+            : `No ${tab.replace('_', ' ')} meetings.`
+        }
+        toolbarSlot={
+          <>
+            {TABS.map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setTab(t.value)}
+                className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
+                  tab === t.value
+                    ? 'bg-white/10 text-white border-transparent'
+                    : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                }`}
+              >
+                {t.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
+                  tab === t.value ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                }`}>
+                  {t.value === 'all' ? meetings.length : meetings.filter((m) => m.status === t.value).length}
+                </span>
+              </button>
+            ))}
+          </>
+        }
       />
-
-      <div className="flex-1 overflow-y-auto admin-scrollbar">
-        <AdminTable
-          data={filtered}
-          columns={columns}
-          onRowClick={(row) => setSelectedId(row.id)}
-          selectedId={selectedId ?? undefined}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSort={handleSort}
-          emptyMessage={
-            tab === 'all'
-              ? 'No meetings synced yet. Click "Sync Now" to fetch from your calendar.'
-              : `No ${tab.replace('_', ' ')} meetings.`
-          }
-        />
-      </div>
 
       <MeetingPanel
         meeting={selectedMeeting}

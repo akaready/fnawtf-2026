@@ -4,7 +4,7 @@ import { useState, useTransition, useCallback, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation';
 import { Plus, Download, Building2, LayoutGrid, Table2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
-import { AdminTable, type ColumnDef } from './AdminTable';
+import { AdminDataTable, type ColDef } from './table';
 import {
   type ClientRow,
   createClientRecord,
@@ -155,11 +155,12 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   }, [clientOnly, search, localProjects]);
 
   // ── Table columns ────────────────────────────────────────────────────────────
-  const tableColumns: ColumnDef<ClientRow>[] = useMemo(() => [
+  const tableColumns: ColDef<ClientRow>[] = useMemo(() => [
     {
       key: 'logo_url',
       label: '',
-      width: 'w-10',
+      type: 'thumbnail',
+      defaultWidth: 44,
       render: (row) =>
         row.logo_url ? (
           <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
@@ -291,6 +292,16 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
             </button>
           </>
         }
+        mobileActions={
+          <>
+            <button onClick={handleExportCsv} className="btn-secondary p-2.5 text-sm" title="Export CSV">
+              <Download size={14} />
+            </button>
+            <button onClick={handleCreate} disabled={creating} className="btn-primary p-2.5 text-sm" title="Add Client">
+              <Plus size={16} />
+            </button>
+          </>
+        }
       />
 
       {viewMode === 'cards' ? (
@@ -354,9 +365,19 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         </div>
       ) : (
         /* Table view */
-        <AdminTable
+        <AdminDataTable
           data={filtered}
           columns={tableColumns}
+          storageKey="fna-table-clients"
+          toolbar
+          sortable
+          filterable
+          columnVisibility
+          columnReorder
+          columnResize
+          selectable
+          freezePanes
+          exportCsv
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
           emptyMessage="No clients yet."

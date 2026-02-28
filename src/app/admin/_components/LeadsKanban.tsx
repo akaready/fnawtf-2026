@@ -267,6 +267,11 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
             Add Lead
           </button>
         }
+        mobileActions={
+          <button onClick={handleCreate} disabled={creating} className="btn-primary p-2.5 text-sm" title="Add Lead">
+            <Plus size={16} />
+          </button>
+        }
       />
 
       {/* Kanban board — horizontal scroll */}

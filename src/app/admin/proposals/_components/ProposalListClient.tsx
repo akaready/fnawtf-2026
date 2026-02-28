@@ -6,13 +6,11 @@ import { Plus, ExternalLink, Trash2, Loader2 } from 'lucide-react';
 import { deleteProposal, createProposalDraft } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
-  AdminTable,
   AdminDeleteModal,
   StatusBadge,
   relativeTime,
-  type ColumnDef,
-  type RowAction,
 } from '@/app/admin/_components/AdminTable';
+import { AdminDataTable, type ColDef, type RowAction } from '@/app/admin/_components/table';
 import { ProposalPanel } from './ProposalPanel';
 import type { ProposalRow, ProposalStatus } from '@/types/proposal';
 
@@ -79,11 +77,13 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     }
   };
 
-  const columns: ColumnDef<ProposalRow>[] = [
+  const columns: ColDef<ProposalRow>[] = [
     {
       key: 'proposal_number',
       label: '#',
-      width: 'w-12',
+      type: 'number',
+      defaultWidth: 52,
+      sortable: true,
       render: (row) => (
         <span className="text-[#404040] font-mono text-xs">{row.proposal_number}</span>
       ),
@@ -91,17 +91,44 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     {
       key: 'contact_company',
       label: 'Company',
+      type: 'text',
       sortable: true,
       render: (row) => <span className="font-medium text-white">{row.contact_company}</span>,
     },
     {
       key: 'contact_name',
       label: 'Contact',
+      type: 'text',
+      sortable: true,
       render: (row) => <span className="text-[#999]">{row.contact_name}</span>,
+    },
+    {
+      key: 'title',
+      label: 'Title',
+      type: 'text',
+      sortable: true,
+      defaultVisible: false,
+    },
+    {
+      key: 'subtitle',
+      label: 'Subtitle',
+      type: 'text',
+      defaultVisible: false,
+      maxWidth: 250,
+    },
+    {
+      key: 'contact_email',
+      label: 'Email',
+      type: 'text',
+      defaultVisible: false,
+      mono: true,
     },
     {
       key: 'proposal_type',
       label: 'Type',
+      type: 'select',
+      sortable: true,
+      options: Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label })),
       render: (row) => (
         <span className="text-[#808080] text-xs">
           {TYPE_LABELS[row.proposal_type] ?? row.proposal_type}
@@ -111,12 +138,60 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     {
       key: 'status',
       label: 'Status',
+      type: 'select',
+      sortable: true,
+      options: STATUS_TABS.filter((t) => t.value !== 'all').map((t) => ({ value: t.value, label: t.label })),
       render: (row) => <StatusBadge value={row.status} />,
+    },
+    {
+      key: 'slug',
+      label: 'Slug',
+      type: 'text',
+      sortable: true,
+      defaultVisible: false,
+      mono: true,
+    },
+    {
+      key: 'proposal_password',
+      label: 'Password',
+      type: 'text',
+      defaultVisible: false,
+      mono: true,
+    },
+    {
+      key: 'schedule_start_date',
+      label: 'Start Date',
+      type: 'date',
+      sortable: true,
+      defaultVisible: false,
+    },
+    {
+      key: 'schedule_end_date',
+      label: 'End Date',
+      type: 'date',
+      sortable: true,
+      defaultVisible: false,
+    },
+    {
+      key: 'crowdfunding_approved',
+      label: 'CF Approved',
+      type: 'toggle',
+      defaultVisible: false,
+      toggleLabels: ['Yes', 'No'],
+      toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-[#515155]'],
+    },
+    {
+      key: 'crowdfunding_deferred',
+      label: 'CF Deferred',
+      type: 'toggle',
+      defaultVisible: false,
+      toggleLabels: ['Yes', 'No'],
+      toggleColors: ['bg-yellow-500/10 text-yellow-400', 'bg-white/5 text-[#515155]'],
     },
     {
       key: '_activity',
       label: 'Activity',
-      width: 'w-36',
+      defaultWidth: 144,
       render: (row) => {
         const vc = viewCounts[row.id];
         if (!vc?.views) return <span className="text-[#333] text-xs">—</span>;
@@ -126,6 +201,19 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           </span>
         );
       },
+    },
+    {
+      key: 'created_at',
+      label: 'Created',
+      type: 'date',
+      sortable: true,
+      defaultVisible: false,
+    },
+    {
+      key: 'updated_at',
+      label: 'Updated',
+      type: 'date',
+      sortable: true,
     },
   ];
 
@@ -167,40 +255,60 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             New Proposal
           </button>
         }
+        mobileActions={
+          <button
+            onClick={() => startCreate(async () => {
+              const id = await createProposalDraft();
+              setActiveId(id);
+            })}
+            disabled={isCreating}
+            className="btn-primary p-2.5 text-sm"
+            title="New Proposal"
+          >
+            {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+          </button>
+        }
       />
 
-      {/* Status filter bar */}
-      <div className="flex-shrink-0 flex items-center gap-1 px-8 py-2 border-b border-[#2a2a2a]">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setStatusFilter(tab.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              statusFilter === tab.value
-                ? 'bg-white/10 text-white'
-                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
-            }`}
-          >
-            {tab.label}
-            {tab.value !== 'all' && (
-              <span className="ml-1.5 text-[#404040]">
-                {proposals.filter((p) => p.status === tab.value).length}
-              </span>
-            )}
-          </button>
-        ))}
-        {(search || statusFilter !== 'all') && filtered.length !== proposals.length && (
-          <span className="ml-auto text-xs text-[#404040] font-mono pr-1">
-            {filtered.length} of {proposals.length}
-          </span>
-        )}
-      </div>
-
-      <AdminTable
+      <AdminDataTable
         data={filtered}
         columns={columns}
+        storageKey="fna-table-proposals"
+        toolbar
+        sortable
+        filterable
+        columnVisibility
+        columnReorder
+        columnResize
+        selectable
+        freezePanes
+        exportCsv
         rowActions={rowActions}
         onRowClick={(row) => setActiveId(row.id)}
+        toolbarSlot={
+          <>
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setStatusFilter(tab.value)}
+                className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
+                  statusFilter === tab.value
+                    ? 'bg-white/10 text-white border-transparent'
+                    : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                }`}
+              >
+                {tab.label}
+                {tab.value !== 'all' && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
+                    statusFilter === tab.value ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                  }`}>
+                    {proposals.filter((p) => p.status === tab.value).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </>
+        }
         emptyMessage={
           search || statusFilter !== 'all'
             ? 'No proposals match your filters.'
