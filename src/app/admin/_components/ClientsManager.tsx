@@ -2,12 +2,19 @@
 
 import { useState, useTransition, useCallback, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Download, Building2, LayoutGrid, Table2 } from 'lucide-react';
+import {
+  Plus, Download, Building2, LayoutGrid, Table2,
+  Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+  Loader2, Trash2, Check,
+} from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ToolbarButton } from './table/TableToolbar';
 import { AdminDataTable, type ColDef } from './table';
 import {
   type ClientRow,
   createClientRecord,
+  updateClientRecord,
   updateContact,
   updateTestimonial,
   updateProject,
@@ -42,7 +49,11 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'cards';
+    return (localStorage.getItem('fna-clients-viewMode') as ViewMode) || 'cards';
+  });
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -52,6 +63,33 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    localStorage.setItem('fna-clients-viewMode', viewMode);
+  }, [viewMode]);
+
+  const handleGalleryLogoDrop = useCallback(async (clientId: string, file: File) => {
+    setUploadingId(clientId);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split('.').pop() ?? 'png';
+      const path = `${clientId}.${ext}`;
+      const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+      setClients((prev) => prev.map((c) => c.id === clientId ? { ...c, logo_url: publicUrl } : c));
+      await updateClientRecord(clientId, { logo_url: publicUrl });
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+    } finally {
+      setUploadingId(null);
+    }
+  }, []);
+
+  const handleGalleryLogoRemove = useCallback(async (clientId: string) => {
+    setClients((prev) => prev.map((c) => c.id === clientId ? { ...c, logo_url: null } : c));
+    await updateClientRecord(clientId, { logo_url: null });
+  }, []);
 
   const activeCompany = clients.find((c) => c.id === activeId) ?? null;
 
@@ -305,7 +343,20 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       />
 
       {viewMode === 'cards' ? (
-        /* Card grid */
+        <>
+        {/* Toolbar — matches AdminDataTable toolbar style */}
+        <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+          <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+            <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
+            <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
+            <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
+            <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
+            <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
+            <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
+            <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
+          </div>
+        </div>
+        {/* Card grid */}
         <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filtered.map((c) => {
@@ -326,13 +377,12 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                   className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
                 >
                   <div className={`rounded-[11px] px-4 py-3.5 flex items-center gap-3 transition-colors ${isFocused ? 'bg-[#151515]' : 'bg-[#111] hover:bg-[#131313]'}`}>
-                    {c.logo_url ? (
-                      <img src={c.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain flex-shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                        <Building2 size={14} className="text-[#202022]" />
-                      </div>
-                    )}
+                    <GalleryLogoDropzone
+                      logoUrl={c.logo_url}
+                      uploading={uploadingId === c.id}
+                      onDrop={(file) => handleGalleryLogoDrop(c.id, file)}
+                      onRemove={() => handleGalleryLogoRemove(c.id)}
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
                       <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
@@ -363,6 +413,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
             </div>
           )}
         </div>
+        </>
       ) : (
         /* Table view */
         <AdminDataTable
@@ -400,6 +451,103 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         onProjectLinked={handleProjectLinked}
         onProjectUnlinked={handleProjectUnlinked}
       />
+    </div>
+  );
+}
+
+/* ── Inline logo dropzone for gallery cards ──────────────────────────────── */
+
+function GalleryLogoDropzone({
+  logoUrl,
+  uploading,
+  onDrop,
+  onRemove,
+}: {
+  logoUrl: string | null;
+  uploading: boolean;
+  onDrop: (file: File) => void;
+  onRemove: () => void;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) onDrop(file);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (ev) => {
+      const file = (ev.target as HTMLInputElement).files?.[0];
+      if (file) onDrop(file);
+    };
+    input.click();
+  };
+
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirming) {
+      onRemove();
+      setConfirming(false);
+    } else {
+      setConfirming(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!confirming) return;
+    const timer = setTimeout(() => setConfirming(false), 3000);
+    return () => clearTimeout(timer);
+  }, [confirming]);
+
+  return (
+    <div className="relative group/logo flex-shrink-0">
+      <div
+        onClick={handleClick}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }}
+        onDragLeave={(e) => { e.stopPropagation(); setDragOver(false); }}
+        onDrop={handleDrop}
+        className={`w-[54px] h-[54px] rounded-xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors border-2 border-dashed ${
+          dragOver
+            ? 'border-white/40 bg-white/10'
+            : logoUrl
+            ? 'border-transparent'
+            : 'border-border/40 bg-white/[0.02] hover:border-white/20'
+        }`}
+        title="Drop logo or click to upload"
+      >
+        {uploading ? (
+          <Loader2 size={18} className="animate-spin text-[#515155]" />
+        ) : logoUrl ? (
+          <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
+        ) : (
+          <Building2 size={20} className="text-[#202022]" />
+        )}
+      </div>
+      {logoUrl && !uploading && (
+        <button
+          onClick={handleRemoveClick}
+          className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors opacity-0 group-hover/logo:opacity-100 ${
+            confirming
+              ? 'opacity-100 bg-red-500 border border-red-400'
+              : 'bg-[#2a2a2a] border border-[#3a3a3a] hover:bg-red-500/30 hover:border-red-500/40'
+          }`}
+          title={confirming ? 'Click again to confirm' : 'Remove logo'}
+        >
+          {confirming ? (
+            <Check size={9} className="text-white" />
+          ) : (
+            <Trash2 size={9} className="text-[#808080]" />
+          )}
+        </button>
+      )}
     </div>
   );
 }
