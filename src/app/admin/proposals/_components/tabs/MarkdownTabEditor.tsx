@@ -409,7 +409,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
         {/* Snippet sidebar */}
         <div className="w-64 flex-shrink-0 border-l border-[#2a2a2a] flex flex-col">
-          <div className="px-3 h-[51px] border-b border-[#2a2a2a] flex-shrink-0 flex items-center gap-2">
+          <div className="px-3 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 flex items-center gap-2">
             <div className="relative flex-1">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#404040] pointer-events-none" />
               <input

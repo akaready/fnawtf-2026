@@ -912,7 +912,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
       {isCastView ? (
         <>
           {/* Cast gallery toolbar — matches AdminDataTable toolbar style */}
-          <div className="@container flex flex-wrap items-center gap-1 px-6 @md:px-8 min-h-[53px] py-3 border-b border-[#2a2a2a] flex-shrink-0">
+          <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0">
             {/* Type tabs — full buttons on lg+, dropdown on smaller */}
             <div className="hidden 2xl:flex items-center gap-1 flex-shrink-0">
               {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {

@@ -432,14 +432,14 @@ export function AdminDataTable<T extends { id: string }>({
     <tr
       key={row.id}
       onClick={() => onRowClick?.(row)}
-      className={`border-b border-[#2a2a2a] transition-colors group ${
+      className={`h-[3rem] border-b border-[#2a2a2a] transition-colors group ${
         onRowClick ? 'cursor-pointer' : ''
       } ${selectedId === row.id ? 'bg-white/[0.04]' : ''} ${
         selected.has(row.id) ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'
       }`}
     >
       {selectable && (
-        <td className="w-10 px-4 py-3 align-middle" style={stickyStyle(0)}>
+        <td className="w-10 px-4 py-1.5 align-middle" style={stickyStyle(0)}>
           <button
             onClick={(e) => { e.stopPropagation(); toggleOne(row.id); }}
             className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -463,7 +463,7 @@ export function AdminDataTable<T extends { id: string }>({
         return (
           <td
             key={col.key}
-            className={`${col.type === 'thumbnail' ? 'px-2 py-3' : 'px-3 py-3'} overflow-hidden ${alignCls}`}
+            className={`${col.type === 'thumbnail' ? 'px-2 py-1.5' : 'px-3 py-1.5'} overflow-hidden ${alignCls}`}
             style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
           >
             {renderCell(col, row)}
@@ -471,7 +471,7 @@ export function AdminDataTable<T extends { id: string }>({
         );
       })}
       {rowActions && rowActions.length > 0 && (
-        <td className="px-2 py-3 text-right">
+        <td className="px-2 py-1.5 text-right">
           <RowActionsMenu actions={rowActions} row={row} />
         </td>
       )}
@@ -484,7 +484,7 @@ export function AdminDataTable<T extends { id: string }>({
     <div className={`flex flex-col h-full ${className ?? ''}`}>
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       {showToolbar && (
-        <div className="@container flex flex-wrap items-center gap-1 px-6 @md:px-8 min-h-[53px] py-3 border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+        <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
           {toolbarSlot}
 
           {/* Right-aligned toolbar buttons — Freeze, Fields, Filter, Group, Sort, Color, Row Height */}
@@ -598,14 +598,14 @@ export function AdminDataTable<T extends { id: string }>({
           </div>
         )}
 
-        <div ref={tableRef} className="h-full overflow-auto admin-scrollbar">
+        <div ref={tableRef} className="relative z-10 h-full overflow-auto admin-scrollbar">
           <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
             <thead className="bg-[#141414]">
-              <tr>
+              <tr className="h-[3rem]">
                 {/* Checkbox header */}
                 {selectable && (
                   <th
-                    className="w-10 px-4 py-3 align-middle bg-[#141414] border-b border-r border-[#2a2a2a]"
+                    className="w-10 px-4 py-1.5 align-middle bg-[#141414] border-b border-r border-[#2a2a2a]"
                     style={stickyStyle(0, true)}
                   >
                     <button
@@ -670,7 +670,7 @@ export function AdminDataTable<T extends { id: string }>({
                     />
                   ) : null;
 
-                  const thBase = `relative px-3 py-3 text-left text-xs uppercase tracking-wider text-[#616166] font-medium whitespace-nowrap border-b border-r border-[#2a2a2a] group/th ${
+                  const thBase = `relative px-3 py-1.5 text-left text-xs uppercase tracking-wider text-[#616166] font-medium whitespace-nowrap border-b border-r border-[#2a2a2a] group/th ${
                     isLast && !rowActions ? 'border-r-0' : ''
                   } ${isDragOver ? 'border-l-2 border-l-accent' : ''}`;
 

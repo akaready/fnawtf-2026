@@ -40,24 +40,23 @@ export function AdminShell({ children }: Props) {
   };
 
   const navItems = [
-    { href: '/admin/search',       label: 'Search',       icon: Search },        // 0
     // --- CRM ---
-    { href: '/admin/clients',      label: 'Clients',      icon: Building2 },     // 1
-    { href: '/admin/leads',        label: 'Leads',        icon: Target },        // 2
-    { href: '/admin/partners',     label: 'Pipelines',    icon: GitFork },       // 3
-    { href: '/admin/contacts',     label: 'People',       icon: Users },         // 4
+    { href: '/admin/clients',      label: 'Clients',      icon: Building2 },     // 0
+    { href: '/admin/leads',        label: 'Leads',        icon: Target },        // 1
+    { href: '/admin/partners',     label: 'Pipelines',    icon: GitFork },       // 2
+    { href: '/admin/contacts',     label: 'People',       icon: Users },         // 3
     // --- Production ---
-    { href: '/admin/projects',     label: 'Projects',     icon: Rocket },        // 5
-    { href: '/admin/meetings',     label: 'Meetings',     icon: Video },         // 6
+    { href: '/admin/projects',     label: 'Projects',     icon: Rocket },        // 4
+    { href: '/admin/meetings',     label: 'Meetings',     icon: Video },         // 5
     // --- Proposals ---
-    { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },      // 7
-    { href: '/admin/snippets',     label: 'Snippets',     icon: BookOpen },      // 8
+    { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },      // 6
+    { href: '/admin/snippets',     label: 'Snippets',     icon: BookOpen },      // 7
     // --- Config ---
-    { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare }, // 9
-    { href: '/admin/tags',         label: 'Tags',         icon: Tag },           // 10
-    { href: '/admin/roles',        label: 'Roles',        icon: Clapperboard },  // 11
-    { href: '/admin/seo',          label: 'SEO',          icon: Globe },         // 12
-    { href: '/admin/website',      label: 'Website',      icon: AppWindow },     // 13
+    { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare }, // 8
+    { href: '/admin/tags',         label: 'Tags',         icon: Tag },           // 9
+    { href: '/admin/roles',        label: 'Roles',        icon: Clapperboard },  // 10
+    { href: '/admin/seo',          label: 'SEO',          icon: Globe },         // 11
+    { href: '/admin/website',      label: 'Website',      icon: AppWindow },     // 12
   ];
 
   return (
@@ -74,52 +73,54 @@ export function AdminShell({ children }: Props) {
           setCollapsed(!collapsed);
         }}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-center py-8 px-2">
-          <NavLogo ref={logoRef} style={{ transform: collapsed ? 'scale(0.6)' : 'scale(1.25)', transformOrigin: 'center', margin: '-4px', transition: 'transform 200ms ease' }} />
+        {/* Top section — logo + search = exactly 10rem to align with header+toolbar border */}
+        <div className="h-[10rem] flex-shrink-0 flex flex-col border-b border-[#2a2a2a]">
+          {/* Logo */}
+          <div className="flex-1 flex items-center justify-center px-2">
+            <NavLogo ref={logoRef} style={{ transform: collapsed ? 'scale(0.6)' : 'scale(1.25)', transformOrigin: 'center', margin: '-4px', transition: 'transform 200ms ease' }} />
+          </div>
+          {/* Search button */}
+          <div className="px-2 pb-2">
+            <button
+              onClick={() => setSearchOpen(true)}
+              title={collapsed ? 'Search' : undefined}
+              className="w-full flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors text-muted-foreground hover:text-foreground hover:bg-white/5"
+            >
+              <Search size={15} strokeWidth={1.75} className="flex-shrink-0" />
+              <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>
+                Search
+                <span className="ml-1.5 text-xs text-[#4d4d4d] font-normal">⌘+K</span>
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* Nav — always same padding; sidebar overflow-hidden clips text when collapsed */}
-        <nav className="flex-1 pt-[7px] pb-3 space-y-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+        {/* Nav */}
+        <nav className="flex-1 pt-2 pb-3 space-y-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           {navItems.map(({ href, label, icon: Icon }, i) => {
             const active = pathname.startsWith(href);
             return (
               <React.Fragment key={href}>
-                {i === 1 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
-                {i === 5 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
-                {i === 7 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
-                {i === 9 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
-                {i === 12 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
-                {label === 'Search' ? (
-                  <button
-                    onClick={() => setSearchOpen(true)}
-                    title={collapsed ? label : undefined}
-                    className={`w-full flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors text-muted-foreground hover:text-foreground hover:bg-white/5`}
-                  >
-                    <Icon size={15} strokeWidth={1.75} className="flex-shrink-0" />
-                    <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>
-                      {label}
-                      <span className="ml-1.5 text-xs text-[#4d4d4d] font-normal">⌘+K</span>
-                    </span>
-                  </button>
-                ) : (
-                  <Link
-                    href={href}
-                    data-btn-hover
-                    title={collapsed ? label : undefined}
-                    className={`flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
-                      active
-                        ? 'text-foreground bg-white/10'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
-                      <Icon size={15} strokeWidth={1.75} />
-                    </span>
-                    <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
-                    {active && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
-                  </Link>
-                )}
+                {i === 4 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 6 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 8 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                {i === 11 && <div className="border-t border-[#2a2a2a] -mx-2 !mt-2 !mb-2" />}
+                <Link
+                  href={href}
+                  data-btn-hover
+                  title={collapsed ? label : undefined}
+                  className={`flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
+                    active
+                      ? 'text-foreground bg-white/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                  }`}
+                >
+                  <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
+                    <Icon size={15} strokeWidth={1.75} />
+                  </span>
+                  <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
+                  {active && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
+                </Link>
               </React.Fragment>
             );
           })}

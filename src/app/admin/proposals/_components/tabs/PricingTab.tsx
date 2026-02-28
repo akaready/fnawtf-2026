@@ -248,7 +248,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   return (
     <div className="flex flex-col h-full">
       {/* Proposal-level type + crowdfunding bar — universal, applies to all quotes */}
-      <div className="flex items-center gap-1.5 px-8 py-2.5 border-b border-[#2a2a2a] flex-shrink-0 sticky top-0 z-10">
+      <div className="flex items-center gap-1.5 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 sticky top-0 z-10 overflow-x-auto [&::-webkit-scrollbar]:hidden">
         {TYPE_BUTTONS.map(({ type, label, Icon }) => (
           <button
             key={type}
@@ -275,7 +275,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
       </div>
 
       {/* Quote tabs nav */}
-      <div className="flex items-center gap-1 px-8 py-2 border-b border-[#2a2a2a] flex-shrink-0">
+      <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
         {quotes.map((q, i) => {
           const canHide = i > 0;
           const isHidden = q.visible === false;
