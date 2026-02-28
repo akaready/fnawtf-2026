@@ -101,7 +101,7 @@ export function FilterDropdown({
                     : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
                 }`}
               >
-                <span className="text-sm italic">{clearLabel}</span>
+                <span className="text-sm">{clearLabel}</span>
               </button>
             )}
             {filtered.length === 0 ? (

@@ -285,10 +285,13 @@ export function AdminDataTable<T extends { id: string }>({
   const [frozenOffsets, setFrozenOffsets] = useState<number[]>([]);
   const [freezeLineLeft, setFreezeLineLeft] = useState(0);
 
+  // freezeCount semantics: -1 = off, 0 = just checkbox, 1+ = checkbox + N data cols
+  const freezeActive = freezePanes && freezeCount >= 0;
+
   // Measure freeze offsets AND line position from the actual DOM after layout
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
-    if (!freezePanes || freezeCount === 0 || !tableRef.current) {
+    if (!freezeActive || !tableRef.current) {
       setFrozenOffsets((prev) => (prev.length === 0 ? prev : []));
       setFreezeLineLeft((prev) => (prev === 0 ? prev : 0));
       return;
@@ -322,7 +325,7 @@ export function AdminDataTable<T extends { id: string }>({
       return offsets;
     });
     setFreezeLineLeft((prev) => (prev === cumLeft ? prev : cumLeft));
-  }, [freezePanes, freezeCount, selectable, orderedVisibleCols, colWidths]);
+  }, [freezeActive, freezeCount, selectable, orderedVisibleCols, colWidths]);
 
   const thStickyBase: React.CSSProperties = {
     position: 'sticky',
@@ -491,8 +494,8 @@ export function AdminDataTable<T extends { id: string }>({
               label=""
               color="purple"
               disabled={!freezePanes}
-              active={freezeCount > 0}
-              onClick={() => setFreezeCount(freezeCount > 0 ? 0 : 1)}
+              active={freezeActive}
+              onClick={() => setFreezeCount(freezeActive ? -1 : 1)}
             />
             <div className="relative">
               <ToolbarButton
@@ -584,7 +587,7 @@ export function AdminDataTable<T extends { id: string }>({
         )}
 
         {/* Freeze line */}
-        {freezePanes && freezeCount > 0 && (
+        {freezeActive && (
           <div
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleFreezeDrag(e.clientX); }}
             className="absolute top-0 bottom-0 z-[35] cursor-col-resize group/freeze"
@@ -742,7 +745,7 @@ export function AdminDataTable<T extends { id: string }>({
                       <td
                         colSpan={visibleColCount}
                         className="px-4 py-2"
-                        style={freezePanes && freezeCount > 0 ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: '#0a0a0a' } : undefined}
+                        style={freezeActive ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: '#0a0a0a' } : undefined}
                       >
                         <div className="flex items-center gap-2">
                           <ChevronRight
