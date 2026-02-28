@@ -38,13 +38,13 @@ export function AdminPageHeader({
 
   return (
     <div
-      className={`@container flex-shrink-0 px-6 @md:px-8 pb-6 border-b border-[#2a2a2a] ${topContent ? 'pt-6' : 'pt-8 @md:pt-[45px]'}`}
+      className={`@container flex-shrink-0 px-6 @xl:px-8 pb-6 border-b border-[#2a2a2a] ${topContent ? 'pt-6' : 'pt-8 @xl:pt-[45px]'}`}
     >
       {/* Breadcrumb row */}
       {topContent && <div className="mb-3">{topContent}</div>}
 
       {/* Wide: single row — title + search + actions (@md = 448px container) */}
-      <div className="hidden @md:flex items-center gap-3 min-w-0">
+      <div className="hidden @xl:flex items-center gap-3 min-w-0">
         {leftContent}
         <div className="min-w-0 shrink-0 max-w-[40%]">
           <h1 className="text-2xl font-bold tracking-tight truncate">{title}</h1>
@@ -85,7 +85,7 @@ export function AdminPageHeader({
       </div>
 
       {/* Narrow: stacked — title row, then controls row (<@md) */}
-      <div className="flex @md:hidden flex-col gap-3">
+      <div className="flex @xl:hidden flex-col gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {leftContent}
           <div className="min-w-0 shrink">
