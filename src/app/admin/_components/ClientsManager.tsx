@@ -4,13 +4,17 @@ import { useState, useTransition, useCallback, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation';
 import {
   Plus, Download, Building2, LayoutGrid, Table2,
-  Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+  Eye, ListFilter, ArrowUpAZ, Rows,
   Loader2, Trash2, Check,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { AdminPageHeader } from './AdminPageHeader';
-import { ToolbarButton } from './table/TableToolbar';
-import { AdminDataTable, type ColDef } from './table';
+import { ToolbarButton, ToolbarPopover } from './table/TableToolbar';
+import { AdminDataTable, type ColDef, type SortRule, type FilterRule } from './table';
+import { FilterPanel } from './table/FilterPanel';
+import { SortPanel } from './table/SortPanel';
+import { FieldsPanel } from './table/FieldsPanel';
+import { filterData, sortData } from './table/tableUtils';
 import {
   type ClientRow,
   createClientRecord,
@@ -33,6 +37,13 @@ import {
 
 type ViewMode = 'cards' | 'table';
 
+const CARD_SIZE_CONFIG = {
+  1: { logoSize: 36, padding: 'px-3 py-2.5', nameSize: 'text-xs', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5' },
+  2: { logoSize: 54, padding: 'px-4 py-3.5', nameSize: 'text-sm', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' },
+  3: { logoSize: 72, padding: 'px-5 py-4', nameSize: 'text-sm', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' },
+  4: { logoSize: 96, padding: 'px-6 py-5', nameSize: 'text-base', gridCols: 'grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2' },
+} as const;
+
 interface Props {
   initialClients: ClientRow[];
   projects: ClientProject[];
@@ -54,6 +65,19 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     return (localStorage.getItem('fna-clients-viewMode') as ViewMode) || 'cards';
   });
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  // ── Card view state (persisted) ─────────────────────────────────────────
+  type CardSize = 1 | 2 | 3 | 4;
+  type CardPanel = 'fields' | 'filter' | 'sort' | 'size' | null;
+  const [cardPanel, setCardPanel] = useState<CardPanel>(null);
+  const [cardSorts, setCardSorts] = useState<SortRule[]>([]);
+  const [cardFilters, setCardFilters] = useState<FilterRule[]>([]);
+  const [cardVisibleFields, setCardVisibleFields] = useState<Set<string>>(
+    () => new Set(['logo_url', 'name', 'status', '_contacts', '_projects', 'company_types']),
+  );
+  const [cardSize, setCardSize] = useState<CardSize>(2);
+  const [cardHydrated, setCardHydrated] = useState(false);
+
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -67,6 +91,62 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   useEffect(() => {
     localStorage.setItem('fna-clients-viewMode', viewMode);
   }, [viewMode]);
+
+  // ── Card columns (for filter/sort/fields panels) ────────────────────────
+  const cardColumns: ColDef<ClientRow>[] = useMemo(() => [
+    { key: 'logo_url', label: 'Logo', type: 'thumbnail' },
+    { key: 'name', label: 'Name', type: 'text', sortable: true },
+    {
+      key: 'status', label: 'Status', type: 'select', sortable: true,
+      options: Object.entries(STATUS_CONFIG).map(([v, cfg]) => ({ value: v, label: cfg.label })),
+    },
+    { key: 'industry', label: 'Industry', type: 'text', sortable: true },
+    {
+      key: '_contacts', label: 'Contacts', type: 'number', sortable: true,
+      sortValue: (row) => localContacts.filter((ct) => ct.client_id === row.id).length,
+    },
+    {
+      key: '_projects', label: 'Projects', type: 'number', sortable: true,
+      sortValue: (row) => localProjects.filter((p) => p.client_id === row.id).length,
+    },
+    { key: 'company_types', label: 'Types', type: 'tags' },
+    { key: 'created_at', label: 'Added', type: 'date', sortable: true },
+  ], [localContacts, localProjects]);
+
+  // ── Card state persistence ──────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('fna-cards-clients');
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved.sorts) setCardSorts(saved.sorts);
+        if (saved.filters) setCardFilters(saved.filters);
+        if (saved.visibleFields?.length) setCardVisibleFields(new Set(saved.visibleFields));
+        if (saved.size) setCardSize(saved.size);
+      }
+    } catch { /* ignore */ }
+    setCardHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!cardHydrated) return;
+    try {
+      localStorage.setItem('fna-cards-clients', JSON.stringify({
+        sorts: cardSorts,
+        filters: cardFilters,
+        visibleFields: Array.from(cardVisibleFields),
+        size: cardSize,
+      }));
+    } catch { /* quota */ }
+  }, [cardHydrated, cardSorts, cardFilters, cardVisibleFields, cardSize]);
+
+  const toggleCardField = useCallback((key: string) => {
+    setCardVisibleFields((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }, []);
 
   const handleGalleryLogoDrop = useCallback(async (clientId: string, file: File) => {
     setUploadingId(clientId);
@@ -182,15 +262,23 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   );
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return clientOnly;
-    const q = search.toLowerCase();
-    return clientOnly.filter((c) => {
-      if (c.name.toLowerCase().includes(q)) return true;
-      if (c.notes?.toLowerCase().includes(q)) return true;
-      if (localProjects.some((p) => p.client_id === c.id && p.title.toLowerCase().includes(q))) return true;
-      return false;
-    });
-  }, [clientOnly, search, localProjects]);
+    let result = clientOnly;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((c) => {
+        if (c.name.toLowerCase().includes(q)) return true;
+        if (c.notes?.toLowerCase().includes(q)) return true;
+        if (localProjects.some((p) => p.client_id === c.id && p.title.toLowerCase().includes(q))) return true;
+        return false;
+      });
+    }
+    // Apply card-view filters & sorts when in card mode
+    if (viewMode === 'cards') {
+      if (cardFilters.length > 0) result = filterData(result, cardFilters);
+      if (cardSorts.length > 0) result = sortData(result, cardSorts, cardColumns);
+    }
+    return result;
+  }, [clientOnly, search, localProjects, viewMode, cardFilters, cardSorts, cardColumns]);
 
   // ── Table columns ────────────────────────────────────────────────────────────
   const tableColumns: ColDef<ClientRow>[] = useMemo(() => [
@@ -344,31 +432,113 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
 
       {viewMode === 'cards' ? (
         <>
-        {/* Toolbar — matches AdminDataTable toolbar style */}
+        {/* Toolbar */}
         <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
           <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-            <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
-            <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
-            <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
-            <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
-            <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
-            <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
-            <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
+            {/* Fields */}
+            <div className="relative">
+              <ToolbarButton
+                icon={Eye}
+                label=""
+                color="blue"
+                active={cardPanel === 'fields'}
+                onClick={() => setCardPanel((p) => p === 'fields' ? null : 'fields')}
+              />
+              {cardPanel === 'fields' && (
+                <FieldsPanel
+                  columns={cardColumns}
+                  visibleCols={cardVisibleFields}
+                  onToggle={toggleCardField}
+                  onShowAll={() => setCardVisibleFields(new Set(cardColumns.map((c) => c.key)))}
+                  onHideAll={() => setCardVisibleFields(new Set(['name']))}
+                  onClose={() => setCardPanel(null)}
+                />
+              )}
+            </div>
+            {/* Filter */}
+            <div className="relative">
+              <ToolbarButton
+                icon={ListFilter}
+                label=""
+                color="green"
+                active={cardPanel === 'filter' || cardFilters.length > 0}
+                badge={cardFilters.length || undefined}
+                onClick={() => setCardPanel((p) => p === 'filter' ? null : 'filter')}
+              />
+              {cardPanel === 'filter' && (
+                <FilterPanel
+                  columns={cardColumns}
+                  filters={cardFilters}
+                  onChange={setCardFilters}
+                  onClose={() => setCardPanel(null)}
+                />
+              )}
+            </div>
+            {/* Sort */}
+            <div className="relative">
+              <ToolbarButton
+                icon={ArrowUpAZ}
+                label=""
+                color="orange"
+                active={cardPanel === 'sort' || cardSorts.length > 0}
+                badge={cardSorts.length || undefined}
+                onClick={() => setCardPanel((p) => p === 'sort' ? null : 'sort')}
+              />
+              {cardPanel === 'sort' && (
+                <SortPanel
+                  columns={cardColumns}
+                  sorts={cardSorts}
+                  onChange={setCardSorts}
+                  onClose={() => setCardPanel(null)}
+                />
+              )}
+            </div>
+            {/* Card size */}
+            <div className="relative">
+              <ToolbarButton
+                icon={Rows}
+                label=""
+                color="neutral"
+                active={cardPanel === 'size'}
+                onClick={() => setCardPanel((p) => p === 'size' ? null : 'size')}
+              />
+              {cardPanel === 'size' && (
+                <ToolbarPopover onClose={() => setCardPanel(null)} width="w-44" align="right">
+                  <div className="text-xs text-[#888] uppercase tracking-wider font-medium mb-2">Card size</div>
+                  <div className="flex items-end gap-2 justify-center py-1">
+                    {([1, 2, 3, 4] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => { setCardSize(s); setCardPanel(null); }}
+                        className={`rounded-md border-2 transition-colors ${
+                          cardSize === s
+                            ? 'border-white/40 bg-white/10'
+                            : 'border-[#2a2a2a] bg-[#151515] hover:border-white/20'
+                        }`}
+                        style={{ width: 12 + s * 6, height: 12 + s * 6 }}
+                        title={`Size ${s}`}
+                      />
+                    ))}
+                  </div>
+                </ToolbarPopover>
+              )}
+            </div>
           </div>
         </div>
         {/* Card grid */}
         <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className={`grid gap-3 ${CARD_SIZE_CONFIG[cardSize].gridCols}`}>
             {filtered.map((c) => {
               const companyTypes = (c.company_types ?? []) as CompanyType[];
               const cContacts = localContacts.filter((ct) => ct.client_id === c.id);
               const cProjects = localProjects.filter((p) => p.client_id === c.id);
               const countParts = [
-                cContacts.length > 0 && `${cContacts.length} contact${cContacts.length !== 1 ? 's' : ''}`,
-                cProjects.length > 0 && `${cProjects.length} project${cProjects.length !== 1 ? 's' : ''}`,
+                cardVisibleFields.has('_contacts') && cContacts.length > 0 && `${cContacts.length} contact${cContacts.length !== 1 ? 's' : ''}`,
+                cardVisibleFields.has('_projects') && cProjects.length > 0 && `${cProjects.length} project${cProjects.length !== 1 ? 's' : ''}`,
               ].filter(Boolean) as string[];
               const isFocused = activeId === c.id;
               const statusCfg = STATUS_CONFIG[(c.status ?? 'active') as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG['active'];
+              const sz = CARD_SIZE_CONFIG[cardSize];
 
               return (
                 <div
@@ -376,22 +546,37 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                   onClick={() => setActiveId(c.id)}
                   className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
                 >
-                  <div className={`rounded-[11px] px-4 py-3.5 flex items-center gap-3 transition-colors ${isFocused ? 'bg-[#151515]' : 'bg-[#111] hover:bg-[#131313]'}`}>
-                    <GalleryLogoDropzone
-                      logoUrl={c.logo_url}
-                      uploading={uploadingId === c.id}
-                      onDrop={(file) => handleGalleryLogoDrop(c.id, file)}
-                      onRemove={() => handleGalleryLogoRemove(c.id)}
-                    />
+                  <div className={`rounded-[11px] ${sz.padding} flex items-center gap-3 transition-colors ${isFocused ? 'bg-[#151515]' : 'bg-[#111] hover:bg-[#131313]'}`}>
+                    {cardVisibleFields.has('logo_url') && (
+                      <GalleryLogoDropzone
+                        logoUrl={c.logo_url}
+                        uploading={uploadingId === c.id}
+                        onDrop={(file) => handleGalleryLogoDrop(c.id, file)}
+                        onRemove={() => handleGalleryLogoRemove(c.id)}
+                        size={sz.logoSize}
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                      <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
-                        <span className={statusCfg.color}>{statusCfg.label}</span>
-                        {countParts.length > 0 && <span className="text-muted-foreground/25">·</span>}
-                        <span className="text-[#404044]">{countParts.join(' · ')}</span>
-                      </p>
+                      <p className={`${sz.nameSize} font-medium text-foreground truncate`}>{c.name}</p>
+                      {(cardVisibleFields.has('status') || countParts.length > 0) && (
+                        <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
+                          {cardVisibleFields.has('status') && <span className={statusCfg.color}>{statusCfg.label}</span>}
+                          {cardVisibleFields.has('status') && countParts.length > 0 && <span className="text-muted-foreground/25">·</span>}
+                          <span className="text-[#404044]">{countParts.join(' · ')}</span>
+                        </p>
+                      )}
+                      {cardSize >= 3 && (
+                        <>
+                          {cardVisibleFields.has('industry') && c.industry && (
+                            <p className="text-xs mt-1 text-[#515155] truncate">{c.industry}</p>
+                          )}
+                          {cardVisibleFields.has('created_at') && (
+                            <p className="text-[10px] mt-0.5 text-[#404044]">{new Date(c.created_at).toLocaleDateString()}</p>
+                          )}
+                        </>
+                      )}
                     </div>
-                    {companyTypes.length > 0 && (
+                    {cardVisibleFields.has('company_types') && companyTypes.length > 0 && (
                       <div className="flex flex-col gap-1 flex-shrink-0">
                         {companyTypes.map((type) => (
                           <span
@@ -462,11 +647,13 @@ function GalleryLogoDropzone({
   uploading,
   onDrop,
   onRemove,
+  size = 54,
 }: {
   logoUrl: string | null;
   uploading: boolean;
   onDrop: (file: File) => void;
   onRemove: () => void;
+  size?: number;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -514,7 +701,8 @@ function GalleryLogoDropzone({
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }}
         onDragLeave={(e) => { e.stopPropagation(); setDragOver(false); }}
         onDrop={handleDrop}
-        className={`w-[54px] h-[54px] rounded-xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors border-2 border-dashed ${
+        style={{ width: size, height: size }}
+        className={`rounded-xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors border-2 border-dashed ${
           dragOver
             ? 'border-white/40 bg-white/10'
             : logoUrl
@@ -524,11 +712,11 @@ function GalleryLogoDropzone({
         title="Drop logo or click to upload"
       >
         {uploading ? (
-          <Loader2 size={18} className="animate-spin text-[#515155]" />
+          <Loader2 size={Math.max(14, size * 0.3)} className="animate-spin text-[#515155]" />
         ) : logoUrl ? (
           <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
         ) : (
-          <Building2 size={20} className="text-[#202022]" />
+          <Building2 size={Math.max(14, size * 0.35)} className="text-[#202022]" />
         )}
       </div>
       {logoUrl && !uploading && (
