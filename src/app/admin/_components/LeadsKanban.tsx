@@ -2,7 +2,10 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
-import { Plus, Building2, RotateCcw } from 'lucide-react';
+import {
+  Plus, Building2, RotateCcw,
+  Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+} from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import confetti from 'canvas-confetti';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ToolbarButton } from './table/TableToolbar';
 import { type ClientRow, createClientRecord, updateClientRecord, updateContact, updateTestimonial, updateProject } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
@@ -273,6 +277,19 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
           </button>
         }
       />
+
+      {/* Toolbar — matches AdminDataTable toolbar style */}
+      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+          <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
+          <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
+          <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
+          <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
+          <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
+          <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
+          <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
+        </div>
+      </div>
 
       {/* Kanban board — horizontal scroll */}
       <div className="flex-1 min-h-0 overflow-y-hidden admin-scrollbar px-8 pt-4 pb-6">

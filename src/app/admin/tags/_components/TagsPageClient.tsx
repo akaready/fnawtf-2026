@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, X, Pencil, Trash2, Plus, GitMerge, ArrowUpRight, ChevronRight } from 'lucide-react';
@@ -393,6 +393,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [tags, setTags] = useState<TagWithCount[]>(initialTags);
+  const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [mergeState, setMergeState] = useState<{ sourceIds: string[]; category: TagCategory } | null>(null);
 
@@ -475,11 +476,20 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
 
   const totalTags = tags.length;
 
+  const filteredTags = useMemo(() => {
+    if (!search.trim()) return tags;
+    const q = search.toLowerCase();
+    return tags.filter((t) => t.name.toLowerCase().includes(q));
+  }, [tags, search]);
+
   return (
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Tags"
         subtitle={`${totalTags} total across ${CATEGORIES.length} categories`}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search tags…"
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
@@ -487,7 +497,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
           {/* Top row — Project Types + Deliverables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             {CATEGORIES.slice(0, 2).map((category) => {
-              const categoryTags = tags.filter((t) => t.category === category);
+              const categoryTags = filteredTags.filter((t) => t.category === category);
               return (
                 <CategorySection
                   key={category}
@@ -510,7 +520,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
           {/* Bottom row — Style, Technique, Add-ons */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
             {CATEGORIES.slice(2).map((category) => {
-              const categoryTags = tags.filter((t) => t.category === category);
+              const categoryTags = filteredTags.filter((t) => t.category === category);
               return (
                 <CategorySection
                   key={category}

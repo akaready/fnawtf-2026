@@ -7,7 +7,6 @@ import {
   Eye, ListFilter, ArrowUpAZ, Rows,
   Loader2, Trash2, Check,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { AdminPageHeader } from './AdminPageHeader';
 import { ToolbarButton, ToolbarPopover } from './table/TableToolbar';
 import { AdminDataTable, type ColDef, type SortRule, type FilterRule } from './table';
@@ -22,6 +21,7 @@ import {
   updateContact,
   updateTestimonial,
   updateProject,
+  uploadLogo,
 } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
@@ -151,14 +151,10 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   const handleGalleryLogoDrop = useCallback(async (clientId: string, file: File) => {
     setUploadingId(clientId);
     try {
-      const supabase = createClient();
-      const ext = file.name.split('.').pop() ?? 'png';
-      const path = `${clientId}.${ext}`;
-      const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+      const fd = new FormData();
+      fd.append('file', file);
+      const publicUrl = await uploadLogo(clientId, fd);
       setClients((prev) => prev.map((c) => c.id === clientId ? { ...c, logo_url: publicUrl } : c));
-      await updateClientRecord(clientId, { logo_url: publicUrl });
     } catch (err) {
       console.error('Logo upload failed:', err);
     } finally {

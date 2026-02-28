@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Trash2, LayoutGrid, User, Building2, ArrowUpDown, PenLine, Download } from 'lucide-react';
+import {
+  Plus, Trash2, LayoutGrid, User, Building2, ArrowUpDown, PenLine, Download,
+  Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+} from 'lucide-react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ToolbarButton } from './table/TableToolbar';
 import {
   type TestimonialRow,
   createTestimonial,
@@ -318,6 +322,19 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
           </>
         }
       />
+
+      {/* Toolbar — matches AdminDataTable toolbar style */}
+      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+          <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
+          <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
+          <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
+          <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
+          <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
+          <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
+          <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
+        </div>
+      </div>
 
       {/* Scrollable content */}
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">

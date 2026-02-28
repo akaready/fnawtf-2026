@@ -23,7 +23,7 @@ interface AdminTabBarProps {
 
 export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfter }: AdminTabBarProps) {
   return (
-    <div className="flex-shrink-0 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] overflow-x-auto [&::-webkit-scrollbar]:hidden">
+    <div className="flex-shrink-0 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] bg-[#010101] overflow-x-auto [&::-webkit-scrollbar]:hidden">
       {tabs.map((tab) => (
         <Fragment key={tab.value}>
           <button

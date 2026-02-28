@@ -577,7 +577,7 @@ export function AdminDataTable<T extends { id: string }>({
       )}
 
       {/* ── Table ──────────────────────────────────────────────────── */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative z-10 flex-1 min-h-0 isolate">
         {/* Scrollbar cover behind sticky header */}
         {headerHeight > 0 && (
           <div
@@ -598,7 +598,7 @@ export function AdminDataTable<T extends { id: string }>({
           </div>
         )}
 
-        <div ref={tableRef} className="relative z-10 h-full overflow-auto admin-scrollbar">
+        <div ref={tableRef} className="h-full overflow-auto admin-scrollbar">
           <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
             <thead className="bg-[#141414]">
               <tr className="h-[3rem]">

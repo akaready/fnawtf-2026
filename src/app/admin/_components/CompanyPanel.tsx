@@ -8,13 +8,13 @@ import {
 } from 'lucide-react';
 import { SaveButton } from './SaveButton';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
-import { createClient } from '@/lib/supabase/client';
 import {
   type ClientRow,
   updateClientRecord,
   deleteClientRecord,
   getProjectById,
   scrapeCompanyInfo,
+  uploadLogo,
 } from '../actions';
 import { ProjectPanel } from './ProjectPanel';
 import type { ContactRow } from '@/types/proposal';
@@ -162,14 +162,10 @@ export function CompanyPanel({
       const id = current.id;
       (async () => {
         try {
-          const supabase = createClient();
-          const ext = file.name.split('.').pop() ?? 'png';
-          const path = `${id}.${ext}`;
-          const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-          if (error) throw error;
-          const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+          const fd = new FormData();
+          fd.append('file', file);
+          const publicUrl = await uploadLogo(id, fd);
           setLocalCompany((p) => p ? { ...p, logo_url: publicUrl } : p);
-          await updateClientRecord(id, { logo_url: publicUrl });
         } catch (err) {
           console.error('Logo upload failed:', err);
         } finally {

@@ -7,7 +7,7 @@ import {
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
   Wrench, Sparkles, Contact, Star, HeartHandshake, Users, LayoutGrid, Tag,
   Globe, ExternalLink, Linkedin, Instagram, Film, RefreshCw,
-  User, ListFilter, SlidersHorizontal, Layers, ArrowUpAZ, Palette, Rows,
+  User, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Snowflake, Eye,
 } from 'lucide-react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
@@ -912,7 +912,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
       {isCastView ? (
         <>
           {/* Cast gallery toolbar — matches AdminDataTable toolbar style */}
-          <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0">
+          <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
             {/* Type tabs — full buttons on lg+, dropdown on smaller */}
             <div className="hidden 2xl:flex items-center gap-1 flex-shrink-0">
               {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
@@ -1019,9 +1019,10 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
 
             {/* Right-aligned feature buttons (disabled in gallery view) */}
             <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-              <ToolbarButton icon={SlidersHorizontal} label="" color="blue" disabled onClick={() => {}} />
+              <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
+              <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
               <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
-              <ToolbarButton icon={Layers} label="" color="purple" disabled onClick={() => {}} />
+              <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
               <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
               <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
               <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />

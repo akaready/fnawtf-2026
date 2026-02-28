@@ -363,6 +363,19 @@ export async function deleteClientRecord(id: string) {
   revalidatePath('/admin/companies');
 }
 
+export async function uploadLogo(clientId: string, formData: FormData): Promise<string> {
+  const { supabase } = await requireAuth();
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+  const ext = file.name.split('.').pop() ?? 'png';
+  const path = `${clientId}.${ext}`;
+  const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+  const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+  await supabase.from('clients').update({ logo_url: publicUrl } as never).eq('id', clientId);
+  return publicUrl;
+}
+
 // ── Company Info Scraper ────────────────────────────────────────────────
 
 export type ScrapedCompanyInfo = {
