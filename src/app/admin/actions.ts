@@ -369,9 +369,12 @@ export async function uploadLogo(clientId: string, formData: FormData): Promise<
   if (!file) throw new Error('No file provided');
   const ext = file.name.split('.').pop() ?? 'png';
   const path = `${clientId}.${ext}`;
-  const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+  // Use service-role client for storage upload to bypass storage RLS
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+  const { error } = await serviceClient.storage.from('logos').upload(path, file, { upsert: true });
   if (error) throw new Error(error.message);
-  const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+  const { data: { publicUrl } } = serviceClient.storage.from('logos').getPublicUrl(path);
   await supabase.from('clients').update({ logo_url: publicUrl } as never).eq('id', clientId);
   return publicUrl;
 }
