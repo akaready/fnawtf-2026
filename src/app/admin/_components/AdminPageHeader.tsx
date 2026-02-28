@@ -38,7 +38,7 @@ export function AdminPageHeader({
 
   return (
     <div
-      className={`@container flex-shrink-0 px-4 @md:px-8 pb-4 border-b border-[#2a2a2a] ${topContent ? 'pt-5' : 'pt-6 @md:pt-[45px]'}`}
+      className={`@container flex-shrink-0 px-6 @md:px-8 pb-6 border-b border-[#2a2a2a] ${topContent ? 'pt-6' : 'pt-8 @md:pt-[45px]'}`}
     >
       {/* Breadcrumb row */}
       {topContent && <div className="mb-3">{topContent}</div>}
