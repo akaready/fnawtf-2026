@@ -16,10 +16,14 @@ type TestimonialRow = Pick<Database['public']['Tables']['testimonials']['Row'],
 
 export async function TestimonialsServer() {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('testimonials')
-    .select('id, quote, person_name, person_title, company, client:clients(logo_url), projects(clients(logo_url))')
+    .select('id, quote, person_name, person_title, company, client:clients!client_id(logo_url), projects!project_id(clients(logo_url))')
     .order('display_order', { ascending: true });
+
+  if (error) {
+    console.error('[TestimonialsServer] Supabase error:', error.message, error.details, error.hint);
+  }
 
   const testimonials = ((data ?? []) as TestimonialRow[]).map((t) => {
     // Prefer direct client relation logo, fall back to project->client logo
