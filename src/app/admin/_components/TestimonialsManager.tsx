@@ -3,11 +3,14 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, LayoutGrid, User, Building2, ArrowUpDown, PenLine, Download,
-  Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+  Table2, CreditCard, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
 } from 'lucide-react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
+import { useViewMode } from '../_hooks/useViewMode';
+import { AdminDataTable, type ColDef } from './table';
 import { ToolbarButton } from './table/TableToolbar';
 import {
   type TestimonialRow,
@@ -15,12 +18,13 @@ import {
   updateTestimonial,
   deleteTestimonial,
   createContact,
+  batchDeleteTestimonials,
 } from '../actions';
 
 /* ── Combobox ───────────────────────────────────────────────────────────── */
 
 const inputClass =
-  'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
+  'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
 
 function Combobox({
   value,
@@ -103,14 +107,14 @@ function Combobox({
         className={inputClass}
       />
       {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl">
           {filtered.slice(0, 20).map((opt) => (
             <button
               key={opt.id}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(opt)}
-              className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-white/[0.06] transition-colors truncate"
+              className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors truncate"
             >
               {opt.name}
             </button>
@@ -121,7 +125,7 @@ function Combobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-[#2a2a2a]"
+              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-admin-bg-hover transition-colors border-t border-admin-border"
             >
               {creating ? 'Creating…' : `${createLabel} "${query.trim()}"`}
             </button>
@@ -131,6 +135,15 @@ function Combobox({
     </div>
   );
 }
+
+/* ── View Types ────────────────────────────────────────────────────────── */
+
+type TestimonialsView = 'table' | 'cards';
+
+const TESTIMONIALS_VIEWS: ViewDef<TestimonialsView>[] = [
+  { key: 'table', icon: Table2, label: 'Table view' },
+  { key: 'cards', icon: CreditCard, label: 'Card view' },
+];
 
 /* ── TestimonialsManager ────────────────────────────────────────────────── */
 
@@ -149,6 +162,58 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
   const [creating, setCreating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useViewMode<TestimonialsView>('fna-testimonials-viewMode', 'table');
+
+  const tableColumns: ColDef<TestimonialRow>[] = useMemo(() => [
+    {
+      key: 'quote', label: 'Quote', searchable: true, defaultWidth: 360,
+      render: (row) => (
+        <span className="text-sm text-admin-text-primary/80 truncate block max-w-[360px]" title={row.quote}>
+          {row.quote.length > 80 ? row.quote.slice(0, 80) + '…' : row.quote}
+        </span>
+      ),
+    },
+    {
+      key: 'person_name', label: 'Person', sortable: true, searchable: true,
+      render: (row) => {
+        const name = row.contact
+          ? `${row.contact.first_name} ${row.contact.last_name}`.trim()
+          : row.person_name;
+        return name
+          ? <span className="text-sm text-admin-text-primary">{name}</span>
+          : <span className="text-xs text-admin-text-placeholder">—</span>;
+      },
+    },
+    {
+      key: 'client_id', label: 'Client', sortable: true,
+      sortValue: (row) => (row.client_id ? clients.find((c) => c.id === row.client_id)?.name ?? '' : ''),
+      render: (row) => {
+        const client = row.client_id ? clients.find((c) => c.id === row.client_id) : null;
+        return client
+          ? <span className="text-sm text-admin-text-faint">{client.name}</span>
+          : <span className="text-xs text-admin-text-placeholder">—</span>;
+      },
+    },
+    {
+      key: 'project_id', label: 'Project', sortable: true, defaultVisible: false,
+      sortValue: (row) => (row.project_id ? projects.find((p) => p.id === row.project_id)?.title ?? '' : ''),
+      render: (row) => {
+        const proj = row.project_id ? projects.find((p) => p.id === row.project_id) : null;
+        return proj
+          ? <span className="text-sm text-admin-text-faint">{proj.title}</span>
+          : <span className="text-xs text-admin-text-placeholder">—</span>;
+      },
+    },
+    {
+      key: 'display_order', label: 'Order', type: 'number' as const, sortable: true, align: 'right' as const,
+      render: (row) => <span className="text-xs text-admin-text-faint tabular-nums">{row.display_order}</span>,
+    },
+    {
+      key: 'created_at', label: 'Created', sortable: true, defaultVisible: false, align: 'right' as const,
+      sortValue: (row) => new Date(row.created_at).getTime(),
+      render: (row) => <span className="text-xs text-admin-text-ghost">{new Date(row.created_at).toLocaleDateString()}</span>,
+    },
+  ], [clients, projects]);
 
   const handleChange = (id: string, field: string, value: unknown) => {
     setTestimonials((prev) =>
@@ -323,8 +388,42 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
         }
       />
 
-      {/* Toolbar — matches AdminDataTable toolbar style */}
-      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+      {viewMode === 'table' ? (
+        <AdminDataTable
+          columns={tableColumns}
+          data={filteredTestimonials}
+          storageKey="fna-table-testimonials"
+          toolbar
+          toolbarSlot={<ViewSwitcher views={TESTIMONIALS_VIEWS} activeView={viewMode} onChange={setViewMode} />}
+          sortable
+          filterable
+          columnVisibility
+          columnReorder
+          columnResize
+          selectable
+          freezePanes
+          exportCsv
+          onBatchDelete={async (ids) => {
+            await batchDeleteTestimonials(ids);
+            setTestimonials((prev) => prev.filter((t) => !ids.includes(t.id)));
+          }}
+          onRowClick={(row) => { setActiveId(row.id); setViewMode('cards'); }}
+          emptyMessage={testimonials.length === 0 ? 'No testimonials yet.' : 'No matching testimonials.'}
+          emptyAction={{ label: 'Add Testimonial', onClick: handleCreate }}
+          rowActions={[
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              onClick: (row) => setConfirmDeleteId(row.id),
+            },
+          ]}
+        />
+      ) : (
+      <>
+      {/* Disabled toolbar — matches table toolbar height */}
+      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+        <ViewSwitcher views={TESTIMONIALS_VIEWS} activeView={viewMode} onChange={setViewMode} />
         <div className="flex items-center gap-1 ml-auto flex-shrink-0">
           <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
           <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
@@ -335,13 +434,12 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
           <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
         </div>
       </div>
-
       {/* Scrollable content */}
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
       <div className="space-y-4">
       {filteredTestimonials.map((t) => {
         const isUnattached = !t.client_id && !t.project_id;
-        const borderColor = isUnattached ? 'border-red-500/30' : 'border-border/40';
+        const borderColor = isUnattached ? 'border-admin-danger-border' : 'border-admin-border-subtle';
 
         // Filter projects by selected client — only show projects that match
         const filteredProjects = t.client_id
@@ -356,12 +454,12 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
             onClick={() => setActiveId(t.id)}
             className={`rounded-xl p-6 space-y-5 transition-colors cursor-pointer ${
               isActive
-                ? `border border-white/20 bg-[#151515] ${isUnattached ? 'border-red-500/30' : ''}`
-                : `border ${borderColor} bg-[#111]`
+                ? `border border-admin-border-emphasis bg-admin-bg-raised ${isUnattached ? 'border-admin-danger-border' : ''}`
+                : `border ${borderColor} bg-admin-bg-raised`
             }`}
           >
             {isUnattached && (
-              <div className="text-[11px] text-red-400/70 bg-red-500/5 rounded-lg px-3 py-1.5 -mt-1">
+              <div className="text-[11px] text-admin-danger/70 bg-admin-danger-bg rounded-lg px-3 py-1.5 -mt-1">
                 Not linked to a client or project
               </div>
             )}
@@ -376,13 +474,13 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
               }}
               ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
               placeholder="Quote text…"
-              className="w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-base text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20 resize-none overflow-hidden"
+              className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-4 py-3 text-base text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis resize-none overflow-hidden"
             />
 
             {/* Attribution row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <User size={12} /> Contact
                 </label>
                 <Combobox
@@ -395,7 +493,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <PenLine size={12} /> Display Override
                 </label>
                 <input
@@ -411,13 +509,13 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
             {/* Relations row — all with icons */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <Building2 size={12} /> Client
                 </label>
                 <select
                   value={t.client_id ?? ''}
                   onChange={(e) => handleChange(t.id, 'client_id', e.target.value || null)}
-                  className={`w-full rounded-lg border ${!t.client_id ? 'border-red-500/30' : 'border-border/40'} bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20`}
+                  className={`w-full rounded-lg border ${!t.client_id ? 'border-admin-danger-border' : 'border-admin-border-subtle'} bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis`}
                 >
                   <option value="">No client</option>
                   {clients.map((c) => (
@@ -426,13 +524,13 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <LayoutGrid size={12} /> Project
                 </label>
                 <select
                   value={t.project_id ?? ''}
                   onChange={(e) => handleChange(t.id, 'project_id', e.target.value || null)}
-                  className={`w-full rounded-lg border ${!t.project_id ? 'border-red-500/30' : 'border-border/40'} bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20`}
+                  className={`w-full rounded-lg border ${!t.project_id ? 'border-admin-danger-border' : 'border-admin-border-subtle'} bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis`}
                 >
                   <option value="">No project</option>
                   {filteredProjects.map((p) => (
@@ -441,23 +539,23 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <ArrowUpDown size={12} /> Order
                 </label>
                 <input
                   type="number"
                   value={t.display_order}
                   onChange={(e) => handleChange(t.id, 'display_order', parseInt(e.target.value) || 0)}
-                  className="w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis"
                 />
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/20">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-admin-border-subtle">
               <button
                 onClick={() => setConfirmDeleteId(t.id)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
               >
                 <Trash2 size={14} />
                 Delete
@@ -469,28 +567,30 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
       })}
 
       {testimonials.length === 0 && (
-        <div className="text-center py-12 text-[#404044] text-sm">
+        <div className="text-center py-12 text-admin-text-ghost text-sm">
           No testimonials yet. Click &quot;Add Testimonial&quot; to create one.
         </div>
       )}
       </div>
       </div>
+      </>
+      )}
 
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111] border border-border/40 rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
+          <div className="bg-admin-bg-raised border border-admin-border-subtle rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
             <h3 className="font-medium">Delete testimonial?</h3>
-            <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
+            <p className="text-sm text-admin-text-muted">This action cannot be undone.</p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setConfirmDeleteId(null)}
-                className="px-5 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+                className="px-5 py-2.5 rounded-lg text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(confirmDeleteId)}
-                className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition-colors"
+                className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-admin-text-primary hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>

@@ -16,10 +16,10 @@ export function GroupPanel<T extends { id: string }>({ columns, groupField, onCh
   return (
     <ToolbarPopover onClose={onClose} width="w-64" align="right">
       <div className="space-y-2">
-        <div className="text-xs text-[#888] uppercase tracking-wider font-medium mb-2">Group by</div>
+        <div className="text-xs text-admin-text-secondary uppercase tracking-wider font-medium mb-2">Group by</div>
         <label
           className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm cursor-pointer transition-colors ${
-            !groupField ? 'bg-white/5 text-foreground' : 'text-muted-foreground hover:bg-white/5'
+            !groupField ? 'bg-admin-bg-hover text-admin-text-primary' : 'text-admin-text-muted hover:bg-admin-bg-hover'
           }`}
         >
           <input
@@ -35,7 +35,7 @@ export function GroupPanel<T extends { id: string }>({ columns, groupField, onCh
           <label
             key={col.key}
             className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm cursor-pointer transition-colors ${
-              groupField === col.key ? 'bg-white/5 text-foreground' : 'text-muted-foreground hover:bg-white/5'
+              groupField === col.key ? 'bg-admin-bg-hover text-admin-text-primary' : 'text-admin-text-muted hover:bg-admin-bg-hover'
             }`}
           >
             <input

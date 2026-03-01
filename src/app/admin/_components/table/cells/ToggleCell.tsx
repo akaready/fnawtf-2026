@@ -36,7 +36,7 @@ export function ToggleCell({ value, rowId, field: _field, labelTrue, labelFalse,
       <span
         className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
           value ? colorTrue : colorFalse
-        } group-hover:ring-1 group-hover:ring-white/20`}
+        } group-hover:ring-1 group-hover:ring-admin-border-emphasis`}
       >
         {value ? labelTrue : labelFalse}
       </span>

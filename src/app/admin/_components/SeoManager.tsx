@@ -63,7 +63,7 @@ export function SeoManager({ initialSettings }: Props) {
             value: row.page_slug,
             label: meta.label,
             icon: <Icon size={13} className="flex-shrink-0" />,
-            badge: row.no_index ? <EyeOff size={10} className="text-red-400 flex-shrink-0" /> : undefined,
+            badge: row.no_index ? <EyeOff size={10} className="text-admin-danger flex-shrink-0" /> : undefined,
           };
         })}
         activeTab={activeSlug}
@@ -75,7 +75,7 @@ export function SeoManager({ initialSettings }: Props) {
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         {activeRow && (
           <div className="space-y-4">
-            <p className="text-xs text-[#515155]">
+            <p className="text-xs text-admin-text-faint">
               {PAGE_META[activeRow.page_slug]?.description ?? activeRow.page_slug}
             </p>
 
@@ -132,10 +132,10 @@ export function SeoManager({ initialSettings }: Props) {
                   type="checkbox"
                   checked={activeRow.no_index}
                   onChange={(e) => handleChange(activeRow.id, 'no_index', e.target.checked)}
-                  className="rounded border-border-subtle bg-transparent"
+                  className="rounded border-admin-border-subtle bg-transparent"
                 />
-                <span className="text-muted-foreground">
-                  No Index <span className="text-[#404044]">(hide from search engines)</span>
+                <span className="text-admin-text-muted">
+                  No Index <span className="text-admin-text-ghost">(hide from search engines)</span>
                 </span>
               </label>
 
@@ -172,11 +172,11 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted-foreground">{label}</label>
+        <label className="text-xs font-medium text-admin-text-muted">{label}</label>
         {maxLength && (
           <span
             className={`text-[10px] ${
-              overLimit ? 'text-red-400' : nearLimit ? 'text-yellow-400' : 'text-[#303033]'
+              overLimit ? 'text-admin-danger' : nearLimit ? 'text-admin-warning' : 'text-admin-text-placeholder'
             }`}
           >
             {len}/{maxLength}

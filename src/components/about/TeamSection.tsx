@@ -18,7 +18,7 @@ const founders: Founder[] = [
       "Christened \"Ol' Richie\" via sprinkles on a birthday cake. It stuck. Multiple SXSW film festival alum. Spent three years as VP of Marketing at a crowdfunded hardware start-up.",
       'Hails from Texas. Austin, mostly. Boots, brisket, and breakfast tacos.',
     ],
-    photo: '/images/about/FNA-richie-v01-RAR.jpg',
+    photo: '/images/about/richie.jpg',
   },
   {
     name: 'Ready',
@@ -26,7 +26,7 @@ const founders: Founder[] = [
     bio: [
       "New York City blood. Los Angeles graduate. San Francisco style. Gets a moment of zen when he hears, \"action!\" Two decades painting with light, dancing with lens, and sculpting with story. Find him in the back-country when not behind camera.",
     ],
-    photo: '/images/about/FNA-ready-v01-RAR.jpg',
+    photo: '/images/about/ready.jpg',
   },
 ];
 

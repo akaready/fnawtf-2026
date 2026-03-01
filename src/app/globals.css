@@ -37,6 +37,107 @@
   --slide-gradient-h: 6rem;       /* sticky top gradient height */
   --slide-pt: 3.5rem;             /* content padding-top */
   --slide-pull: 3rem;             /* negative margin to pull under gradient */
+
+  /* ─── Admin Design Tokens ─────────────────────────────────────────────── */
+
+  /* Backgrounds — solid tiers (darkest → lightest) */
+  --admin-bg-base:           #000000;
+  --admin-bg-inset:          #0a0a0a;
+  --admin-bg-sidebar:        #0a0a0a;
+  --admin-bg-sidebar-hover:  #0e0e0e;
+  --admin-bg-raised:         #111111;
+  --admin-bg-overlay:        #1a1a1a;
+
+  /* Backgrounds — alpha layers */
+  --admin-bg-wash:           rgba(255, 255, 255, 0.02);
+  --admin-bg-subtle:         rgba(255, 255, 255, 0.03);
+  --admin-bg-selected:       rgba(255, 255, 255, 0.04);
+  --admin-bg-hover:          rgba(255, 255, 255, 0.05);
+  --admin-bg-hover-strong:   rgba(255, 255, 255, 0.10);
+  --admin-bg-active:         rgba(255, 255, 255, 0.10);
+
+  /* Borders */
+  --admin-border-subtle:     #1f1f1f;
+  --admin-border:            #2a2a2a;
+  --admin-border-muted:      rgba(255, 255, 255, 0.10);
+  --admin-border-emphasis:   rgba(255, 255, 255, 0.20);
+  --admin-border-focus:      rgba(255, 255, 255, 0.30);
+
+  /* Text */
+  --admin-text-primary:      #fafafa;
+  --admin-text-secondary:    #b3b3b3;
+  --admin-text-muted:        #a1a1aa;
+  --admin-text-dim:          #666666;
+  --admin-text-faint:        #505055;
+  --admin-text-ghost:        #404044;
+  --admin-text-placeholder:  #303033;
+
+  /* Status — Danger (red) */
+  --admin-danger:            #f87171;
+  --admin-danger-bg:         rgba(239, 68, 68, 0.10);
+  --admin-danger-bg-strong:  rgba(239, 68, 68, 0.20);
+  --admin-danger-border:     rgba(239, 68, 68, 0.30);
+
+  /* Status — Success (emerald) */
+  --admin-success:           #34d399;
+  --admin-success-bg:        rgba(16, 185, 129, 0.10);
+  --admin-success-bg-strong: rgba(16, 185, 129, 0.15);
+  --admin-success-border:    rgba(16, 185, 129, 0.30);
+
+  /* Status — Warning (amber) */
+  --admin-warning:           #fbbf24;
+  --admin-warning-bg:        rgba(245, 158, 11, 0.10);
+  --admin-warning-bg-strong: rgba(245, 158, 11, 0.15);
+  --admin-warning-border:    rgba(245, 158, 11, 0.30);
+
+  /* Status — Info (sky) */
+  --admin-info:              #38bdf8;
+  --admin-info-bg:           rgba(14, 165, 233, 0.10);
+  --admin-info-bg-strong:    rgba(14, 165, 233, 0.15);
+  --admin-info-border:       rgba(14, 165, 233, 0.30);
+
+  /* Accent / brand */
+  --admin-accent:            #a14dfd;
+  --admin-accent-hover:      #8b3de8;
+  --admin-accent-bg:         rgba(161, 77, 253, 0.15);
+  --admin-accent-border:     rgba(161, 77, 253, 0.30);
+
+  /* Toolbar accent colors (ROYGBIV) */
+  --admin-toolbar-red:       #ef4444;
+  --admin-toolbar-orange:    #ff6f2c;
+  --admin-toolbar-yellow:    #fcb400;
+  --admin-toolbar-green:     #20c933;
+  --admin-toolbar-blue:      #2d7ff9;
+  --admin-toolbar-indigo:    #6366f1;
+  --admin-toolbar-violet:    #8b46ff;
+
+  /* Border radius */
+  --admin-radius-sm:   0.375rem;
+  --admin-radius-md:   0.5rem;
+  --admin-radius-lg:   0.75rem;
+  --admin-radius-xl:   1rem;
+  --admin-radius-full: 9999px;
+
+  /* Typography */
+  --admin-font-display:          'Space Grotesk', sans-serif;
+  --admin-font-body:             'Manrope', sans-serif;
+  --admin-font-mono:             'Space Mono', monospace;
+  --admin-font-size-xs:          0.625rem;
+  --admin-font-size-sm:          0.75rem;
+  --admin-font-size-base:        0.875rem;
+  --admin-font-size-lg:          1rem;
+  --admin-font-size-xl:          1.25rem;
+  --admin-font-size-2xl:         1.5rem;
+  --admin-font-weight-normal:    400;
+  --admin-font-weight-medium:    500;
+  --admin-font-weight-semibold:  600;
+  --admin-font-weight-bold:      700;
+  --admin-line-height-tight:     1.25;
+  --admin-line-height-normal:    1.5;
+  --admin-line-height-relaxed:   1.625;
+  --admin-letter-spacing-tight:  -0.02em;
+  --admin-letter-spacing-normal: 0em;
+  --admin-letter-spacing-wide:   0.05em;
 }
 
 html {
@@ -87,26 +188,91 @@ html::-webkit-scrollbar {
   background: transparent;
 }
 
+/* Auto-hide scrollbar variant — hidden until hover (used by chat widget, etc.) */
+.admin-scrollbar-auto {
+  scrollbar-width: none;
+}
+.admin-scrollbar-auto:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.admin-scrollbar-auto::-webkit-scrollbar {
+  width: 4px;
+}
+.admin-scrollbar-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scrollbar-auto::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+}
+.admin-scrollbar-auto:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.admin-scrollbar-auto:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ─── Admin light mode (CSS inversion) ──────────────────────────────────── */
+.admin-shell.light-mode,
+html[data-admin-light] .admin-shell {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Counter-invert images, videos, and media so they render normally */
+.admin-shell.light-mode img,
+.admin-shell.light-mode video,
+.admin-shell.light-mode .no-invert,
+html[data-admin-light] .admin-shell img,
+html[data-admin-light] .admin-shell video,
+html[data-admin-light] .admin-shell .no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Client logos: stay inverted with the shell (white PNG → black in light mode) */
+.admin-shell.light-mode .admin-logo,
+html[data-admin-light] .admin-shell .admin-logo {
+  filter: none;
+}
+
 /* ─── Admin shared component utilities ────────────────────────────────────── */
 @layer components {
   /* Primary: white fill → black on hover */
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-lg border border-white bg-white text-black font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap;
+    @apply inline-flex items-center gap-2 border border-white bg-white text-black font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap;
+    border-radius: var(--admin-radius-md);
   }
 
   /* Secondary: ghost with subtle border → bg fill on hover */
   .btn-secondary {
-    @apply inline-flex items-center gap-2 rounded-lg border border-border-subtle text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-40 whitespace-nowrap;
+    @apply inline-flex items-center gap-2 border border-admin-border-subtle text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors disabled:opacity-40 whitespace-nowrap;
+    border-radius: var(--admin-radius-md);
   }
 
-  /* Danger: used for inline delete confirmations */
+  /* Danger: used for inline delete confirmations — always inline (never flex-col) */
   .btn-danger {
-    @apply rounded bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-50;
+    @apply inline-flex items-center gap-2 bg-admin-danger-bg text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors disabled:opacity-50;
+    border-radius: var(--admin-radius-md);
+  }
+
+  /* Ghost icon buttons */
+  .btn-ghost {
+    @apply flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors;
+    border-radius: var(--admin-radius-md);
+  }
+  .btn-ghost-danger {
+    @apply flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-danger hover:bg-admin-danger-bg transition-colors;
+    border-radius: var(--admin-radius-md);
+  }
+  .btn-ghost-add {
+    @apply flex items-center justify-center rounded-lg text-admin-text-muted hover:text-black hover:bg-white transition-colors;
+    border-radius: var(--admin-radius-md);
   }
 
   /* Admin text inputs, search, selects */
   .admin-input {
-    @apply rounded-lg border border-border-subtle bg-black text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-white/30 focus:border-white/30;
+    @apply border border-admin-border-subtle bg-admin-bg-base text-admin-text-primary placeholder:text-admin-text-faint focus:outline-none focus:ring-1 focus:ring-admin-border-focus focus:border-admin-border-focus;
+    border-radius: var(--admin-radius-md);
   }
 }
 
@@ -176,6 +342,21 @@ a:hover {
 /* Nav buttons manage their own hover color via GSAP — never go purple */
 a[data-btn-hover]:hover {
   color: inherit;
+}
+
+/* Admin shell links should never go purple — they manage their own hover colors */
+.admin-shell a:hover {
+  color: inherit;
+}
+
+/* Focus mode — push AdminShell sidebar off-screen to the left */
+.admin-shell.focus-push > aside {
+  transform: translateX(-100%);
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.admin-shell:not(.focus-push) > aside {
+  transform: translateX(0);
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */

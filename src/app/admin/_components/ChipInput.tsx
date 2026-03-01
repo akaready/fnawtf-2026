@@ -77,7 +77,7 @@ export function ChipInput({ value, onChange, placeholder = 'Add tag…', disable
   return (
     <div ref={wrapperRef} className="relative">
       <div
-        className={`flex flex-wrap gap-1.5 min-h-[42px] px-3 py-2 bg-black border border-border rounded-lg focus-within:border-white/30 transition-colors ${
+        className={`flex flex-wrap gap-1.5 min-h-[42px] px-3 py-2 bg-admin-bg-base border border-admin-border rounded-lg focus-within:border-admin-border-focus transition-colors ${
           disabled ? 'opacity-40 cursor-not-allowed' : ''
         }`}
         onClick={() => inputRef.current?.focus()}
@@ -85,14 +85,14 @@ export function ChipInput({ value, onChange, placeholder = 'Add tag…', disable
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/8 border border-border/60 rounded-md text-xs text-foreground"
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-admin-bg-hover rounded-md text-xs text-admin-text-primary"
           >
             {tag}
             {!disabled && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); remove(tag); }}
-                className="text-[#616166] hover:text-foreground transition-colors"
+                className="text-admin-text-faint hover:text-admin-text-primary transition-colors"
               >
                 <X size={10} />
               </button>
@@ -119,13 +119,13 @@ export function ChipInput({ value, onChange, placeholder = 'Add tag…', disable
           }}
           placeholder={value.length === 0 ? placeholder : ''}
           disabled={disabled}
-          className="flex-1 min-w-24 bg-transparent text-sm text-foreground placeholder:text-[#404044] focus:outline-none disabled:cursor-not-allowed"
+          className="flex-1 min-w-24 bg-transparent text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none disabled:cursor-not-allowed"
         />
       </div>
 
       {/* Suggestions dropdown */}
       {showSuggestions && filtered.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-border/60 rounded-lg shadow-xl">
+        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border rounded-lg shadow-xl">
           {filtered.map((suggestion, i) => (
             <button
               key={suggestion}
@@ -137,8 +137,8 @@ export function ChipInput({ value, onChange, placeholder = 'Add tag…', disable
               }}
               className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
                 i === highlightIndex
-                  ? 'bg-white/10 text-foreground'
-                  : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+                  ? 'bg-admin-bg-active text-admin-text-primary'
+                  : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary'
               }`}
             >
               {suggestion}

@@ -27,9 +27,9 @@ interface TimelineTabProps {
 // ── Phase icon (matches ScheduleSlide) ───────────────────────────────────────
 
 function PhaseIcon({ phase }: { phase: string }) {
-  if (phase === 'pre-production')  return <Pencil  size={12} className="text-[#4d4d4d]" />;
-  if (phase === 'production')      return <Camera  size={12} className="text-[#4d4d4d]" />;
-  if (phase === 'post-production') return <Scissors size={12} className="text-[#4d4d4d]" />;
+  if (phase === 'pre-production')  return <Pencil  size={12} className="text-admin-text-faint" />;
+  if (phase === 'production')      return <Camera  size={12} className="text-admin-text-faint" />;
+  if (phase === 'post-production') return <Scissors size={12} className="text-admin-text-faint" />;
   return null;
 }
 
@@ -43,8 +43,8 @@ function displayLabel(m: ProposalMilestoneRow): string {
 // ── Month dropdown options ───────────────────────────────────────────────────
 
 const dateInputCls =
-  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-3 py-1.5 text-[#b3b3b3] ' +
-  'focus:outline-none focus:border-white/20 focus:text-white/90 transition-colors ' +
+  'text-xs bg-black/40 border border-admin-border rounded px-3 py-1.5 text-admin-text-secondary ' +
+  'focus:outline-none focus:border-admin-border-emphasis focus:text-white/90 transition-colors ' +
   '[color-scheme:dark]';
 
 // ── Default timeline generation ──────────────────────────────────────────────
@@ -128,8 +128,8 @@ function generateDefaultTimeline(
 
 const resetBtnCls =
   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ' +
-  'bg-white/[0.06] border border-[#2a2a2a] text-[#999] ' +
-  'hover:text-white hover:bg-white/[0.10] transition-colors disabled:opacity-30';
+  'bg-admin-bg-hover border border-admin-border text-admin-text-secondary ' +
+  'hover:text-admin-text-primary hover:bg-admin-bg-hover-strong transition-colors disabled:opacity-30';
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -387,12 +387,12 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
     <div className="flex flex-col h-full">
 
       {/* Schedule window header */}
-      <div className="px-8 h-[51px] border-b border-[#2a2a2a] flex items-center gap-6">
-        <p className="text-xs font-mono text-[#404040] uppercase tracking-widest flex-shrink-0">
+      <div className="px-8 h-[51px] border-b border-admin-border flex items-center gap-6">
+        <p className="text-xs font-mono text-admin-text-ghost uppercase tracking-widest flex-shrink-0">
           Schedule window
         </p>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-[#666] flex-shrink-0">Kickoff</label>
+          <label className="text-xs text-admin-text-dim flex-shrink-0">Kickoff</label>
           <input
             type="date"
             value={scheduleStart}
@@ -401,7 +401,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           />
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-[#666] flex-shrink-0">Go Live</label>
+          <label className="text-xs text-admin-text-dim flex-shrink-0">Go Live</label>
           <div className={`relative${goLiveShake ? ' animate-shake' : ''}`}>
             <input
               type="date"
@@ -412,7 +412,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
             {scheduleEnd && (
               <button
                 onClick={() => handleScheduleEndChange('')}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-[#404040] hover:text-[#999] transition-colors"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-admin-text-ghost hover:text-admin-text-secondary transition-colors"
                 title="Clear Go Live date"
               >
                 <X size={10} />
@@ -439,12 +439,12 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           {visibleMonths.map((m, i) => (
             <div
               key={i}
-              className="relative group border border-[#2a2a2a] rounded-xl p-1 bg-white/[0.05]"
+              className="relative group border border-admin-border rounded-xl p-1 bg-admin-bg-hover"
             >
               {canRemoveMonthAt(i) && (
                 <button
                   onClick={() => setExtraMonths(n => n - 1)}
-                  className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-[#4d4d4d] hover:text-white hover:bg-white/10 transition-all"
+                  className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-active transition-all"
                   title="Remove month"
                 >
                   <X size={12} />
@@ -464,7 +464,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           <div className="flex items-center justify-center py-2">
             <button
               onClick={() => setExtraMonths(n => n + 1)}
-              className="flex items-center gap-1.5 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
+              className="flex items-center gap-1.5 text-xs text-admin-text-faint hover:text-admin-text-secondary transition-colors"
             >
               <Plus size={13} />
               Add month
@@ -478,7 +478,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
         {/* Right panel: phase-grouped milestone display */}
         <div className="flex-1 overflow-y-auto admin-scrollbar p-6">
           {sorted.length === 0 ? (
-            <p className="text-xs text-[#404040] text-center mt-8">
+            <p className="text-xs text-admin-text-ghost text-center mt-8">
               No milestones yet. Select a Kickoff month and click Generate Timeline.
             </p>
           ) : (
@@ -491,13 +491,13 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
                       <PhaseIcon phase={phase} />
                       {phase !== 'production' && (
                         <span
-                          className="text-[9px] font-mono text-[#404040] uppercase my-1"
+                          className="text-[9px] font-mono text-admin-text-ghost uppercase my-1"
                           style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                         >
                           {phase.replace('-', ' ')}
                         </span>
                       )}
-                      <div className="flex-1 w-px bg-white/10 mt-1" />
+                      <div className="flex-1 w-px bg-admin-bg-active mt-1" />
                     </div>
                   )}
                   {/* Milestone rows */}
@@ -537,14 +537,14 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
                           />
                           <div className="flex-1 py-1">
                             <div className="flex items-baseline gap-3 mb-1">
-                              <p className={`font-semibold text-lg ${isRedRow ? 'text-red-400' : 'text-white'}`}>{displayLabel(m)}</p>
+                              <p className={`font-semibold text-lg ${isRedRow ? 'text-admin-danger' : 'text-admin-text-primary'}`}>{displayLabel(m)}</p>
                               <p className="font-mono text-sm tracking-wider flex-shrink-0" style={{ color: isRedRow ? 'rgb(248,113,113)' : color }}>
                                 {formatDate(m.start_date)}
                                 {hasSpan && <> → {formatDate(m.end_date!)}</>}
                               </p>
                             </div>
                             {m.description && (
-                              <p className={`text-sm leading-relaxed ${isRedRow ? 'text-red-400/50' : 'text-[#808080]'}`}>{m.description}</p>
+                              <p className={`text-sm leading-relaxed ${isRedRow ? 'text-red-400/50' : 'text-admin-text-secondary'}`}>{m.description}</p>
                             )}
                           </div>
                         </div>

@@ -14,7 +14,7 @@ interface Props<T extends { id: string }> {
 }
 
 export function FilterPanel<T extends { id: string }>({ columns, filters, onChange, onClose }: Props<T>) {
-  const filterableCols = columns.filter((c) => c.type !== 'thumbnail');
+  const filterableCols = columns.filter((c) => c.type != null);
 
   const addFilter = () => {
     const col = filterableCols[0];
@@ -48,9 +48,9 @@ export function FilterPanel<T extends { id: string }>({ columns, filters, onChan
   return (
     <ToolbarPopover onClose={onClose} width="w-[520px]" align="right">
       <div className="space-y-2">
-        <div className="text-xs text-[#888] uppercase tracking-wider font-medium mb-2">Filter where</div>
+        <div className="text-xs text-admin-text-secondary uppercase tracking-wider font-medium mb-2">Filter where</div>
         {filters.length === 0 && (
-          <p className="text-sm text-[#777] py-2">No filters applied. Showing all rows.</p>
+          <p className="text-sm text-admin-text-secondary py-2">No filters applied. Showing all rows.</p>
         )}
         {filters.map((f, i) => {
           const col = columns.find((c) => c.key === f.field) ?? filterableCols[0];
@@ -86,7 +86,7 @@ export function FilterPanel<T extends { id: string }>({ columns, filters, onChan
                     value={f.value}
                     onChange={(e) => updateFilter(i, { value: e.target.value })}
                     placeholder={colType === 'tags' ? 'tag name…' : 'value…'}
-                    className="flex-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-1.5 text-sm text-foreground placeholder:text-[#555] focus:outline-none focus:border-white/20"
+                    className="flex-1 bg-admin-bg-overlay border border-admin-border rounded-lg px-2.5 py-1.5 text-sm text-admin-text-primary placeholder:text-admin-text-faint focus:outline-none focus:border-admin-border-emphasis"
                   />
                 )
               ) : (
@@ -94,7 +94,7 @@ export function FilterPanel<T extends { id: string }>({ columns, filters, onChan
               )}
               <button
                 onClick={() => removeFilter(i)}
-                className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-[#555] hover:text-foreground hover:bg-white/5 transition-colors"
+                className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
               >
                 <X size={14} />
               </button>
@@ -103,7 +103,7 @@ export function FilterPanel<T extends { id: string }>({ columns, filters, onChan
         })}
         <button
           onClick={addFilter}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mt-1"
+          className="flex items-center gap-1.5 text-sm text-admin-text-muted hover:text-admin-text-primary transition-colors mt-1"
         >
           <Plus size={14} /> Add filter
         </button>

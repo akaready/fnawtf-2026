@@ -30,7 +30,7 @@ interface Props {
 }
 
 const inputCls =
-  'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2 text-sm text-muted-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
+  'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
 
 export function MeetingPanel({
   meeting,
@@ -64,7 +64,7 @@ export function MeetingPanel({
       value: 'transcript',
       label: 'Transcript',
       badge: transcript ? (
-        <span className="ml-1 text-[10px] rounded-full bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5">
+        <span className="ml-1 text-[10px] rounded-full bg-admin-success-bg text-emerald-300 px-1.5 py-0.5">
           ready
         </span>
       ) : undefined,
@@ -89,10 +89,10 @@ export function MeetingPanel({
   return (
     <PanelDrawer open={open} onClose={onClose} width="w-[540px]">
       {/* Header */}
-      <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-[#2a2a2a]">
+      <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border">
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-medium truncate">{meeting.title}</h2>
-          <div className="flex items-center gap-2 mt-1.5 text-sm text-[#515155]">
+          <div className="flex items-center gap-2 mt-1.5 text-sm text-admin-text-faint">
             <span>
               {new Date(meeting.start_time).toLocaleDateString('en-US', {
                 weekday: 'short',
@@ -117,7 +117,7 @@ export function MeetingPanel({
           <div className="flex items-center gap-2 mt-2">
             <StatusBadge value={meeting.status} />
             {meeting.recall_bot_status && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-[#303033]">
+              <span className="inline-flex items-center gap-1 text-[10px] text-admin-text-placeholder">
                 <Bot size={10} />
                 {meeting.recall_bot_status}
               </span>
@@ -126,7 +126,7 @@ export function MeetingPanel({
         </div>
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#404044] hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
         >
           <X size={18} />
         </button>
@@ -141,7 +141,7 @@ export function MeetingPanel({
           <div className="px-6 py-5 space-y-5">
             {/* ── Relationships ── */}
             <div>
-              <label className="text-xs text-[#303033] uppercase tracking-wider font-medium">
+              <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium">
                 Relationships
               </label>
               {meeting.meeting_relationships.length > 0 ? (
@@ -149,15 +149,15 @@ export function MeetingPanel({
                   {meeting.meeting_relationships.map((rel) => (
                     <div
                       key={rel.id}
-                      className="flex items-center gap-2.5 rounded-lg bg-white/5 border border-[#2a2a2a] px-3 py-2.5 group"
+                      className="flex items-center gap-2.5 rounded-lg bg-admin-bg-hover border border-admin-border px-3 py-2.5 group"
                     >
                       {rel.clients ? (
                         <>
                           <Building2
                             size={14}
-                            className="text-amber-400 flex-shrink-0"
+                            className="text-admin-warning flex-shrink-0"
                           />
-                          <span className="text-sm text-foreground truncate">
+                          <span className="text-sm text-admin-text-primary truncate">
                             {rel.clients.name}
                           </span>
                         </>
@@ -165,9 +165,9 @@ export function MeetingPanel({
                         <>
                           <User
                             size={14}
-                            className="text-sky-400 flex-shrink-0"
+                            className="text-admin-info flex-shrink-0"
                           />
-                          <span className="text-sm text-foreground truncate">
+                          <span className="text-sm text-admin-text-primary truncate">
                             {rel.contacts.first_name} {rel.contacts.last_name}
                           </span>
                         </>
@@ -176,13 +176,13 @@ export function MeetingPanel({
                         className={`ml-auto text-[10px] rounded-full px-1.5 py-0.5 flex-shrink-0 ${
                           rel.match_type === 'auto'
                             ? 'bg-indigo-500/20 text-indigo-300'
-                            : 'bg-white/10 text-[#515155]'
+                            : 'bg-admin-bg-active text-admin-text-faint'
                         }`}
                       >
                         {rel.match_type}
                       </span>
                       {rel.matched_email && (
-                        <span className="text-[10px] text-[#202022] flex-shrink-0 hidden group-hover:inline">
+                        <span className="text-[10px] text-admin-text-placeholder flex-shrink-0 hidden group-hover:inline">
                           {rel.matched_email}
                         </span>
                       )}
@@ -193,7 +193,7 @@ export function MeetingPanel({
                           })
                         }
                         disabled={linking}
-                        className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/0 group-hover:text-[#303033] hover:!text-red-400 hover:!bg-red-500/10 transition-colors flex-shrink-0 cursor-pointer"
+                        className="w-6 h-6 flex items-center justify-center rounded text-admin-text-muted/0 group-hover:text-admin-text-placeholder hover:!text-admin-danger hover:!bg-red-500/10 transition-colors flex-shrink-0 cursor-pointer"
                       >
                         <Unlink size={14} />
                       </button>
@@ -201,7 +201,7 @@ export function MeetingPanel({
                   ))}
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-[#202022]">
+                <p className="mt-2 text-sm text-admin-text-placeholder">
                   No relationships detected yet.
                 </p>
               )}
@@ -269,14 +269,14 @@ export function MeetingPanel({
             {/* ── Meeting link ── */}
             {meeting.meeting_url && (
               <div>
-                <label className="text-xs text-[#303033] uppercase tracking-wider font-medium">
+                <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium">
                   Meeting Link
                 </label>
                 <a
                   href={meeting.meeting_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 mt-1.5 text-sm text-sky-400 hover:text-sky-300 transition-colors truncate"
+                  className="flex items-center gap-1.5 mt-1.5 text-sm text-admin-info hover:text-sky-300 transition-colors truncate"
                 >
                   <ExternalLink size={12} className="flex-shrink-0" />
                   <span className="truncate">{meeting.meeting_url}</span>
@@ -286,7 +286,7 @@ export function MeetingPanel({
 
             {/* ── Attendees ── */}
             <div>
-              <label className="text-xs text-[#303033] uppercase tracking-wider font-medium flex items-center gap-1.5">
+              <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium flex items-center gap-1.5">
                 <Users size={12} />
                 Attendees ({meeting.meeting_attendees.length})
               </label>
@@ -294,21 +294,21 @@ export function MeetingPanel({
                 {meeting.meeting_attendees.map((att) => (
                   <div
                     key={att.id}
-                    className="flex items-center justify-between rounded-lg bg-white/5 border border-[#2a2a2a] px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-lg bg-admin-bg-hover border border-admin-border px-3 py-2 text-sm"
                   >
                     <div className="min-w-0">
-                      <span className="text-foreground truncate block">
+                      <span className="text-admin-text-primary truncate block">
                         {att.display_name || att.email}
                       </span>
                       {att.display_name && (
-                        <span className="text-[#303033] text-xs">
+                        <span className="text-admin-text-placeholder text-xs">
                           {att.email}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {att.is_organizer && (
-                        <span className="text-[10px] text-[#303033] uppercase">
+                        <span className="text-[10px] text-admin-text-placeholder uppercase">
                           organizer
                         </span>
                       )}
@@ -319,7 +319,7 @@ export function MeetingPanel({
                   </div>
                 ))}
                 {meeting.meeting_attendees.length === 0 && (
-                  <p className="text-sm text-[#202022]">
+                  <p className="text-sm text-admin-text-placeholder">
                     No attendees
                   </p>
                 )}
@@ -329,10 +329,10 @@ export function MeetingPanel({
             {/* ── Description ── */}
             {meeting.description && (
               <div>
-                <label className="text-xs text-[#303033] uppercase tracking-wider font-medium">
+                <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium">
                   Description
                 </label>
-                <p className="mt-1.5 text-sm text-[#404044] whitespace-pre-wrap leading-relaxed break-words">
+                <p className="mt-1.5 text-sm text-admin-text-ghost whitespace-pre-wrap leading-relaxed break-words">
                   {meeting.description}
                 </p>
               </div>

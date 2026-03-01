@@ -63,6 +63,56 @@ export async function batchDeleteProjects(ids: string[]) {
   revalidatePath('/work');
 }
 
+export async function batchDeleteClients(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('clients').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/companies');
+}
+
+export async function batchDeleteContacts(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('contacts').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/contacts');
+}
+
+export async function batchDeleteTestimonials(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('testimonials').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/testimonials');
+  revalidatePath('/');
+}
+
+export async function batchDeleteProposals(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('proposals').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+}
+
+export async function batchDeleteRoles(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('roles').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/roles');
+}
+
+export async function batchDeleteTags(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('tags').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/tags');
+}
+
+export async function batchDeleteScripts(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('scripts').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
 // ── Project Fetchers (for side panel) ─────────────────────────────────────
 
 export async function getProjectById(id: string) {
@@ -181,6 +231,20 @@ export async function saveProjectBTSImages(
     const { error } = await supabase.from('project_bts_images').insert(rows as never);
     if (error) throw new Error(error.message);
   }
+}
+
+export async function uploadBTSImage(projectId: string, formData: FormData): Promise<string> {
+  await requireAuth();
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const path = `${projectId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+  const { error } = await serviceClient.storage.from('bts-images').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  const { data: { publicUrl } } = serviceClient.storage.from('bts-images').getPublicUrl(path);
+  return publicUrl;
 }
 
 // ── SEO Settings ─────────────────────────────────────────────────────────
@@ -1955,4 +2019,575 @@ export async function unlinkMeetingRelationship(relationshipId: string) {
     .eq('id', relationshipId);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/meetings');
+}
+
+// ── Intake Submissions ──────────────────────────────────────────────────────
+
+export interface IntakeSubmission {
+  id: string;
+  name: string;
+  email: string;
+  title: string | null;
+  company_name: string | null;
+  project_name: string;
+  phases: string[];
+  pitch: string;
+  deliverables: string[];
+  timeline: string;
+  timeline_date: string | null;
+  priority_order: string[];
+  experience: string;
+  budget: string | null;
+  status: string;
+  client_id: string | null;
+  contact_id: string | null;
+  project_id: string | null;
+  created_at: string;
+  // All fields
+  stakeholders: string | null;
+  excitement: string | null;
+  key_feature: string | null;
+  vision: string | null;
+  avoid: string | null;
+  audience: string | null;
+  challenge: string | null;
+  competitors: string | null;
+  video_links: string | null;
+  deliverable_notes: string | null;
+  timeline_notes: string | null;
+  experience_notes: string | null;
+  partners: string[];
+  partner_details: string | null;
+  public_goal: string | null;
+  internal_goal: string | null;
+  email_list_size: string | null;
+  file_urls: string[];
+  anything_else: string | null;
+  referral: string | null;
+}
+
+export async function getIntakeSubmissions(): Promise<IntakeSubmission[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('intake_submissions')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as IntakeSubmission[];
+}
+
+export async function updateIntakeSubmission(id: string, updates: Partial<IntakeSubmission>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('intake_submissions')
+    .update({ ...updates, updated_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/intake');
+}
+
+export async function deleteIntakeSubmission(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('intake_submissions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/intake');
+}
+
+// ── Scripts ──────────────────────────────────────────────────────────────
+
+export async function getScripts() {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('scripts')
+    .select('*, project:projects(id, title)')
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getScriptById(id: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('scripts')
+    .select('*, project:projects(id, title)')
+    .eq('id', id)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function createScript(data: Record<string, unknown>): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+  const { data: script, error } = await supabase
+    .from('scripts')
+    .insert({ ...data, created_by: userId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  const scriptId = (script as { id: string }).id;
+
+  // Seed default tags
+  const { DEFAULT_SCRIPT_TAGS } = await import('@/types/scripts');
+  const tagRows = DEFAULT_SCRIPT_TAGS.map(tag => ({ ...tag, script_id: scriptId }));
+  await supabase.from('script_tags').insert(tagRows as never);
+
+  revalidatePath('/admin/scripts');
+  return scriptId;
+}
+
+export async function updateScript(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('scripts')
+    .update({ ...data, updated_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
+export async function getScriptVersions(scriptGroupId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('scripts')
+    .select('id, title, version, status, created_at')
+    .eq('script_group_id', scriptGroupId)
+    .order('version', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function deleteScript(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('scripts').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
+// ── Script Scenes ────────────────────────────────────────────────────────
+
+export async function getScriptScenes(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_scenes')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createScene(scriptId: string, data: Record<string, unknown>): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: scene, error } = await supabase
+    .from('script_scenes')
+    .insert({ ...data, script_id: scriptId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+  return (scene as { id: string }).id;
+}
+
+export async function updateScene(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_scenes')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
+export async function deleteScene(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_scenes').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
+export async function reorderScenes(_scriptId: string, orderedIds: string[]) {
+  const { supabase } = await requireAuth();
+  const updates = orderedIds.map((id, i) =>
+    supabase.from('script_scenes').update({ sort_order: i } as never).eq('id', id)
+  );
+  const results = await Promise.all(updates);
+  const failed = results.find(r => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
+  revalidatePath('/admin/scripts');
+}
+
+// ── Script Beats ─────────────────────────────────────────────────────────
+
+export async function getScriptBeats(sceneIds: string[]) {
+  if (sceneIds.length === 0) return [];
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_beats')
+    .select('*')
+    .in('scene_id', sceneIds)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createBeat(sceneId: string, data: Record<string, unknown>): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: beat, error } = await supabase
+    .from('script_beats')
+    .insert({ ...data, scene_id: sceneId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (beat as { id: string }).id;
+}
+
+export async function updateBeat(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_beats')
+    .update({ ...data, updated_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteBeat(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_beats').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderBeats(_sceneId: string, orderedIds: string[]) {
+  const { supabase } = await requireAuth();
+  const updates = orderedIds.map((id, i) =>
+    supabase.from('script_beats').update({ sort_order: i } as never).eq('id', id)
+  );
+  const results = await Promise.all(updates);
+  const failed = results.find(r => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
+}
+
+// ── Script Characters ────────────────────────────────────────────────────
+
+export async function getScriptCharacters(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_characters')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createCharacter(scriptId: string, data: Record<string, unknown>): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: char, error } = await supabase
+    .from('script_characters')
+    .insert({ ...data, script_id: scriptId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (char as { id: string }).id;
+}
+
+export async function updateCharacter(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_characters')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteCharacter(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_characters').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Script Tags ──────────────────────────────────────────────────────────
+
+export async function getScriptTags(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_tags')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('name');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createScriptTag(scriptId: string, data: Record<string, unknown>): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: tag, error } = await supabase
+    .from('script_tags')
+    .insert({ ...data, script_id: scriptId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (tag as { id: string }).id;
+}
+
+export async function updateScriptTag(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_tags')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteScriptTag(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_tags').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Script Locations ──────────────────────────────────────────────────
+
+export async function getScriptLocations(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_locations')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  if (error?.message?.includes('schema cache')) return [];
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function createLocation(scriptId: string, data: Record<string, unknown>): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: loc, error } = await supabase
+    .from('script_locations')
+    .insert({ ...data, script_id: scriptId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (loc as { id: string }).id;
+}
+
+export async function updateLocation(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_locations').update(data as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteLocation(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_locations').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Script Beat References ────────────────────────────────────────────
+
+export async function getBeatReferences(beatIds: string[]) {
+  if (beatIds.length === 0) return [];
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_beat_references')
+    .select('*')
+    .in('beat_id', beatIds)
+    .order('sort_order');
+  // Gracefully handle table not yet created (migration not applied)
+  if (error?.message?.includes('schema cache')) return [];
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function uploadBeatReference(beatId: string, formData: FormData): Promise<{ id: string; image_url: string; storage_path: string }> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${beatId}/${Date.now()}.${ext}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from('script-references')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: urlData } = supabase.storage.from('script-references').getPublicUrl(path);
+  const image_url = urlData.publicUrl;
+
+  // Get current max sort_order
+  const { data: existing } = await supabase
+    .from('script_beat_references')
+    .select('sort_order')
+    .eq('beat_id', beatId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = ((existing?.[0] as { sort_order: number } | undefined)?.sort_order ?? -1) + 1;
+
+  const { data: ref, error: insertErr } = await supabase
+    .from('script_beat_references')
+    .insert({ beat_id: beatId, image_url, storage_path: path, sort_order: nextOrder } as never)
+    .select('id')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+
+  return { id: (ref as { id: string }).id, image_url, storage_path: path };
+}
+
+export async function deleteBeatReference(id: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Get storage path first
+  const { data: ref } = await supabase
+    .from('script_beat_references')
+    .select('storage_path')
+    .eq('id', id)
+    .single();
+  if (ref) {
+    await supabase.storage.from('script-references').remove([(ref as { storage_path: string }).storage_path]);
+  }
+  await supabase.from('script_beat_references').delete().eq('id', id);
+}
+
+// ── Script Versioning ──────────────────────────────────────────────────
+
+export async function createScriptVersion(scriptId: string): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+
+  // 1. Fetch current script
+  const { data: script, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('*')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
+  const s = script as Record<string, unknown>;
+
+  // 2. Fetch all related data
+  const [scenesRes, charsRes, tagsRes, locsRes] = await Promise.all([
+    supabase.from('script_scenes').select('*').eq('script_id', scriptId).order('sort_order'),
+    supabase.from('script_characters').select('*').eq('script_id', scriptId).order('sort_order'),
+    supabase.from('script_tags').select('*').eq('script_id', scriptId).order('name'),
+    supabase.from('script_locations').select('*').eq('script_id', scriptId).order('sort_order'),
+  ]);
+
+  const scenes = scenesRes.data ?? [];
+  const sceneIds = scenes.map((s: { id: string }) => s.id);
+
+  // Fetch beats for all scenes
+  let allBeats: Record<string, unknown>[] = [];
+  if (sceneIds.length > 0) {
+    const { data: beatsData } = await supabase
+      .from('script_beats')
+      .select('*')
+      .in('scene_id', sceneIds)
+      .order('sort_order');
+    allBeats = beatsData ?? [];
+  }
+
+  // 3. Create new script with bumped version
+  const { data: newScript, error: newScriptErr } = await supabase
+    .from('scripts')
+    .insert({
+      title: s.title,
+      project_id: s.project_id,
+      script_group_id: s.script_group_id,
+      status: 'draft',
+      version: ((s.version as number) ?? 1) + 1,
+      notes: s.notes,
+      created_by: userId,
+    } as never)
+    .select('id')
+    .single();
+  if (newScriptErr || !newScript) throw new Error(newScriptErr?.message ?? 'Failed to create version');
+  const newScriptId = (newScript as { id: string }).id;
+
+  // 4. Clone scenes — map old scene IDs to new ones
+  const sceneIdMap = new Map<string, string>();
+  for (const scene of scenes) {
+    const s = scene as Record<string, unknown>;
+    const { data: newScene, error: sceneErr } = await supabase
+      .from('script_scenes')
+      .insert({
+        script_id: newScriptId,
+        sort_order: s.sort_order,
+        location_name: s.location_name,
+        time_of_day: s.time_of_day,
+        int_ext: s.int_ext,
+        scene_notes: s.scene_notes,
+      } as never)
+      .select('id')
+      .single();
+    if (sceneErr || !newScene) throw new Error(sceneErr?.message ?? 'Failed to clone scene');
+    sceneIdMap.set(s.id as string, (newScene as { id: string }).id);
+  }
+
+  // 5. Clone beats with mapped scene IDs
+  for (const beat of allBeats) {
+    const b = beat as Record<string, unknown>;
+    const newSceneId = sceneIdMap.get(b.scene_id as string);
+    if (!newSceneId) continue;
+    await supabase.from('script_beats').insert({
+      scene_id: newSceneId,
+      sort_order: b.sort_order,
+      audio_content: b.audio_content,
+      visual_content: b.visual_content,
+      notes_content: b.notes_content,
+    } as never);
+  }
+
+  // 6. Clone characters
+  for (const char of (charsRes.data ?? [])) {
+    const c = char as Record<string, unknown>;
+    await supabase.from('script_characters').insert({
+      script_id: newScriptId,
+      name: c.name,
+      description: c.description,
+      color: c.color,
+      sort_order: c.sort_order,
+    } as never);
+  }
+
+  // 7. Clone tags
+  for (const tag of (tagsRes.data ?? [])) {
+    const t = tag as Record<string, unknown>;
+    await supabase.from('script_tags').insert({
+      script_id: newScriptId,
+      name: t.name,
+      slug: t.slug,
+      category: t.category,
+      color: t.color,
+    } as never);
+  }
+
+  // 8. Clone locations and remap scene location_id
+  const locationIdMap = new Map<string, string>();
+  for (const loc of (locsRes.data ?? [])) {
+    const l = loc as Record<string, unknown>;
+    const { data: newLoc } = await supabase.from('script_locations').insert({
+      script_id: newScriptId,
+      name: l.name,
+      description: l.description,
+      sort_order: l.sort_order,
+    } as never).select('id').single();
+    if (newLoc) locationIdMap.set(l.id as string, (newLoc as { id: string }).id);
+  }
+
+  // Remap location_id on cloned scenes
+  for (const scene of scenes) {
+    const s = scene as Record<string, unknown>;
+    const oldLocId = s.location_id as string | null;
+    if (oldLocId && locationIdMap.has(oldLocId)) {
+      const newSceneId = sceneIdMap.get(s.id as string);
+      if (newSceneId) {
+        await supabase.from('script_scenes').update({ location_id: locationIdMap.get(oldLocId) } as never).eq('id', newSceneId);
+      }
+    }
+  }
+
+  revalidatePath('/admin/scripts');
+  return newScriptId;
 }

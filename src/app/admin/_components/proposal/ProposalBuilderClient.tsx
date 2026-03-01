@@ -296,41 +296,41 @@ export function ProposalBuilderClient({
       <div className="flex-shrink-0 px-6 py-3 border-b border-border flex items-center gap-3">
         <button
           onClick={() => router.push('/admin/proposals')}
-          className="p-2 rounded-lg text-[#4d4d4d] hover:text-foreground hover:bg-white/5 transition-colors"
+          className="p-2 rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
         >
           <ArrowLeft size={16} />
         </button>
 
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-bold truncate">{proposal.title}</h1>
-          <p className="text-[11px] text-[#333] font-mono truncate">/p/{proposal.slug}</p>
+          <p className="text-[11px] text-admin-text-placeholder font-mono truncate">/p/{proposal.slug}</p>
         </div>
 
         <button
           onClick={() => router.push(`/admin/proposals/${proposal.id}/settings`)}
           title="Edit proposal settings"
-          className="p-2 rounded-lg text-[#4d4d4d] hover:text-foreground hover:bg-white/5 transition-colors"
+          className="p-2 rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
         >
           <Settings size={15} />
         </button>
         <button
           onClick={copyLink}
           title="Copy proposal link"
-          className="p-2 rounded-lg text-[#4d4d4d] hover:text-foreground hover:bg-white/5 transition-colors"
+          className="p-2 rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
         >
-          {copiedLink ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
+          {copiedLink ? <Check size={15} className="text-admin-success" /> : <Copy size={15} />}
         </button>
         <button
           onClick={() => window.open(`/p/${proposal.slug}`, '_blank')}
           title="Open proposal page"
-          className="p-2 rounded-lg text-[#4d4d4d] hover:text-foreground hover:bg-white/5 transition-colors"
+          className="p-2 rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
         >
           <ExternalLink size={15} />
         </button>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           title={sidebarOpen ? 'Hide library' : 'Show library'}
-          className="p-2 rounded-lg text-[#4d4d4d] hover:text-foreground hover:bg-white/5 transition-colors"
+          className="p-2 rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
         >
           {sidebarOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
         </button>

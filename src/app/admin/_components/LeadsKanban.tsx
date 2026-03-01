@@ -3,8 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
 import {
-  Plus, Building2, RotateCcw,
-  Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+  Plus, Building2, RotateCcw, Table2, Columns, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
 } from 'lucide-react';
 import {
   DndContext,
@@ -26,8 +25,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import confetti from 'canvas-confetti';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
+import { useViewMode } from '../_hooks/useViewMode';
+import { AdminDataTable, type ColDef } from './table';
 import { ToolbarButton } from './table/TableToolbar';
-import { type ClientRow, createClientRecord, updateClientRecord, updateContact, updateTestimonial, updateProject } from '../actions';
+import { type ClientRow, createClientRecord, updateClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
 import {
@@ -40,11 +42,18 @@ import {
 type PipelineStage = 'new' | 'qualified' | 'proposal' | 'negotiating' | 'closed' | 'lost';
 
 const PIPELINE_COLUMNS: { value: PipelineStage; label: string; accent: string; headerColor: string; overColor: string; cardBg: string; cardBgFocused: string; cardBorder: string; cardBorderFocused: string }[] = [
-  { value: 'new',         label: 'New Lead',    accent: 'border-[#2a2a2a]',      headerColor: 'text-[#666]',    overColor: 'bg-white/[0.04]',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
-  { value: 'qualified',   label: 'Qualified',   accent: 'border-amber-500/30',   headerColor: 'text-amber-400',   overColor: 'bg-amber-500/[0.06]',   cardBg: '#1a1408',   cardBgFocused: '#251c0c',   cardBorder: 'bg-amber-800/50',   cardBorderFocused: 'bg-amber-600/70' },
-  { value: 'proposal',    label: 'Proposal',    accent: 'border-sky-500/30',     headerColor: 'text-sky-400',     overColor: 'bg-sky-500/[0.06]',     cardBg: '#0a1520',   cardBgFocused: '#0d1e2e',   cardBorder: 'bg-sky-800/50',     cardBorderFocused: 'bg-sky-600/70' },
+  { value: 'new',         label: 'New Lead',    accent: 'border-admin-border',      headerColor: 'text-admin-text-dim',    overColor: 'bg-admin-bg-selected',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
+  { value: 'qualified',   label: 'Qualified',   accent: 'border-admin-warning-border',   headerColor: 'text-admin-warning',   overColor: 'bg-amber-500/[0.06]',   cardBg: '#1a1408',   cardBgFocused: '#251c0c',   cardBorder: 'bg-amber-800/50',   cardBorderFocused: 'bg-amber-600/70' },
+  { value: 'proposal',    label: 'Proposal',    accent: 'border-admin-info-border',     headerColor: 'text-admin-info',     overColor: 'bg-sky-500/[0.06]',     cardBg: '#0a1520',   cardBgFocused: '#0d1e2e',   cardBorder: 'bg-sky-800/50',     cardBorderFocused: 'bg-sky-600/70' },
   { value: 'negotiating', label: 'Negotiating', accent: 'border-violet-500/30',  headerColor: 'text-violet-400',  overColor: 'bg-violet-500/[0.06]',  cardBg: '#150f1e',   cardBgFocused: '#1d1528',   cardBorder: 'bg-violet-800/50',  cardBorderFocused: 'bg-violet-600/70' },
-  { value: 'closed',      label: 'Won',         accent: 'border-emerald-500/30', headerColor: 'text-emerald-400', overColor: 'bg-emerald-500/[0.06]', cardBg: '#0a1810',   cardBgFocused: '#0e2018',   cardBorder: 'bg-emerald-800/50', cardBorderFocused: 'bg-emerald-600/70' },
+  { value: 'closed',      label: 'Won',         accent: 'border-admin-success-border', headerColor: 'text-admin-success', overColor: 'bg-emerald-500/[0.06]', cardBg: '#0a1810',   cardBgFocused: '#0e2018',   cardBorder: 'bg-emerald-800/50', cardBorderFocused: 'bg-emerald-600/70' },
+];
+
+type LeadsView = 'kanban' | 'table';
+
+const LEADS_VIEWS: ViewDef<LeadsView>[] = [
+  { key: 'kanban', icon: Columns, label: 'Kanban view' },
+  { key: 'table', icon: Table2, label: 'Table view' },
 ];
 
 interface Props {
@@ -63,6 +72,7 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useViewMode<LeadsView>('fna-leads-viewMode', 'kanban');
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [animatingCard, setAnimatingCard] = useState<ClientRow | null>(null);
   const [showLost, setShowLost] = useState(false);
@@ -253,6 +263,74 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
     return map;
   }, [filtered]);
 
+  // All leads for table view (including lost)
+  const allLeadsForTable = useMemo(() => {
+    if (!search.trim()) return leadsOnly;
+    const q = search.toLowerCase();
+    return leadsOnly.filter((c) =>
+      c.name.toLowerCase().includes(q) || c.notes?.toLowerCase().includes(q)
+    );
+  }, [leadsOnly, search]);
+
+  const leadsTableColumns: ColDef<ClientRow>[] = useMemo(() => [
+    {
+      key: 'logo_url', label: '', type: 'thumbnail' as const, defaultWidth: 44,
+      render: (row) => row.logo_url ? (
+        <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
+      ) : (
+        <div className="w-8 h-8 rounded-md bg-admin-bg-selected flex items-center justify-center">
+          <Building2 size={12} className="text-admin-text-placeholder" />
+        </div>
+      ),
+    },
+    {
+      key: 'name', label: 'Company', sortable: true, searchable: true,
+      render: (row) => <span className="font-medium text-admin-text-primary/80">{row.name}</span>,
+    },
+    {
+      key: 'pipeline_stage', label: 'Stage', sortable: true, groupable: true,
+      type: 'select' as const,
+      options: [...PIPELINE_COLUMNS.map((c) => ({ value: c.value, label: c.label })), { value: 'lost', label: 'Lost' }],
+      render: (row) => {
+        const stage = (row.pipeline_stage ?? 'new') as PipelineStage;
+        const col = PIPELINE_COLUMNS.find((c) => c.value === stage);
+        return <span className={`text-xs ${col?.headerColor ?? 'text-red-500/60'}`}>{col?.label ?? 'Lost'}</span>;
+      },
+    },
+    {
+      key: 'status', label: 'Status', sortable: true,
+      render: (row) => {
+        const cfg = STATUS_CONFIG[(row.status ?? 'prospect') as CompanyStatus] ?? STATUS_CONFIG['prospect'];
+        return <span className={`text-xs ${cfg.color}`}>{cfg.label}</span>;
+      },
+    },
+    {
+      key: '_contacts', label: 'Contacts', type: 'number' as const,
+      sortValue: (row) => localContacts.filter((ct) => ct.client_id === row.id).length,
+      render: (row) => {
+        const count = localContacts.filter((ct) => ct.client_id === row.id).length;
+        return count > 0
+          ? <span className="text-xs text-admin-text-faint">{count}</span>
+          : <span className="text-xs text-admin-text-placeholder">—</span>;
+      },
+    },
+    {
+      key: '_projects', label: 'Projects', type: 'number' as const,
+      sortValue: (row) => localProjects.filter((p) => p.client_id === row.id).length,
+      render: (row) => {
+        const count = localProjects.filter((p) => p.client_id === row.id).length;
+        return count > 0
+          ? <span className="text-xs text-admin-text-faint">{count}</span>
+          : <span className="text-xs text-admin-text-placeholder">—</span>;
+      },
+    },
+    {
+      key: 'created_at', label: 'Added', sortable: true, align: 'right' as const,
+      sortValue: (row) => new Date(row.created_at).getTime(),
+      render: (row) => <span className="text-xs text-admin-text-ghost">{new Date(row.created_at).toLocaleDateString()}</span>,
+    },
+  ], [localContacts, localProjects]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
@@ -278,8 +356,36 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
         }
       />
 
-      {/* Toolbar — matches AdminDataTable toolbar style */}
-      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+      {viewMode === 'table' ? (
+        <AdminDataTable
+          columns={leadsTableColumns}
+          data={allLeadsForTable}
+          storageKey="fna-table-leads"
+          toolbar
+          toolbarSlot={<ViewSwitcher views={LEADS_VIEWS} activeView={viewMode} onChange={setViewMode} />}
+          sortable
+          filterable
+          groupable
+          columnVisibility
+          columnReorder
+          columnResize
+          selectable
+          freezePanes
+          exportCsv
+          onBatchDelete={async (ids) => {
+            await batchDeleteClients(ids);
+            setLeads((prev) => prev.filter((l) => !ids.includes(l.id)));
+          }}
+          onRowClick={(row) => setActiveId(row.id)}
+          selectedId={activeId ?? undefined}
+          emptyMessage={leadsOnly.length === 0 ? 'No leads yet.' : 'No matching leads.'}
+          emptyAction={{ label: 'Add your first lead', onClick: handleCreate }}
+        />
+      ) : (
+      <>
+      {/* Disabled toolbar — matches table toolbar height */}
+      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+        <ViewSwitcher views={LEADS_VIEWS} activeView={viewMode} onChange={setViewMode} />
         <div className="flex items-center gap-1 ml-auto flex-shrink-0">
           <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
           <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
@@ -290,7 +396,6 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
           <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
         </div>
       </div>
-
       {/* Kanban board — horizontal scroll */}
       <div className="flex-1 min-h-0 overflow-y-hidden admin-scrollbar px-8 pt-4 pb-6">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -345,6 +450,8 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
           </DragOverlay>
         </DndContext>
       </div>
+      </>
+      )}
 
       <CompanyPanel
         company={activeCompany}
@@ -395,13 +502,13 @@ function KanbanColumn({
   return (
     <div
       className={`flex flex-col flex-1 min-w-0 h-full rounded-xl border transition-colors ${col.accent} ${
-        isOver ? col.overColor : 'bg-white/[0.02]'
+        isOver ? col.overColor : 'bg-admin-bg-wash'
       }`}
     >
       {/* Column header */}
       <div className={`px-3 py-2.5 border-b flex items-center justify-between ${col.accent}`}>
         <span className={`text-xs font-semibold ${col.headerColor}`}>{col.label}</span>
-        <span className="text-[10px] text-[#303033] bg-white/5 rounded px-1.5 py-0.5">
+        <span className="text-[10px] text-admin-text-placeholder bg-admin-bg-hover rounded px-1.5 py-0.5">
           {cards.length}
         </span>
       </div>
@@ -450,7 +557,7 @@ function LostZone({
 
   return (
     <div className={`flex flex-col flex-shrink-0 rounded-xl border transition-colors border-red-900/30 ${
-      isOver ? 'bg-red-500/[0.08]' : 'bg-white/[0.02]'
+      isOver ? 'bg-red-500/[0.08]' : 'bg-admin-bg-wash'
     }`}>
       {/* Header — is both the drop zone and the expand toggle */}
       <div
@@ -461,8 +568,8 @@ function LostZone({
         <span className="text-xs font-semibold text-red-500/60">Lost</span>
         <span className={`text-[10px] rounded px-1.5 py-0.5 ${
           lostLeads.length > 0
-            ? 'text-red-400/70 bg-red-500/10'
-            : 'text-[#303033] bg-white/5'
+            ? 'text-admin-danger/70 bg-admin-danger-bg'
+            : 'text-admin-text-placeholder bg-admin-bg-hover'
         }`}>
           {lostLeads.length}
         </span>
@@ -476,11 +583,11 @@ function LostZone({
               {animatingCard.logo_url ? (
                 <img src={animatingCard.logo_url} alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0" />
               ) : (
-                <div className="w-6 h-6 rounded-md bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-                  <Building2 size={10} className="text-[#202022]" />
+                <div className="w-6 h-6 rounded-md bg-admin-bg-selected flex items-center justify-center flex-shrink-0">
+                  <Building2 size={10} className="text-admin-text-placeholder" />
                 </div>
               )}
-              <p className="text-xs font-medium text-foreground/60 truncate">{animatingCard.name}</p>
+              <p className="text-xs font-medium text-admin-text-primary/60 truncate">{animatingCard.name}</p>
             </div>
           </div>
         </div>
@@ -514,8 +621,8 @@ function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRe
         {c.logo_url ? (
           <img src={c.logo_url} alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0 opacity-50" />
         ) : (
-          <div className="w-6 h-6 rounded-md bg-white/[0.03] flex items-center justify-center flex-shrink-0">
-            <Building2 size={10} className="text-[#202022]" />
+          <div className="w-6 h-6 rounded-md bg-admin-bg-subtle flex items-center justify-center flex-shrink-0">
+            <Building2 size={10} className="text-admin-text-placeholder" />
           </div>
         )}
         <p className="text-[11px] text-red-200/40 truncate flex-1">{c.name}</p>
@@ -523,7 +630,7 @@ function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRe
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onRestore(c.id); }}
           title="Restore to New Lead"
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-[#404044] hover:text-[#b3b3b3] flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-admin-text-ghost hover:text-admin-text-secondary flex-shrink-0"
         >
           <RotateCcw size={11} />
         </button>
@@ -568,7 +675,7 @@ function LeadCard({
   isRemoving = false,
   cardBg = '#0e0e0e',
   cardBgFocused = '#141414',
-  cardBorder = 'bg-white/[0.08]',
+  cardBorder = 'bg-admin-bg-hover',
   cardBorderFocused = 'bg-white/20',
   onClick,
   sortableRef,
@@ -616,18 +723,18 @@ function LeadCard({
         {c.logo_url ? (
           <img src={c.logo_url} alt="" className="w-7 h-7 rounded-md object-contain flex-shrink-0" />
         ) : (
-          <div className="w-7 h-7 rounded-md bg-white/[0.04] flex items-center justify-center flex-shrink-0">
-            <Building2 size={12} className="text-[#202022]" />
+          <div className="w-7 h-7 rounded-md bg-admin-bg-selected flex items-center justify-center flex-shrink-0">
+            <Building2 size={12} className="text-admin-text-placeholder" />
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-foreground truncate">{c.name}</p>
+          <p className="text-xs font-medium text-admin-text-primary truncate">{c.name}</p>
           <p className="text-[10px] mt-0.5 flex items-center gap-1 truncate">
             <span className={statusCfg.color}>{statusCfg.label}</span>
             {(contactCount > 0 || projectCount > 0) && (
               <>
-                <span className="text-muted-foreground/25">·</span>
-                <span className="text-[#404044]">
+                <span className="text-admin-text-muted/25">·</span>
+                <span className="text-admin-text-ghost">
                   {[
                     contactCount > 0 && `${contactCount}c`,
                     projectCount > 0 && `${projectCount}p`,

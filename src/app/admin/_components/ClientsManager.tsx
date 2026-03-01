@@ -8,6 +8,8 @@ import {
   Loader2, Trash2, Check,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
+import { useViewMode } from '../_hooks/useViewMode';
 import { ToolbarButton, ToolbarPopover } from './table/TableToolbar';
 import { AdminDataTable, type ColDef, type SortRule, type FilterRule } from './table';
 import { FilterPanel } from './table/FilterPanel';
@@ -22,6 +24,7 @@ import {
   updateTestimonial,
   updateProject,
   uploadLogo,
+  batchDeleteClients,
 } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
@@ -37,11 +40,16 @@ import {
 
 type ViewMode = 'cards' | 'table';
 
+const CLIENT_VIEWS: ViewDef<ViewMode>[] = [
+  { key: 'cards', icon: LayoutGrid, label: 'Card view' },
+  { key: 'table', icon: Table2, label: 'Table view' },
+];
+
 const CARD_SIZE_CONFIG = {
-  1: { logoSize: 36, padding: 'px-3 py-2.5', nameSize: 'text-xs', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5' },
-  2: { logoSize: 54, padding: 'px-4 py-3.5', nameSize: 'text-sm', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' },
-  3: { logoSize: 72, padding: 'px-5 py-4', nameSize: 'text-sm', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' },
-  4: { logoSize: 96, padding: 'px-6 py-5', nameSize: 'text-base', gridCols: 'grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2' },
+  1: { logoSize: 36, padding: 'px-3 py-3', nameSize: 'text-sm', detailSize: 'text-sm', metaSize: 'text-xs', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5' },
+  2: { logoSize: 54, padding: 'px-5 py-4', nameSize: 'text-lg', detailSize: 'text-sm', metaSize: 'text-sm', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' },
+  3: { logoSize: 72, padding: 'px-5 py-5', nameSize: 'text-xl', detailSize: 'text-base', metaSize: 'text-sm', gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' },
+  4: { logoSize: 96, padding: 'px-6 py-6', nameSize: 'text-2xl', detailSize: 'text-lg', metaSize: 'text-base', gridCols: 'grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2' },
 } as const;
 
 interface Props {
@@ -60,10 +68,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === 'undefined') return 'cards';
-    return (localStorage.getItem('fna-clients-viewMode') as ViewMode) || 'cards';
-  });
+  const [viewMode, setViewMode] = useViewMode<ViewMode>('fna-clients-viewMode', 'cards');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   // ── Card view state (persisted) ─────────────────────────────────────────
@@ -87,10 +92,6 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    localStorage.setItem('fna-clients-viewMode', viewMode);
-  }, [viewMode]);
 
   // ── Card columns (for filter/sort/fields panels) ────────────────────────
   const cardColumns: ColDef<ClientRow>[] = useMemo(() => [
@@ -305,10 +306,10 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       defaultWidth: 44,
       render: (row) =>
         row.logo_url ? (
-          <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
+          <img src={row.logo_url} alt="" className="admin-logo w-8 h-8 rounded-md object-contain" />
         ) : (
-          <div className="w-8 h-8 rounded-md bg-white/[0.04] flex items-center justify-center">
-            <Building2 size={12} className="text-[#202022]" />
+          <div className="w-8 h-8 rounded-md bg-admin-bg-selected flex items-center justify-center">
+            <Building2 size={12} className="text-admin-text-placeholder" />
           </div>
         ),
     },
@@ -316,7 +317,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       key: 'name',
       label: 'Name',
       sortable: true,
-      render: (row) => <span className="font-medium text-foreground/80">{row.name}</span>,
+      render: (row) => <span className="font-medium text-admin-text-primary/80">{row.name}</span>,
     },
     {
       key: 'status',
@@ -331,9 +332,9 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       label: 'Industry',
       render: (row) =>
         row.industry ? (
-          <span className="text-xs text-[#515155]">{row.industry}</span>
+          <span className="text-xs text-admin-text-faint">{row.industry}</span>
         ) : (
-          <span className="text-xs text-[#202022]">—</span>
+          <span className="text-xs text-admin-text-placeholder">—</span>
         ),
     },
     {
@@ -342,9 +343,9 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       render: (row) => {
         const count = localContacts.filter((ct) => ct.client_id === row.id).length;
         return count > 0 ? (
-          <span className="text-xs text-[#515155]">{count}</span>
+          <span className="text-xs text-admin-text-faint">{count}</span>
         ) : (
-          <span className="text-xs text-[#202022]">—</span>
+          <span className="text-xs text-admin-text-placeholder">—</span>
         );
       },
     },
@@ -354,9 +355,9 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       render: (row) => {
         const count = localProjects.filter((p) => p.client_id === row.id).length;
         return count > 0 ? (
-          <span className="text-xs text-[#515155]">{count}</span>
+          <span className="text-xs text-admin-text-faint">{count}</span>
         ) : (
-          <span className="text-xs text-[#202022]">—</span>
+          <span className="text-xs text-admin-text-placeholder">—</span>
         );
       },
     },
@@ -364,7 +365,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       key: 'created_at',
       label: 'Added',
       render: (row) => (
-        <span className="text-xs text-[#404044]">
+        <span className="text-xs text-admin-text-ghost">
           {new Date(row.created_at).toLocaleDateString()}
         </span>
       ),
@@ -396,24 +397,6 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search clients…"
-        rightContent={
-          <div className="flex items-center rounded-lg border border-yellow-500/30 overflow-hidden">
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`px-3 py-[9px] transition-colors ${viewMode === 'cards' ? 'bg-yellow-500/20 text-yellow-400' : 'text-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10'}`}
-              title="Card view"
-            >
-              <LayoutGrid size={14} />
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`px-3 py-[9px] transition-colors ${viewMode === 'table' ? 'bg-yellow-500/20 text-yellow-400' : 'text-yellow-500/50 hover:text-yellow-400 hover:bg-yellow-500/10'}`}
-              title="Table view"
-            >
-              <Table2 size={14} />
-            </button>
-          </div>
-        }
         actions={
           <>
             <button
@@ -449,7 +432,8 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
       {viewMode === 'cards' ? (
         <>
         {/* Toolbar */}
-        <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+        <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+          <ViewSwitcher views={CLIENT_VIEWS} activeView={viewMode} onChange={setViewMode} />
           <div className="flex items-center gap-1 ml-auto flex-shrink-0">
             {/* Fields */}
             <div className="relative">
@@ -520,7 +504,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
               />
               {cardPanel === 'size' && (
                 <ToolbarPopover onClose={() => setCardPanel(null)} width="w-44" align="right">
-                  <div className="text-xs text-[#888] uppercase tracking-wider font-medium mb-2">Card size</div>
+                  <div className="text-xs text-admin-text-secondary uppercase tracking-wider font-medium mb-2">Card size</div>
                   <div className="flex items-end gap-2 justify-center py-1">
                     {([1, 2, 3, 4] as const).map((s) => (
                       <button
@@ -528,8 +512,8 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                         onClick={() => { setCardSize(s); setCardPanel(null); }}
                         className={`rounded-md border-2 transition-colors ${
                           cardSize === s
-                            ? 'border-white/40 bg-white/10'
-                            : 'border-[#2a2a2a] bg-[#151515] hover:border-white/20'
+                            ? 'border-admin-border-emphasis bg-admin-bg-active'
+                            : 'border-admin-border bg-admin-bg-raised hover:border-admin-border-emphasis'
                         }`}
                         style={{ width: 12 + s * 6, height: 12 + s * 6 }}
                         title={`Size ${s}`}
@@ -562,7 +546,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                   onClick={() => setActiveId(c.id)}
                   className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
                 >
-                  <div className={`rounded-[11px] ${sz.padding} flex items-center gap-3 transition-colors ${isFocused ? 'bg-[#151515]' : 'bg-[#111] hover:bg-[#131313]'}`}>
+                  <div className={`rounded-[11px] ${sz.padding} flex items-start gap-3 h-full transition-colors ${isFocused ? 'bg-admin-bg-raised' : 'bg-admin-bg-raised hover:bg-[#131313]'}`}>
                     {cardVisibleFields.has('logo_url') && (
                       <GalleryLogoDropzone
                         logoUrl={c.logo_url}
@@ -573,54 +557,54 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className={`${sz.nameSize} font-medium text-foreground truncate`}>{c.name}</p>
+                      <p className={`${sz.nameSize} font-medium text-admin-text-primary truncate`}>{c.name}</p>
                       {(cardVisibleFields.has('status') || countParts.length > 0) && (
-                        <p className="text-xs mt-0.5 truncate flex items-center gap-1.5">
+                        <p className={`${sz.detailSize} mt-0.5 truncate flex items-center gap-1.5`}>
                           {cardVisibleFields.has('status') && <span className={statusCfg.color}>{statusCfg.label}</span>}
-                          {cardVisibleFields.has('status') && countParts.length > 0 && <span className="text-muted-foreground/25">·</span>}
-                          <span className="text-[#404044]">{countParts.join(' · ')}</span>
+                          {cardVisibleFields.has('status') && countParts.length > 0 && <span className="text-admin-text-muted/25">·</span>}
+                          <span className="text-admin-text-ghost">{countParts.join(' · ')}</span>
                         </p>
                       )}
                       {cardSize >= 3 && (
                         <>
                           {cardVisibleFields.has('industry') && c.industry && (
-                            <p className="text-xs mt-1 text-[#515155] truncate">{c.industry}</p>
+                            <p className={`${sz.detailSize} mt-1 text-admin-text-faint truncate`}>{c.industry}</p>
                           )}
                           {cardVisibleFields.has('location') && c.location && (
-                            <p className="text-xs mt-0.5 text-[#515155] truncate">{c.location}</p>
+                            <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate`}>{c.location}</p>
                           )}
                           {cardVisibleFields.has('email') && c.email && (
-                            <p className="text-xs mt-0.5 text-[#515155] truncate">{c.email}</p>
+                            <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate`}>{c.email}</p>
                           )}
                           {cardVisibleFields.has('company_size') && c.company_size && (
-                            <p className="text-xs mt-0.5 text-[#515155] truncate">{c.company_size}</p>
+                            <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate`}>{c.company_size}</p>
                           )}
                           {cardVisibleFields.has('founded_year') && c.founded_year && (
-                            <p className="text-xs mt-0.5 text-[#515155] truncate">Est. {c.founded_year}</p>
+                            <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate`}>Est. {c.founded_year}</p>
                           )}
                           {cardVisibleFields.has('pipeline_stage') && c.pipeline_stage && c.pipeline_stage !== 'new' && (
-                            <p className="text-xs mt-0.5 text-amber-400/60 truncate capitalize">{c.pipeline_stage}</p>
+                            <p className={`${sz.detailSize} mt-0.5 text-amber-400/60 truncate capitalize`}>{c.pipeline_stage}</p>
                           )}
                           {cardVisibleFields.has('description') && c.description && (
-                            <p className="text-[10px] mt-0.5 text-[#404044] line-clamp-2">{c.description}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-admin-text-ghost line-clamp-2`}>{c.description}</p>
                           )}
                           {cardVisibleFields.has('notes') && c.notes && (
-                            <p className="text-[10px] mt-0.5 text-[#404044] italic line-clamp-1">{c.notes}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-admin-text-ghost italic line-clamp-1`}>{c.notes}</p>
                           )}
                           {cardVisibleFields.has('website_url') && c.website_url && (
-                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.website_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-blue-400/50 truncate`}>{c.website_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
                           )}
                           {cardVisibleFields.has('linkedin_url') && c.linkedin_url && (
-                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.linkedin_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-blue-400/50 truncate`}>{c.linkedin_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
                           )}
                           {cardVisibleFields.has('twitter_url') && c.twitter_url && (
-                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.twitter_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-blue-400/50 truncate`}>{c.twitter_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
                           )}
                           {cardVisibleFields.has('instagram_url') && c.instagram_url && (
-                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.instagram_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-blue-400/50 truncate`}>{c.instagram_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
                           )}
                           {cardVisibleFields.has('created_at') && (
-                            <p className="text-[10px] mt-0.5 text-[#404044]">{new Date(c.created_at).toLocaleDateString()}</p>
+                            <p className={`${sz.metaSize} mt-0.5 text-admin-text-ghost`}>{new Date(c.created_at).toLocaleDateString()}</p>
                           )}
                         </>
                       )}
@@ -642,7 +626,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
             })}
           </div>
           {clientOnly.length === 0 && (
-            <div className="text-center py-12 text-[#404044] text-sm">
+            <div className="text-center py-12 text-admin-text-ghost text-sm">
               No clients yet. Click &quot;Add Client&quot; to create one.
             </div>
           )}
@@ -655,6 +639,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
           columns={tableColumns}
           storageKey="fna-table-clients"
           toolbar
+          toolbarSlot={<ViewSwitcher views={CLIENT_VIEWS} activeView={viewMode} onChange={setViewMode} />}
           sortable
           filterable
           columnVisibility
@@ -663,6 +648,10 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
           selectable
           freezePanes
           exportCsv
+          onBatchDelete={async (ids) => {
+            await batchDeleteClients(ids);
+            setClients((prev) => prev.filter((c) => !ids.includes(c.id)));
+          }}
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
           emptyMessage="No clients yet."
@@ -753,19 +742,19 @@ function GalleryLogoDropzone({
         style={{ width: size, height: size }}
         className={`rounded-xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors border-2 border-dashed ${
           dragOver
-            ? 'border-white/40 bg-white/10'
+            ? 'border-admin-border-emphasis bg-admin-bg-active'
             : logoUrl
             ? 'border-transparent'
-            : 'border-border/40 bg-white/[0.02] hover:border-white/20'
+            : 'border-admin-border-subtle bg-admin-bg-wash hover:border-admin-border-emphasis'
         }`}
         title="Drop logo or click to upload"
       >
         {uploading ? (
-          <Loader2 size={Math.max(14, size * 0.3)} className="animate-spin text-[#515155]" />
+          <Loader2 size={Math.max(14, size * 0.3)} className="animate-spin text-admin-text-faint" />
         ) : logoUrl ? (
-          <img src={logoUrl} alt="" className="w-full h-full object-contain p-1" />
+          <img src={logoUrl} alt="" className="admin-logo w-full h-full object-contain p-1" />
         ) : (
-          <Building2 size={Math.max(14, size * 0.35)} className="text-[#202022]" />
+          <Building2 size={Math.max(14, size * 0.35)} className="text-admin-text-placeholder" />
         )}
       </div>
       {logoUrl && !uploading && (
@@ -774,14 +763,14 @@ function GalleryLogoDropzone({
           className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors opacity-0 group-hover/logo:opacity-100 ${
             confirming
               ? 'opacity-100 bg-red-500 border border-red-400'
-              : 'bg-[#2a2a2a] border border-[#3a3a3a] hover:bg-red-500/30 hover:border-red-500/40'
+              : 'bg-admin-border border border-admin-border hover:bg-admin-danger-bg-strong hover:border-admin-danger-border'
           }`}
           title={confirming ? 'Click again to confirm' : 'Remove logo'}
         >
           {confirming ? (
             <Check size={9} className="text-white" />
           ) : (
-            <Trash2 size={9} className="text-[#808080]" />
+            <Trash2 size={9} className="text-admin-text-secondary" />
           )}
         </button>
       )}

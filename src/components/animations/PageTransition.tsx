@@ -121,8 +121,9 @@ export function PageTransition({ children }: PageTransitionProps) {
       const navEl = document.querySelector('nav') as HTMLElement | null;
       const navHeight = navEl ? navEl.offsetHeight : 0;
 
-      // Proposal routes: cover entire viewport (nav unmounts behind the panel)
-      const isProposalTransition = destPathname.startsWith('/p/') || window.location.pathname.startsWith('/p/');
+      // Immersive routes: cover entire viewport (nav unmounts behind the panel)
+      const isProposalTransition = destPathname.startsWith('/p/') || window.location.pathname.startsWith('/p/')
+        || destPathname === '/start' || window.location.pathname === '/start';
 
       const panel = createPanel({
         top: isProposalTransition ? '0' : `${navHeight}px`,

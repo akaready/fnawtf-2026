@@ -37,7 +37,7 @@ export function EditableTextCell({ value, rowId, field: _field, onEdit, classNam
         className={`inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
         title={value || undefined}
       >
-        {value || <span className="text-[#303033]">—</span>}
+        {value || <span className="text-admin-text-placeholder">—</span>}
       </span>
     );
   }
@@ -47,10 +47,10 @@ export function EditableTextCell({ value, rowId, field: _field, onEdit, classNam
       <span
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={() => setEditing(true)}
-        className={`cursor-text hover:ring-1 hover:ring-white/15 rounded px-1 -mx-1 py-0.5 transition-all inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
+        className={`cursor-text hover:ring-1 hover:ring-admin-border-muted rounded px-1 -mx-1 py-0.5 transition-all inline-block w-full truncate ${mono ? 'font-mono text-xs' : ''} ${className ?? ''}`}
         title={value || 'Double-click to edit'}
       >
-        {value || <span className="text-[#303033] italic">—</span>}
+        {value || <span className="text-admin-text-placeholder italic">—</span>}
       </span>
     );
   }
@@ -68,7 +68,7 @@ export function EditableTextCell({ value, rowId, field: _field, onEdit, classNam
         if (e.key === 'Enter') save();
         if (e.key === 'Escape') { setDraft(value); setEditing(false); }
       }}
-      className={`w-full bg-black border border-white/20 rounded px-1.5 py-0.5 text-sm text-foreground focus:outline-none focus:border-white/40 ${mono ? 'font-mono text-xs' : ''}`}
+      className={`w-full bg-admin-bg-base border border-admin-border-emphasis rounded px-1.5 py-0.5 text-sm text-admin-text-primary focus:outline-none focus:border-admin-border-focus ${mono ? 'font-mono text-xs' : ''}`}
     />
   );
 }

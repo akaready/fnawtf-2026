@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Plus, ExternalLink, Trash2, Loader2 } from 'lucide-react';
-import { deleteProposal, createProposalDraft } from '@/app/admin/actions';
+import { deleteProposal, createProposalDraft, batchDeleteProposals } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
   AdminDeleteModal,
@@ -85,7 +85,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       defaultWidth: 52,
       sortable: true,
       render: (row) => (
-        <span className="text-[#404040] font-mono text-xs">{row.proposal_number}</span>
+        <span className="text-admin-text-ghost font-mono text-xs">{row.proposal_number}</span>
       ),
     },
     {
@@ -93,14 +93,14 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       label: 'Company',
       type: 'text',
       sortable: true,
-      render: (row) => <span className="font-medium text-white">{row.contact_company}</span>,
+      render: (row) => <span className="font-medium text-admin-text-primary">{row.contact_company}</span>,
     },
     {
       key: 'contact_name',
       label: 'Contact',
       type: 'text',
       sortable: true,
-      render: (row) => <span className="text-[#999]">{row.contact_name}</span>,
+      render: (row) => <span className="text-admin-text-secondary">{row.contact_name}</span>,
     },
     {
       key: 'title',
@@ -130,7 +130,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       sortable: true,
       options: Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label })),
       render: (row) => (
-        <span className="text-[#808080] text-xs">
+        <span className="text-admin-text-secondary text-xs">
           {TYPE_LABELS[row.proposal_type] ?? row.proposal_type}
         </span>
       ),
@@ -178,7 +178,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       type: 'toggle',
       defaultVisible: false,
       toggleLabels: ['Yes', 'No'],
-      toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-[#515155]'],
+      toggleColors: ['bg-admin-success-bg text-admin-success', 'bg-admin-bg-hover text-admin-text-faint'],
     },
     {
       key: 'crowdfunding_deferred',
@@ -186,7 +186,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       type: 'toggle',
       defaultVisible: false,
       toggleLabels: ['Yes', 'No'],
-      toggleColors: ['bg-yellow-500/10 text-yellow-400', 'bg-white/5 text-[#515155]'],
+      toggleColors: ['bg-admin-warning-bg text-admin-warning', 'bg-admin-bg-hover text-admin-text-faint'],
     },
     {
       key: '_activity',
@@ -194,9 +194,9 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       defaultWidth: 144,
       render: (row) => {
         const vc = viewCounts[row.id];
-        if (!vc?.views) return <span className="text-[#333] text-xs">—</span>;
+        if (!vc?.views) return <span className="text-admin-text-ghost text-xs">—</span>;
         return (
-          <span className="text-[#666] text-xs font-mono whitespace-nowrap">
+          <span className="text-admin-text-dim text-xs font-mono whitespace-nowrap">
             {vc.views} view{vc.views !== 1 ? 's' : ''} · {relativeTime(vc.lastViewed)}
           </span>
         );
@@ -293,14 +293,14 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
                 onClick={() => setStatusFilter(tab.value)}
                 className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
                   statusFilter === tab.value
-                    ? 'bg-white/10 text-white border-transparent'
-                    : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                    ? 'bg-admin-bg-active text-admin-text-primary border-transparent'
+                    : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
                 }`}
               >
                 {tab.label}
                 {tab.value !== 'all' && (
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
-                    statusFilter === tab.value ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                    statusFilter === tab.value ? 'bg-admin-bg-active' : 'bg-admin-bg-hover text-admin-text-faint'
                   }`}>
                     {proposals.filter((p) => p.status === tab.value).length}
                   </span>
@@ -309,6 +309,10 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             ))}
           </>
         }
+        onBatchDelete={async (ids) => {
+          await batchDeleteProposals(ids);
+          setProposals((prev) => prev.filter((p) => !ids.includes(p.id)));
+        }}
         emptyMessage={
           search || statusFilter !== 'all'
             ? 'No proposals match your filters.'
@@ -326,7 +330,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           title="Delete proposal?"
           description={
             <>
-              <span className="text-[#ccc]">{deleteTarget.contact_company}</span> — this action
+              <span className="text-admin-text-secondary">{deleteTarget.contact_company}</span> — this action
               cannot be undone.
             </>
           }

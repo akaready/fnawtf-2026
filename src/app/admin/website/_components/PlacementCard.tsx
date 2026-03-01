@@ -35,7 +35,7 @@ function CardContent({
 
   return (
     <>
-      <div className={`flex-shrink-0 ${thumbSize} rounded overflow-hidden bg-white/[0.04]`}>
+      <div className={`flex-shrink-0 ${thumbSize} rounded overflow-hidden bg-admin-bg-selected`}>
         {placement.project.thumbnail_url ? (
           <img
             src={placement.project.thumbnail_url}
@@ -48,10 +48,10 @@ function CardContent({
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#ccc] truncate">
+        <p className="text-sm font-medium text-admin-text-secondary truncate">
           {placement.project.title}
         </p>
-        <p className="text-xs text-[#4d4d4d] truncate">{placement.project.client_name}</p>
+        <p className="text-xs text-admin-text-secondary truncate">{placement.project.client_name}</p>
       </div>
 
       {!isDragging && showFullWidth && onToggleFullWidth && (
@@ -61,7 +61,7 @@ function CardContent({
           className={`flex-shrink-0 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 ${
             placement.full_width
               ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-400/10'
-              : 'text-[#333] hover:text-[#666] hover:bg-white/5'
+              : 'text-admin-text-placeholder hover:text-admin-text-dim hover:bg-admin-bg-hover'
           }`}
           title={placement.full_width ? 'Shrink to normal' : 'Expand to full width'}
         >
@@ -73,7 +73,7 @@ function CardContent({
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(placement.id); }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="flex-shrink-0 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 text-[#333] hover:text-red-400 hover:bg-red-400/10"
+          className="flex-shrink-0 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 text-admin-text-placeholder hover:text-admin-danger hover:bg-admin-danger-bg"
           aria-label="Remove from page"
         >
           <X size={14} />
@@ -133,8 +133,8 @@ export function PlacementCard({
       {...attributes}
       className={`relative flex items-center ${padding} rounded-lg group touch-none ${
         isDragging
-          ? 'border-2 border-dashed border-[#2a2a2a] bg-white/[0.02] opacity-40'
-          : 'bg-white/[0.03] border border-[#2a2a2a] cursor-grab active:cursor-grabbing'
+          ? 'border-2 border-dashed border-admin-border bg-admin-bg-subtle opacity-40'
+          : 'bg-admin-bg-subtle border border-admin-border cursor-grab active:cursor-grabbing'
       } ${className}`}
     >
       <CardContent

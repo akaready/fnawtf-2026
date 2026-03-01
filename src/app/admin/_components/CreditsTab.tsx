@@ -35,7 +35,7 @@ export type CreditsTabHandle = {
 };
 
 const inputClass =
-  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors';
+  'w-full px-3 py-2 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors';
 
 /* ── Combobox ───────────────────────────────────────────────────────────── */
 
@@ -127,14 +127,14 @@ function Combobox({
         className={inputClass}
       />
       {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border rounded-lg shadow-xl">
           {filtered.slice(0, 20).map((opt) => (
             <button
               key={opt.id}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(opt)}
-              className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-white/[0.06] transition-colors truncate"
+              className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-white/[0.06] transition-colors truncate"
             >
               {opt.name}
             </button>
@@ -145,7 +145,7 @@ function Combobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-[#2a2a2a]"
+              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-white/[0.06] transition-colors border-t border-admin-border"
             >
               {creating ? 'Creating...' : `${createLabel} "${query.trim()}"`}
             </button>
@@ -219,20 +219,20 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
   return (
     <div className="space-y-4">
       {credits.length === 0 ? (
-        <p className="text-sm text-[#515155] py-4">No credits yet.</p>
+        <p className="text-sm text-admin-text-faint py-4">No credits yet.</p>
       ) : (
         <div className="space-y-2">
           {credits.map((credit, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 p-3 border border-border/40 rounded-lg bg-white/[0.02]"
+              className="flex items-center gap-2 p-3 border border-admin-border-subtle rounded-lg bg-admin-bg-subtle"
             >
               <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
                   onClick={() => move(i, -1)}
                   disabled={i === 0}
-                  className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors"
+                  className="text-admin-text-ghost hover:text-admin-text-muted disabled:opacity-20 transition-colors"
                 >
                   <ArrowUp size={12} />
                 </button>
@@ -240,7 +240,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
                   type="button"
                   onClick={() => move(i, 1)}
                   disabled={i === credits.length - 1}
-                  className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors"
+                  className="text-admin-text-ghost hover:text-admin-text-muted disabled:opacity-20 transition-colors"
                 >
                   <ArrowDown size={12} />
                 </button>
@@ -266,7 +266,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
+                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-danger hover:bg-red-500/8 transition-colors"
               >
                 <Trash2 size={13} />
               </button>
@@ -278,7 +278,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
       <button
         type="button"
         onClick={add}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
       >
         <Plus size={14} /> Add Credit
       </button>

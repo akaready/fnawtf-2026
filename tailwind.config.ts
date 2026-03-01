@@ -31,7 +31,7 @@ const config: Config = {
           800: '#561d94',
           900: '#471976',
         },
-        // Dark theme
+        // Dark theme (legacy — kept for public site compatibility)
         background: '#000000',
         surface: '#070707',
         foreground: '#fafafa',
@@ -41,12 +41,104 @@ const config: Config = {
         'border-subtle': '#1f1f1f',
         accent: '#a14dfd',
         'accent-foreground': '#ffffff',
+
+        // ─── Admin Design Tokens ───────────────────────────────────
+        admin: {
+          bg: {
+            base:           'var(--admin-bg-base)',
+            inset:          'var(--admin-bg-inset)',
+            sidebar:        'var(--admin-bg-sidebar)',
+            'sidebar-hover': 'var(--admin-bg-sidebar-hover)',
+            raised:         'var(--admin-bg-raised)',
+            overlay:        'var(--admin-bg-overlay)',
+            wash:           'var(--admin-bg-wash)',
+            subtle:         'var(--admin-bg-subtle)',
+            selected:       'var(--admin-bg-selected)',
+            hover:          'var(--admin-bg-hover)',
+            'hover-strong': 'var(--admin-bg-hover-strong)',
+            active:         'var(--admin-bg-active)',
+          },
+          border: {
+            subtle:    'var(--admin-border-subtle)',
+            DEFAULT:   'var(--admin-border)',
+            muted:     'var(--admin-border-muted)',
+            emphasis:  'var(--admin-border-emphasis)',
+            focus:     'var(--admin-border-focus)',
+          },
+          text: {
+            primary:     'var(--admin-text-primary)',
+            secondary:   'var(--admin-text-secondary)',
+            muted:       'var(--admin-text-muted)',
+            dim:         'var(--admin-text-dim)',
+            faint:       'var(--admin-text-faint)',
+            ghost:       'var(--admin-text-ghost)',
+            placeholder: 'var(--admin-text-placeholder)',
+          },
+          danger: {
+            DEFAULT:     'var(--admin-danger)',
+            bg:          'var(--admin-danger-bg)',
+            'bg-strong': 'var(--admin-danger-bg-strong)',
+            border:      'var(--admin-danger-border)',
+          },
+          success: {
+            DEFAULT:     'var(--admin-success)',
+            bg:          'var(--admin-success-bg)',
+            'bg-strong': 'var(--admin-success-bg-strong)',
+            border:      'var(--admin-success-border)',
+          },
+          warning: {
+            DEFAULT:     'var(--admin-warning)',
+            bg:          'var(--admin-warning-bg)',
+            'bg-strong': 'var(--admin-warning-bg-strong)',
+            border:      'var(--admin-warning-border)',
+          },
+          info: {
+            DEFAULT:     'var(--admin-info)',
+            bg:          'var(--admin-info-bg)',
+            'bg-strong': 'var(--admin-info-bg-strong)',
+            border:      'var(--admin-info-border)',
+          },
+          accent: {
+            DEFAULT:     'var(--admin-accent)',
+            hover:       'var(--admin-accent-hover)',
+            bg:          'var(--admin-accent-bg)',
+            border:      'var(--admin-accent-border)',
+          },
+          toolbar: {
+            red:    'var(--admin-toolbar-red)',
+            orange: 'var(--admin-toolbar-orange)',
+            yellow: 'var(--admin-toolbar-yellow)',
+            green:  'var(--admin-toolbar-green)',
+            blue:   'var(--admin-toolbar-blue)',
+            indigo: 'var(--admin-toolbar-indigo)',
+            violet: 'var(--admin-toolbar-violet)',
+          },
+        },
       },
       fontFamily: {
         display: ['var(--font-space-grotesk)', 'sans-serif'],
         body: ['var(--font-manrope)', 'sans-serif'],
         mono: ['var(--font-space-mono)', 'monospace'],
         marker: ['var(--font-permanent-marker)', 'cursive'],
+        // Admin typography tokens
+        'admin-display': ['var(--admin-font-display)'],
+        'admin-body':    ['var(--admin-font-body)'],
+        'admin-mono':    ['var(--admin-font-mono)'],
+      },
+      fontSize: {
+        'admin-xs':  'var(--admin-font-size-xs)',
+        'admin-sm':  'var(--admin-font-size-sm)',
+        'admin-base': 'var(--admin-font-size-base)',
+        'admin-lg':  'var(--admin-font-size-lg)',
+        'admin-xl':  'var(--admin-font-size-xl)',
+        'admin-2xl': 'var(--admin-font-size-2xl)',
+      },
+      borderRadius: {
+        'admin-sm':   'var(--admin-radius-sm)',
+        'admin-md':   'var(--admin-radius-md)',
+        'admin-lg':   'var(--admin-radius-lg)',
+        'admin-xl':   'var(--admin-radius-xl)',
+        'admin-full': 'var(--admin-radius-full)',
       },
       keyframes: {
         shake: {

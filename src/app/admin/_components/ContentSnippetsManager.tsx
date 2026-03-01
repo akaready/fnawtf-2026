@@ -33,8 +33,8 @@ const MAX_MID  = 480;
 
 const stripMd = (s: string) => s.replace(/[*_`#>]/g, '').replace(/\n/g, ' ').trim();
 
-const SEL = 'bg-[#1c1c1c]';
-const HOV = 'hover:bg-[#141414]';
+const SEL = 'bg-admin-bg-overlay';
+const HOV = 'hover:bg-admin-bg-raised';
 
 // ── Snippet WYSIWYG Editor ─────────────────────────────────────────────────
 
@@ -117,19 +117,19 @@ function SnippetEditor({
             key={key}
             onMouseDown={e => { e.preventDefault(); fn(); }}
             title={lbl}
-            className={`p-1.5 rounded transition-colors flex-shrink-0 ${isActive ? 'text-foreground bg-white/[0.1]' : 'text-[#4d4d4d] hover:text-foreground hover:bg-white/[0.06]'}`}
+            className={`p-1.5 rounded transition-colors flex-shrink-0 ${isActive ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover'}`}
           >
             <I size={14} />
           </button>
         ))}
 
-        <span className="w-px h-3.5 bg-white/10 mx-1 flex-shrink-0" />
+        <span className="w-px h-3.5 bg-admin-bg-active mx-1 flex-shrink-0" />
 
         {/* Link icon — toggles URL input inline */}
         <button
           onMouseDown={e => { e.preventDefault(); openLink(); }}
           title="Link (⌘⇧U)"
-          className={`p-1.5 rounded transition-colors flex-shrink-0 ${isLink || showLinkInput ? 'text-foreground bg-white/[0.1]' : 'text-[#4d4d4d] hover:text-foreground hover:bg-white/[0.06]'}`}
+          className={`p-1.5 rounded transition-colors flex-shrink-0 ${isLink || showLinkInput ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover'}`}
         >
           <Link2 size={14} />
         </button>
@@ -146,7 +146,7 @@ function SnippetEditor({
                 if (e.key === 'Escape') { editor.chain().focus().run(); }
               }}
               placeholder="https://"
-              className="flex-1 min-w-0 ml-1 bg-transparent text-sm text-[#b3b3b3] placeholder:text-[#333] outline-none"
+              className="flex-1 min-w-0 ml-1 bg-transparent text-sm text-admin-text-secondary placeholder:text-admin-text-ghost outline-none"
             />
             {linkUrl && (
               <a
@@ -156,7 +156,7 @@ function SnippetEditor({
                 tabIndex={-1}
                 onMouseDown={e => e.preventDefault()}
                 title="Open link"
-                className="text-[#404040] hover:text-[#999] transition-colors p-1 flex-shrink-0"
+                className="text-admin-text-ghost hover:text-admin-text-secondary transition-colors p-1 flex-shrink-0"
               >
                 <ExternalLink size={12} />
               </a>
@@ -165,7 +165,7 @@ function SnippetEditor({
               <button
                 onMouseDown={e => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
                 title="Remove link"
-                className="text-[#404040] hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                className="text-admin-text-ghost hover:text-admin-danger transition-colors p-1 flex-shrink-0"
               >
                 <Trash2 size={12} />
               </button>
@@ -348,12 +348,12 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
         subtitle={`${filtered.length} snippet${filtered.length !== 1 ? 's' : ''} — Pre-written content blocks for proposals.`}
         search={search} onSearchChange={setSearch} searchPlaceholder="Search snippets…"
         actions={<>
-          <button onClick={exportCsv} className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"><Download size={14} />CSV</button>
-          <button onClick={() => handleCreate()} disabled={creating} className="flex items-center gap-2 px-5 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-50"><Plus size={16} />Add Snippet</button>
+          <button onClick={exportCsv} className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"><Download size={14} />CSV</button>
+          <button onClick={() => handleCreate()} disabled={creating} className="btn-primary px-5 py-2.5 text-sm"><Plus size={16} />Add Snippet</button>
         </>}
         mobileActions={<>
-          <button onClick={exportCsv} className="flex items-center justify-center p-2.5 rounded-lg border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors" title="Export CSV"><Download size={14} /></button>
-          <button onClick={() => handleCreate()} disabled={creating} className="flex items-center justify-center p-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-50" title="Add Snippet"><Plus size={16} /></button>
+          <button onClick={exportCsv} className="flex items-center justify-center p-2.5 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Export CSV"><Download size={14} /></button>
+          <button onClick={() => handleCreate()} disabled={creating} className="btn-primary p-2.5" title="Add Snippet"><Plus size={16} /></button>
         </>}
       />
 
@@ -364,12 +364,12 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
           <aside className="flex-shrink-0 flex flex-col" style={{ width: leftWidth }}>
             <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar pt-2">
 
-              <button onClick={() => setFilterCat('all')} className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${filterCat === 'all' ? `${SEL} text-foreground` : `text-muted-foreground ${HOV} hover:text-foreground`}`}>
+              <button onClick={() => setFilterCat('all')} className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${filterCat === 'all' ? `${SEL} text-admin-text-primary` : `text-admin-text-muted ${HOV} hover:text-admin-text-primary`}`}>
                 <span className="flex items-center gap-2.5 min-w-0 truncate"><FolderOpen size={13} className="flex-shrink-0" />All</span>
-                <span className="text-xs text-[#4d4d4d] flex-shrink-0 ml-1">{snippets.length}</span>
+                <span className="text-xs text-admin-text-faint flex-shrink-0 ml-1">{snippets.length}</span>
               </button>
 
-              {categories.length > 0 && <div className="my-2 mx-4 border-t border-border" />}
+              {categories.length > 0 && <div className="my-2 mx-4 border-t border-admin-border" />}
 
               {categories.map(cat => {
                 const isActive  = filterCat === cat;
@@ -392,24 +392,24 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                         }}
                         onBlur={() => handleRename(cat, editingCatVal)}
                         onClick={e => e.stopPropagation()}
-                        className="flex-1 min-w-0 text-sm bg-transparent border-b border-border outline-none text-foreground pb-0.5 focus:border-white/30 transition-colors"
+                        className="flex-1 min-w-0 text-sm bg-transparent border-b border-admin-border outline-none text-admin-text-primary pb-0.5 focus:border-admin-border-focus transition-colors"
                       />
                     ) : (
-                      <span className={`flex-1 min-w-0 text-sm truncate ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{cat}</span>
+                      <span className={`flex-1 min-w-0 text-sm truncate ${isActive ? 'text-admin-text-primary' : 'text-admin-text-muted'}`}>{cat}</span>
                     )}
                     {!isEditing && <>
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <button onClick={e => { e.stopPropagation(); setEditingCat(cat); setEditingCatVal(cat); }} className="p-0.5 rounded text-[#4d4d4d] hover:text-[#b3b3b3] transition-colors"><Pencil size={11} /></button>
-                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteCat(cat); }} className="p-0.5 rounded text-[#4d4d4d] hover:text-red-400 transition-colors"><Trash2 size={11} /></button>
+                        <button onClick={e => { e.stopPropagation(); setEditingCat(cat); setEditingCatVal(cat); }} className="p-0.5 rounded text-admin-text-faint hover:text-admin-text-secondary transition-colors"><Pencil size={11} /></button>
+                        <button onClick={e => { e.stopPropagation(); setConfirmDeleteCat(cat); }} className="p-0.5 rounded text-admin-text-faint hover:text-admin-danger transition-colors"><Trash2 size={11} /></button>
                       </div>
-                      <span className="text-xs text-[#4d4d4d] flex-shrink-0">{count}</span>
+                      <span className="text-xs text-admin-text-faint flex-shrink-0">{count}</span>
                     </>}
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex-shrink-0 border-t border-border px-3 py-3.5 flex items-center">
+            <div className="flex-shrink-0 border-t border-admin-border px-3 py-3.5 flex items-center">
               {addingCat ? (
                 <input
                   autoFocus
@@ -421,15 +421,15 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                   }}
                   onBlur={handleAddCat}
                   placeholder="Category name…"
-                  className="w-full text-xs bg-transparent border-b border-border outline-none text-foreground placeholder:text-[#333] pb-0.5 focus:border-white/30 transition-colors"
+                  className="w-full text-xs bg-transparent border-b border-admin-border outline-none text-admin-text-primary placeholder:text-admin-text-ghost pb-0.5 focus:border-admin-border-focus transition-colors"
                 />
               ) : (
-                <button onClick={() => setAddingCat(true)} className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-white/10 hover:bg-white/20 border border-transparent rounded-lg h-[36px] transition-colors"><Plus size={12} />New Category</button>
+                <button onClick={() => setAddingCat(true)} className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"><Plus size={12} />New Category</button>
               )}
             </div>
           </aside>
 
-          <div onMouseDown={startResize('left')} className="w-px flex-shrink-0 bg-[#1f1f1f] cursor-col-resize hover:bg-white/20 active:bg-white/30 transition-colors" />
+          <div onMouseDown={startResize('left')} className="w-px flex-shrink-0 bg-admin-border-subtle cursor-col-resize hover:bg-admin-bg-hover-strong active:bg-white/30 transition-colors" />
         </>)}
 
         {/* ── MIDDLE list ── */}
@@ -438,29 +438,29 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
             <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
               {filtered.length === 0 ? (
                 <div className="flex items-center justify-center h-full px-6 text-center">
-                  <p className="text-xs text-[#404044]">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
+                  <p className="text-xs text-admin-text-ghost">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
                 </div>
               ) : filtered.map(s => (
                 <button
                   key={s.id}
                   onClick={() => setActiveId(s.id)}
-                  className={`w-full text-left px-4 py-3.5 border-b border-border transition-colors ${activeId === s.id ? SEL : HOV}`}
+                  className={`w-full text-left px-4 py-3.5 border-b border-admin-border transition-colors ${activeId === s.id ? SEL : HOV}`}
                 >
-                  <div className="text-sm font-medium text-foreground truncate leading-snug">{s.title || <span className="text-[#4d4d4d] italic">Untitled</span>}</div>
+                  <div className="text-sm font-medium text-admin-text-primary truncate leading-snug">{s.title || <span className="text-admin-text-faint italic">Untitled</span>}</div>
                   {s.body && <div className="text-xs text-white/35 mt-1 line-clamp-2 leading-relaxed">{stripMd(s.body)}</div>}
                 </button>
               ))}
             </div>
           </div>
 
-          <div onMouseDown={startResize('mid')} className="w-px flex-shrink-0 bg-[#1f1f1f] cursor-col-resize hover:bg-white/20 active:bg-white/30 transition-colors" />
+          <div onMouseDown={startResize('mid')} className="w-px flex-shrink-0 bg-admin-border-subtle cursor-col-resize hover:bg-admin-bg-hover-strong active:bg-white/30 transition-colors" />
         </>)}
 
         {/* ── RIGHT editor ── */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {!active ? (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-[#303033]">Select a snippet to edit</p>
+              <p className="text-sm text-admin-text-placeholder">Select a snippet to edit</p>
             </div>
           ) : (<>
             <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
@@ -472,20 +472,20 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                     value={active.title}
                     onChange={e => mutate(active.id, 'title', e.target.value)}
                     placeholder="Snippet title…"
-                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-foreground placeholder:text-[#333] focus:ring-0"
+                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-admin-text-primary placeholder:text-admin-text-ghost focus:ring-0"
                   />
                   <div className="flex items-center gap-2 mt-[2.1rem] mr-5 flex-shrink-0">
                     <button
                       onClick={() => setFocusMode(v => !v)}
                       title={focusMode ? 'Exit focus mode' : 'Focus mode (hide sidebars)'}
-                      className="p-1.5 rounded text-[#333] hover:text-[#999] hover:bg-white/5 transition-colors"
+                      className="p-1.5 rounded text-admin-text-ghost hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
                     >
                       {focusMode ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                     </button>
                   </div>
                 </div>
 
-                <div className="mx-8 border-b border-border" />
+                <div className="mx-8 border-b border-admin-border" />
 
                 <SnippetEditor
                   key={activeId}
@@ -495,26 +495,26 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
               </div>
             </div>
 
-            <div className="flex-shrink-0 border-t border-border px-8 py-3 flex items-center justify-between gap-4">
+            <div className="flex-shrink-0 border-t border-admin-border px-8 py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <SaveButton saving={saving} saved={saved} onClick={() => handleSave(active)} className="px-5 py-2 text-sm" />
                 <div className="relative">
                   <button
                     onClick={() => setCatDropOpen(v => !v)}
-                    className="flex items-center gap-2 bg-black border border-border rounded-lg px-3 pr-8 h-[38px] text-sm text-foreground cursor-pointer hover:border-white/20 focus:outline-none focus:border-white/30 transition-colors"
+                    className="flex items-center gap-2 bg-admin-bg-base border border-admin-border rounded-lg px-3 pr-8 h-[38px] text-sm text-admin-text-primary cursor-pointer hover:border-admin-border-emphasis focus:outline-none focus:border-admin-border-focus transition-colors"
                   >
                     {active.category}
                   </button>
-                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-admin-text-ghost pointer-events-none" />
                   {catDropOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setCatDropOpen(false)} />
-                      <div className="absolute bottom-full left-0 mb-1 z-50 min-w-[160px] bg-black border border-border rounded-lg py-1 shadow-xl">
+                      <div className="absolute bottom-full left-0 mb-1 z-50 min-w-[160px] bg-admin-bg-base border border-admin-border rounded-lg py-1 shadow-xl">
                         {categories.map(c => (
                           <button
                             key={c}
                             onClick={() => { mutate(active.id, 'category', c); setCatDropOpen(false); }}
-                            className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${c === active.category ? 'text-foreground bg-white/10' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+                            className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${c === active.category ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'}`}
                           >
                             {c}
                           </button>
@@ -522,7 +522,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                         {!categories.includes(active.category) && (
                           <button
                             onClick={() => setCatDropOpen(false)}
-                            className="w-full text-left px-3 py-1.5 text-sm text-foreground bg-white/10"
+                            className="w-full text-left px-3 py-1.5 text-sm text-admin-text-primary bg-admin-bg-active"
                           >
                             {active.category}
                           </button>
@@ -535,24 +535,24 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
               <div className="flex items-center gap-2">
                 {confirmDeleteId === active.id ? (
                   <>
-                    <span className="text-xs text-red-400">Delete?</span>
+                    <span className="text-xs text-admin-danger">Delete?</span>
                     <button
                       onClick={() => handleDelete(active.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
                       title="Confirm delete"
                     >
                       <Check size={14} />
                     </button>
                     <button
                       onClick={() => setConfirmDeleteId(null)}
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-[#4d4d4d] hover:text-[#b3b3b3] hover:bg-white/5 transition-colors"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
                       title="Cancel"
                     >
                       <X size={14} />
                     </button>
                   </>
                 ) : (
-                  <button onClick={() => setConfirmDeleteId(active.id)} title="Delete snippet" className="p-2 rounded-lg text-red-400/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"><Trash2 size={14} /></button>
+                  <button onClick={() => setConfirmDeleteId(active.id)} title="Delete snippet" className="p-2 rounded-lg text-admin-danger/40 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"><Trash2 size={14} /></button>
                 )}
               </div>
             </div>
@@ -562,9 +562,9 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
 
       {confirmDeleteCat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111] border border-border/40 rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
+          <div className="bg-admin-bg-raised border border-admin-border-subtle rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
             <h3 className="font-medium">Delete &ldquo;{confirmDeleteCat}&rdquo;?</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-admin-text-muted">
               {(() => {
                 const n  = snippets.filter(s => s.category === confirmDeleteCat).length;
                 const fb = categories.find(c => c !== confirmDeleteCat) ?? 'general';
@@ -572,7 +572,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
               })()}
             </p>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setConfirmDeleteCat(null)} className="px-5 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={() => setConfirmDeleteCat(null)} className="px-5 py-2.5 rounded-lg text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">Cancel</button>
               <button onClick={() => handleDeleteCat(confirmDeleteCat)} className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, RefreshCw, Link2 } from 'lucide-react';
+import { ChevronDown, RefreshCw, Link2, MessageSquare } from 'lucide-react';
 import { SaveButton } from './SaveButton';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { ChipInput } from './ChipInput';
@@ -18,7 +18,6 @@ type ProjectRow = Record<string, unknown> & {
   client_name: string;
   client_quote: string | null;
   client_id: string | null;
-  type: 'video' | 'design';
   category: string | null;
   thumbnail_url: string | null;
   preview_gif_url: string | null;
@@ -42,8 +41,6 @@ interface Props {
   clients?: ClientOption[];
   onSaved?: () => void;
   onCreated?: (newId: string) => void;
-  /** Which sections to show: 'project' = core + visibility, 'metadata' = tags + scope + testimonial, undefined = all */
-  visibleSections?: 'project' | 'metadata';
   /** Hide the inline save button (use when parent provides a universal footer save) */
   hideInlineSave?: boolean;
 }
@@ -54,14 +51,14 @@ export type MetadataTabHandle = {
 };
 
 const inputClass =
-  'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors disabled:opacity-40';
+  'w-full px-3 py-2.5 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors disabled:opacity-40';
 
 const textareaClass =
-  'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors resize-none disabled:opacity-40';
+  'w-full px-3 py-2.5 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors resize-none disabled:opacity-40';
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wider">
+    <label className="block text-xs text-admin-text-muted mb-1.5 uppercase tracking-wider">
       {children}
     </label>
   );
@@ -69,35 +66,6 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function Field({ children }: { children: React.ReactNode }) {
   return <div className="space-y-1">{children}</div>;
-}
-
-function CheckField({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2.5 cursor-pointer group">
-      <div
-        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-          checked ? 'bg-white border-white' : 'border-border group-hover:border-white/40'
-        }`}
-      >
-        {checked && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-            <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
-      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-        {label}
-      </span>
-    </button>
-  );
 }
 
 function slugify(text: string) {
@@ -187,10 +155,10 @@ function ClientCombobox({
         className={`${inputClass}${linked ? ' pr-9' : ''}`}
       />
       {linked && (
-        <Link2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400/70" />
+        <Link2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-admin-success/70" />
       )}
       {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border rounded-lg shadow-xl">
           {filtered.slice(0, 20).map((opt) => (
             <button
               key={opt.id}
@@ -198,7 +166,7 @@ function ClientCombobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(opt)}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors truncate ${
-                opt.id === clientId ? 'text-foreground bg-white/[0.04]' : 'text-muted-foreground'
+                opt.id === clientId ? 'text-admin-text-primary bg-admin-bg-selected' : 'text-admin-text-muted'
               }`}
             >
               {opt.name}
@@ -210,7 +178,7 @@ function ClientCombobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-white/[0.06] transition-colors border-t border-[#2a2a2a]"
+              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-white/[0.06] transition-colors border-t border-admin-border"
             >
               {creating ? 'Creating…' : `Create "${query.trim()}"`}
             </button>
@@ -222,7 +190,7 @@ function ClientCombobox({
 }
 
 export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function MetadataTab(
-  { project, tagSuggestions, testimonials, clients: initialClients, onSaved, onCreated, visibleSections, hideInlineSave },
+  { project, tagSuggestions, testimonials, clients: initialClients, onSaved, onCreated, hideInlineSave },
   ref
 ) {
   const router = useRouter();
@@ -244,7 +212,6 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
     description: project?.description ?? '',
     client_name: project?.client_name ?? '',
     client_id: (project?.client_id as string | null) ?? null,
-    type: (project?.type ?? 'video') as 'video' | 'design',
     category: project?.category ?? '',
     thumbnail_url: project?.thumbnail_url ?? '',
     preview_gif_url: project?.preview_gif_url ?? '',
@@ -321,191 +288,84 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 
   useImperativeHandle(ref, () => ({ save: doSave, isDirty }));
 
-  const showProject = !visibleSections || visibleSections === 'project';
-  const showMetadata = !visibleSections || visibleSections === 'metadata';
-
   return (
-    <div className="space-y-8">
-      {showProject && (<section className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <Label>Title</Label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => {
-                set('title', e.target.value);
-                if (!project) set('slug', slugify(e.target.value));
-              }}
-              placeholder="Campaign Title"
-              className={inputClass}
-            />
-          </Field>
-          <Field>
-            <Label>Subtitle</Label>
-            <input
-              type="text"
-              value={form.subtitle}
-              onChange={(e) => set('subtitle', e.target.value)}
-              placeholder="Short tagline"
-              className={inputClass}
-            />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <Label>Slug</Label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={form.slug}
-                onChange={(e) => set('slug', e.target.value)}
-                placeholder="url-slug"
-                className={`${inputClass} flex-1 min-w-0`}
-              />
-              <button
-                type="button"
-                onClick={() => set('slug', slugify(form.title))}
-                className="w-10 h-10 flex items-center justify-center text-[#515155] border border-border rounded-lg hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0"
-                title="Regenerate from title"
-              >
-                <RefreshCw size={14} />
-              </button>
-            </div>
-          </Field>
-          <Field>
-            <Label>Type</Label>
-            <div className="relative">
-              <select
-                value={form.type}
-                onChange={(e) => set('type', e.target.value as 'video' | 'design')}
-                className={`${inputClass} appearance-none pr-9 cursor-pointer`}
-              >
-                <option value="video">Video</option>
-                <option value="design">Design</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
-            </div>
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <Label>Client</Label>
-            <ClientCombobox
-              value={form.client_name}
-              clientId={form.client_id}
-              options={clients}
-              onChange={(name, id) => {
-                setForm((f) => ({ ...f, client_name: name, client_id: id }));
-                setIsDirty(true);
-              }}
-              onCreate={async (name) => {
-                const id = await createClientRecord({ name, email: '' });
-                const opt = { id, name };
-                setClients((prev) => [...prev, opt].sort((a, b) => a.name.localeCompare(b.name)));
-                return opt;
-              }}
-            />
-          </Field>
-          <Field>
-            <Label>Category</Label>
-            <div className="relative">
-              <select
-                value={form.category}
-                onChange={(e) => set('category', e.target.value)}
-                className={`${inputClass} appearance-none pr-9 cursor-pointer`}
-              >
-                <option value="">Select type…</option>
-                {(tagSuggestions?.project_type ?? []).map((pt) => (
-                  <option key={pt} value={pt}>{pt}</option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
-            </div>
-          </Field>
-        </div>
+    <div className="flex flex-col gap-6 h-full">
+      {/* Client + Slug */}
+      <div className="grid grid-cols-2 gap-4">
         <Field>
-          <Label>Description</Label>
-          <textarea
-            value={form.description}
-            onChange={(e) => {
-              set('description', e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = e.target.scrollHeight + 'px';
+          <Label>Client</Label>
+          <ClientCombobox
+            value={form.client_name}
+            clientId={form.client_id}
+            options={clients}
+            onChange={(name, id) => {
+              setForm((f) => ({ ...f, client_name: name, client_id: id }));
+              setIsDirty(true);
             }}
-            ref={(el) => {
-              if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+            onCreate={async (name) => {
+              const id = await createClientRecord({ name, email: '' });
+              const opt = { id, name };
+              setClients((prev) => [...prev, opt].sort((a, b) => a.name.localeCompare(b.name)));
+              return opt;
             }}
-            placeholder="Project description…"
-            rows={3}
-            className={`${textareaClass} overflow-hidden`}
           />
         </Field>
-      </section>)}
+        <Field>
+          <Label>Slug</Label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.slug}
+              onChange={(e) => set('slug', e.target.value)}
+              placeholder="url-slug"
+              className={`${inputClass} flex-1 min-w-0`}
+            />
+            <button
+              type="button"
+              onClick={() => set('slug', slugify(form.title))}
+              className="h-[42px] w-[42px] flex items-center justify-center text-admin-text-faint border border-border rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+              title="Regenerate from title"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        </Field>
+      </div>
 
-      {/* Tags & Deliverables */}
-      {showMetadata && (<><section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
-          Tags &amp; Deliverables
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Field>
-            <Label>Style Tags</Label>
-            <ChipInput value={form.style_tags} onChange={(v) => set('style_tags', v)} placeholder="Add style…" suggestions={tagSuggestions?.style_tags} />
-          </Field>
-          <Field>
-            <Label>Premium Add-ons</Label>
-            <ChipInput value={form.premium_addons} onChange={(v) => set('premium_addons', v)} placeholder="Add add-on…" suggestions={tagSuggestions?.premium_addons} />
-          </Field>
-          <Field>
-            <Label>Camera Techniques</Label>
-            <ChipInput value={form.camera_techniques} onChange={(v) => set('camera_techniques', v)} placeholder="Add technique…" suggestions={tagSuggestions?.camera_techniques} />
-          </Field>
-          <Field>
-            <Label>Assets Delivered</Label>
-            <ChipInput value={form.assets_delivered} onChange={(v) => set('assets_delivered', v)} placeholder="Add asset…" suggestions={tagSuggestions?.assets_delivered} />
-          </Field>
-        </div>
-      </section>
-
-      {/* Scope */}
-      <section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
-          Production Scope
-        </h3>
-        <div className="grid grid-cols-4 gap-4">
-          {(
-            [
-              { key: 'production_days', label: 'Days' },
-              { key: 'crew_count', label: 'Crew' },
-              { key: 'talent_count', label: 'Talent' },
-              { key: 'location_count', label: 'Locations' },
-            ] as const
-          ).map(({ key, label }) => (
-            <Field key={key}>
-              <Label>{label}</Label>
-              <input
-                type="number"
-                min={0}
-                value={form[key]}
-                onChange={(e) => set(key, e.target.value as never)}
-                placeholder="—"
-                className={inputClass}
-              />
-            </Field>
-          ))}
-        </div>
-      </section>
+      {/* Title + Subtitle */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <Label>Title</Label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={(e) => {
+              set('title', e.target.value);
+              if (!project) set('slug', slugify(e.target.value));
+            }}
+            placeholder="Campaign Title"
+            className={inputClass}
+          />
+        </Field>
+        <Field>
+          <Label>Subtitle</Label>
+          <input
+            type="text"
+            value={form.subtitle}
+            onChange={(e) => set('subtitle', e.target.value)}
+            placeholder="Short tagline"
+            className={inputClass}
+          />
+        </Field>
+      </div>
 
       {/* Testimonial */}
-      <section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
-          Testimonial
-        </h3>
-        <Field>
-          {testimonials && testimonials.length > 0 ? (
-            <div className="space-y-2">
-              <div className="relative">
+      <Field>
+        <Label>Testimonial</Label>
+        {testimonials && testimonials.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <div className="relative flex-1 min-w-0">
                 <select
                   value={linkedTestimonialId}
                   onChange={(e) => { setLinkedTestimonialId(e.target.value); setIsDirty(true); }}
@@ -525,34 +385,111 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
                       </option>
                     ))}
                 </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#404044] pointer-events-none" />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-admin-text-ghost pointer-events-none" />
               </div>
-              {linkedTestimonialId && (
-                <p className="text-xs text-[#515155] italic">
-                  &ldquo;{testimonials.find((t) => t.id === linkedTestimonialId)?.quote.slice(0, 120)}…&rdquo;
-                </p>
-              )}
-              <p className="text-[10px] text-[#404044]">
-                Manage testimonials in the <a href="/admin/testimonials" className="underline hover:text-foreground">Testimonials</a> section.
-              </p>
+              <a
+                href="/admin/testimonials"
+                className="h-[42px] flex items-center gap-1.5 px-3 text-xs text-admin-text-faint border border-border rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 whitespace-nowrap"
+              >
+                <MessageSquare size={13} />
+                Testimonials
+              </a>
             </div>
-          ) : (
-            <p className="text-xs text-[#404044]">
-              No testimonials available. <a href="/admin/testimonials" className="underline hover:text-foreground">Create one</a> first.
-            </p>
-          )}
-        </Field>
-      </section></>)}
+            {linkedTestimonialId && (
+              <p className="text-xs text-admin-text-faint italic">
+                &ldquo;{testimonials.find((t) => t.id === linkedTestimonialId)?.quote.slice(0, 120)}…&rdquo;
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-admin-text-ghost flex-1">No testimonials available.</p>
+            <a
+              href="/admin/testimonials"
+              title="Manage testimonials"
+              className="w-10 h-10 flex items-center justify-center text-admin-text-faint border border-border rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+            >
+              <MessageSquare size={14} />
+            </a>
+          </div>
+        )}
+      </Field>
 
-      {/* Published */}
-      {showProject && (<section className="space-y-4">
-        <h3 className="text-xs uppercase tracking-widest text-[#515155] font-medium border-b border-border/30 pb-2">
-          Visibility
-        </h3>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-          <CheckField label="Published" checked={form.published} onChange={(v) => set('published', v)} />
-        </div>
-      </section>)}
+      {/* Description — fills remaining vertical space */}
+      <div className="flex flex-col flex-1 min-h-0 space-y-1">
+        <Label>Description</Label>
+        <textarea
+          value={form.description}
+          onChange={(e) => set('description', e.target.value)}
+          placeholder="Project description…"
+          rows={2}
+          className={`${textareaClass} flex-1 min-h-[42px] overflow-y-auto admin-scrollbar-auto`}
+        />
+      </div>
+
+      {/* Type + Deliverables */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field>
+          <Label>Type</Label>
+          <div className="relative">
+            <select
+              value={form.category}
+              onChange={(e) => set('category', e.target.value)}
+              className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+            >
+              <option value="">Select type…</option>
+              {(tagSuggestions?.project_type ?? []).map((pt) => (
+                <option key={pt} value={pt}>{pt}</option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-admin-text-ghost pointer-events-none" />
+          </div>
+        </Field>
+        <Field>
+          <Label>Deliverables</Label>
+          <ChipInput value={form.assets_delivered} onChange={(v) => set('assets_delivered', v)} placeholder="Add deliverable…" suggestions={tagSuggestions?.assets_delivered} />
+        </Field>
+      </div>
+
+      {/* Style / Add-Ons / Techniques */}
+      <div className="grid grid-cols-3 gap-4">
+        <Field>
+          <Label>Style</Label>
+          <ChipInput value={form.style_tags} onChange={(v) => set('style_tags', v)} placeholder="Add style…" suggestions={tagSuggestions?.style_tags} />
+        </Field>
+        <Field>
+          <Label>Add-Ons</Label>
+          <ChipInput value={form.premium_addons} onChange={(v) => set('premium_addons', v)} placeholder="Add add-on…" suggestions={tagSuggestions?.premium_addons} />
+        </Field>
+        <Field>
+          <Label>Techniques</Label>
+          <ChipInput value={form.camera_techniques} onChange={(v) => set('camera_techniques', v)} placeholder="Add technique…" suggestions={tagSuggestions?.camera_techniques} />
+        </Field>
+      </div>
+
+      {/* Scope */}
+      <div className="grid grid-cols-4 gap-4">
+        {(
+          [
+            { key: 'production_days', label: 'Days' },
+            { key: 'crew_count', label: 'Crew' },
+            { key: 'talent_count', label: 'Talent' },
+            { key: 'location_count', label: 'Locations' },
+          ] as const
+        ).map(({ key, label }) => (
+          <Field key={key}>
+            <Label>{label}</Label>
+            <input
+              type="number"
+              min={0}
+              value={form[key]}
+              onChange={(e) => set(key, e.target.value as never)}
+              placeholder="—"
+              className={inputClass}
+            />
+          </Field>
+        ))}
+      </div>
 
       {/* Save — only shown for new projects or when parent doesn't own the save */}
       {!hideInlineSave && (
@@ -564,11 +501,11 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
             label={project ? 'Save' : 'Create Project'}
             className="px-5 py-2.5 text-sm"
           />
-          {errorMsg && <span className="text-sm text-red-400">{errorMsg}</span>}
+          {errorMsg && <span className="text-sm text-admin-danger">{errorMsg}</span>}
         </div>
       )}
       {hideInlineSave && errorMsg && (
-        <p className="text-sm text-red-400 pt-2">{errorMsg}</p>
+        <p className="text-sm text-admin-danger pt-2">{errorMsg}</p>
       )}
     </div>
   );

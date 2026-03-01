@@ -31,16 +31,16 @@ const PHASE_OPTIONS = [
 // ── Style constants ──────────────────────────────────────────────────────────
 
 const inputCls =
-  'bg-transparent text-sm text-white focus:outline-none min-w-0';
+  'bg-transparent text-sm text-admin-text-primary focus:outline-none min-w-0';
 
 const dateInputCls =
-  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-2 py-1 text-[#999] ' +
-  'focus:outline-none focus:border-white/20 focus:text-[#ccc] transition-colors ' +
+  'text-xs bg-black/40 border border-admin-border rounded px-2 py-1 text-[#999] ' +
+  'focus:outline-none focus:border-admin-border-emphasis focus:text-[#ccc] transition-colors ' +
   '[color-scheme:dark]';
 
 const selectCls =
-  'text-xs bg-black/40 border border-[#2a2a2a] rounded px-2 py-1 text-[#808080] ' +
-  'focus:outline-none focus:border-white/20 cursor-pointer [color-scheme:dark]';
+  'text-xs bg-black/40 border border-admin-border rounded px-2 py-1 text-admin-text-secondary ' +
+  'focus:outline-none focus:border-admin-border-emphasis cursor-pointer [color-scheme:dark]';
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -258,7 +258,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
 
       {/* Preset checklist */}
       <div>
-        <p className="text-xs font-mono text-[#404040] uppercase tracking-widest mb-3">
+        <p className="text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-3">
           Presets
         </p>
         <div className="space-y-1">
@@ -277,9 +277,9 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
                   type="checkbox"
                   readOnly
                   checked={checked}
-                  className="w-4 h-4 rounded border-white/20 bg-white/[0.04] accent-white pointer-events-none"
+                  className="w-4 h-4 rounded border-admin-border-subtle bg-admin-bg-hover accent-white pointer-events-none"
                 />
-                <span className="text-sm text-[#b3b3b3] group-hover:text-white transition-colors">
+                <span className="text-sm text-admin-text-secondary group-hover:text-admin-text-primary transition-colors">
                   {label}
                 </span>
               </label>
@@ -291,7 +291,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
       {/* Milestone list */}
       {sorted.length > 0 && (
         <div>
-          <p className="text-xs font-mono text-[#404040] uppercase tracking-widest mb-3">
+          <p className="text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-3">
             Milestones
           </p>
           <div>
@@ -301,7 +301,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
               return (
                 <div
                   key={m.id}
-                  className="flex items-center gap-3 py-2 border-b border-[#2a2a2a]"
+                  className="flex items-center gap-3 py-2 border-b border-admin-border"
                 >
                   {/* Color swatch */}
                   <div
@@ -325,7 +325,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
                     onChange={(e) => handleStartDateChange(m.id, e.target.value)}
                     className={dateInputCls}
                   />
-                  <span className="text-[#333] text-xs flex-shrink-0">–</span>
+                  <span className="text-admin-text-placeholder text-xs flex-shrink-0">–</span>
                   <input
                     type="date"
                     value={m.end_date}
@@ -350,7 +350,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
                   <button
                     onClick={() => handleDelete(m.id)}
                     disabled={isPending}
-                    className="flex-shrink-0 p-1 text-[#333] hover:text-red-400 transition-colors disabled:opacity-30"
+                    className="flex-shrink-0 p-1 text-admin-text-placeholder hover:text-admin-danger transition-colors disabled:opacity-30"
                     title="Delete milestone"
                   >
                     <Trash2 size={13} />
@@ -365,7 +365,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
       {/* Custom form */}
       {showCustomForm ? (
         <form onSubmit={handleCustomSubmit} className="flex items-center gap-3 py-2">
-          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-white/20" />
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-admin-border-emphasis" />
           <input
             type="text"
             value={customLabel}
@@ -380,7 +380,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
             onChange={(e) => setCustomStart(e.target.value)}
             className={dateInputCls}
           />
-          <span className="text-[#333] text-xs flex-shrink-0">–</span>
+          <span className="text-admin-text-placeholder text-xs flex-shrink-0">–</span>
           <input
             type="date"
             value={customEnd}
@@ -390,14 +390,14 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
           <button
             type="submit"
             disabled={!customLabel.trim() || isPending}
-            className="text-xs px-3 py-1 bg-white/[0.08] border border-white/10 rounded text-[#b3b3b3] hover:text-white hover:bg-white/[0.12] transition-colors disabled:opacity-30"
+            className="text-xs px-3 py-1 bg-white/[0.08] border border-admin-border-muted rounded text-admin-text-secondary hover:text-admin-text-primary hover:bg-white/[0.12] transition-colors disabled:opacity-30"
           >
             Add
           </button>
           <button
             type="button"
             onClick={() => setShowCustomForm(false)}
-            className="text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
+            className="text-xs text-admin-text-faint hover:text-[#999] transition-colors"
           >
             Cancel
           </button>
@@ -405,7 +405,7 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
       ) : (
         <button
           onClick={openCustomForm}
-          className="flex items-center gap-2 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
+          className="flex items-center gap-2 text-xs text-admin-text-faint hover:text-[#999] transition-colors"
         >
           <Plus size={13} />
           Add custom

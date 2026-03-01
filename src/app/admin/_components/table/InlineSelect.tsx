@@ -42,14 +42,14 @@ export function InlineSelect({ options, value, onChange, className }: Props) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-2.5 py-1.5 text-sm text-foreground hover:border-white/20 transition-colors text-left"
+        className="flex items-center gap-1.5 w-full bg-admin-bg-overlay border border-admin-border rounded-lg px-2.5 py-1.5 text-sm text-admin-text-primary hover:border-admin-border-emphasis transition-colors text-left"
       >
         <span className="flex-1 truncate">{selectedLabel}</span>
-        <ChevronDown size={12} className={`text-[#666] flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`text-admin-text-dim flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-[3px] w-full min-w-[160px] bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in">
+        <div className="absolute top-full left-0 mt-[3px] w-full min-w-[160px] bg-admin-bg-overlay border-2 border-admin-border rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in">
           <div className="max-h-56 overflow-y-auto admin-scrollbar py-1">
             {options.map((opt) => (
               <button
@@ -58,8 +58,8 @@ export function InlineSelect({ options, value, onChange, className }: Props) {
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
                   opt.value === value
-                    ? 'bg-white/10 text-white'
-                    : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
+                    ? 'bg-admin-bg-active text-admin-text-primary'
+                    : 'text-admin-text-secondary hover:bg-admin-bg-hover hover:text-admin-text-primary/90'
                 }`}
               >
                 {opt.label}

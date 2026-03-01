@@ -54,10 +54,10 @@ interface Props {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-white/10 text-[#666]',
-  sent: 'bg-blue-500/20 text-blue-300',
-  viewed: 'bg-yellow-500/20 text-yellow-300',
-  accepted: 'bg-green-500/20 text-green-300',
+  draft: 'bg-admin-bg-active text-admin-text-dim',
+  sent: 'bg-admin-info-bg text-admin-info',
+  viewed: 'bg-admin-warning-bg text-admin-warning',
+  accepted: 'bg-admin-success-bg text-admin-success',
 };
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
@@ -127,16 +127,16 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       />
 
       {/* Header: title + meta (left) | status + X (right) */}
-      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-[#2a2a2a]">
+      <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-admin-border">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold tracking-tight truncate">{proposal.title}</h1>
-            <p className="text-sm mt-1 text-muted-foreground font-mono truncate">
+            <p className="text-sm mt-1 text-admin-text-muted font-mono truncate">
               /p/{proposal.slug} · #{proposal.proposal_number}
             </p>
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
-            <span className="flex items-center gap-1.5 px-4 py-1 rounded-full text-xs text-[#666] whitespace-nowrap bg-white/[0.04]">
+            <span className="flex items-center gap-1.5 px-4 py-1 rounded-full text-xs text-admin-text-dim whitespace-nowrap bg-admin-bg-selected">
               <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-400' : 'bg-white/25'}`} />
               {isLive ? 'Live' : 'Draft'}
             </span>
@@ -145,7 +145,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             </span>
             <button
               onClick={handleClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-[#666] hover:text-white hover:bg-white/5 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-dim hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
               aria-label="Close"
             >
               <X size={15} />
@@ -155,7 +155,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       </div>
 
       {/* Tabs */}
-      <div className="flex-shrink-0 px-8 py-3 border-b border-[#2a2a2a] bg-white/[0.02]">
+      <div className="flex-shrink-0 px-8 py-3 border-b border-admin-border bg-admin-bg-wash">
         <nav className="inline-flex flex-wrap gap-1.5">
           {TABS.map(tab => {
             const Icon = TAB_ICONS[tab];
@@ -166,15 +166,15 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
                   title={tab}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
                     activeTab === tab
-                      ? 'bg-white/10 text-foreground'
-                      : 'text-muted-foreground hover:bg-white/5 hover:text-foreground/80'
+                      ? 'bg-admin-bg-active text-admin-text-primary'
+                      : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary/80'
                   }`}
                 >
                   <Icon size={13} className="flex-shrink-0" />
                   <span className="hidden md:inline">{tab}</span>
                 </button>
                 {tab === 'details' && (
-                  <div className="w-px bg-white/10 mx-0.5 my-1" />
+                  <div className="w-px bg-admin-bg-active mx-0.5 my-1" />
                 )}
               </Fragment>
             );
@@ -253,7 +253,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       </div>
 
       {/* Footer: action buttons (left) | delete (right) */}
-      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-[#2a2a2a] bg-white/[0.02]">
+      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-admin-border bg-admin-bg-wash">
         <div className="flex items-center gap-3">
           <SaveButton
             saving={activeTab === 'pricing' ? pricingSaving : activeTab === 'welcome' || activeTab === 'approach' ? markdownSaving : detailsSaving}
@@ -286,18 +286,18 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         <div className="flex items-center gap-2">
           {confirmDelete ? (
             <>
-              <span className="text-xs text-red-400">Delete this proposal?</span>
+              <span className="text-xs text-admin-danger">Delete this proposal?</span>
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger-hover hover:bg-admin-danger-bg transition-colors disabled:opacity-40"
                 title="Confirm delete"
               >
                 {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#4d4d4d] hover:text-[#b3b3b3] hover:bg-white/5 transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
                 title="Cancel"
               >
                 <X size={14} />
@@ -306,7 +306,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/50 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
             >
               <Trash2 size={14} />
             </button>

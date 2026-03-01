@@ -7,11 +7,13 @@ import {
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
   Wrench, Sparkles, Contact, Star, HeartHandshake, Users, LayoutGrid, Tag,
   Globe, ExternalLink, Linkedin, Instagram, Film, RefreshCw,
-  User, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Snowflake, Eye,
+  User, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Snowflake, Eye, Table2,
 } from 'lucide-react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
 import { AdminPageHeader } from './AdminPageHeader';
+import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
+import { useViewMode } from '../_hooks/useViewMode';
 import { ToolbarButton } from './table/TableToolbar';
 import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
@@ -31,40 +33,41 @@ import {
   deleteHeadshot,
   type ClientRow,
   type HeadshotRow,
+  batchDeleteContacts,
 } from '../actions';
 import type { ContactRow, ContactType } from '@/types/proposal';
 
 const TYPE_COLORS: Record<ContactType, string> = {
   crew: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   cast: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  contact: 'bg-green-500/20 text-green-400 border-green-500/30',
-  staff: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  contact: 'bg-admin-success-bg text-admin-success border-admin-success-border',
+  staff: 'bg-admin-warning-bg text-admin-warning border-admin-warning-border',
   partner: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
 const TYPE_ICON_COLORS: Record<string, string> = {
-  all: 'text-[#666]',
+  all: 'text-admin-text-dim',
   crew: 'text-purple-400',
   cast: 'text-pink-400',
-  contact: 'text-green-400',
-  staff: 'text-yellow-400',
+  contact: 'text-admin-success',
+  staff: 'text-admin-warning',
   partner: 'text-orange-400',
 };
 
 const TYPE_ACTIVE_CLASSES: Record<string, string> = {
-  all: 'bg-white/10 text-white border-white/20',
+  all: 'bg-admin-bg-active text-admin-text-primary border-admin-border-emphasis',
   crew: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
   cast: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
-  contact: 'bg-green-500/15 text-green-300 border-green-500/30',
-  staff: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30',
+  contact: 'bg-admin-success-bg text-admin-success border-admin-success-border',
+  staff: 'bg-admin-warning-bg text-admin-warning border-admin-warning-border',
   partner: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
 };
 
 const TYPE_CIRCLE_BG: Record<ContactType, string> = {
   crew: 'bg-purple-500/10',
   cast: 'bg-pink-500/10',
-  contact: 'bg-green-500/10',
-  staff: 'bg-yellow-500/10',
+  contact: 'bg-admin-success-bg',
+  staff: 'bg-admin-warning-bg',
   partner: 'bg-orange-500/10',
 };
 
@@ -81,39 +84,39 @@ const CONTACT_COLUMNS: ColDef<ContactRow>[] = [
             <User size={14} className={TYPE_ICON_COLORS[c.type]} />
           </div>
         )}
-        <span className="font-medium text-foreground">{c.first_name}</span>
+        <span className="font-medium text-admin-text-primary">{c.first_name}</span>
       </div>
     ),
   },
   {
     key: 'last_name', label: 'Last Name', sortable: true,
     sortValue: (c) => c.last_name.toLowerCase(),
-    render: (c) => <span className="text-foreground">{c.last_name}</span>,
+    render: (c) => <span className="text-admin-text-primary">{c.last_name}</span>,
   },
   { key: 'type', label: 'Type', sortable: true, sortValue: (c) => c.type, render: (c) => (
     <span className={`inline-flex px-2 py-0.5 text-xs rounded border capitalize ${TYPE_COLORS[c.type]}`}>{c.type}</span>
   )},
-  { key: 'email', label: 'Email', sortable: true, sortValue: (c) => (c.email ?? '').toLowerCase(), render: (c) => <span className="text-muted-foreground">{c.email || '—'}</span> },
-  { key: 'phone', label: 'Phone', defaultVisible: false, render: (c) => <span className="text-muted-foreground">{c.phone || '—'}</span> },
-  { key: 'company', label: 'Company', sortable: true, sortValue: (c) => (c.company ?? '').toLowerCase(), render: (c) => <span className="text-muted-foreground">{c.company || '—'}</span> },
-  { key: 'title', label: 'Title', sortable: true, sortValue: (c) => (c.role ?? '').toLowerCase(), render: (c) => <span className="text-muted-foreground">{c.role || '—'}</span> },
+  { key: 'email', label: 'Email', sortable: true, sortValue: (c) => (c.email ?? '').toLowerCase(), render: (c) => <span className="text-admin-text-muted">{c.email || '—'}</span> },
+  { key: 'phone', label: 'Phone', defaultVisible: false, render: (c) => <span className="text-admin-text-muted">{c.phone || '—'}</span> },
+  { key: 'company', label: 'Company', sortable: true, sortValue: (c) => (c.company ?? '').toLowerCase(), render: (c) => <span className="text-admin-text-muted">{c.company || '—'}</span> },
+  { key: 'title', label: 'Title', sortable: true, sortValue: (c) => (c.role ?? '').toLowerCase(), render: (c) => <span className="text-admin-text-muted">{c.role || '—'}</span> },
   { key: 'website_url', label: 'Website', defaultVisible: false, render: (c) => c.website_url ? (
     <a href={c.website_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">{new URL(c.website_url).hostname}</a>
-  ) : <span className="text-muted-foreground">—</span> },
+  ) : <span className="text-admin-text-muted">—</span> },
   { key: 'linkedin_url', label: 'LinkedIn', defaultVisible: false, render: (c) => c.linkedin_url ? (
     <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">Profile</a>
-  ) : <span className="text-muted-foreground">—</span> },
+  ) : <span className="text-admin-text-muted">—</span> },
   { key: 'instagram_url', label: 'Instagram', defaultVisible: false, render: (c) => c.instagram_url ? (
     <a href={c.instagram_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">@{c.instagram_url.split('/').filter(Boolean).pop()}</a>
-  ) : <span className="text-muted-foreground">—</span> },
+  ) : <span className="text-admin-text-muted">—</span> },
   { key: 'imdb_url', label: 'IMDB', defaultVisible: false, render: (c) => c.imdb_url ? (
     <a href={c.imdb_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-accent hover:underline truncate block">Page</a>
-  ) : <span className="text-muted-foreground">—</span> },
+  ) : <span className="text-admin-text-muted">—</span> },
   { key: 'notes', label: 'Notes', defaultVisible: false, render: (c) => c.notes ? (
-    <span className="truncate block max-w-[200px] text-muted-foreground" title={c.notes}>{c.notes}</span>
-  ) : <span className="text-muted-foreground">—</span> },
-  { key: 'created_at', label: 'Added', align: 'right', sortable: true, sortValue: (c) => new Date(c.created_at).getTime(), render: (c) => <span className="text-xs text-[#515155]">{new Date(c.created_at).toLocaleDateString()}</span> },
-  { key: 'updated_at', label: 'Updated', defaultVisible: false, align: 'right', sortable: true, sortValue: (c) => new Date(c.updated_at).getTime(), render: (c) => <span className="text-xs text-[#515155]">{new Date(c.updated_at).toLocaleDateString()}</span> },
+    <span className="truncate block max-w-[200px] text-admin-text-muted" title={c.notes}>{c.notes}</span>
+  ) : <span className="text-admin-text-muted">—</span> },
+  { key: 'created_at', label: 'Added', align: 'right', sortable: true, sortValue: (c) => new Date(c.created_at).getTime(), render: (c) => <span className="text-xs text-admin-text-faint">{new Date(c.created_at).toLocaleDateString()}</span> },
+  { key: 'updated_at', label: 'Updated', defaultVisible: false, align: 'right', sortable: true, sortValue: (c) => new Date(c.updated_at).getTime(), render: (c) => <span className="text-xs text-admin-text-faint">{new Date(c.updated_at).toLocaleDateString()}</span> },
 ];
 
 const TYPE_ICONS: Record<string, typeof Users> = {
@@ -124,6 +127,13 @@ const TYPE_ICONS: Record<string, typeof Users> = {
   staff: Star,
   partner: HeartHandshake,
 };
+
+type ContactViewMode = 'table' | 'gallery';
+
+const CONTACT_VIEWS: ViewDef<ContactViewMode>[] = [
+  { key: 'table', icon: Table2, label: 'Table view' },
+  { key: 'gallery', icon: LayoutGrid, label: 'Cast gallery' },
+];
 
 interface Props {
   initialContacts: ContactRow[];
@@ -343,7 +353,7 @@ function PersonPanel({
     await searchEmails(allUrls);
   };
 
-  const inputClass = 'w-full rounded-lg border border-border/40 bg-black/50 px-3 py-2.5 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
+  const inputClass = 'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[520px]">
@@ -354,12 +364,12 @@ function PersonPanel({
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2a2a2a] bg-white/[0.02] flex-shrink-0">
+      <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-wash flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           {draft.headshot_url ? (
             <img src={draft.headshot_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 text-[#404044]">
+            <div className="w-10 h-10 rounded-full bg-admin-bg-hover flex items-center justify-center flex-shrink-0 text-admin-text-ghost">
               <ImageIcon size={16} />
             </div>
           )}
@@ -369,14 +379,14 @@ function PersonPanel({
                 type="text"
                 value={draft.first_name}
                 onChange={(e) => handleChange('first_name', e.target.value)}
-                className="bg-transparent text-lg font-semibold text-foreground placeholder:text-[#303033] focus:outline-none flex-1 min-w-0"
+                className="bg-transparent text-lg font-semibold text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none flex-1 min-w-0"
                 placeholder="First"
               />
               <input
                 type="text"
                 value={draft.last_name}
                 onChange={(e) => handleChange('last_name', e.target.value)}
-                className="bg-transparent text-lg font-semibold text-foreground placeholder:text-[#303033] focus:outline-none flex-1 min-w-0"
+                className="bg-transparent text-lg font-semibold text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none flex-1 min-w-0"
                 placeholder="Last"
               />
             </div>
@@ -385,13 +395,13 @@ function PersonPanel({
             </span>
           </div>
         </div>
-        <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors flex-shrink-0">
+        <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0">
           <X size={16} />
         </button>
       </div>
 
       {/* Tab strip */}
-      <div className="flex items-center gap-1 border-b border-[#2a2a2a] px-6 py-2 flex-shrink-0 bg-white/[0.02]">
+      <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-wash">
         {([
           { id: 'details' as const, label: 'Details', show: true, count: 0 },
           { id: 'projects' as const, label: 'Projects', show: projects.length > 0, count: projects.length },
@@ -404,13 +414,13 @@ function PersonPanel({
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
               activeTab === tab.id
-                ? 'bg-white/10 text-white'
-                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
+                ? 'bg-admin-bg-active text-admin-text-primary'
+                : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover'
             }`}
           >
             {tab.label}
             {tab.count > 0 && (
-              <span className="ml-1 text-xs text-[#4d4d4d]">{tab.count}</span>
+              <span className="ml-1 text-xs text-admin-text-faint">{tab.count}</span>
             )}
           </button>
         ))}
@@ -423,14 +433,14 @@ function PersonPanel({
           <>
             {/* Type */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Type</label>
+              <label className="text-xs font-medium text-admin-text-muted">Type</label>
               <div className="flex gap-1.5 flex-wrap">
                 {(['contact', 'crew', 'cast', 'staff', 'partner'] as ContactType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => handleChange('type', t)}
                     className={`px-3 py-1.5 text-xs rounded-lg border capitalize transition-colors ${
-                      draft.type === t ? TYPE_COLORS[t] : 'border-[#2a2a2a] text-[#515155] hover:text-foreground hover:border-white/20'
+                      draft.type === t ? TYPE_COLORS[t] : 'border-admin-border text-admin-text-faint hover:text-admin-text-primary hover:border-admin-border-emphasis'
                     }`}
                   >
                     {t}
@@ -441,7 +451,7 @@ function PersonPanel({
 
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                 <Briefcase size={12} /> Title
               </label>
               <input type="text" value={draft.role ?? ''} onChange={(e) => handleChange('role', e.target.value || null)} placeholder="CEO, Founder, Marketing Director..." className={inputClass} />
@@ -449,7 +459,7 @@ function PersonPanel({
 
             {/* Company */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                 <Building2 size={12} /> Company
               </label>
               <select
@@ -472,13 +482,13 @@ function PersonPanel({
             {/* Email + Phone */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <Mail size={12} /> Email
                 </label>
                 <input type="email" value={draft.email ?? ''} onChange={(e) => handleChange('email', e.target.value || null)} placeholder="john@acme.com" className={inputClass} />
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                   <Phone size={12} /> Phone
                 </label>
                 <input type="tel" value={draft.phone ?? ''} onChange={(e) => handleChange('phone', e.target.value || null)} placeholder="(555) 123-4567" className={inputClass} />
@@ -487,7 +497,7 @@ function PersonPanel({
 
             {/* Links */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                 <Globe size={12} /> Links
               </label>
               <div className="space-y-2">
@@ -505,9 +515,9 @@ function PersonPanel({
                       placeholder={placeholder}
                       className={`${inputClass} pl-8 pr-8`}
                     />
-                    <Icon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#303033]" />
+                    <Icon size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-admin-text-placeholder" />
                     {draft[key] && (
-                      <a href={draft[key]!} target="_blank" rel="noopener noreferrer" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-[#303033] hover:text-foreground hover:bg-white/10 transition-colors">
+                      <a href={draft[key]!} target="_blank" rel="noopener noreferrer" className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-admin-text-placeholder hover:text-admin-text-primary hover:bg-admin-bg-hover-strong transition-colors">
                         <ExternalLink size={12} />
                       </a>
                     )}
@@ -518,7 +528,7 @@ function PersonPanel({
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                 <StickyNote size={12} /> Notes
               </label>
               <textarea
@@ -542,14 +552,14 @@ function PersonPanel({
                   <div
                     key={hs.id}
                     className={`rounded-lg overflow-hidden border transition-colors ${
-                      hs.featured ? 'border-yellow-500/50 ring-1 ring-yellow-500/20' : 'border-[#2a2a2a]'
+                      hs.featured ? 'border-admin-warning-border ring-1 ring-admin-warning-bg' : 'border-admin-border'
                     }`}
                   >
-                    <div className="aspect-[3/4] bg-white/[0.03]">
+                    <div className="aspect-[3/4] bg-admin-bg-subtle">
                       <img src={hs.url} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex items-center justify-between px-1.5 py-1">
-                      <span className="text-xs text-[#515155]">{hs.width}×{hs.height}</span>
+                      <span className="text-xs text-admin-text-faint">{hs.width}×{hs.height}</span>
                       <div className="flex items-center gap-0.5">
                         <button
                           onClick={() => {
@@ -560,8 +570,8 @@ function PersonPanel({
                           }}
                           className={`p-1 rounded transition-colors ${
                             hs.featured
-                              ? 'text-yellow-400'
-                              : 'text-[#303033] hover:text-yellow-400 hover:bg-yellow-500/10'
+                              ? 'text-admin-warning'
+                              : 'text-admin-text-placeholder hover:text-admin-warning hover:bg-admin-warning-bg'
                           }`}
                           title={hs.featured ? 'Featured' : 'Set as featured'}
                         >
@@ -574,7 +584,7 @@ function PersonPanel({
                               setHeadshots(prev => prev.filter(h => h.id !== hs.id));
                             });
                           }}
-                          className="p-1 rounded text-[#303033] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          className="p-1 rounded text-admin-text-placeholder hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
                           title="Delete headshot"
                         >
                           <Trash2 size={12} />
@@ -585,12 +595,12 @@ function PersonPanel({
                 ))}
               </div>
             ) : !hsSearchResults && (
-              <p className="text-sm text-[#404044]">No headshots yet. Use Fetch Data to search.</p>
+              <p className="text-sm text-admin-text-ghost">No headshots yet. Use Fetch Data to search.</p>
             )}
             {/* Search results */}
             {hsSearchResults && hsSearchResults.length > 0 && (
               <div className="space-y-2">
-                <p className="text-[11px] text-[#515155]">Search results — select to save:</p>
+                <p className="text-[11px] text-admin-text-faint">Search results — select to save:</p>
                 <div className="grid grid-cols-4 gap-1.5">
                   {hsSearchResults.map((img, i) => (
                     <button
@@ -602,10 +612,10 @@ function PersonPanel({
                         return next;
                       })}
                       className={`rounded-lg overflow-hidden border-2 transition-colors ${
-                        hsSelected.has(i) ? 'border-accent' : 'border-transparent hover:border-white/20'
+                        hsSelected.has(i) ? 'border-accent' : 'border-transparent hover:border-admin-border-emphasis'
                       }`}
                     >
-                      <div className="aspect-[3/4] bg-white/[0.03]">
+                      <div className="aspect-[3/4] bg-admin-bg-subtle">
                         <img src={img.imageUrl} alt={img.title} className="w-full h-full object-cover" />
                       </div>
                     </button>
@@ -622,7 +632,7 @@ function PersonPanel({
                   </button>
                   <button
                     onClick={() => { setHsSearchResults(null); setHsSelected(new Set()); }}
-                    className="px-3 py-1.5 text-xs rounded-lg text-[#515155] hover:text-foreground hover:bg-white/5 transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
                   >
                     Cancel
                   </button>
@@ -630,7 +640,7 @@ function PersonPanel({
               </div>
             )}
             {hsSearchResults && hsSearchResults.length === 0 && (
-              <p className="text-xs text-[#404044]">No headshots found for &ldquo;{contactFullName(draft)}&rdquo;</p>
+              <p className="text-xs text-admin-text-ghost">No headshots found for &ldquo;{contactFullName(draft)}&rdquo;</p>
             )}
           </>
         )}
@@ -639,9 +649,9 @@ function PersonPanel({
         {activeTab === 'roles' && (
           <>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Production Roles</label>
+              <label className="text-xs font-medium text-admin-text-muted">Production Roles</label>
               {loadingMeta ? (
-                <p className="text-xs text-[#404044]">Loading...</p>
+                <p className="text-xs text-admin-text-ghost">Loading...</p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {roles.map((r) => (
@@ -650,8 +660,8 @@ function PersonPanel({
                       onClick={() => toggleRole(r.id)}
                       className={`px-2.5 py-1 text-xs rounded-lg border transition-colors ${
                         personRoleIds.has(r.id)
-                          ? 'bg-white/10 border-white/20 text-foreground'
-                          : 'border-[#2a2a2a] text-[#515155] hover:text-foreground hover:border-white/15'
+                          ? 'bg-admin-bg-active border-admin-border-emphasis text-admin-text-primary'
+                          : 'border-admin-border text-admin-text-faint hover:text-admin-text-primary hover:border-admin-border-muted'
                       }`}
                     >
                       {r.name}
@@ -673,9 +683,9 @@ function PersonPanel({
                     key={p.id}
                     type="button"
                     onClick={() => setOpenProject(p)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[#2a2a2a] hover:border-white/[0.16] hover:bg-white/[0.04] transition-colors group text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-admin-border hover:border-admin-border-muted hover:bg-admin-bg-selected transition-colors group text-left"
                   >
-                    <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-white/[0.04]">
+                    <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-admin-bg-selected">
                       {p.thumbnail_url ? (
                         <img src={p.thumbnail_url} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -683,29 +693,29 @@ function PersonPanel({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#808080] group-hover:text-[#b3b3b3] truncate">{p.title}</p>
+                      <p className="text-sm font-medium text-admin-text-secondary group-hover:text-admin-text-secondary truncate">{p.title}</p>
                       {p.client_name && (
-                        <p className="text-xs text-[#404040] truncate">{p.client_name}</p>
+                        <p className="text-xs text-admin-text-ghost truncate">{p.client_name}</p>
                       )}
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[#404044]">No linked projects.</p>
+              <p className="text-sm text-admin-text-ghost">No linked projects.</p>
             )}
           </>
         )}
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-[#2a2a2a] bg-white/[0.02] flex-shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash flex-shrink-0">
         <div className="flex items-center gap-2">
           <SaveButton saving={saving} saved={saved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
           <button
             onClick={fetchAllData}
             disabled={fetching}
-            className="flex items-center gap-2 px-4 py-[9px] rounded-lg border border-[#2a2a2a] text-sm text-muted-foreground hover:text-foreground hover:border-white/20 hover:bg-white/5 transition-colors disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-[9px] rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors disabled:opacity-40"
           >
             {fetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
             {fetching ? 'Fetching...' : 'Fetch Data'}
@@ -713,13 +723,13 @@ function PersonPanel({
         </div>
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <button onClick={() => { onDelete(draft.id); onClose(); }} className="px-3 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
-            <button onClick={() => setConfirmDelete(false)} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
+            <button onClick={() => { onDelete(draft.id); onClose(); }} className="px-3 py-1.5 text-xs rounded bg-red-600 text-admin-text-primary hover:bg-red-700 transition-colors">Delete</button>
+            <button onClick={() => setConfirmDelete(false)} className="p-2 rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">
               <X size={14} />
             </button>
           </div>
         ) : (
-          <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+          <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-lg text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors">
             <Trash2 size={14} />
           </button>
         )}
@@ -745,6 +755,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
   const [creating, setCreating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useViewMode<ContactViewMode>('fna-contacts-viewMode', 'table');
   const [typeFilter, setTypeFilter] = useState<ContactType | 'all'>('all');
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
@@ -876,7 +887,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
   }, [contacts]);
 
   // Cast gallery view
-  const isCastView = typeFilter === 'cast';
+  const isCastView = viewMode === 'gallery';
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden">
@@ -912,7 +923,8 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
       {isCastView ? (
         <>
           {/* Cast gallery toolbar — matches AdminDataTable toolbar style */}
-          <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+          <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+            <ViewSwitcher views={CONTACT_VIEWS} activeView={viewMode} onChange={setViewMode} />
             {/* Type tabs — full buttons on lg+, dropdown on smaller */}
             <div className="hidden 2xl:flex items-center gap-1 flex-shrink-0">
               {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
@@ -923,14 +935,14 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                     onClick={() => setTypeFilter(t)}
                     className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
                       typeFilter === t
-                        ? (TYPE_ACTIVE_CLASSES[t] ?? 'bg-white/10 text-white border-transparent')
-                        : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                        ? (TYPE_ACTIVE_CLASSES[t] ?? 'bg-admin-bg-active text-admin-text-primary border-transparent')
+                        : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
                     }`}
                   >
                     <Icon size={14} strokeWidth={1.75} />
                     {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
-                      typeFilter === t ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                      typeFilter === t ? 'bg-admin-bg-active' : 'bg-admin-bg-hover text-admin-text-faint'
                     }`}>{typeCounts[t] ?? 0}</span>
                   </button>
                 );
@@ -955,7 +967,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
               />
             </div>
 
-            <div className="w-px bg-white/10 mx-1.5 self-stretch" />
+            <div className="w-px bg-admin-bg-active mx-1.5 self-stretch" />
 
             {/* Filter dropdowns */}
             <FilterDropdown
@@ -983,34 +995,34 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
 
             {/* Active filter chips */}
             {(companyFilter || projectFilter || roleFilter) && (
-              <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-[#2a2a2a]">
+              <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-admin-border">
                 {companyFilter && (() => {
                   const name = companies.find((co) => co.id === companyFilter)?.name;
                   return name ? (
-                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                      <Building2 size={13} className="text-[#666]" />
+                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-admin-bg-hover text-admin-text-secondary border border-admin-border">
+                      <Building2 size={13} className="text-admin-text-dim" />
                       <span className="truncate max-w-[160px]">{name}</span>
-                      <button onClick={() => setCompanyFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                      <button onClick={() => setCompanyFilter(null)} className="p-0.5 rounded hover:bg-admin-bg-hover-strong text-admin-text-dim hover:text-admin-text-secondary transition-colors"><X size={12} /></button>
                     </span>
                   ) : null;
                 })()}
                 {projectFilter && (() => {
                   const proj = projects.find((p) => p.id === projectFilter);
                   return proj ? (
-                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                      <LayoutGrid size={13} className="text-[#666]" />
+                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-admin-bg-hover text-admin-text-secondary border border-admin-border">
+                      <LayoutGrid size={13} className="text-admin-text-dim" />
                       <span className="truncate max-w-[160px]">{proj.title}</span>
-                      <button onClick={() => setProjectFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                      <button onClick={() => setProjectFilter(null)} className="p-0.5 rounded hover:bg-admin-bg-hover-strong text-admin-text-dim hover:text-admin-text-secondary transition-colors"><X size={12} /></button>
                     </span>
                   ) : null;
                 })()}
                 {roleFilter && (() => {
                   const name = roles.find((r) => r.id === roleFilter)?.name;
                   return name ? (
-                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                      <Tag size={13} className="text-[#666]" />
+                    <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-admin-bg-hover text-admin-text-secondary border border-admin-border">
+                      <Tag size={13} className="text-admin-text-dim" />
                       <span className="truncate max-w-[160px]">{name}</span>
-                      <button onClick={() => setRoleFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                      <button onClick={() => setRoleFilter(null)} className="p-0.5 rounded hover:bg-admin-bg-hover-strong text-admin-text-dim hover:text-admin-text-secondary transition-colors"><X size={12} /></button>
                     </span>
                   ) : null;
                 })()}
@@ -1032,7 +1044,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
           {/* Cast gallery grid */}
           <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
             {filtered.length === 0 ? (
-              <div className="text-center py-12 text-[#404044] text-sm">
+              <div className="text-center py-12 text-admin-text-ghost text-sm">
                 {contacts.length === 0 ? 'No people yet.' : 'No matching cast members.'}
               </div>
             ) : (
@@ -1042,19 +1054,19 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                     key={c.id}
                     onClick={() => setActiveId(c.id)}
                     className={`group cursor-pointer rounded-xl overflow-hidden border transition-colors ${
-                      activeId === c.id ? 'border-white/20' : 'border-[#2a2a2a] hover:border-white/15'
+                      activeId === c.id ? 'border-admin-border-emphasis' : 'border-admin-border hover:border-admin-border-muted'
                     }`}
                   >
-                    <div className="aspect-[3/4] bg-white/[0.03] flex items-center justify-center">
+                    <div className="aspect-[3/4] bg-admin-bg-subtle flex items-center justify-center">
                       {c.headshot_url ? (
                         <img src={c.headshot_url} alt={contactFullName(c)} className="w-full h-full object-cover" />
                       ) : (
-                        <ImageIcon size={24} className="text-[#202022]" />
+                        <ImageIcon size={24} className="text-admin-text-placeholder" />
                       )}
                     </div>
                     <div className="px-3 py-2.5">
-                      <p className="text-sm font-medium text-foreground truncate">{contactFullName(c)}</p>
-                      <p className="text-xs text-[#515155] truncate">{c.role || 'Cast'}</p>
+                      <p className="text-sm font-medium text-admin-text-primary truncate">{contactFullName(c)}</p>
+                      <p className="text-xs text-admin-text-faint truncate">{c.role || 'Cast'}</p>
                     </div>
                   </div>
                 ))}
@@ -1076,11 +1088,16 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
           selectable
           freezePanes
           exportCsv
+          onBatchDelete={async (ids) => {
+            await batchDeleteContacts(ids);
+            setContacts((prev) => prev.filter((c) => !ids.includes(c.id)));
+          }}
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
           emptyMessage={contacts.length === 0 ? 'No people yet.' : 'No matching people.'}
           toolbarSlot={
             <>
+              <ViewSwitcher views={CONTACT_VIEWS} activeView={viewMode} onChange={setViewMode} />
               {/* Type tabs — full buttons on lg+, dropdown on smaller */}
               <div className="hidden 2xl:flex items-center gap-1">
                 {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
@@ -1091,14 +1108,14 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                       onClick={() => setTypeFilter(t)}
                       className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
                         typeFilter === t
-                          ? (TYPE_ACTIVE_CLASSES[t] ?? 'bg-white/10 text-white border-transparent')
-                          : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                          ? (TYPE_ACTIVE_CLASSES[t] ?? 'bg-admin-bg-active text-admin-text-primary border-transparent')
+                          : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
                       }`}
                     >
                       <Icon size={14} strokeWidth={1.75} />
                       {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
-                        typeFilter === t ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                        typeFilter === t ? 'bg-admin-bg-active' : 'bg-admin-bg-hover text-admin-text-faint'
                       }`}>{typeCounts[t] ?? 0}</span>
                     </button>
                   );
@@ -1123,7 +1140,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                 />
               </div>
 
-              <div className="w-px bg-white/10 mx-1.5 self-stretch" />
+              <div className="w-px bg-admin-bg-active mx-1.5 self-stretch" />
 
               {/* Filter dropdowns */}
               <FilterDropdown
@@ -1151,34 +1168,34 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
 
               {/* Active filter chips */}
               {(companyFilter || projectFilter || roleFilter) && (
-                <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-[#2a2a2a]">
+                <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-admin-border">
                   {companyFilter && (() => {
                     const name = companies.find((co) => co.id === companyFilter)?.name;
                     return name ? (
-                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                        <Building2 size={13} className="text-[#666]" />
+                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-admin-bg-hover text-admin-text-secondary border border-admin-border">
+                        <Building2 size={13} className="text-admin-text-dim" />
                         <span className="truncate max-w-[160px]">{name}</span>
-                        <button onClick={() => setCompanyFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                        <button onClick={() => setCompanyFilter(null)} className="p-0.5 rounded hover:bg-admin-bg-hover-strong text-admin-text-dim hover:text-admin-text-secondary transition-colors"><X size={12} /></button>
                       </span>
                     ) : null;
                   })()}
                   {projectFilter && (() => {
                     const proj = projects.find((p) => p.id === projectFilter);
                     return proj ? (
-                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                        <LayoutGrid size={13} className="text-[#666]" />
+                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-admin-bg-hover text-admin-text-secondary border border-admin-border">
+                        <LayoutGrid size={13} className="text-admin-text-dim" />
                         <span className="truncate max-w-[160px]">{proj.title}</span>
-                        <button onClick={() => setProjectFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                        <button onClick={() => setProjectFilter(null)} className="p-0.5 rounded hover:bg-admin-bg-hover-strong text-admin-text-dim hover:text-admin-text-secondary transition-colors"><X size={12} /></button>
                       </span>
                     ) : null;
                   })()}
                   {roleFilter && (() => {
                     const name = roles.find((r) => r.id === roleFilter)?.name;
                     return name ? (
-                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-white/[0.08] text-[#ccc] border border-[#2a2a2a]">
-                        <Tag size={13} className="text-[#666]" />
+                      <span className="flex items-center gap-1.5 px-3 py-[4px] rounded-lg text-sm font-medium bg-admin-bg-hover text-admin-text-secondary border border-admin-border">
+                        <Tag size={13} className="text-admin-text-dim" />
                         <span className="truncate max-w-[160px]">{name}</span>
-                        <button onClick={() => setRoleFilter(null)} className="p-0.5 rounded hover:bg-white/10 text-[#666] hover:text-[#b3b3b3] transition-colors"><X size={12} /></button>
+                        <button onClick={() => setRoleFilter(null)} className="p-0.5 rounded hover:bg-admin-bg-hover-strong text-admin-text-dim hover:text-admin-text-secondary transition-colors"><X size={12} /></button>
                       </span>
                     ) : null;
                   })()}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import Image from 'next/image';
 import { motion, useInView } from 'framer-motion';
 import { ServicesTags } from '@/components/services/ServicesTags';
 import { ProjectReel, ServicesProjectGrid } from '@/components/services/ProjectReel';
@@ -221,6 +222,13 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
                 {projects.crowdfunding.length > 0 && (
                   <ProjectReel projects={projects.crowdfunding} fadeColor="#000000" />
                 )}
+
+                {/* Certification badges */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+                  <Image src="/images/crowdfunding/kickstarter.png" alt="Kickstarter Certified Expert" width={280} height={96} className="w-full h-auto" />
+                  <Image src="/images/crowdfunding/indiegogo.png" alt="Indiegogo Certified Expert" width={280} height={96} className="w-full h-auto" />
+                  <Image src="/images/crowdfunding/launchboom.png" alt="LaunchBoom Certified Expert" width={280} height={96} className="w-full h-auto" />
+                </div>
               </div>
             </div>
 

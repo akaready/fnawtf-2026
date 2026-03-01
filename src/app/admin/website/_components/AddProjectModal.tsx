@@ -55,21 +55,21 @@ export function AddProjectModal({
       onClick={onClose}
     >
       <div
-        className="bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[60vh] flex flex-col"
+        className="bg-admin-bg-raised border border-admin-border rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[60vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2a2a2a]">
-          <Search size={15} className="text-[#4d4d4d] flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-admin-border">
+          <Search size={15} className="text-admin-text-secondary flex-shrink-0" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search published projects…"
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-[#404040] focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none"
             autoFocus
           />
-          <button onClick={onClose} className="text-[#4d4d4d] hover:text-[#999] transition-colors">
+          <button onClick={onClose} className="text-admin-text-secondary hover:text-admin-text-secondary transition-colors">
             <X size={15} />
           </button>
         </div>
@@ -77,7 +77,7 @@ export function AddProjectModal({
         {/* Project list */}
         <div className="flex-1 overflow-y-auto admin-scrollbar p-2">
           {available.length === 0 ? (
-            <p className="text-center text-xs text-[#404040] py-8">
+            <p className="text-center text-xs text-admin-text-ghost py-8">
               {search ? 'No matching projects.' : 'All projects are already placed on this page.'}
             </p>
           ) : (
@@ -89,10 +89,10 @@ export function AddProjectModal({
                     key={project.id}
                     onClick={() => handleAdd(project.id)}
                     disabled={isLoading}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-admin-bg-selected transition-colors disabled:opacity-50"
                   >
                     {/* Thumbnail */}
-                    <div className="flex-shrink-0 w-10 h-7 rounded overflow-hidden bg-white/[0.04]">
+                    <div className="flex-shrink-0 w-10 h-7 rounded overflow-hidden bg-admin-bg-selected">
                       {project.thumbnail_url ? (
                         <img
                           src={project.thumbnail_url}
@@ -104,12 +104,12 @@ export function AddProjectModal({
                       )}
                     </div>
 
-                    <span className="flex-1 text-sm text-[#b3b3b3] truncate">{project.title}</span>
+                    <span className="flex-1 text-sm text-admin-text-secondary truncate">{project.title}</span>
 
                     {isLoading ? (
-                      <Loader2 size={13} className="text-[#4d4d4d] animate-spin flex-shrink-0" />
+                      <Loader2 size={13} className="text-admin-text-secondary animate-spin flex-shrink-0" />
                     ) : placedProjectIds.has(project.id) ? (
-                      <Check size={13} className="text-green-400 flex-shrink-0" />
+                      <Check size={13} className="text-admin-success flex-shrink-0" />
                     ) : null}
                   </button>
                 );

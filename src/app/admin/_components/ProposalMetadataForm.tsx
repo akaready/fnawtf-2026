@@ -100,8 +100,8 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
     });
   };
 
-  const inputCls = 'w-full rounded-lg border border-border/40 bg-black/50 px-4 py-3 text-sm text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20';
-  const labelCls = 'text-xs font-medium text-muted-foreground mb-1.5 block';
+  const inputCls = 'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-4 py-3 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
+  const labelCls = 'text-xs font-medium text-admin-text-muted mb-1.5 block';
 
   return (
     <div className="flex flex-col h-full">
@@ -111,7 +111,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
         leftContent={
           <button
             onClick={() => router.push('/admin/proposals')}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+            className="p-2 rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
           >
             <ArrowLeft size={18} />
           </button>
@@ -120,7 +120,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
           <button
             onClick={handleSave}
             disabled={saving || !title.trim() || !contactName.trim() || !contactCompany.trim() || !subtitle.trim() || !slug.trim()}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white text-black text-sm font-medium rounded-lg border border-white hover:bg-black hover:text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            className="btn-primary px-6 py-2.5 text-sm"
           >
             {saving ? (
               <Loader2 size={14} className="animate-spin" />
@@ -150,8 +150,8 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
                     onClick={() => setProposalType(t.value)}
                     className={`flex items-center gap-2 px-5 py-3 rounded-lg border text-sm font-medium transition-colors ${
                       active
-                        ? 'border-white/30 bg-white/10 text-foreground'
-                        : 'border-border/40 bg-black/50 text-muted-foreground hover:text-foreground hover:border-white/20'
+                        ? 'border-admin-border-focus bg-admin-bg-active text-admin-text-primary'
+                        : 'border-admin-border-subtle bg-admin-bg-base text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis'
                     }`}
                   >
                     <Icon size={15} />
@@ -244,7 +244,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
             <div>
               <label className={labelCls}>URL Slug *</label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#404044] font-mono whitespace-nowrap">/p/</span>
+                <span className="text-xs text-admin-text-ghost font-mono whitespace-nowrap">/p/</span>
                 <input
                   type="text"
                   value={slug}
@@ -266,16 +266,16 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
                 <button
                   onClick={() => setPassword(generatePassword())}
                   title="Generate new code"
-                  className="p-3 rounded-lg border border-border/40 bg-black/50 text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors flex-shrink-0"
+                  className="p-3 rounded-lg border border-admin-border-subtle bg-admin-bg-base text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis transition-colors flex-shrink-0"
                 >
                   <RefreshCw size={14} />
                 </button>
                 <button
                   onClick={() => { navigator.clipboard.writeText(password); setCopiedPw(true); setTimeout(() => setCopiedPw(false), 2000); }}
                   title="Copy code"
-                  className="p-3 rounded-lg border border-border/40 bg-black/50 text-muted-foreground hover:text-foreground hover:border-white/20 transition-colors flex-shrink-0"
+                  className="p-3 rounded-lg border border-admin-border-subtle bg-admin-bg-base text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis transition-colors flex-shrink-0"
                 >
-                  {copiedPw ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                  {copiedPw ? <Check size={14} className="text-admin-success" /> : <Copy size={14} />}
                 </button>
               </div>
             </div>

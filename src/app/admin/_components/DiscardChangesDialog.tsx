@@ -15,13 +15,13 @@ export function DiscardChangesDialog({ open, onKeepEditing, onDiscard }: Props) 
 
   return (
     <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-6 mx-6 max-w-sm space-y-3 shadow-2xl">
-        <h3 className="text-base font-semibold text-foreground">Discard changes?</h3>
-        <p className="text-sm text-muted-foreground">Closing will discard unsaved changes.</p>
+      <div className="bg-admin-bg-overlay border border-admin-border rounded-xl p-6 mx-6 max-w-sm space-y-3 shadow-2xl">
+        <h3 className="text-base font-semibold text-admin-text-primary">Discard changes?</h3>
+        <p className="text-sm text-admin-text-muted">Closing will discard unsaved changes.</p>
         <div className="flex items-center gap-2 justify-end pt-1">
           <button
             onClick={onKeepEditing}
-            className="px-4 py-2 text-sm rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
+            className="px-4 py-2 text-sm rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
           >
             Keep Editing
           </button>

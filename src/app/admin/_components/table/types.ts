@@ -151,6 +151,8 @@ export interface AdminDataTableProps<T extends { id: string }> {
 
   /* Selection & batch actions */
   batchActions?: BatchAction<T>[];
+  /** Toolbar-integrated bulk delete. When provided + rows selected, shows trash icon in toolbar. */
+  onBatchDelete?: (ids: string[]) => void | Promise<void>;
 
   /* Row interaction */
   rowActions?: RowAction<T>[];

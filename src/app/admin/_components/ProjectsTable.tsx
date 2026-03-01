@@ -19,7 +19,6 @@ interface ProjectRow {
   description: string;
   client_name: string;
   client_quote: string | null;
-  type: string;
   category: string | null;
   thumbnail_url: string | null;
   preview_gif_url: string | null;
@@ -75,8 +74,7 @@ export function ProjectsTable({
     { key: 'client_name', label: 'Client', type: 'text', sortable: true, onEdit: edit('client_name') },
     { key: 'description', label: 'Description', type: 'text', defaultVisible: false, maxWidth: 300, onEdit: edit('description') },
     { key: 'client_quote', label: 'Quote', type: 'text', defaultVisible: false, maxWidth: 250, onEdit: edit('client_quote') },
-    { key: 'type', label: 'Type', type: 'select', sortable: true, options: [{ value: 'video', label: 'Video' }, { value: 'design', label: 'Design' }], onEdit: edit('type') },
-    { key: 'category', label: 'Category', type: 'text', sortable: true, defaultVisible: false, onEdit: edit('category') },
+    { key: 'category', label: 'Type', type: 'text', sortable: true, onEdit: edit('category') },
     { key: 'style_tags', label: 'Style', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.style_tags, onEdit: edit('style_tags') },
     { key: 'premium_addons', label: 'Add-ons', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.premium_addons, onEdit: edit('premium_addons') },
     { key: 'camera_techniques', label: 'Techniques', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.camera_techniques, onEdit: edit('camera_techniques') },
@@ -93,7 +91,7 @@ export function ProjectsTable({
     {
       key: 'published', label: 'Published', type: 'toggle', sortable: true, group: 'Status',
       toggleLabels: ['Published', 'Draft'],
-      toggleColors: ['bg-green-500/10 text-green-400', 'bg-white/5 text-[#515155]'],
+      toggleColors: ['bg-admin-success-bg text-admin-success', 'bg-admin-bg-hover text-admin-text-faint'],
       onEdit: edit('published'),
     },
   ];
@@ -151,6 +149,10 @@ export function ProjectsTable({
       search={search}
       exportRef={exportRef}
       batchActions={batchActions}
+      onBatchDelete={async (ids) => {
+        await batchDeleteProjects(ids);
+        router.refresh();
+      }}
       onRowClick={onRowClick}
       emptyMessage="No projects yet."
     />

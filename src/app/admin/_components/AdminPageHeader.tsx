@@ -38,7 +38,7 @@ export function AdminPageHeader({
 
   return (
     <div
-      className="@container flex-shrink-0 h-[7rem] px-6 @xl:px-8 border-b border-[#2a2a2a] flex flex-col justify-center"
+      className="@container flex-shrink-0 h-[7rem] px-6 @xl:px-8 border-b border-admin-border flex flex-col justify-center"
     >
       {/* Breadcrumb row */}
       {topContent && <div className="mb-2">{topContent}</div>}
@@ -49,7 +49,7 @@ export function AdminPageHeader({
         <div className="min-w-0 shrink-0 max-w-[40%]">
           <h1 className="text-2xl font-bold tracking-tight truncate">{title}</h1>
           {subtitle && (
-            <p className="text-sm mt-1 text-muted-foreground truncate">{subtitle}</p>
+            <p className="text-sm mt-1 text-admin-text-muted truncate">{subtitle}</p>
           )}
         </div>
         {hasInlineControls && (
@@ -57,7 +57,7 @@ export function AdminPageHeader({
             {rightContent}
             {onSearchChange !== undefined && (
               <div className="relative flex-1 max-w-64 min-w-[100px]">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-text-faint" />
                 <input
                   type="text"
                   value={search ?? ''}
@@ -68,7 +68,7 @@ export function AdminPageHeader({
                 {search && (
                   <button
                     onClick={() => onSearchChange('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616166] hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-admin-text-faint hover:text-admin-text-primary transition-colors"
                   >
                     <X size={14} />
                   </button>
@@ -91,7 +91,7 @@ export function AdminPageHeader({
           <div className="min-w-0 shrink">
             <h1 className="text-xl font-bold tracking-tight truncate">{title}</h1>
             {subtitle && (
-              <p className="text-xs mt-0.5 text-muted-foreground truncate">{subtitle}</p>
+              <p className="text-xs mt-0.5 text-admin-text-muted truncate">{subtitle}</p>
             )}
           </div>
           <div className="flex-1" />
@@ -101,7 +101,7 @@ export function AdminPageHeader({
           <div className="flex items-center gap-2">
             {onSearchChange !== undefined && (
               <div className="relative flex-1 min-w-0">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#616166]" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-text-faint" />
                 <input
                   type="text"
                   value={search ?? ''}
@@ -112,7 +112,7 @@ export function AdminPageHeader({
                 {search && (
                   <button
                     onClick={() => onSearchChange('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#616166] hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-admin-text-faint hover:text-admin-text-primary transition-colors"
                   >
                     <X size={14} />
                   </button>

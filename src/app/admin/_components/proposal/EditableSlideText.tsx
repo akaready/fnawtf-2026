@@ -98,7 +98,7 @@ export function EditableSlideText({
           onChange={(e) => setEditTitle(e.target.value)}
           placeholder="Section label (optional)"
           autoFocus
-          className="w-full text-sm tracking-[0.3em] uppercase font-mono text-[#666] bg-transparent border-b border-dashed border-white/20 outline-none placeholder:text-white/10 pb-2"
+          className="w-full text-sm tracking-[0.3em] uppercase font-mono text-admin-text-dim bg-transparent border-b border-dashed border-admin-border-emphasis outline-none placeholder:text-white/10 pb-2"
         />
         <textarea
           value={editContent}
@@ -113,15 +113,15 @@ export function EditableSlideText({
           }}
           placeholder={placeholder}
           rows={5}
-          className="w-full text-2xl lg:text-3xl font-display text-[#ccc] leading-relaxed bg-transparent border-b border-dashed border-white/20 outline-none resize-none placeholder:text-white/15 pb-3"
+          className="w-full text-2xl lg:text-3xl font-display text-[#ccc] leading-relaxed bg-transparent border-b border-dashed border-admin-border-emphasis outline-none resize-none placeholder:text-white/15 pb-3"
         />
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-admin-danger">{error}</p>}
         <div className="flex items-center justify-between">
-          <p className="text-xs text-[#333] font-mono">⌘↵ to save · Esc to cancel</p>
+          <p className="text-xs text-admin-text-placeholder font-mono">⌘↵ to save · Esc to cancel</p>
           <div className="flex gap-2">
             <button
               onClick={onCancel}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-admin-text-faint hover:text-[#999] transition-colors"
             >
               <X size={10} />
               Cancel
@@ -129,7 +129,7 @@ export function EditableSlideText({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-white/10 hover:bg-white/15 rounded-lg font-medium transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-admin-bg-active hover:bg-white/15 rounded-lg font-medium transition-colors disabled:opacity-50"
             >
               {saving ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
               Save

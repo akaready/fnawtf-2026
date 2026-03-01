@@ -49,7 +49,7 @@ export function ProjectForm({ project, videos, credits, btsImages, tagSuggestion
   return (
     <div>
       {/* Tab nav */}
-      <div className="flex gap-1 mb-8 border-b border-border/30">
+      <div className="flex gap-1 mb-8 border-b border-admin-border-subtle">
         {TABS.map((tab) => {
           const disabled = isNew && tab.id !== 'metadata';
           return (
@@ -60,15 +60,15 @@ export function ProjectForm({ project, videos, credits, btsImages, tagSuggestion
               disabled={disabled}
               className={`px-4 py-2.5 text-sm font-medium transition-colors relative -mb-px ${
                 disabled
-                  ? 'text-muted-foreground/25 cursor-not-allowed'
+                  ? 'text-admin-text-muted/25 cursor-not-allowed'
                   : activeTab === tab.id
-                  ? 'text-foreground border-b-2 border-white'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-admin-text-primary border-b-2 border-admin-text-primary'
+                  : 'text-admin-text-muted hover:text-admin-text-primary'
               }`}
             >
               {tab.label}
               {disabled && (
-                <span className="ml-1 text-[10px] text-[#303033]">(save first)</span>
+                <span className="ml-1 text-[10px] text-admin-text-placeholder">(save first)</span>
               )}
             </button>
           );

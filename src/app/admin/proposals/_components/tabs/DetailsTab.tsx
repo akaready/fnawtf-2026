@@ -55,10 +55,10 @@ const CONTACT_TYPES: { value: ContactType; label: string }[] = [
   { value: 'cast', label: 'Cast' },
 ];
 
-const labelCls = 'block text-xs text-[#808080] uppercase tracking-wide mb-1';
+const labelCls = 'block text-xs text-admin-text-secondary uppercase tracking-wide mb-1';
 const inputCls =
-  'w-full bg-black/40 border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 placeholder:text-[#333]';
-const sectionHeadingCls = 'text-xs font-mono text-[#404040] uppercase tracking-widest mb-4';
+  'w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis placeholder:text-admin-text-ghost';
+const sectionHeadingCls = 'text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4';
 
 export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
   { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onSaveStateChange, onProposalTypeChange },
@@ -320,7 +320,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               {contactCompany && (
                 <button
                   onClick={() => { setContactCompany(''); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4d4d4d] hover:text-[#999] transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-admin-text-faint hover:text-admin-text-secondary transition-colors"
                   title="Clear company"
                 >
                   <X size={13} />
@@ -329,17 +329,17 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             </div>
             {filteredClients.length > 0 && (
               <div className="relative">
-                <div className="absolute z-50 top-0 left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
+                <div className="absolute z-50 top-0 left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl">
                   {filteredClients.map((c) => (
                     <button
                       key={c.id}
                       type="button"
                       onClick={() => handleSelectCompany(c)}
-                      className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex items-center gap-2"
                     >
-                      <Building2 size={12} className="text-[#4d4d4d] flex-shrink-0" />
+                      <Building2 size={12} className="text-admin-text-faint flex-shrink-0" />
                       <span className="truncate">{c.name}</span>
-                      {c.industry && <span className="text-xs text-[#404040] truncate">{c.industry}</span>}
+                      {c.industry && <span className="text-xs text-admin-text-ghost truncate">{c.industry}</span>}
                     </button>
                   ))}
                 </div>
@@ -348,8 +348,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
             {/* Add new company — right below the company field */}
             {showAddCompany ? (
-              <div className="mt-2 p-4 bg-white/[0.03] border border-[#2a2a2a] rounded-lg space-y-3">
-                <p className="text-xs text-[#666] font-medium">New Company</p>
+              <div className="mt-2 p-4 bg-admin-bg-subtle border border-admin-border rounded-lg space-y-3">
+                <p className="text-xs text-admin-text-dim font-medium">New Company</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Name</label>
@@ -421,13 +421,13 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                   <button
                     onClick={handleAddNewCompany}
                     disabled={!newCompanyName.trim() || addingCompany}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {addingCompany ? 'Adding…' : 'Add Company'}
                   </button>
                   <button
                     onClick={() => { setShowAddCompany(false); setNewCompanyName(''); setNewCompanyEmail(''); setNewCompanyWebsite(''); setNewCompanyIndustry(''); setNewCompanyLocation(''); setNewCompanyNotes(''); }}
-                    className="px-3 py-1.5 text-xs text-[#666] hover:text-[#b3b3b3] transition-colors"
+                    className="px-3 py-1.5 text-xs text-admin-text-dim hover:text-admin-text-secondary transition-colors"
                   >
                     Cancel
                   </button>
@@ -436,7 +436,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             ) : (
               <button
                 onClick={() => setShowAddCompany(true)}
-                className="mt-1.5 flex items-center gap-1.5 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
+                className="mt-1.5 flex items-center gap-1.5 text-xs text-admin-text-faint hover:text-admin-text-secondary transition-colors"
               >
                 <Plus size={12} />
                 Add new company
@@ -500,7 +500,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                     setTimeout(() => setSlugCopied(false), 1500);
                   }}
                   title="Copy URL"
-                  className="text-[#4d4d4d] hover:text-[#b3b3b3] transition-colors"
+                  className="text-admin-text-faint hover:text-admin-text-secondary transition-colors"
                 >
                   {slugCopied ? <Check size={12} /> : <Copy size={12} />}
                 </button>
@@ -517,7 +517,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <button
                 onClick={() => setSlug(slugify(contactCompany))}
                 title="Regenerate slug from company name"
-                className="flex-shrink-0 p-2 rounded-lg border border-white/10 bg-white/[0.04] text-[#666] hover:text-[#ccc] hover:border-white/20 transition-colors"
+                className="flex-shrink-0 p-2 rounded-lg border border-admin-border-muted bg-admin-bg-selected text-admin-text-dim hover:text-admin-text-secondary hover:border-admin-border-emphasis transition-colors"
               >
                 <RefreshCw size={13} />
               </button>
@@ -535,7 +535,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <button
                 onClick={() => setPassword(generatePassword())}
                 title="Generate new password"
-                className="flex-shrink-0 p-2 rounded-lg border border-white/10 bg-white/[0.04] text-[#666] hover:text-[#ccc] hover:border-white/20 transition-colors"
+                className="flex-shrink-0 p-2 rounded-lg border border-admin-border-muted bg-admin-bg-selected text-admin-text-dim hover:text-admin-text-secondary hover:border-admin-border-emphasis transition-colors"
               >
                 <RefreshCw size={13} />
               </button>
@@ -547,7 +547,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       {/* Contacts (approved access list) */}
       <section>
         <p className={sectionHeadingCls}>Contacts</p>
-        <p className="text-xs text-[#4d4d4d] -mt-2 mb-4">
+        <p className="text-xs text-admin-text-faint -mt-2 mb-4">
           People with approved access to this proposal. Their emails are validated on login.
         </p>
 
@@ -557,26 +557,26 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             {propContacts.map((c) => (
               <div
                 key={c.id}
-                className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.04] border border-[#2a2a2a] rounded-lg group"
+                className="flex items-center gap-3 px-3 py-2.5 bg-admin-bg-selected border border-admin-border rounded-lg group"
               >
-                <div className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 text-[#4d4d4d]">
+                <div className="w-7 h-7 rounded-full bg-admin-bg-hover flex items-center justify-center flex-shrink-0 text-admin-text-faint">
                   <UserPlus size={13} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{contactFullName(c)}</p>
+                  <p className="text-sm font-medium text-admin-text-primary truncate">{contactFullName(c)}</p>
                   {c.email && (
-                    <p className="text-xs text-[#666] truncate flex items-center gap-1">
+                    <p className="text-xs text-admin-text-dim truncate flex items-center gap-1">
                       <Mail size={10} />
                       {c.email}
                     </p>
                   )}
                 </div>
                 {c.role && (
-                  <span className="text-[10px] text-[#404040] bg-white/[0.04] px-2 py-0.5 rounded-full flex-shrink-0">{c.role}</span>
+                  <span className="text-[10px] text-admin-text-ghost bg-admin-bg-selected px-2 py-0.5 rounded-full flex-shrink-0">{c.role}</span>
                 )}
                 <button
                   onClick={() => handleRemoveContact(c.id)}
-                  className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded text-[#4d4d4d] hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-danger hover:bg-admin-danger-bg transition-all flex-shrink-0"
                   title="Remove contact"
                 >
                   <X size={13} />
@@ -596,16 +596,16 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             className={inputCls}
           />
           {filteredContacts.length > 0 && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-[#111] border border-white/15 rounded-lg shadow-xl">
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl">
               {filteredContacts.map((c) => (
                 <button
                   key={c.id}
                   type="button"
                   onClick={() => handleAddExisting(c)}
-                  className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex items-center gap-2"
                 >
                   <span className="truncate">{contactFullName(c)}</span>
-                  {c.email && <span className="text-xs text-[#4d4d4d] truncate">{c.email}</span>}
+                  {c.email && <span className="text-xs text-admin-text-faint truncate">{c.email}</span>}
                 </button>
               ))}
             </div>
@@ -614,8 +614,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
         {/* Add new contact inline — expanded with all fields */}
         {showAddNew ? (
-          <div className="mt-3 p-4 bg-white/[0.03] border border-[#2a2a2a] rounded-lg space-y-3">
-            <p className="text-xs text-[#666] font-medium">New Contact</p>
+          <div className="mt-3 p-4 bg-admin-bg-subtle border border-admin-border rounded-lg space-y-3">
+            <p className="text-xs text-admin-text-dim font-medium">New Contact</p>
 
             {/* Name row */}
             <div className="grid grid-cols-2 gap-3">
@@ -764,13 +764,13 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <button
                 onClick={handleAddNewContact}
                 disabled={!newFirstName.trim() || addingContact}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/10 text-white hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {addingContact ? 'Adding…' : 'Add Contact'}
               </button>
               <button
                 onClick={() => { setShowAddNew(false); resetNewContactForm(); }}
-                className="px-3 py-1.5 text-xs text-[#666] hover:text-[#b3b3b3] transition-colors"
+                className="px-3 py-1.5 text-xs text-admin-text-dim hover:text-admin-text-secondary transition-colors"
               >
                 Cancel
               </button>
@@ -779,7 +779,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         ) : (
           <button
             onClick={() => setShowAddNew(true)}
-            className="mt-3 flex items-center gap-1.5 text-xs text-[#4d4d4d] hover:text-[#999] transition-colors"
+            className="mt-3 flex items-center gap-1.5 text-xs text-admin-text-faint hover:text-admin-text-secondary transition-colors"
           >
             <Plus size={12} />
             Add new contact

@@ -30,8 +30,8 @@ const TOOLBAR_COLORS = {
     badge: 'bg-[#ef4444]/15 text-[#ef4444]',
   },
   neutral: {
-    active: 'bg-white/10 text-[#ccc] border-white/15',
-    badge: 'bg-white/10 text-[#ccc]',
+    active: 'bg-admin-bg-active text-admin-text-secondary border-white/15',
+    badge: 'bg-admin-bg-active text-admin-text-secondary',
   },
 } as const;
 
@@ -64,17 +64,17 @@ export function ToolbarButton({
       disabled={disabled}
       className={`flex items-center ${iconOnly ? 'px-[9px]' : 'gap-1.5 px-[15px]'} py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap border ${
         disabled
-          ? 'text-[#404044] border-transparent cursor-default'
+          ? 'text-admin-text-ghost border-transparent cursor-default'
           : active
             ? scheme.active
-            : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+            : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
       }`}
     >
       <Icon size={14} strokeWidth={1.75} />
       {label && label}
       {badge !== undefined && badge !== 0 && (
         <span className={`ml-0.5 text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
-          active ? scheme.badge : 'bg-white/10 text-[#999]'
+          active ? scheme.badge : 'bg-admin-bg-active text-admin-text-secondary'
         }`}>
           {badge}
         </span>
@@ -120,7 +120,7 @@ export function ToolbarPopover({
   return (
     <div
       ref={ref}
-      className={`absolute top-full mt-[5px] bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] p-3 z-50 animate-dropdown-in max-w-[calc(100vw-2rem)] ${
+      className={`absolute top-full mt-[5px] bg-admin-bg-overlay border-2 border-admin-border rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] p-3 z-50 animate-dropdown-in max-w-[calc(100vw-2rem)] ${
         align === 'right' ? 'right-0' : 'left-0'
       } ${width ?? 'w-80'}`}
     >

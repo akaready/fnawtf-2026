@@ -5,7 +5,7 @@ import { useTransition } from 'react';
 import { Plus, Building2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { AdminDataTable, type ColDef } from './table';
-import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject } from '../actions';
+import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
 import {
@@ -141,8 +141,8 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
         row.logo_url ? (
           <img src={row.logo_url} alt="" className="w-8 h-8 rounded-md object-contain" />
         ) : (
-          <div className="w-8 h-8 rounded-md bg-white/[0.04] flex items-center justify-center">
-            <Building2 size={12} className="text-[#202022]" />
+          <div className="w-8 h-8 rounded-md bg-admin-bg-selected flex items-center justify-center">
+            <Building2 size={12} className="text-admin-text-placeholder" />
           </div>
         ),
     },
@@ -151,7 +151,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       label: 'Name',
       sortable: true,
       render: (row) => (
-        <span className="font-medium text-foreground/80">{row.name}</span>
+        <span className="font-medium text-admin-text-primary/80">{row.name}</span>
       ),
     },
     {
@@ -186,9 +186,9 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       render: (row) => {
         const count = localContacts.filter((ct) => ct.client_id === row.id).length;
         return count > 0 ? (
-          <span className="text-xs text-[#515155]">{count}</span>
+          <span className="text-xs text-admin-text-faint">{count}</span>
         ) : (
-          <span className="text-xs text-[#202022]">—</span>
+          <span className="text-xs text-admin-text-placeholder">—</span>
         );
       },
     },
@@ -198,9 +198,9 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       render: (row) => {
         const count = projects.filter((p) => p.client_id === row.id).length;
         return count > 0 ? (
-          <span className="text-xs text-[#515155]">{count}</span>
+          <span className="text-xs text-admin-text-faint">{count}</span>
         ) : (
-          <span className="text-xs text-[#202022]">—</span>
+          <span className="text-xs text-admin-text-placeholder">—</span>
         );
       },
     },
@@ -208,7 +208,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
       key: 'created_at',
       label: 'Added',
       render: (row) => (
-        <span className="text-xs text-[#404044]">
+        <span className="text-xs text-admin-text-ghost">
           {new Date(row.created_at).toLocaleDateString()}
         </span>
       ),
@@ -253,6 +253,10 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
         selectable
         freezePanes
         exportCsv
+        onBatchDelete={async (ids) => {
+          await batchDeleteClients(ids);
+          setPartners((prev) => prev.filter((p) => !ids.includes(p.id)));
+        }}
         onRowClick={(row) => setActiveId(row.id)}
         selectedId={activeId ?? undefined}
         emptyMessage="No partners yet."

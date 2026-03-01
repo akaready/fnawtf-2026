@@ -394,6 +394,115 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['meeting_relationships']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['meeting_relationships']['Row']>;
       };
+      chat_conversations: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string | null;
+          model: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          title?: string | null;
+          model?: string;
+        };
+        Update: {
+          title?: string | null;
+          model?: string;
+          updated_at?: string;
+        };
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          role: 'user' | 'assistant';
+          content: string;
+          context: Record<string, unknown> | null;
+          created_at: string;
+        };
+        Insert: {
+          conversation_id: string;
+          role: 'user' | 'assistant';
+          content: string;
+          context?: Record<string, unknown> | null;
+        };
+        Update: {
+          content?: string;
+          context?: Record<string, unknown> | null;
+        };
+      };
+      scripts: {
+        Row: {
+          id: string;
+          title: string;
+          project_id: string | null;
+          status: 'draft' | 'review' | 'locked';
+          version: number;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['scripts']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['scripts']['Row']>;
+      };
+      script_scenes: {
+        Row: {
+          id: string;
+          script_id: string;
+          sort_order: number;
+          location_name: string;
+          time_of_day: string;
+          int_ext: 'INT' | 'EXT' | 'INT/EXT';
+          scene_notes: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['script_scenes']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['script_scenes']['Row']>;
+      };
+      script_beats: {
+        Row: {
+          id: string;
+          scene_id: string;
+          sort_order: number;
+          audio_content: string;
+          visual_content: string;
+          notes_content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['script_beats']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['script_beats']['Row']>;
+      };
+      script_characters: {
+        Row: {
+          id: string;
+          script_id: string;
+          name: string;
+          description: string | null;
+          color: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['script_characters']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['script_characters']['Row']>;
+      };
+      script_tags: {
+        Row: {
+          id: string;
+          script_id: string;
+          name: string;
+          slug: string;
+          category: string;
+          color: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['script_tags']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['script_tags']['Row']>;
+      };
     };
     Views: {};
     Functions: {};

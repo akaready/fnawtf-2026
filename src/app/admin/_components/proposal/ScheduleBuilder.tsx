@@ -87,29 +87,29 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
                 key={ms.id}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-border group"
               >
-                <Calendar size={12} className="text-[#333] flex-shrink-0" />
+                <Calendar size={12} className="text-admin-text-placeholder flex-shrink-0" />
                 <input
                   type="text"
                   value={ms.label}
                   onChange={(e) => onUpdate(ms.id, { label: e.target.value })}
-                  className="flex-1 min-w-0 bg-transparent text-sm text-foreground outline-none"
+                  className="flex-1 min-w-0 bg-transparent text-sm text-admin-text-primary outline-none"
                 />
                 <input
                   type="date"
                   value={ms.start_date}
                   onChange={(e) => onUpdate(ms.id, { start_date: e.target.value })}
-                  className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
+                  className="bg-transparent text-xs text-admin-text-dim outline-none [color-scheme:dark]"
                 />
-                <span className="text-[#333] text-xs">to</span>
+                <span className="text-admin-text-placeholder text-xs">to</span>
                 <input
                   type="date"
                   value={ms.end_date}
                   onChange={(e) => onUpdate(ms.id, { end_date: e.target.value })}
-                  className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
+                  className="bg-transparent text-xs text-admin-text-dim outline-none [color-scheme:dark]"
                 />
                 <button
                   onClick={() => onDelete(ms.id)}
-                  className="p-1 text-red-400/30 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1 text-admin-danger/30 hover:text-admin-danger transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <X size={12} />
                 </button>
@@ -127,33 +127,33 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Milestone name"
               autoFocus
-              className="flex-1 min-w-0 bg-transparent text-sm text-foreground outline-none placeholder:text-white/15"
+              className="flex-1 min-w-0 bg-transparent text-sm text-admin-text-primary outline-none placeholder:text-white/15"
               onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false); }}
             />
             <input
               type="date"
               value={newStart}
               onChange={(e) => setNewStart(e.target.value)}
-              className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
+              className="bg-transparent text-xs text-admin-text-dim outline-none [color-scheme:dark]"
             />
-            <span className="text-[#333] text-xs">to</span>
+            <span className="text-admin-text-placeholder text-xs">to</span>
             <input
               type="date"
               value={newEnd}
               onChange={(e) => setNewEnd(e.target.value)}
-              className="bg-transparent text-xs text-[#666] outline-none [color-scheme:dark]"
+              className="bg-transparent text-xs text-admin-text-dim outline-none [color-scheme:dark]"
             />
-            <button onClick={handleAdd} className="px-2 py-1 text-xs bg-white/10 hover:bg-white/15 rounded font-medium transition-colors">
+            <button onClick={handleAdd} className="px-2 py-1 text-xs bg-admin-bg-active hover:bg-white/15 rounded font-medium transition-colors">
               Add
             </button>
-            <button onClick={() => setAdding(false)} className="px-2 py-1 text-xs text-[#4d4d4d] hover:text-[#808080] transition-colors">
+            <button onClick={() => setAdding(false)} className="px-2 py-1 text-xs text-admin-text-faint hover:text-admin-text-secondary transition-colors">
               Cancel
             </button>
           </div>
         ) : (
           <button
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[#333] hover:text-[#808080] border border-dashed border-border hover:border-white/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-admin-text-placeholder hover:text-admin-text-secondary border border-dashed border-border hover:border-admin-border-emphasis transition-colors"
           >
             <Plus size={12} />
             Add Milestone
@@ -168,7 +168,7 @@ export function ScheduleBuilder({ proposal, milestones, onAdd, onUpdate, onDelet
               <button
                 key={preset}
                 onClick={() => handlePresetClick(preset)}
-                className="px-2 py-0.5 rounded text-[10px] text-[#404040] hover:text-[#808080] bg-white/[0.02] hover:bg-white/[0.05] border border-[#2a2a2a] transition-colors"
+                className="px-2 py-0.5 rounded text-[10px] text-admin-text-ghost hover:text-admin-text-secondary bg-admin-bg-subtle hover:bg-admin-bg-hover border border-admin-border transition-colors"
               >
                 + {preset}
               </button>

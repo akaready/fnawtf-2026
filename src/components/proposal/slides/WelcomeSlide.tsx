@@ -104,8 +104,8 @@ export function WelcomeSlide({ section, slideRef }: Props) {
           <p data-sig-hope className="text-white/55 text-base mb-5">We hope you enjoy the proposal and that we get to work together soon.</p>
           <div className="flex items-end gap-6 w-fit">
             {[
-              { src: '/images/about/FNA-richie-v01-RAR.jpg', name: "Ol' Richie" },
-              { src: '/images/about/FNA-ready-v01-RAR.jpg',  name: 'Ready'      },
+              { src: '/images/about/richie.jpg', name: "Ol' Richie" },
+              { src: '/images/about/ready.jpg',  name: 'Ready'      },
             ].map(({ src, name }) => (
               <div key={name} data-photo className="flex flex-col items-center gap-2">
                 <div className="w-24 h-24 rounded-full overflow-hidden border border-white/15 relative flex-shrink-0">

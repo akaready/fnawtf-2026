@@ -68,36 +68,36 @@ export function FieldsPanel<T extends { id: string }>({
   return (
     <ToolbarPopover onClose={onClose} width="w-64" align="right">
       <div className="space-y-2">
-        <div className="flex items-center gap-2 px-3 py-[10px] -mx-3 -mt-3 mb-1 border-b border-[#2a2a2a] bg-black/30 rounded-t-xl">
-          <Search size={13} className="text-[#666] flex-shrink-0" />
+        <div className="flex items-center gap-2 px-3 py-[10px] -mx-3 -mt-3 mb-1 border-b border-admin-border bg-admin-bg-base rounded-t-xl">
+          <Search size={13} className="text-admin-text-dim flex-shrink-0" />
           <input
             type="text"
             value={fieldSearch}
             onChange={(e) => setFieldSearch(e.target.value)}
             placeholder="Search fields…"
-            className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#555]"
+            className="flex-1 bg-transparent text-sm text-admin-text-primary outline-none placeholder:text-admin-text-faint"
             autoFocus
           />
         </div>
-        <div className="flex items-center gap-2 pb-1 border-b border-[#2a2a2a]/50">
-          <button onClick={onShowAll} className="text-[11px] text-[#999] hover:text-foreground transition-colors">
+        <div className="flex items-center gap-2 pb-1 border-b border-admin-border">
+          <button onClick={onShowAll} className="text-[11px] text-admin-text-secondary hover:text-admin-text-primary transition-colors">
             Show all
           </button>
-          <span className="text-[#444]">·</span>
-          <button onClick={onHideAll} className="text-[11px] text-[#999] hover:text-foreground transition-colors">
+          <span className="text-admin-text-ghost">·</span>
+          <button onClick={onHideAll} className="text-[11px] text-admin-text-secondary hover:text-admin-text-primary transition-colors">
             Hide all
           </button>
         </div>
         <div className="max-h-96 overflow-y-auto admin-scrollbar space-y-3">
           {groups.map((g) => (
             <div key={g.label}>
-              <div className="text-[10px] text-[#666] uppercase tracking-wider font-medium px-2.5 mb-1">
+              <div className="text-[10px] text-admin-text-dim uppercase tracking-wider font-medium px-2.5 mb-1">
                 {g.label}
               </div>
               {g.cols.map((col) => (
                 <label
                   key={col.key}
-                  className="flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-sm cursor-pointer hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-sm cursor-pointer hover:bg-admin-bg-hover transition-colors"
                 >
                   <input
                     type="checkbox"
@@ -105,7 +105,7 @@ export function FieldsPanel<T extends { id: string }>({
                     onChange={() => onToggle(col.key)}
                     className="accent-white rounded"
                   />
-                  <span className={visibleCols.has(col.key) ? 'text-foreground' : 'text-[#888]'}>
+                  <span className={visibleCols.has(col.key) ? 'text-admin-text-primary' : 'text-admin-text-secondary'}>
                     {col.label}
                   </span>
                 </label>

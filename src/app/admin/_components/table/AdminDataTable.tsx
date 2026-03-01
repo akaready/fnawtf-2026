@@ -4,8 +4,8 @@ import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffe
 import {
   ArrowUpDown, ChevronUp, ChevronDown, ChevronRight,
   ArrowUpAZ, ListFilter, Layers, Eye,
-  GripVertical, MoreHorizontal, Plus, Check, Minus,
-  Rows, Palette, Snowflake,
+  GripVertical, MoreHorizontal, Plus, Check, Minus, X,
+  Rows, Palette, Snowflake, Trash2,
 } from 'lucide-react';
 
 import type { AdminDataTableProps, ColDef } from './types';
@@ -59,8 +59,8 @@ function DefaultCell<T extends { id: string }>({ col, row }: { col: ColDef<T>; r
           onEdit={col.onEdit}
           labelTrue={col.toggleLabels?.[0] ?? 'Yes'}
           labelFalse={col.toggleLabels?.[1] ?? 'No'}
-          colorTrue={col.toggleColors?.[0] ?? 'bg-green-500/10 text-green-400'}
-          colorFalse={col.toggleColors?.[1] ?? 'bg-white/5 text-[#515155]'}
+          colorTrue={col.toggleColors?.[0] ?? 'bg-admin-success-bg text-admin-success'}
+          colorFalse={col.toggleColors?.[1] ?? 'bg-admin-bg-hover text-admin-text-faint'}
         />
       );
     case 'select':
@@ -84,12 +84,12 @@ function DefaultCell<T extends { id: string }>({ col, row }: { col: ColDef<T>; r
         />
       );
     case 'date': {
-      if (!val) return <span className="text-[#303033]">—</span>;
+      if (!val) return <span className="text-admin-text-placeholder">—</span>;
       const d = new Date(val as string);
-      return <span className="text-muted-foreground text-xs tabular-nums">{d.toLocaleDateString()}</span>;
+      return <span className="text-admin-text-muted text-xs tabular-nums">{d.toLocaleDateString()}</span>;
     }
     case 'thumbnail': {
-      if (!val) return <span className="text-[#303033]">—</span>;
+      if (!val) return <span className="text-admin-text-placeholder">—</span>;
       return (
         <img
           src={val as string}
@@ -99,7 +99,7 @@ function DefaultCell<T extends { id: string }>({ col, row }: { col: ColDef<T>; r
       );
     }
     default:
-      return <span className="text-muted-foreground truncate">{val != null ? String(val) : ''}</span>;
+      return <span className="text-admin-text-muted truncate">{val != null ? String(val) : ''}</span>;
   }
 }
 
@@ -127,6 +127,7 @@ export function AdminDataTable<T extends { id: string }>({
   emptyMessage = 'No items.',
   emptyAction,
   search,
+  onBatchDelete,
   exportRef,
   className,
 }: AdminDataTableProps<T>) {
@@ -144,9 +145,11 @@ export function AdminDataTable<T extends { id: string }>({
   /* ── Selection ───────────────────────────────────────────────────────── */
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
+  const [batchDeleting, setBatchDeleting] = useState(false);
 
   // Clear selection when data changes
-  useEffect(() => { setSelected(new Set()); }, [data]);
+  useEffect(() => { setSelected(new Set()); setConfirmBatchDelete(false); }, [data]);
 
   /* ── Processed data ──────────────────────────────────────────────────── */
 
@@ -166,6 +169,18 @@ export function AdminDataTable<T extends { id: string }>({
     next.has(id) ? next.delete(id) : next.add(id);
     setSelected(next);
   };
+
+  const handleBatchDelete = useCallback(async () => {
+    if (!onBatchDelete || selected.size === 0) return;
+    setBatchDeleting(true);
+    try {
+      await onBatchDelete(Array.from(selected));
+      setSelected(new Set());
+    } finally {
+      setBatchDeleting(false);
+      setConfirmBatchDelete(false);
+    }
+  }, [onBatchDelete, selected]);
 
   /* ── Grouping ────────────────────────────────────────────────────────── */
 
@@ -331,8 +346,8 @@ export function AdminDataTable<T extends { id: string }>({
     position: 'sticky',
     top: 0,
     zIndex: 20,
-    backgroundColor: '#141414',
-    borderBottom: '1px solid #2a2a2a',
+    backgroundColor: 'var(--admin-bg-raised)',
+    borderBottom: '1px solid var(--admin-border)',
   };
 
   const stickyStyle = (offsetIdx: number, isHeader?: boolean): React.CSSProperties | undefined => {
@@ -432,21 +447,21 @@ export function AdminDataTable<T extends { id: string }>({
     <tr
       key={row.id}
       onClick={() => onRowClick?.(row)}
-      className={`h-[3rem] border-b border-[#2a2a2a] transition-colors group ${
+      className={`h-[3rem] border-b border-admin-border transition-colors group ${
         onRowClick ? 'cursor-pointer' : ''
-      } ${selectedId === row.id ? 'bg-white/[0.04]' : ''} ${
-        selected.has(row.id) ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'
+      } ${selectedId === row.id ? 'bg-admin-bg-selected' : ''} ${
+        selected.has(row.id) ? 'bg-admin-bg-selected' : 'hover:bg-admin-bg-subtle'
       }`}
     >
       {selectable && (
         <td className="w-10 px-4 py-1.5 align-middle" style={stickyStyle(0)}>
           <button
             onClick={(e) => { e.stopPropagation(); toggleOne(row.id); }}
-            className="flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center justify-center text-admin-text-muted hover:text-admin-text-primary transition-colors"
           >
             {selected.has(row.id)
               ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={11} strokeWidth={3} className="text-black" /></div>
-              : <div className="w-4 h-4 rounded border border-[#444] hover:border-[#666] transition-colors" />}
+              : <div className="w-4 h-4 rounded border border-admin-border hover:border-admin-border-emphasis transition-colors" />}
           </button>
         </td>
       )}
@@ -484,11 +499,41 @@ export function AdminDataTable<T extends { id: string }>({
     <div className={`flex flex-col h-full ${className ?? ''}`}>
       {/* ── Toolbar ────────────────────────────────────────────────── */}
       {showToolbar && (
-        <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] flex-shrink-0 bg-[#010101]">
+        <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
           {toolbarSlot}
 
-          {/* Right-aligned toolbar buttons — Freeze, Fields, Filter, Group, Sort, Color, Row Height */}
+          {/* Right-aligned toolbar buttons — Batch Delete, Freeze, Fields, Filter, Group, Sort, Color, Row Height */}
           <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+            {/* Batch delete — appears when rows are selected and onBatchDelete is provided */}
+            {onBatchDelete && selected.size > 0 && (
+              confirmBatchDelete ? (
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={handleBatchDelete}
+                    disabled={batchDeleting}
+                    className="btn-ghost-danger w-8 h-8"
+                    title="Confirm delete"
+                  >
+                    <Check size={14} strokeWidth={2} />
+                  </button>
+                  <button
+                    onClick={() => setConfirmBatchDelete(false)}
+                    className="btn-ghost w-8 h-8"
+                    title="Cancel"
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmBatchDelete(true)}
+                  className="btn-ghost-danger w-8 h-8"
+                  title={`Delete ${selected.size} selected`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )
+            )}
             <ToolbarButton
               icon={Snowflake}
               label=""
@@ -581,7 +626,7 @@ export function AdminDataTable<T extends { id: string }>({
         {/* Scrollbar cover behind sticky header */}
         {headerHeight > 0 && (
           <div
-            className="absolute top-0 right-0 w-3 bg-[#141414] z-40 pointer-events-none border-b border-[#2a2a2a]"
+            className="absolute top-0 right-0 w-3 bg-admin-bg-raised z-40 pointer-events-none border-b border-admin-border"
             style={{ height: headerHeight - 0.5 }}
           />
         )}
@@ -600,23 +645,23 @@ export function AdminDataTable<T extends { id: string }>({
 
         <div ref={tableRef} className="h-full overflow-auto admin-scrollbar">
           <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
-            <thead className="bg-[#141414]">
+            <thead className="bg-admin-bg-raised">
               <tr className="h-[3rem]">
                 {/* Checkbox header */}
                 {selectable && (
                   <th
-                    className="w-10 px-4 py-1.5 align-middle bg-[#141414] border-b border-r border-[#2a2a2a]"
+                    className="w-10 px-4 py-1.5 align-middle bg-admin-bg-raised border-b border-r border-admin-border"
                     style={stickyStyle(0, true)}
                   >
                     <button
                       onClick={toggleAll}
-                      className="text-muted-foreground hover:text-foreground transition-colors flex items-center"
+                      className="text-admin-text-muted hover:text-admin-text-primary transition-colors flex items-center"
                     >
                       {allSelected
                         ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={11} strokeWidth={3} className="text-black" /></div>
                         : someSelected
                           ? <div className="w-4 h-4 rounded bg-accent/50 flex items-center justify-center"><Minus size={11} strokeWidth={3} className="text-black" /></div>
-                          : <div className="w-4 h-4 rounded border border-[#444] hover:border-[#666] transition-colors" />}
+                          : <div className="w-4 h-4 rounded border border-admin-border hover:border-admin-border-emphasis transition-colors" />}
                     </button>
                   </th>
                 )}
@@ -666,11 +711,11 @@ export function AdminDataTable<T extends { id: string }>({
                           nextTh ? nextTh.getBoundingClientRect().width : 0,
                         );
                       }}
-                      className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-white/20 transition-colors z-10"
+                      className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-admin-bg-active transition-colors z-10"
                     />
                   ) : null;
 
-                  const thBase = `relative px-3 py-1.5 text-left text-xs uppercase tracking-wider text-[#616166] font-medium whitespace-nowrap border-b border-r border-[#2a2a2a] group/th ${
+                  const thBase = `relative px-3 py-1.5 text-left text-xs uppercase tracking-wider text-admin-text-faint font-medium whitespace-nowrap border-b border-r border-admin-border group/th ${
                     isLast && !rowActions ? 'border-r-0' : ''
                   } ${isDragOver ? 'border-l-2 border-l-accent' : ''}`;
 
@@ -678,7 +723,7 @@ export function AdminDataTable<T extends { id: string }>({
                     return (
                       <th
                         key={col.key}
-                        className={`${thBase} cursor-pointer hover:text-[#999] transition-colors`}
+                        className={`${thBase} cursor-pointer hover:text-admin-text-secondary transition-colors`}
                         style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                         onClick={() => { if (!resizingRef.current) handleHeaderSort(col.key); }}
                         {...dropProps}
@@ -712,7 +757,7 @@ export function AdminDataTable<T extends { id: string }>({
                 {/* Actions header */}
                 {rowActions && rowActions.length > 0 && (
                   <th
-                    className="w-10 px-2 py-3 text-right border-b border-[#2a2a2a]"
+                    className="w-10 px-2 py-3 text-right border-b border-admin-border"
                     style={thStickyBase}
                   />
                 )}
@@ -722,12 +767,12 @@ export function AdminDataTable<T extends { id: string }>({
             <tbody>
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColCount} className="px-4 py-12 text-center text-[#404044] text-sm">
+                  <td colSpan={visibleColCount} className="px-4 py-12 text-center text-admin-text-ghost text-sm">
                     {emptyMessage}
                     {emptyAction && (
                       <button
                         onClick={emptyAction.onClick}
-                        className="flex items-center gap-1 mx-auto mt-2 text-xs text-[#808080] hover:text-white transition-colors"
+                        className="flex items-center gap-1 mx-auto mt-2 text-xs text-admin-text-secondary hover:text-admin-text-primary transition-colors"
                       >
                         <Plus size={13} /> {emptyAction.label}
                       </button>
@@ -738,24 +783,24 @@ export function AdminDataTable<T extends { id: string }>({
                 Array.from(groups.entries()).map(([label, rows]) => (
                   <React.Fragment key={label}>
                     <tr
-                      className="border-b border-[#2a2a2a]/30 cursor-pointer hover:bg-white/[0.05] transition-colors"
-                      style={{ backgroundColor: '#0a0a0a' }}
+                      className="border-b border-admin-border-subtle cursor-pointer hover:bg-admin-bg-hover transition-colors"
+                      style={{ backgroundColor: 'var(--admin-bg-sidebar)' }}
                       onClick={() => toggleCollapsedGroup(label)}
                     >
                       <td
                         colSpan={visibleColCount}
                         className="px-4 py-2"
-                        style={freezeActive ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: '#0a0a0a' } : undefined}
+                        style={freezeActive ? { position: 'sticky', left: 0, zIndex: 20, backgroundColor: 'var(--admin-bg-sidebar)' } : undefined}
                       >
                         <div className="flex items-center gap-2">
                           <ChevronRight
                             size={14}
-                            className={`text-[#515155] transition-transform ${
+                            className={`text-admin-text-faint transition-transform ${
                               collapsedGroups.has(label) ? '' : 'rotate-90'
                             }`}
                           />
-                          <span className="text-xs font-medium text-foreground uppercase tracking-wider">{label}</span>
-                          <span className="text-[10px] text-[#404044] tabular-nums">{rows.length}</span>
+                          <span className="text-xs font-medium text-admin-text-primary uppercase tracking-wider">{label}</span>
+                          <span className="text-[10px] text-admin-text-ghost tabular-nums">{rows.length}</span>
                         </div>
                       </td>
                     </tr>
@@ -772,19 +817,19 @@ export function AdminDataTable<T extends { id: string }>({
 
       {/* ── Batch action bar ─────────────────────────────────────── */}
       {selectable && batchActions && selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 bg-black border border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)]">
-          <span className="text-sm text-muted-foreground mr-2">{selected.size} selected</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 bg-admin-bg-base border border-admin-border rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)]">
+          <span className="text-sm text-admin-text-muted mr-2">{selected.size} selected</span>
           {batchActions.map((action, i) => (
             <React.Fragment key={i}>
               {i > 0 && action.variant === 'danger' && (
-                <div className="w-px h-5 bg-[#2a2a2a] mx-1" />
+                <div className="w-px h-5 bg-admin-border mx-1" />
               )}
               <button
                 onClick={() => action.onClick(Array.from(selected), sorted.filter((r) => selected.has(r.id)))}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                   action.variant === 'danger'
-                    ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400'
-                    : 'bg-white/[0.08] hover:bg-white/[0.12] text-foreground'
+                    ? 'bg-admin-danger-bg hover:bg-admin-danger-bg-strong text-admin-danger'
+                    : 'bg-admin-bg-hover hover:bg-admin-bg-active text-admin-text-primary'
                 }`}
               >
                 {action.icon} <span className="hidden sm:inline">{action.label}</span>
@@ -793,7 +838,7 @@ export function AdminDataTable<T extends { id: string }>({
           ))}
           <button
             onClick={() => setSelected(new Set())}
-            className="ml-1 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="ml-1 px-2 py-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary transition-colors"
           >
             Clear
           </button>
@@ -831,8 +876,8 @@ function RowActionsMenu<T extends { id: string }>({
         onClick={(e) => { e.stopPropagation(); a.onClick(row, e); }}
         className={`p-1 rounded transition-colors ${
           a.variant === 'danger'
-            ? 'text-[#404044] hover:text-red-400 hover:bg-red-500/10'
-            : 'text-[#404044] hover:text-foreground hover:bg-white/5'
+            ? 'text-admin-text-ghost hover:text-admin-danger hover:bg-admin-danger-bg'
+            : 'text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover'
         }`}
         title={a.label}
       >
@@ -845,20 +890,20 @@ function RowActionsMenu<T extends { id: string }>({
     <div ref={ref} className="relative">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="p-1 rounded text-[#404044] hover:text-foreground hover:bg-white/5 transition-colors"
+        className="p-1 rounded text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
       >
         <MoreHorizontal size={16} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in min-w-[140px]">
+        <div className="absolute right-0 top-full mt-1 bg-admin-bg-overlay border-2 border-admin-border rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in min-w-[140px]">
           {actions.map((a, i) => (
             <button
               key={i}
               onClick={(e) => { e.stopPropagation(); a.onClick(row, e); setOpen(false); }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                 a.variant === 'danger'
-                  ? 'text-red-400 hover:bg-red-500/10'
-                  : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
+                  ? 'text-admin-danger hover:bg-admin-danger-bg'
+                  : 'text-admin-text-secondary hover:bg-admin-bg-hover hover:text-admin-text-primary/90'
               }`}
             >
               {a.icon}

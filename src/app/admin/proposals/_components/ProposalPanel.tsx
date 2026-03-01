@@ -108,7 +108,7 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
     <PanelDrawer open={open} onClose={handleClose} width="w-[min(92vw,840px)]">
       {loading && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-admin-border-emphasis border-t-white/60 rounded-full animate-spin" />
         </div>
       )}
       {!loading && data && (

@@ -40,16 +40,16 @@ export default async function EditProjectPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-[#2a2a2a]">
-        <p className="text-xs text-[#515155] uppercase tracking-wider mb-1">
-          <Link href="/admin/projects" className="hover:text-muted-foreground transition-colors">
+      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-admin-border">
+        <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-1">
+          <Link href="/admin/projects" className="hover:text-admin-text-muted transition-colors">
             Projects
           </Link>
           {' / '}
           Edit
         </p>
-        <h1 className="font-display text-2xl font-bold text-foreground">{(project as Record<string, unknown>).title as string}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{(project as Record<string, unknown>).slug as string}</p>
+        <h1 className="font-display text-2xl font-bold text-admin-text-primary">{(project as Record<string, unknown>).title as string}</h1>
+        <p className="text-sm text-admin-text-muted mt-1">{(project as Record<string, unknown>).slug as string}</p>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         <ProjectForm

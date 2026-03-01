@@ -160,28 +160,28 @@ export function ProposalCanvas({
           <AdminSlideShell label="Sample Videos">
             <div className="space-y-3 p-6">
               {(proposalVideos ?? []).length === 0 && (
-                <p className="text-[#333] text-sm text-center py-8">
+                <p className="text-admin-text-placeholder text-sm text-center py-8">
                   Drag videos from the library to add sample project slides
                 </p>
               )}
               {(proposalVideos ?? []).map((v: any, i: number) => (
                 <div
                   key={v.id}
-                  className="flex gap-3 items-start rounded-lg border border-[#2a2a2a] bg-white/[0.02] p-4"
+                  className="flex gap-3 items-start rounded-lg border border-admin-border bg-admin-bg-subtle p-4"
                 >
                   {/* Reorder buttons */}
                   <div className="flex flex-col gap-1 flex-shrink-0 pt-1">
                     <button
                       onClick={() => onMoveVideo?.(v.id, 'up')}
                       disabled={i === 0}
-                      className="p-1 rounded text-[#333] hover:text-[#999] disabled:opacity-20 transition-colors"
+                      className="p-1 rounded text-admin-text-placeholder hover:text-[#999] disabled:opacity-20 transition-colors"
                     >
                       <ChevronUp size={14} />
                     </button>
                     <button
                       onClick={() => onMoveVideo?.(v.id, 'down')}
                       disabled={i === (proposalVideos ?? []).length - 1}
-                      className="p-1 rounded text-[#333] hover:text-[#999] disabled:opacity-20 transition-colors"
+                      className="p-1 rounded text-admin-text-placeholder hover:text-[#999] disabled:opacity-20 transition-colors"
                     >
                       <ChevronDown size={14} />
                     </button>
@@ -189,6 +189,7 @@ export function ProposalCanvas({
                   {/* Video info + blurb */}
                   <div className="flex-1 min-w-0 space-y-2">
                     <p className="text-sm font-medium text-[#999] truncate">
+
                       {v.project_video?.title ?? v.project_video?.project?.title ?? 'Untitled video'}
                     </p>
                     <textarea
@@ -196,13 +197,13 @@ export function ProposalCanvas({
                       value={v.proposal_blurb ?? ''}
                       onChange={(e) => onUpdateVideoBlurb?.(v.id, e.target.value || null)}
                       placeholder="What to watch for… (optional)"
-                      className="w-full rounded-md border border-[#2a2a2a] bg-black/50 px-3 py-2 text-xs text-foreground placeholder:text-[#303033] focus:outline-none focus:ring-1 focus:ring-white/20 resize-none"
+                      className="w-full rounded-md border border-admin-border bg-admin-bg-base px-3 py-2 text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis resize-none"
                     />
                   </div>
                   {/* Remove */}
                   <button
                     onClick={() => onRemoveVideo(v.id)}
-                    className="flex-shrink-0 p-1.5 rounded text-red-400/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="flex-shrink-0 p-1.5 rounded text-admin-danger/40 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
                   >
                     <X size={14} />
                   </button>
@@ -258,13 +259,13 @@ function AdminSlideShell({ label, actionLabel, actionIcon, onAction, children }:
     <div className="relative group">
       {children}
       <div className="absolute top-4 left-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 pointer-events-none group-hover:pointer-events-auto">
-        <span className="bg-black/80 border border-[#2a2a2a] text-[#666] text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-full backdrop-blur-sm">
+        <span className="bg-black/80 border border-admin-border text-admin-text-dim text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-full backdrop-blur-sm">
           {label}
         </span>
         {actionLabel && onAction && (
           <button
             onClick={onAction}
-            className="flex items-center gap-1.5 bg-black/80 border border-[#2a2a2a] text-[#666] hover:text-[#ccc] text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-full backdrop-blur-sm transition-colors"
+            className="flex items-center gap-1.5 bg-black/80 border border-admin-border text-admin-text-dim hover:text-[#ccc] text-[10px] font-mono tracking-wider uppercase px-2.5 py-1 rounded-full backdrop-blur-sm transition-colors"
           >
             {actionIcon}
             {actionLabel}

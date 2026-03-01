@@ -7,7 +7,7 @@ export interface AdminTab {
   label: string;
   icon?: ReactNode;
   badge?: ReactNode;
-  /** Custom class applied when this tab is active (overrides default bg-white/10 text-white) */
+  /** Custom class applied when this tab is active (overrides default bg-admin-bg-active text-admin-text-primary) */
   activeClassName?: string;
 }
 
@@ -23,15 +23,15 @@ interface AdminTabBarProps {
 
 export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfter }: AdminTabBarProps) {
   return (
-    <div className="flex-shrink-0 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-[#2a2a2a] bg-[#010101] overflow-x-auto [&::-webkit-scrollbar]:hidden">
+    <div className="flex-shrink-0 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border bg-admin-bg-inset overflow-x-auto [&::-webkit-scrollbar]:hidden">
       {tabs.map((tab) => (
         <Fragment key={tab.value}>
           <button
             onClick={() => onTabChange(tab.value)}
             className={`flex items-center gap-1.5 px-[15px] py-[7px] rounded-lg text-sm font-medium transition-colors border ${
               activeTab === tab.value
-                ? (tab.activeClassName ?? 'bg-white/10 text-white border-transparent')
-                : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                ? (tab.activeClassName ?? 'bg-admin-bg-active text-admin-text-primary border-transparent')
+                : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
             }`}
           >
             {tab.icon}
@@ -39,7 +39,7 @@ export function AdminTabBar({ tabs, activeTab, onTabChange, actions, dividerAfte
             {tab.badge}
           </button>
           {dividerAfter === tab.value && (
-            <div className="w-px bg-white/10 mx-2 my-1 self-stretch" />
+            <div className="w-px bg-admin-bg-active mx-2 my-1 self-stretch" />
           )}
         </Fragment>
       ))}

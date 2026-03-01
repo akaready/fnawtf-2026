@@ -70,8 +70,8 @@ export function FilterDropdown({
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-1.5 px-3 py-[7px] rounded-lg text-sm transition-colors border border-transparent ${
           value
-            ? 'text-[#ccc] bg-white/[0.06] border-[#2a2a2a]'
-            : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
+            ? 'text-admin-text-secondary bg-admin-bg-hover border-admin-border'
+            : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover'
         }`}
       >
         {icon}
@@ -80,15 +80,15 @@ export function FilterDropdown({
       </button>
 
       {open && (
-        <div className={`absolute top-full left-0 mt-[5px] ${width} bg-[#1a1a1a] border-2 border-[#2a2a2a] rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in`}>
-          <div className="flex items-center gap-2 px-3 py-[10px] border-b border-[#2a2a2a] bg-black/30">
-            <Search size={13} className="text-[#4d4d4d] flex-shrink-0" />
+        <div className={`absolute top-full left-0 mt-[5px] ${width} bg-admin-bg-overlay border-2 border-admin-border rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-dropdown-in`}>
+          <div className="flex items-center gap-2 px-3 py-[10px] border-b border-admin-border bg-admin-bg-base">
+            <Search size={13} className="text-admin-text-faint flex-shrink-0" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${searchPlural ?? `${label.toLowerCase()}s`}...`}
-              className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#404040]"
+              className="flex-1 bg-transparent text-sm text-admin-text-primary outline-none placeholder:text-admin-text-ghost"
             />
           </div>
           <div className="max-h-56 overflow-y-auto admin-scrollbar py-1">
@@ -97,15 +97,15 @@ export function FilterDropdown({
                 onClick={() => { onChange(null); setOpen(false); }}
                 className={`w-full text-left px-3 py-1.5 transition-colors ${
                   !value
-                    ? 'bg-white/10 text-white'
-                    : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
+                    ? 'bg-admin-bg-active text-admin-text-primary'
+                    : 'text-admin-text-secondary hover:bg-admin-bg-hover hover:text-admin-text-primary/90'
                 }`}
               >
                 <span className="text-sm">{clearLabel}</span>
               </button>
             )}
             {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-[#404040] text-center">No matches</div>
+              <div className="px-3 py-4 text-xs text-admin-text-ghost text-center">No matches</div>
             ) : (
               filtered.map((item) => (
                 <button
@@ -113,13 +113,13 @@ export function FilterDropdown({
                   onClick={() => { onChange(item.id); setOpen(false); }}
                   className={`w-full text-left px-3 py-1.5 transition-colors ${
                     value === item.id
-                      ? 'bg-white/10 text-white'
-                      : 'text-[#999] hover:bg-white/[0.06] hover:text-white/90'
+                      ? 'bg-admin-bg-active text-admin-text-primary'
+                      : 'text-admin-text-secondary hover:bg-admin-bg-hover hover:text-admin-text-primary/90'
                   }`}
                 >
                   <span className="text-sm truncate block">{item.name}</span>
                   {item.subtitle && (
-                    <span className="text-xs text-[#4d4d4d] truncate block">{item.subtitle}</span>
+                    <span className="text-xs text-admin-text-faint truncate block">{item.subtitle}</span>
                   )}
                 </button>
               ))

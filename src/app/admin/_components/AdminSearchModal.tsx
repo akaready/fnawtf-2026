@@ -310,21 +310,21 @@ export function AdminSearchModal({ open, onClose }: Props) {
         onMouseEnter={() => setHighlighted(i)}
         onClick={() => navigate(result)}
         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-          i === highlighted ? 'bg-white/[0.06]' : 'hover:bg-white/[0.03]'
+          i === highlighted ? 'bg-admin-bg-hover' : 'hover:bg-admin-bg-subtle'
         } ${stagger ? 'animate-search-results-in' : ''}`}
         style={stagger ? { animationDelay: `${60 + i * 30}ms` } : undefined}
       >
         <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full ${TYPE_META[result.type].color}`} />
-        <span className="flex-shrink-0 w-[76px] text-[10px] text-[#4d4d4d] uppercase tracking-wide">
+        <span className="flex-shrink-0 w-[76px] text-[10px] text-admin-text-faint uppercase tracking-wide">
           {TYPE_META[result.type].label}
         </span>
         <span className="flex-1 min-w-0">
-          <span className="text-sm text-foreground truncate block">{result.primary}</span>
+          <span className="text-sm text-admin-text-primary truncate block">{result.primary}</span>
           {result.secondary && (
-            <span className="text-xs text-white/35 truncate block">{result.secondary}</span>
+            <span className="text-xs text-admin-text-primary/35 truncate block">{result.secondary}</span>
           )}
         </span>
-        <ArrowRight size={12} className="flex-shrink-0 text-[#333]" />
+        <ArrowRight size={12} className="flex-shrink-0 text-admin-text-ghost" />
       </button>
     );
   }
@@ -333,31 +333,31 @@ export function AdminSearchModal({ open, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
       {/* Backdrop — click to close */}
       <div
-        className={`absolute inset-0 bg-black/60 backdrop-blur-[1px] ${closing ? 'animate-search-fade-out' : 'animate-search-fade-in'}`}
+        className={`absolute inset-0 bg-admin-bg-base backdrop-blur-[1px] ${closing ? 'animate-search-fade-out' : 'animate-search-fade-in'}`}
         onClick={handleClose}
       />
 
       {/* Modal — w-fit so it's exactly the width of the pills row */}
-      <div className={`relative w-fit mx-4 bg-[#111] border border-[#2a2a2a] rounded-xl shadow-2xl overflow-hidden ${closing ? 'animate-search-slide-up' : 'animate-search-slide-down'}`}>
+      <div className={`relative w-fit mx-4 bg-admin-bg-raised border border-admin-border rounded-xl shadow-2xl overflow-hidden ${closing ? 'animate-search-slide-up' : 'animate-search-slide-down'}`}>
 
         {/* Raycast-style search row — the input IS the row */}
-        <div className="relative border-b border-[#2a2a2a] bg-black/50">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4d4d4d] pointer-events-none" />
+        <div className="relative border-b border-admin-border bg-admin-bg-base">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-admin-text-faint pointer-events-none" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search…"
-            className="w-full bg-transparent px-12 py-3.5 text-[15px] text-foreground placeholder:text-[#4d4d4d] outline-none"
+            className="w-full bg-transparent px-12 py-3.5 text-[15px] text-admin-text-primary placeholder:text-admin-text-faint outline-none"
           />
-          <button onClick={handleClose} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#404040] hover:text-[#999] transition-colors">
+          <button onClick={handleClose} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-admin-text-ghost hover:text-admin-text-secondary transition-colors">
             <X size={14} />
           </button>
         </div>
 
         {/* Type filter pills — this row determines the modal width */}
-        <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-[#2a2a2a] bg-white/[0.02]">
+        <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-admin-border bg-admin-bg-wash">
           {(['all', ...ALL_TYPES] as const).map((t) => {
             const Icon = t !== 'all' ? TYPE_ICON[t] : null;
             return (
@@ -366,8 +366,8 @@ export function AdminSearchModal({ open, onClose }: Props) {
                 onClick={() => setActiveType(t)}
                 className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-md text-xs whitespace-nowrap transition-colors ${
                   activeType === t
-                    ? 'bg-white/10 text-foreground'
-                    : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5'
+                    ? 'bg-admin-bg-active text-admin-text-primary'
+                    : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover'
                 }`}
               >
                 {Icon && <Icon size={12} />}
@@ -380,23 +380,23 @@ export function AdminSearchModal({ open, onClose }: Props) {
         {/* Results */}
         <div ref={listRef} className="overflow-y-auto max-h-[400px]" style={{ scrollbarWidth: 'none' }}>
           {loading && (
-            <div className="px-4 py-8 text-center text-xs text-[#4d4d4d]">Searching…</div>
+            <div className="px-4 py-8 text-center text-xs text-admin-text-faint">Searching…</div>
           )}
 
           {!loading && showRecents && (
             <>
-              <div className={`px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-[#404040] ${shouldStagger ? 'animate-search-results-in' : ''}`}
+              <div className={`px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-admin-text-ghost ${shouldStagger ? 'animate-search-results-in' : ''}`}
                 style={shouldStagger ? { animationDelay: '40ms' } : undefined}>Recent</div>
               {recents.map((result, i) => renderResultRow(result, i, shouldStagger))}
             </>
           )}
 
           {!loading && !typedQuery && recents.length === 0 && (
-            <div className="px-4 py-8 text-center text-xs text-[#4d4d4d]">Type to search across all content</div>
+            <div className="px-4 py-8 text-center text-xs text-admin-text-faint">Type to search across all content</div>
           )}
 
           {!loading && typedQuery && results.length === 0 && (
-            <div className="px-4 py-8 text-center text-xs text-[#4d4d4d]">No results for &ldquo;{typedQuery}&rdquo;</div>
+            <div className="px-4 py-8 text-center text-xs text-admin-text-faint">No results for &ldquo;{typedQuery}&rdquo;</div>
           )}
 
           {!loading && typedQuery && results.length > 0 && results.map((result, i) => renderResultRow(result, i, false))}

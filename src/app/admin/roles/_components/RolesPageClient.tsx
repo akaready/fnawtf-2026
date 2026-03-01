@@ -2,9 +2,13 @@
 
 import React, { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Pencil, Trash2, Plus, GitMerge, ChevronRight, Users, Clapperboard } from 'lucide-react';
+import { Check, X, Pencil, Trash2, Plus, GitMerge, ChevronRight, Users, Clapperboard, List, Table2, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
-import { createRole, renameRole, deleteRole, mergeRoles, getPeopleForRole } from '../../actions';
+import { ViewSwitcher, type ViewDef } from '../../_components/ViewSwitcher';
+import { useViewMode } from '../../_hooks/useViewMode';
+import { AdminDataTable, type ColDef } from '../../_components/table';
+import { ToolbarButton } from '../../_components/table/TableToolbar';
+import { createRole, renameRole, deleteRole, mergeRoles, getPeopleForRole, batchDeleteRoles } from '../../actions';
 import type { RoleWithCounts } from '../../actions';
 
 type PersonRef = { id: string; first_name: string; last_name: string; type: string };
@@ -30,45 +34,45 @@ function MergeDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[#0f0f0f] border border-[#2a2a2a] rounded-xl w-full max-w-md mx-4 shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f1f1f]">
-          <h2 className="text-lg font-semibold text-foreground">Merge Roles</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+      <div className="relative z-10 bg-[#0f0f0f] border border-admin-border rounded-xl w-full max-w-md mx-4 shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border-subtle">
+          <h2 className="text-lg font-semibold text-admin-text-primary">Merge Roles</h2>
+          <button onClick={onClose} className="text-admin-text-muted hover:text-admin-text-primary transition-colors">
             <X size={16} />
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-5">
           <div>
-            <p className="text-xs text-[#616166] uppercase tracking-wider mb-2">Merging</p>
+            <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Merging</p>
             <div className="flex flex-wrap gap-1.5">
               {sourceTags.map((r) => (
-                <span key={r.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.06] border border-[#2a2a2a] text-sm text-foreground">
+                <span key={r.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-admin-bg-hover border border-admin-border text-sm text-admin-text-primary">
                   {r.name}
-                  <span className="text-xs text-muted-foreground">{r.projectCount}</span>
+                  <span className="text-xs text-admin-text-muted">{r.projectCount}</span>
                 </span>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-xs text-[#616166] uppercase tracking-wider mb-2">Keep as</p>
+            <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Keep as</p>
             <div className="space-y-1.5">
               {sourceTags.map((r) => (
-                <label key={r.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-white/[0.04] transition-colors">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${targetId === r.id ? 'border-white bg-white' : 'border-white/30'}`}>
+                <label key={r.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-admin-bg-hover transition-colors">
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${targetId === r.id ? 'border-admin-text-primary bg-admin-text-primary' : 'border-admin-border'}`}>
                     {targetId === r.id && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
                   </div>
                   <input type="radio" className="sr-only" value={r.id} checked={targetId === r.id} onChange={() => setTargetId(r.id)} />
-                  <span className="text-sm text-foreground flex-1">{r.name}</span>
-                  <span className="text-xs text-muted-foreground">{r.projectCount} projects</span>
+                  <span className="text-sm text-admin-text-primary flex-1">{r.name}</span>
+                  <span className="text-xs text-admin-text-muted">{r.projectCount} projects</span>
                 </label>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-[#1f1f1f]">
+        <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-admin-border-subtle">
           <button onClick={onClose} disabled={isPending} className="btn-secondary px-4 py-2 text-sm font-medium">
             Cancel
           </button>
@@ -107,17 +111,45 @@ function InlineEdit({ value, onSave, onCancel }: { value: string; onSave: (v: st
           if (e.key === 'Enter') onSave(draft);
           if (e.key === 'Escape') onCancel();
         }}
-        className="flex-1 min-w-0 bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-sm text-foreground outline-none focus:border-white/40"
+        className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis"
       />
-      <button onClick={() => onSave(draft)} className="text-green-400 hover:text-green-300 transition-colors flex-shrink-0">
+      <button onClick={() => onSave(draft)} className="text-admin-success hover:text-admin-success transition-colors flex-shrink-0">
         <Check size={13} />
       </button>
-      <button onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+      <button onClick={onCancel} className="text-admin-text-muted hover:text-admin-text-primary transition-colors flex-shrink-0">
         <X size={13} />
       </button>
     </div>
   );
 }
+
+/* ── View Types & Table Columns ─────────────────────────────────────────── */
+
+type RolesView = 'table' | 'list';
+
+const ROLES_VIEWS: ViewDef<RolesView>[] = [
+  { key: 'table', icon: Table2, label: 'Table view' },
+  { key: 'list', icon: List, label: 'List view' },
+];
+
+const ROLE_COLUMNS: ColDef<RoleWithCounts>[] = [
+  {
+    key: 'name', label: 'Role', sortable: true, searchable: true,
+    render: (row) => <span className="font-medium text-admin-text-primary">{row.name}</span>,
+  },
+  {
+    key: 'peopleCount', label: 'People', type: 'number', sortable: true, align: 'right',
+    render: (row) => row.peopleCount > 0
+      ? <span className="flex items-center gap-1 text-xs text-admin-text-faint tabular-nums"><Users size={10} />{row.peopleCount}</span>
+      : <span className="text-xs text-[#202022]">0</span>,
+  },
+  {
+    key: 'projectCount', label: 'Projects', type: 'number', sortable: true, align: 'right',
+    render: (row) => row.projectCount > 0
+      ? <span className="flex items-center gap-1 text-xs text-admin-text-faint tabular-nums"><Clapperboard size={10} />{row.projectCount}</span>
+      : <span className="text-xs text-[#202022]">0</span>,
+  },
+];
 
 /* ── Main Component ─────────────────────────────────────────────────────── */
 
@@ -133,6 +165,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
   const [newValue, setNewValue] = useState('');
   const addInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useViewMode<RolesView>('fna-roles-viewMode', 'table');
 
   // Expand state for people list
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -236,7 +269,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
               </button>
             )}
             <button
-              onClick={() => setAddingNew(true)}
+              onClick={() => { if (viewMode === 'table') setViewMode('list'); setAddingNew(true); }}
               disabled={isPending}
               className="btn-primary px-5 py-2.5 text-sm"
             >
@@ -247,12 +280,64 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
         }
       />
 
+      {viewMode === 'table' ? (
+        <AdminDataTable
+          columns={ROLE_COLUMNS}
+          data={filtered}
+          storageKey="fna-table-roles"
+          toolbar
+          toolbarSlot={<ViewSwitcher views={ROLES_VIEWS} activeView={viewMode} onChange={setViewMode} />}
+          sortable
+          filterable
+          columnVisibility
+          columnReorder
+          columnResize
+          selectable
+          freezePanes
+          exportCsv
+          onBatchDelete={async (ids) => {
+            await batchDeleteRoles(ids);
+            setRoles((prev) => prev.filter((r) => !ids.includes(r.id)));
+          }}
+          emptyMessage={search ? 'No matching roles.' : 'No roles yet.'}
+          rowActions={[
+            {
+              label: 'Rename',
+              icon: <Pencil size={13} />,
+              onClick: (row) => {
+                setViewMode('list');
+                setTimeout(() => setEditingId(row.id), 100);
+              },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              onClick: (row) => handleDelete(row.id),
+            },
+          ]}
+        />
+      ) : (
+      <>
+      {/* Disabled toolbar — matches table toolbar height */}
+      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+        <ViewSwitcher views={ROLES_VIEWS} activeView={viewMode} onChange={setViewMode} />
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+          <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
+          <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
+          <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
+          <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
+          <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
+          <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
+          <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
+        </div>
+      </div>
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
         <div>
-          <div className="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl">
-            <div className="divide-y divide-[#2a2a2a]">
+          <div className="bg-admin-bg-sidebar border border-admin-border-subtle rounded-xl">
+            <div className="divide-y divide-admin-border">
               {filtered.length === 0 && !addingNew && (
-                <div className="px-5 py-8 text-center text-xs text-[#404044]">
+                <div className="px-5 py-8 text-center text-xs text-admin-text-ghost">
                   {search ? 'No matching roles' : 'No roles yet'}
                 </div>
               )}
@@ -268,13 +353,13 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                   <React.Fragment key={role.id}>
                     <div
                       onClick={() => role.peopleCount > 0 && !isEditing && !isDeleting && handleToggleExpand(role)}
-                      className={`flex items-center gap-3 px-5 py-2.5 group transition-colors ${role.peopleCount > 0 && !isEditing && !isDeleting ? 'cursor-pointer' : ''} ${isSelected ? 'bg-white/[0.03]' : isExpanded ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}
+                      className={`flex items-center gap-3 px-5 py-2.5 group transition-colors ${role.peopleCount > 0 && !isEditing && !isDeleting ? 'cursor-pointer' : ''} ${isSelected ? 'bg-admin-bg-subtle' : isExpanded ? 'bg-admin-bg-subtle' : 'hover:bg-admin-bg-subtle'}`}
                     >
                       {/* Checkbox */}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleToggleSelect(role.id); }}
                         disabled={isPending}
-                        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? 'bg-white border-white' : 'border-white/20 group-hover:border-white/40'}`}
+                        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${isSelected ? 'bg-white border-white' : 'border-admin-border-subtle group-hover:border-admin-border-emphasis'}`}
                       >
                         {isSelected && <Check size={10} className="text-black" strokeWidth={2.5} />}
                       </button>
@@ -287,24 +372,24 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                         />
                       ) : isDeleting ? (
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span className="text-xs text-muted-foreground flex-1">
-                            Remove? Used by <strong className="text-foreground">{role.peopleCount}</strong> people, <strong className="text-foreground">{role.projectCount}</strong> projects
+                          <span className="text-xs text-admin-text-muted flex-1">
+                            Remove? Used by <strong className="text-admin-text-primary">{role.peopleCount}</strong> people, <strong className="text-admin-text-primary">{role.projectCount}</strong> projects
                           </span>
-                          <button onClick={() => { handleDelete(role.id); setPendingDeleteId(null); }} disabled={isPending} className="px-2.5 py-1 text-xs rounded bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-50">
+                          <button onClick={() => { handleDelete(role.id); setPendingDeleteId(null); }} disabled={isPending} className="px-2.5 py-1 text-xs rounded bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-red-500/30 transition-colors disabled:opacity-50">
                             {isPending ? '...' : 'Delete'}
                           </button>
-                          <button onClick={() => setPendingDeleteId(null)} disabled={isPending} className="px-2.5 py-1 text-xs rounded bg-white/5 text-muted-foreground hover:text-foreground transition-colors">
+                          <button onClick={() => setPendingDeleteId(null)} disabled={isPending} className="px-2.5 py-1 text-xs rounded bg-admin-bg-hover text-admin-text-muted hover:text-admin-text-primary transition-colors">
                             Cancel
                           </button>
                         </div>
                       ) : (
                         <>
-                          <span className="flex-1 min-w-0 text-sm text-foreground truncate">{role.name}</span>
+                          <span className="flex-1 min-w-0 text-sm text-admin-text-primary truncate">{role.name}</span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingId(role.id); setPendingDeleteId(null); }}
                               disabled={isPending}
-                              className="p-1 rounded text-[#515155] hover:text-foreground hover:bg-white/[0.06] transition-colors"
+                              className="p-1 rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
                               title="Rename"
                             >
                               <Pencil size={11} />
@@ -312,7 +397,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                             <button
                               onClick={(e) => { e.stopPropagation(); setPendingDeleteId(role.id); setEditingId(null); }}
                               disabled={isPending}
-                              className="p-1 rounded text-[#515155] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                              className="p-1 rounded text-admin-text-faint hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={11} />
@@ -320,16 +405,16 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                           </div>
                           {/* Counts */}
                           <div className="flex items-center gap-3 flex-shrink-0">
-                            <span className="flex items-center gap-1 text-xs tabular-nums text-[#515155]" title="People">
+                            <span className="flex items-center gap-1 text-xs tabular-nums text-admin-text-faint" title="People">
                               <Users size={10} />
                               {role.peopleCount}
                             </span>
-                            <span className="flex items-center gap-1 text-xs tabular-nums text-[#515155]" title="Projects">
+                            <span className="flex items-center gap-1 text-xs tabular-nums text-admin-text-faint" title="Projects">
                               <Clapperboard size={10} />
                               {role.projectCount}
                             </span>
                             {role.peopleCount > 0 && (
-                              <ChevronRight size={10} className={`text-[#515155] transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
+                              <ChevronRight size={10} className={`text-admin-text-faint transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
                             )}
                           </div>
                         </>
@@ -338,9 +423,9 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
 
                     {/* Expanded people list */}
                     {isExpanded && (
-                      <div className="py-2 bg-white/[0.01]">
+                      <div className="py-2 bg-admin-bg-subtle">
                         {isLoadingPeople ? (
-                          <div className="px-5 py-3 text-xs text-[#404044]">Loading...</div>
+                          <div className="px-5 py-3 text-xs text-admin-text-ghost">Loading...</div>
                         ) : cachedPeople && cachedPeople.length > 0 ? (
                           <div>
                             {cachedPeople.map((person) => (
@@ -348,13 +433,13 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                                 <span className="w-4 flex items-center justify-center flex-shrink-0">
                                   <span className={`w-1.5 h-1.5 rounded-full ${person.type === 'cast' ? 'bg-purple-400' : 'bg-blue-400'}`} />
                                 </span>
-                                <span className="text-xs text-foreground/80 flex-1 min-w-0 truncate">{person.first_name} {person.last_name}</span>
-                                <span className="text-xs text-[#404044] capitalize">{person.type}</span>
+                                <span className="text-xs text-admin-text-primary/80 flex-1 min-w-0 truncate">{person.first_name} {person.last_name}</span>
+                                <span className="text-xs text-admin-text-ghost capitalize">{person.type}</span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="px-5 py-3 text-xs text-[#404044]">No people found</div>
+                          <div className="px-5 py-3 text-xs text-admin-text-ghost">No people found</div>
                         )}
                       </div>
                     )}
@@ -376,12 +461,12 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                         if (e.key === 'Escape') { setAddingNew(false); setNewValue(''); }
                       }}
                       placeholder="New role name..."
-                      className="flex-1 min-w-0 bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-sm text-foreground outline-none focus:border-white/40 placeholder:text-[#404044]"
+                      className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis placeholder:text-admin-text-ghost"
                     />
-                    <button onClick={handleAdd} className="text-green-400 hover:text-green-300 transition-colors flex-shrink-0">
+                    <button onClick={handleAdd} className="text-admin-success hover:text-admin-success transition-colors flex-shrink-0">
                       <Check size={13} />
                     </button>
-                    <button onClick={() => { setAddingNew(false); setNewValue(''); }} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0">
+                    <button onClick={() => { setAddingNew(false); setNewValue(''); }} className="text-admin-text-muted hover:text-admin-text-primary transition-colors flex-shrink-0">
                       <X size={13} />
                     </button>
                   </div>
@@ -391,6 +476,8 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {mergeState && (
         <MergeDialog

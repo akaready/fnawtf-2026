@@ -40,10 +40,10 @@ export function DropZone({ id, zoneType, zoneId, label, children }: Props) {
         ${isRelevantDrag
           ? isOver
             ? 'min-h-[96px] border-accent/50 bg-accent/5'
-            : 'min-h-[64px] border-white/15 bg-white/[0.02]'
+            : 'min-h-[64px] border-admin-border-subtle bg-admin-bg-wash'
           : children
             ? ''
-            : 'min-h-[64px] border-[#2a2a2a] bg-white/[0.01]'
+            : 'min-h-[64px] border-admin-border bg-admin-bg-wash'
         }
       `}
     >
@@ -52,7 +52,7 @@ export function DropZone({ id, zoneType, zoneId, label, children }: Props) {
           {isOver ? (
             <span className="text-accent/60">Drop {label.toLowerCase()} here</span>
           ) : (
-            <span className="text-[#333]">{label}</span>
+            <span className="text-admin-text-placeholder">{label}</span>
           )}
         </div>
       ) : children ? (

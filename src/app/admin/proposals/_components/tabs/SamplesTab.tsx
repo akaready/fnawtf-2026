@@ -47,9 +47,9 @@ function ProjectListItem({
   };
 
   return (
-    <div className="p-3 rounded-lg border border-[#2a2a2a] transition-colors">
+    <div className="p-3 rounded-lg border border-admin-border transition-colors">
       {/* Full-width thumbnail */}
-      <div className="w-full rounded-md overflow-hidden bg-white/[0.06] mb-2.5" style={{ aspectRatio: '16/9' }}>
+      <div className="w-full rounded-md overflow-hidden bg-admin-bg-hover mb-2.5" style={{ aspectRatio: '16/9' }}>
         {item.project.thumbnail_url ? (
           <img
             src={item.project.thumbnail_url}
@@ -57,16 +57,16 @@ function ProjectListItem({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-white/[0.04]" />
+          <div className="w-full h-full bg-admin-bg-selected" />
         )}
       </div>
 
       {/* Title + client */}
       <div className="mt-1 mb-2.5">
-        <p className="text-base font-medium text-white/90 truncate leading-tight">
+        <p className="text-base font-medium text-admin-text-primary/90 truncate leading-tight">
           {item.project.title}
         </p>
-        <p className="text-sm text-[#666] truncate mt-0.5">
+        <p className="text-sm text-admin-text-dim truncate mt-0.5">
           {item.project.client_name ?? ''}
         </p>
       </div>
@@ -77,7 +77,7 @@ function ProjectListItem({
         value={blurb}
         onChange={(e) => setBlurb(e.target.value)}
         placeholder="What to look for..."
-        className="w-full bg-black/40 border border-[#2a2a2a] rounded text-sm text-[#b3b3b3] placeholder:text-[#333] px-2.5 py-2 resize-none focus:outline-none focus:border-white/20 transition-colors leading-relaxed"
+        className="w-full bg-black/40 border border-admin-border rounded text-sm text-admin-text-secondary placeholder:text-admin-text-ghost px-2.5 py-2 resize-none focus:outline-none focus:border-admin-border-emphasis transition-colors leading-relaxed"
       />
 
       {/* Action row */}
@@ -89,13 +89,13 @@ function ProjectListItem({
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-40 ${
             blurb.trim()
               ? 'bg-white text-black hover:bg-white/90'
-              : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/[0.06]'
+              : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover'
           }`}
         >
           {saving ? (
             <Loader2 size={11} className="animate-spin" />
           ) : saved ? (
-            <Check size={11} className={blurb.trim() ? 'text-black' : 'text-green-400'} />
+            <Check size={11} className={blurb.trim() ? 'text-black' : 'text-admin-success'} />
           ) : (
             <Save size={11} />
           )}
@@ -107,7 +107,7 @@ function ProjectListItem({
           onClick={() => onMoveUp(item.id)}
           disabled={isFirst}
           title="Move up"
-          className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.04] text-[#4d4d4d] hover:text-[#999] hover:bg-white/[0.08] transition-colors disabled:opacity-20 disabled:hover:bg-white/[0.04] disabled:hover:text-[#4d4d4d]"
+          className="w-6 h-6 flex items-center justify-center rounded bg-admin-bg-selected text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover-strong transition-colors disabled:opacity-20 disabled:hover:bg-admin-bg-selected disabled:hover:text-admin-text-faint"
         >
           <ChevronUp size={13} />
         </button>
@@ -115,7 +115,7 @@ function ProjectListItem({
           onClick={() => onMoveDown(item.id)}
           disabled={isLast}
           title="Move down"
-          className="w-6 h-6 flex items-center justify-center rounded bg-white/[0.04] text-[#4d4d4d] hover:text-[#999] hover:bg-white/[0.08] transition-colors disabled:opacity-20 disabled:hover:bg-white/[0.04] disabled:hover:text-[#4d4d4d]"
+          className="w-6 h-6 flex items-center justify-center rounded bg-admin-bg-selected text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover-strong transition-colors disabled:opacity-20 disabled:hover:bg-admin-bg-selected disabled:hover:text-admin-text-faint"
         >
           <ChevronDown size={13} />
         </button>
@@ -128,14 +128,14 @@ function ProjectListItem({
             <button
               onClick={() => { onRemove(item.id); setConfirmingRemove(false); }}
               title="Confirm remove"
-              className="w-6 h-6 flex items-center justify-center rounded text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded text-admin-danger hover:text-admin-danger-hover hover:bg-admin-danger-bg transition-colors"
             >
               <Check size={12} />
             </button>
             <button
               onClick={() => setConfirmingRemove(false)}
               title="Cancel"
-              className="w-6 h-6 flex items-center justify-center rounded text-[#4d4d4d] hover:text-[#999] hover:bg-white/[0.06] transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
             >
               <X size={12} />
             </button>
@@ -143,7 +143,7 @@ function ProjectListItem({
         ) : (
           <button
             onClick={() => setConfirmingRemove(true)}
-            className="w-6 h-6 flex items-center justify-center rounded text-[#333] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded text-admin-text-ghost hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
             aria-label="Remove project"
           >
             <X size={12} />
@@ -226,13 +226,13 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
   return (
     <div className="flex h-full">
       {/* Left panel: selected + ordered list (40%) */}
-      <div className="w-[40%] border-r border-[#2a2a2a] overflow-y-auto admin-scrollbar p-4">
-        <p className="text-xs font-mono text-[#404040] uppercase tracking-widest mb-4">
+      <div className="w-[40%] border-r border-admin-border overflow-y-auto admin-scrollbar p-4">
+        <p className="text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4">
           Selected ({proposalProjects.length})
         </p>
 
         {sortedProposalProjects.length === 0 ? (
-          <p className="text-xs text-[#404040] text-center mt-8">
+          <p className="text-xs text-admin-text-ghost text-center mt-8">
             Click projects on the right to add them.
           </p>
         ) : (

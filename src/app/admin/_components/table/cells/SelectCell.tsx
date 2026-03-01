@@ -23,7 +23,7 @@ export function SelectCell({ value, rowId, field: _field, options, onEdit }: Pro
 
   if (!onEdit) {
     const label = options.find((o) => o.value === value)?.label ?? value;
-    return <span className="text-muted-foreground text-sm capitalize">{label}</span>;
+    return <span className="text-admin-text-muted text-sm capitalize">{label}</span>;
   }
 
   return (
@@ -31,13 +31,13 @@ export function SelectCell({ value, rowId, field: _field, options, onEdit }: Pro
       <select
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        className="appearance-none bg-transparent text-muted-foreground text-sm capitalize cursor-pointer hover:text-foreground focus:outline-none pr-5 transition-colors"
+        className="appearance-none bg-transparent text-admin-text-muted text-sm capitalize cursor-pointer hover:text-admin-text-primary focus:outline-none pr-5 transition-colors"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <ChevronDown size={10} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#303033] pointer-events-none" />
+      <ChevronDown size={10} className="absolute right-0 top-1/2 -translate-y-1/2 text-admin-text-placeholder pointer-events-none" />
     </div>
   );
 }

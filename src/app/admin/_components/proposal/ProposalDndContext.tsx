@@ -101,8 +101,8 @@ export function ProposalDndContext({ children, onDropSnippet, onDropVideo }: Pro
 
         <DragOverlay dropAnimation={null}>
           {activeId && activeDragData && (
-            <div className="bg-[#111] border border-border rounded-lg px-4 py-3 shadow-2xl max-w-xs opacity-90">
-              <div className="flex items-center gap-2 text-xs text-foreground">
+            <div className="bg-admin-bg-raised border border-border rounded-lg px-4 py-3 shadow-2xl max-w-xs opacity-90">
+              <div className="flex items-center gap-2 text-xs text-admin-text-primary">
                 {activeDragData.dragType === 'snippet' && <FileText size={12} />}
                 {activeDragData.dragType === 'video' && <Video size={12} />}
                 <span className="truncate">{activeDragData.label ?? 'Item'}</span>

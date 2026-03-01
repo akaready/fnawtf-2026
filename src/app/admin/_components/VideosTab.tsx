@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useTransition, useRef } from 'react';
-import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan } from 'lucide-react';
-import { addProjectVideo, updateProjectVideo, deleteProjectVideo } from '../actions';
+import { useState, useTransition, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject } from '../actions';
+import { ThumbnailScrubCard } from './ThumbnailScrubCard';
 
 type VideoType = 'flagship' | 'cutdown' | 'bts' | 'pitch';
 type AspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '21:9';
@@ -23,14 +25,16 @@ interface VideoRow {
 interface Props {
   projectId: string;
   initialVideos: VideoRow[];
+  currentThumbnailUrl?: string;
 }
 
 const inputClass =
-  'w-full px-3 py-2 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-[#404044] focus:outline-none focus:border-white/30 transition-colors';
+  'w-full px-3 py-2 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors';
 
 const VIDEO_TYPES: VideoType[] = ['flagship', 'cutdown', 'bts'];
 
-export function VideosTab({ projectId, initialVideos }: Props) {
+export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Props) {
+  const router = useRouter();
   const [videos, setVideos] = useState<VideoRow[]>(initialVideos);
   const [isPending, startTransition] = useTransition();
 
@@ -47,6 +51,68 @@ export function VideosTab({ projectId, initialVideos }: Props) {
   const [linkId, setLinkId] = useState('');
   const [linkTitle, setLinkTitle] = useState('');
   const [linkType, setLinkType] = useState<VideoType>('flagship');
+
+  // Thumbnail state
+  const [thumbVideoId, setThumbVideoId] = useState<string | null>(() => {
+    const match = initialVideos.find((v) => currentThumbnailUrl?.includes(v.bunny_video_id));
+    return match?.bunny_video_id ?? (initialVideos.length > 0 ? initialVideos[0].bunny_video_id : null);
+  });
+  const [savingThumb, setSavingThumb] = useState<string | null>(null);
+  const [framePreview, setFramePreview] = useState<string | null>(null);
+  const [previewBroken, setPreviewBroken] = useState(false);
+  const [thumbStatus, setThumbStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [thumbError, setThumbError] = useState<string | null>(null);
+  const [selectedThumbVideoId, setSelectedThumbVideoId] = useState<string | null>(() => {
+    const match = initialVideos.find((v) => currentThumbnailUrl?.includes(v.bunny_video_id));
+    return match?.bunny_video_id ?? null;
+  });
+
+  const handleThumbSelect = useCallback(async (bunnyVideoId: string, thumbnailTimeMs: number, frameDataUrl: string) => {
+    setSavingThumb(bunnyVideoId);
+    setThumbStatus('saving');
+    setThumbError(null);
+    if (frameDataUrl) { setFramePreview(frameDataUrl); setPreviewBroken(false); }
+
+    try {
+      let blob: Blob | null = null;
+      if (frameDataUrl) {
+        const res = await fetch(frameDataUrl);
+        blob = await res.blob();
+      }
+      if (!blob) {
+        setThumbStatus('error');
+        setThumbError('Could not capture frame. Try hovering the video first.');
+        return;
+      }
+
+      const uploadRes = await fetch('/api/admin/bunny/set-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/jpeg', 'x-video-id': bunnyVideoId },
+        body: blob,
+      });
+      if (!uploadRes.ok) {
+        const data = await uploadRes.json();
+        setThumbStatus('error');
+        setThumbError(data.error || 'Failed to upload thumbnail');
+        return;
+      }
+
+      const { thumbnailUrl } = await uploadRes.json();
+      const thumbnailTimeSec = thumbnailTimeMs / 1000;
+      await updateProject(projectId, { thumbnail_url: thumbnailUrl, thumbnail_time: thumbnailTimeSec });
+
+      setSelectedThumbVideoId(bunnyVideoId);
+      setThumbStatus('saved');
+      router.refresh();
+      setTimeout(() => setThumbStatus('idle'), 3000);
+    } catch (err) {
+      console.error('Thumbnail update failed:', err);
+      setThumbStatus('error');
+      setThumbError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setSavingThumb(null);
+    }
+  }, [projectId, router]);
 
   const handleFileSelect = async (file: File) => {
     setUploading(true);
@@ -203,36 +269,120 @@ export function VideosTab({ projectId, initialVideos }: Props) {
     });
   };
 
+  const previewSrc = framePreview || (!previewBroken && currentThumbnailUrl ? currentThumbnailUrl : null);
+  const thumbVideo = thumbVideoId ? videos.find((v) => v.bunny_video_id === thumbVideoId) : null;
+
   return (
     <div className="space-y-4">
+      {/* Thumbnail picker */}
+      {videos.length > 0 && (
+        <section className="space-y-3 pb-4 border-b border-admin-border-subtle">
+          <div className="flex items-center gap-3">
+            <div
+              className="relative w-32 rounded-lg overflow-hidden border border-admin-border bg-admin-bg-base flex-shrink-0"
+              style={{ aspectRatio: '16/9' }}
+            >
+              {previewSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewSrc}
+                  alt="Current thumbnail"
+                  className="w-full h-full object-cover"
+                  onError={() => setPreviewBroken(true)}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-admin-text-ghost gap-1">
+                  <ImageIcon className="w-5 h-5" strokeWidth={1} />
+                  <span className="text-[10px]">No thumbnail</span>
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase tracking-widest text-admin-text-faint font-medium mb-1.5">Thumbnail</p>
+              <p className="text-xs text-admin-text-muted">Hover to scrub, click to set</p>
+              <div className="mt-1">
+                {thumbStatus === 'saving' && (
+                  <p className="text-xs text-accent flex items-center gap-1.5">
+                    <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                    Uploading…
+                  </p>
+                )}
+                {thumbStatus === 'saved' && (
+                  <p className="text-xs text-admin-success flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Saved!
+                  </p>
+                )}
+                {thumbStatus === 'error' && (
+                  <p className="text-xs text-admin-danger flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {thumbError || 'Save failed'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Video selector tabs */}
+          {videos.length > 1 && (
+            <div className="flex gap-1 flex-wrap">
+              {videos.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setThumbVideoId(v.bunny_video_id)}
+                  className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+                    thumbVideoId === v.bunny_video_id
+                      ? 'bg-admin-bg-active text-admin-text-primary'
+                      : 'text-admin-text-muted hover:text-admin-text-secondary hover:bg-admin-bg-hover'
+                  }`}
+                >
+                  {v.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Scrub card for selected video */}
+          {thumbVideo && (
+            <ThumbnailScrubCard
+              video={{ id: thumbVideo.id, bunny_video_id: thumbVideo.bunny_video_id, title: thumbVideo.title, video_type: thumbVideo.video_type }}
+              isSelected={selectedThumbVideoId === thumbVideo.bunny_video_id}
+              isSaving={savingThumb === thumbVideo.bunny_video_id}
+              onSelect={handleThumbSelect}
+            />
+          )}
+        </section>
+      )}
+
       {/* Existing videos */}
       {videos.length === 0 ? (
-        <p className="text-sm text-[#515155] py-2">No videos linked yet.</p>
+        <p className="text-sm text-admin-text-faint py-2">No videos linked yet.</p>
       ) : (
         <div className="space-y-2">
           {videos.map((video, i) => (
             <div
               key={video.id}
-              className="flex items-center gap-3 p-3 border border-border/40 rounded-lg bg-white/[0.02]"
+              className="group/vid flex items-center gap-3 p-2.5 border border-admin-border-subtle rounded-lg bg-admin-bg-subtle hover:bg-admin-bg-hover transition-colors"
             >
-              <div className="flex flex-col gap-0.5">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors">
+              <div className="flex flex-col gap-0.5 opacity-0 group-hover/vid:opacity-100 transition-opacity">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-admin-text-ghost hover:text-admin-text-muted disabled:opacity-20 transition-colors">
                   <ArrowUp size={12} />
                 </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === videos.length - 1} className="text-[#404044] hover:text-muted-foreground disabled:opacity-20 transition-colors">
+                <button type="button" onClick={() => move(i, 1)} disabled={i === videos.length - 1} className="text-admin-text-ghost hover:text-admin-text-muted disabled:opacity-20 transition-colors">
                   <ArrowDown size={12} />
                 </button>
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{video.title}</p>
-                <p className="text-xs text-[#515155] font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
+                <p className="text-sm font-medium text-admin-text-primary truncate">{video.title}</p>
+                <p className="text-xs text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
               </div>
 
               <select
                 value={video.video_type}
                 onChange={(e) => handleTypeChange(video, e.target.value as VideoType)}
-                className="px-2 py-1.5 bg-black border border-border rounded-lg text-xs text-muted-foreground focus:outline-none focus:border-white/30 transition-colors"
+                className="px-2 py-1.5 bg-admin-bg-base border border-admin-border-subtle rounded-lg text-xs text-admin-text-muted focus:outline-none focus:border-admin-border-focus transition-colors"
               >
                 {VIDEO_TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -243,7 +393,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
               <select
                 value={video.aspect_ratio}
                 onChange={(e) => handleAspectRatioChange(video, e.target.value as AspectRatio)}
-                className="px-2 py-1.5 bg-black border border-border rounded-lg text-xs text-muted-foreground focus:outline-none focus:border-white/30 transition-colors"
+                className="px-2 py-1.5 bg-admin-bg-base border border-admin-border-subtle rounded-lg text-xs text-admin-text-muted focus:outline-none focus:border-admin-border-focus transition-colors"
               >
                 {ASPECT_RATIOS.map((r) => (
                   <option key={r} value={r}>{r}</option>
@@ -254,7 +404,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                 title="Auto-detect ratio from Bunny"
                 onClick={() => handleAutoDetectRatio(video)}
                 disabled={isPending}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#404044] hover:text-muted-foreground transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-muted transition-colors opacity-0 group-hover/vid:opacity-100"
               >
                 <Scan size={13} />
               </button>
@@ -267,8 +417,8 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                 disabled={isPending}
                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
                   video.password_protected
-                    ? 'text-amber-400 hover:text-amber-300 bg-amber-500/10'
-                    : 'text-[#404044] hover:text-muted-foreground'
+                    ? 'text-admin-warning hover:text-amber-300 bg-admin-warning-bg'
+                    : 'text-admin-text-ghost hover:text-admin-text-muted opacity-0 group-hover/vid:opacity-100'
                 }`}
               >
                 {video.password_protected ? <Lock size={13} /> : <Unlock size={13} />}
@@ -280,7 +430,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                   value={video.viewer_password ?? ''}
                   onChange={(e) => handlePasswordChange(video, e.target.value)}
                   placeholder="password"
-                  className="w-28 px-2 py-1.5 bg-black border border-amber-500/30 rounded-lg text-xs text-foreground placeholder:text-[#303033] focus:outline-none focus:border-amber-400/50 font-mono transition-colors"
+                  className="w-28 px-2 py-1.5 bg-admin-bg-base border border-admin-warning-border rounded-lg text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-amber-400/50 font-mono transition-colors"
                 />
               )}
 
@@ -288,7 +438,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
                 type="button"
                 onClick={() => setConfirmDeleteId(video.id)}
                 disabled={isPending}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/8 transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted opacity-0 group-hover/vid:opacity-100 hover:text-admin-danger hover:bg-red-500/8 transition-all"
               >
                 <Trash2 size={13} />
               </button>
@@ -299,11 +449,11 @@ export function VideosTab({ projectId, initialVideos }: Props) {
 
       {/* Pending upload form */}
       {pendingVideo && (
-        <div className="p-4 border border-border rounded-lg bg-white/[0.02] space-y-3">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Upload complete — set details</p>
+        <div className="p-4 border border-border rounded-lg bg-admin-bg-subtle space-y-3">
+          <p className="text-xs text-admin-text-muted uppercase tracking-wider">Upload complete — set details</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Title</label>
+              <label className="block text-xs text-admin-text-muted mb-1">Title</label>
               <input
                 type="text"
                 value={pendingVideo.title}
@@ -312,7 +462,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Type</label>
+              <label className="block text-xs text-admin-text-muted mb-1">Type</label>
               <select
                 value={pendingVideo.video_type}
                 onChange={(e) => setPendingVideo((p) => p ? { ...p, video_type: e.target.value as VideoType } : null)}
@@ -327,14 +477,14 @@ export function VideosTab({ projectId, initialVideos }: Props) {
               type="button"
               onClick={savePendingVideo}
               disabled={isPending}
-              className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors disabled:opacity-40"
+              className="btn-primary px-4 py-2.5 text-sm"
             >
               {isPending ? 'Saving…' : 'Save Video'}
             </button>
             <button
               type="button"
               onClick={() => setPendingVideo(null)}
-              className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:text-foreground transition-colors"
+              className="px-4 py-2 text-sm text-admin-text-muted border border-border rounded-lg hover:text-admin-text-primary transition-colors"
             >
               Discard
             </button>
@@ -344,11 +494,11 @@ export function VideosTab({ projectId, initialVideos }: Props) {
 
       {/* Link existing Bunny video form */}
       {showLinkForm && (
-        <div className="p-4 border border-border rounded-lg bg-white/[0.02] space-y-3">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Link existing Bunny video</p>
+        <div className="p-4 border border-border rounded-lg bg-admin-bg-subtle space-y-3">
+          <p className="text-xs text-admin-text-muted uppercase tracking-wider">Link existing Bunny video</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Bunny Video ID</label>
+              <label className="block text-xs text-admin-text-muted mb-1">Bunny Video ID</label>
               <input
                 type="text"
                 value={linkId}
@@ -358,7 +508,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Type</label>
+              <label className="block text-xs text-admin-text-muted mb-1">Type</label>
               <select
                 value={linkType}
                 onChange={(e) => setLinkType(e.target.value as VideoType)}
@@ -369,7 +519,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Title</label>
+            <label className="block text-xs text-admin-text-muted mb-1">Title</label>
             <input
               type="text"
               value={linkTitle}
@@ -383,14 +533,14 @@ export function VideosTab({ projectId, initialVideos }: Props) {
               type="button"
               onClick={saveLinkVideo}
               disabled={isPending || !linkId.trim() || !linkTitle.trim()}
-              className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors disabled:opacity-40"
+              className="btn-primary px-4 py-2.5 text-sm"
             >
               {isPending ? 'Saving…' : 'Link Video'}
             </button>
             <button
               type="button"
               onClick={() => setShowLinkForm(false)}
-              className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:text-foreground transition-colors"
+              className="px-4 py-2 text-sm text-admin-text-muted border border-border rounded-lg hover:text-admin-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -401,11 +551,11 @@ export function VideosTab({ projectId, initialVideos }: Props) {
       {/* Upload progress */}
       {uploading && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-admin-text-muted">
             <span>Uploading…</span>
             <span>{uploadProgress}%</span>
           </div>
-          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+          <div className="h-1 bg-admin-bg-hover rounded-full overflow-hidden">
             <div
               className="h-full bg-white/60 rounded-full transition-all duration-200"
               style={{ width: `${uploadProgress}%` }}
@@ -415,7 +565,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
       )}
 
       {uploadError && (
-        <p className="text-sm text-red-400">{uploadError}</p>
+        <p className="text-sm text-admin-danger">{uploadError}</p>
       )}
 
       {/* Action buttons */}
@@ -435,7 +585,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading || isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors disabled:opacity-40"
           >
             <Upload size={14} /> Upload Video
           </button>
@@ -443,7 +593,7 @@ export function VideosTab({ projectId, initialVideos }: Props) {
             type="button"
             onClick={() => setShowLinkForm(true)}
             disabled={uploading}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:text-foreground hover:border-border/80 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors disabled:opacity-40"
           >
             <LinkIcon size={14} /> Link by ID
           </button>
@@ -453,17 +603,17 @@ export function VideosTab({ projectId, initialVideos }: Props) {
       {/* Delete confirm modal */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" style={{ backdropFilter: 'blur(4px)' }}>
-          <div className="bg-[#111] border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <h3 className="font-display text-lg font-bold text-foreground mb-2">Delete video?</h3>
-            <p className="text-sm text-muted-foreground mb-5">This cannot be undone.</p>
+          <div className="bg-admin-bg-raised border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 className="font-display text-lg font-bold text-admin-text-primary mb-2">Delete video?</h3>
+            <p className="text-sm text-admin-text-muted mb-5">This cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 px-4 py-2 text-sm rounded-lg border border-border text-admin-text-muted hover:text-admin-text-primary transition-colors">
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(confirmDeleteId)}
                 disabled={isPending}
-                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-admin-danger-bg-strong hover:bg-red-500/25 text-admin-danger transition-colors disabled:opacity-50"
               >
                 {isPending ? 'Deleting…' : 'Delete'}
               </button>

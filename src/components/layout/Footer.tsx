@@ -1,4 +1,4 @@
-import { Mail } from 'lucide-react';
+import { Mail, Rocket } from 'lucide-react';
 import { Logo } from './Logo';
 import { ClientLoginButton } from './ClientLoginButton';
 import { AdminDashboardLink } from './AdminDashboardLink';
@@ -61,6 +61,13 @@ export function Footer() {
                 >
                   <Mail className="w-4 h-4" />
                   hi@fna.wtf
+                </a>
+                <a
+                  href="/start"
+                  className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
+                >
+                  <Rocket className="w-4 h-4" />
+                  Start a Project
                 </a>
                 <ClientLoginButton />
                 <AdminDashboardLink />

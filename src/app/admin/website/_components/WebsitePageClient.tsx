@@ -174,7 +174,7 @@ export function WebsitePageClient({
         actions={
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-2 rounded-lg text-[#999] hover:text-white hover:bg-white/5 transition-colors"
+            className="p-2 rounded-lg text-admin-text-secondary hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
             title={sidebarOpen ? 'Hide project list' : 'Show project list'}
           >
             {sidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
@@ -189,8 +189,8 @@ export function WebsitePageClient({
           {activeTab === 'homepage' && (
             <div>
               <div className="mb-5">
-                <h2 className="text-base font-semibold text-[#b3b3b3]">Featured Work</h2>
-                <p className="text-sm text-[#4d4d4d] mt-1">
+                <h2 className="text-base font-semibold text-admin-text-secondary">Featured Work</h2>
+                <p className="text-sm text-admin-text-secondary mt-1">
                   Projects displayed on the homepage. Drag to reorder.
                 </p>
               </div>
@@ -208,8 +208,8 @@ export function WebsitePageClient({
           {activeTab === 'work' && (
             <div>
               <div className="mb-5">
-                <h2 className="text-base font-semibold text-[#b3b3b3]">Portfolio</h2>
-                <p className="text-sm text-[#4d4d4d] mt-1">
+                <h2 className="text-base font-semibold text-admin-text-secondary">Portfolio</h2>
+                <p className="text-sm text-admin-text-secondary mt-1">
                   Projects displayed on the /work page. Drag to reorder.
                 </p>
               </div>
@@ -237,19 +237,19 @@ export function WebsitePageClient({
                     tabIndex={0}
                     className={`block w-full text-left rounded-xl p-5 border transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-white/[0.04] border-[#2a2a2a]'
-                        : 'bg-white/[0.015] border-[#2a2a2a] hover:bg-white/[0.03]'
+                        ? 'bg-admin-bg-selected border-admin-border'
+                        : 'bg-white/[0.015] border-admin-border hover:bg-admin-bg-subtle'
                     }`}
                     onClick={() => setActiveServicePage(section.page)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveServicePage(section.page); }}
                   >
                     <div className="mb-5">
                       <h2 className={`text-base font-semibold transition-colors ${
-                        isActive ? 'text-[#b3b3b3]' : 'text-[#666]'
+                        isActive ? 'text-admin-text-secondary' : 'text-admin-text-dim'
                       }`}>
                         {section.label}
                       </h2>
-                      <p className="text-sm text-[#4d4d4d] mt-1">
+                      <p className="text-sm text-admin-text-secondary mt-1">
                         {section.description}
                         {section.max && (
                           <span className={`ml-1 ${placements.length >= section.max ? 'text-yellow-400/60' : ''}`}>
@@ -277,18 +277,18 @@ export function WebsitePageClient({
 
         {/* Right: project sidebar */}
         {sidebarOpen && (
-        <div className="flex-shrink-0 w-72 border-l border-[#2a2a2a] flex flex-col bg-white/[0.01]">
+        <div className="flex-shrink-0 w-72 border-l border-admin-border flex flex-col bg-admin-bg-subtle">
           <div className="flex-shrink-0">
             {activeTab === 'services' && (
-              <div className="flex flex-wrap items-center gap-1 px-3 py-2.5 border-b border-[#2a2a2a]">
+              <div className="flex flex-wrap items-center gap-1 px-3 py-2.5 border-b border-admin-border">
                 {SERVICE_SECTIONS.map((s) => (
                   <button
                     key={s.page}
                     onClick={() => setActiveServicePage(s.page)}
                     className={`px-2.5 py-1 rounded text-sm font-medium transition-colors ${
                       activeServicePage === s.page
-                        ? 'bg-white/10 text-white'
-                        : 'text-[#4d4d4d] hover:text-[#808080]'
+                        ? 'bg-admin-bg-active text-admin-text-primary'
+                        : 'text-admin-text-secondary hover:text-admin-text-secondary'
                     }`}
                   >
                     {s.label}
@@ -296,15 +296,15 @@ export function WebsitePageClient({
                 ))}
               </div>
             )}
-            <div className="px-3 py-3 border-b border-[#2a2a2a] space-y-2.5">
+            <div className="px-3 py-3 border-b border-admin-border space-y-2.5">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#404040]" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-text-ghost" />
                 <input
                   type="text"
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
                   placeholder="Search…"
-                  className="w-full bg-white/[0.04] border border-[#2a2a2a] rounded-md pl-9 pr-3 py-2 text-sm text-white placeholder:text-[#333] focus:outline-none focus:border-white/20"
+                  className="w-full bg-admin-bg-selected border border-admin-border rounded-md pl-9 pr-3 py-2 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-border-emphasis"
                 />
               </div>
               <div className="flex items-center">
@@ -314,8 +314,8 @@ export function WebsitePageClient({
                     onClick={() => setSidebarFilter(f)}
                     className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
                       sidebarFilter === f
-                        ? 'bg-white/10 text-[#b3b3b3]'
-                        : 'text-[#404040] hover:text-[#666]'
+                        ? 'bg-admin-bg-active text-admin-text-secondary'
+                        : 'text-admin-text-ghost hover:text-admin-text-dim'
                     }`}
                   >
                     {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -327,7 +327,7 @@ export function WebsitePageClient({
 
           <div className="flex-1 overflow-y-auto admin-scrollbar p-2">
             {sidebarProjects.length === 0 ? (
-              <p className="text-center text-sm text-[#333] py-8">No matching projects.</p>
+              <p className="text-center text-sm text-admin-text-placeholder py-8">No matching projects.</p>
             ) : (
               <div className="flex flex-col gap-0.5">
                 {sidebarProjects.map((project) => {
@@ -341,11 +341,11 @@ export function WebsitePageClient({
                       disabled={isLoading || (!isPlaced && isAtMax)}
                       className={`flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition-colors disabled:opacity-50 group/item ${
                         isPlaced
-                          ? 'bg-white/[0.04]'
-                          : 'hover:bg-white/[0.04]'
+                          ? 'bg-admin-bg-selected'
+                          : 'hover:bg-admin-bg-selected'
                       }`}
                     >
-                      <div className="flex-shrink-0 w-9 h-9 rounded overflow-hidden bg-white/[0.04]">
+                      <div className="flex-shrink-0 w-9 h-9 rounded overflow-hidden bg-admin-bg-selected">
                         {project.thumbnail_url ? (
                           <img
                             src={project.thumbnail_url}
@@ -358,28 +358,28 @@ export function WebsitePageClient({
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${isPlaced ? 'text-[#b3b3b3]' : 'text-[#808080]'}`}>
+                        <p className={`text-sm font-medium truncate ${isPlaced ? 'text-admin-text-secondary' : 'text-admin-text-secondary'}`}>
                           {project.title}
                         </p>
                         {project.client_name && (
-                          <p className="text-xs text-[#404040] truncate">{project.client_name}</p>
+                          <p className="text-xs text-admin-text-ghost truncate">{project.client_name}</p>
                         )}
                       </div>
 
                       {isLoading ? (
-                        <Loader2 size={14} className="text-[#4d4d4d] animate-spin flex-shrink-0" />
+                        <Loader2 size={14} className="text-admin-text-secondary animate-spin flex-shrink-0" />
                       ) : isPlaced ? (
-                        <span className="flex-shrink-0 text-green-400/60 group-hover/item:hidden">
+                        <span className="flex-shrink-0 text-admin-success/60 group-hover/item:hidden">
                           <Check size={14} />
                         </span>
                       ) : (
-                        <span className="flex-shrink-0 text-white/15 opacity-0 group-hover/item:opacity-100">
+                        <span className="flex-shrink-0 text-admin-text-primary/15 opacity-0 group-hover/item:opacity-100">
                           <Plus size={14} />
                         </span>
                       )}
 
                       {isPlaced && !isLoading && (
-                        <span className="flex-shrink-0 text-red-400/60 hidden group-hover/item:block">
+                        <span className="flex-shrink-0 text-admin-danger/60 hidden group-hover/item:block">
                           <X size={14} />
                         </span>
                       )}

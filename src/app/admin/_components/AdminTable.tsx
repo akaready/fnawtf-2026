@@ -54,33 +54,33 @@ interface AdminTableProps<T extends { id: string }> {
 
 export const STATUS_COLORS: Record<string, string> = {
   // Proposals
-  draft:         'bg-white/10 text-[#808080]',
-  sent:          'bg-blue-500/20 text-blue-300',
-  viewed:        'bg-yellow-500/20 text-yellow-300',
-  accepted:      'bg-green-500/20 text-green-300',
+  draft:         'bg-admin-bg-active text-admin-text-secondary',
+  sent:          'bg-admin-info-bg text-admin-info',
+  viewed:        'bg-admin-warning-bg text-admin-warning',
+  accepted:      'bg-admin-success-bg text-admin-success',
   // Projects
-  published:     'bg-green-500/20 text-green-400',
-  hidden:        'bg-red-500/20 text-red-400',
-  featured:      'bg-amber-500/20 text-amber-400',
+  published:     'bg-admin-success-bg text-admin-success',
+  hidden:        'bg-admin-danger-bg-strong text-admin-danger',
+  featured:      'bg-amber-500/20 text-admin-warning',
   // Companies
-  active:        'bg-green-500/20 text-green-400',
-  prospect:      'bg-amber-500/20 text-amber-400',
+  active:        'bg-admin-success-bg text-admin-success',
+  prospect:      'bg-amber-500/20 text-admin-warning',
   'on hold':     'bg-slate-500/20 text-slate-400',
-  past:          'bg-white/5 text-[#4d4d4d]',
+  past:          'bg-admin-bg-hover text-admin-text-faint',
   // Meetings
-  upcoming:       'bg-sky-500/20 text-sky-300',
+  upcoming:       'bg-admin-info-bg text-admin-info',
   bot_scheduled:  'bg-indigo-500/20 text-indigo-300',
-  in_progress:    'bg-green-500/20 text-green-300',
-  completed:      'bg-emerald-500/20 text-emerald-300',
-  failed:         'bg-red-500/20 text-red-300',
-  no_video_link:  'bg-white/5 text-[#4d4d4d]',
-  cancelled:      'bg-white/5 text-[#4d4d4d]',
+  in_progress:    'bg-admin-success-bg text-admin-success',
+  completed:      'bg-admin-success-bg text-admin-success',
+  failed:         'bg-admin-danger-bg-strong text-admin-danger',
+  no_video_link:  'bg-admin-bg-hover text-admin-text-faint',
+  cancelled:      'bg-admin-bg-hover text-admin-text-faint',
 };
 
 export function StatusBadge({ value }: { value: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[value] ?? 'bg-white/10 text-[#808080]'}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[value] ?? 'bg-admin-bg-active text-admin-text-secondary'}`}
     >
       {value}
     </span>
@@ -147,16 +147,16 @@ export function AdminDeleteModal({
       onClick={() => !isDeleting && onCancel()}
     >
       <div
-        className="bg-[#111] border border-[#2a2a2a] rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
+        className="bg-admin-bg-raised border border-admin-border rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-base font-semibold text-white mb-2">{title}</h3>
-        {description && <div className="text-sm text-[#808080] mb-6">{description}</div>}
+        <h3 className="text-base font-semibold text-admin-text-primary mb-2">{title}</h3>
+        {description && <div className="text-sm text-admin-text-secondary mb-6">{description}</div>}
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
             disabled={isDeleting}
-            className="px-4 py-2 rounded-lg border border-[#2a2a2a] text-sm text-[#999] hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
+            className="px-4 py-2 rounded-lg border border-admin-border text-sm text-admin-text-secondary hover:text-admin-text-primary hover:border-admin-border-emphasis transition-colors disabled:opacity-40"
           >
             Cancel
           </button>
@@ -199,11 +199,11 @@ export function AdminTable<T extends { id: string }>({
       <div
         className={`flex flex-col items-center justify-center flex-1 min-h-[240px] gap-3 ${className ?? ''}`}
       >
-        <p className="text-sm text-[#4d4d4d]">{emptyMessage}</p>
+        <p className="text-sm text-admin-text-faint">{emptyMessage}</p>
         {emptyAction && (
           <button
             onClick={emptyAction.onClick}
-            className="flex items-center gap-1.5 text-xs text-[#808080] hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-xs text-admin-text-secondary hover:text-admin-text-primary transition-colors"
           >
             <Plus size={12} />
             {emptyAction.label}
@@ -227,7 +227,7 @@ export function AdminTable<T extends { id: string }>({
   return (
     <div className={`flex-1 min-h-0 relative ${className ?? ''}`}>
       {headerHeight > 0 && (
-        <div className="absolute top-0 right-0 w-3 bg-[#0f0f0f] z-20 pointer-events-none border-b border-[#1f1f1f]" style={{ height: headerHeight - 0.5 }} />
+        <div className="absolute top-0 right-0 w-3 bg-admin-bg-sidebar z-20 pointer-events-none border-b border-admin-border-subtle" style={{ height: headerHeight - 0.5 }} />
       )}
       <div ref={scrollRef} className="h-full overflow-y-auto admin-scrollbar">
       <table className="w-full text-sm border-separate" style={{ borderSpacing: 0 }}>
@@ -239,12 +239,12 @@ export function AdminTable<T extends { id: string }>({
               <th
                 key={col.key}
                 className={[
-                  'px-4 py-3 text-xs font-mono text-[#404040] uppercase tracking-widest font-normal whitespace-nowrap bg-[#0f0f0f] border-b border-[#1f1f1f]',
+                  'px-4 py-3 text-xs font-mono text-admin-text-ghost uppercase tracking-widest font-normal whitespace-nowrap bg-admin-bg-sidebar border-b border-admin-border-subtle',
                   isLast ? '' : 'border-r',
                   alignClass(col.align),
                   col.width ?? '',
                   col.sortable && onSort
-                    ? 'cursor-pointer select-none group/th hover:text-[#666] transition-colors'
+                    ? 'cursor-pointer select-none group/th hover:text-admin-text-dim transition-colors'
                     : '',
                 ]
                   .filter(Boolean)
@@ -254,7 +254,7 @@ export function AdminTable<T extends { id: string }>({
                 <span className="inline-flex items-center gap-1">
                   {col.label}
                   {col.sortable && onSort && (
-                    <span className="inline-flex text-[#333]">
+                    <span className="inline-flex text-admin-text-ghost">
                       {sortKey === col.key ? (
                         sortDir === 'asc' ? (
                           <ChevronUp size={10} />
@@ -274,7 +274,7 @@ export function AdminTable<T extends { id: string }>({
               );
             })}
             {hasActions && (
-              <th className="px-4 py-3 w-20 text-xs font-mono text-[#404040] uppercase tracking-widest font-normal bg-[#0f0f0f] border-b border-[#1f1f1f]" />
+              <th className="px-4 py-3 w-20 text-xs font-mono text-admin-text-ghost uppercase tracking-widest font-normal bg-admin-bg-sidebar border-b border-admin-border-subtle" />
             )}
           </tr>
         </thead>
@@ -284,11 +284,11 @@ export function AdminTable<T extends { id: string }>({
               key={row.id}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={[
-                'border-b border-[#2a2a2a] transition-colors group',
+                'border-b border-admin-border transition-colors group',
                 isClickable ? 'cursor-pointer' : '',
                 selectedId === row.id
-                  ? 'bg-white/[0.04]'
-                  : 'hover:bg-white/[0.03]',
+                  ? 'bg-admin-bg-selected'
+                  : 'hover:bg-admin-bg-subtle',
               ]
                 .filter(Boolean)
                 .join(' ')}
@@ -314,8 +314,8 @@ export function AdminTable<T extends { id: string }>({
                         title={action.label}
                         className={`p-1.5 rounded transition-colors ${
                           action.variant === 'danger'
-                            ? 'text-[#666] hover:text-red-400 hover:bg-red-500/10'
-                            : 'text-[#666] hover:text-white hover:bg-white/10'
+                            ? 'text-admin-text-dim hover:text-admin-danger hover:bg-admin-danger-bg'
+                            : 'text-admin-text-dim hover:text-admin-text-primary hover:bg-admin-bg-active'
                         }`}
                       >
                         {action.icon}

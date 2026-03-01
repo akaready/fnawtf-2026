@@ -90,7 +90,7 @@ export function TranscriptViewer({ segments, formattedText }: Props) {
 
   if (segments.length === 0) {
     return (
-      <div className="flex items-center justify-center h-40 text-[#4d4d4d] text-sm">
+      <div className="flex items-center justify-center h-40 text-admin-text-secondary text-sm">
         No transcript available
       </div>
     );
@@ -99,11 +99,11 @@ export function TranscriptViewer({ segments, formattedText }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[#2a2a2a]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-admin-border">
         <div className="relative flex-1">
           <Search
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4d4d4d]"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-admin-text-secondary"
           />
           <input
             type="text"
@@ -115,7 +115,7 @@ export function TranscriptViewer({ segments, formattedText }: Props) {
         </div>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[#808080] hover:text-white hover:bg-white/5 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-admin-text-secondary hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
           {copied ? 'Copied' : 'Copy'}
@@ -132,17 +132,17 @@ export function TranscriptViewer({ segments, formattedText }: Props) {
               >
                 {group.speaker}
               </span>
-              <span className="text-[10px] text-[#333]">
+              <span className="text-[10px] text-admin-text-placeholder">
                 {formatTime(group.startTime)}
               </span>
             </div>
-            <p className="text-sm text-[#b3b3b3] leading-relaxed">
+            <p className="text-sm text-admin-text-secondary leading-relaxed">
               {highlightMatch(group.text)}
             </p>
           </div>
         ))}
         {filtered.length === 0 && searchQuery && (
-          <div className="text-center text-[#4d4d4d] text-sm py-8">
+          <div className="text-center text-admin-text-secondary text-sm py-8">
             No matches found
           </div>
         )}

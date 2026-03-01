@@ -7,15 +7,15 @@ export default async function NewProjectPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-[#2a2a2a]">
-        <p className="text-xs text-[#515155] uppercase tracking-wider mb-1">
-          <Link href="/admin/projects" className="hover:text-muted-foreground transition-colors">
+      <div className="flex-shrink-0 px-8 pt-10 pb-4 border-b border-admin-border">
+        <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-1">
+          <Link href="/admin/projects" className="hover:text-admin-text-muted transition-colors">
             Projects
           </Link>
           {' / '}
           New
         </p>
-        <h1 className="font-display text-2xl font-bold text-foreground">New Project</h1>
+        <h1 className="font-display text-2xl font-bold text-admin-text-primary">New Project</h1>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         <ProjectForm project={null} videos={[]} credits={[]} btsImages={[]} tagSuggestions={tagSuggestions} />

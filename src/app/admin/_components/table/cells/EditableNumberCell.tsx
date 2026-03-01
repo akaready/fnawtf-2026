@@ -32,8 +32,8 @@ export function EditableNumberCell({ value, rowId, field: _field, onEdit }: Prop
 
   if (!onEdit) {
     return (
-      <span className="text-muted-foreground tabular-nums">
-        {value ?? <span className="text-[#303033]">—</span>}
+      <span className="text-admin-text-muted tabular-nums">
+        {value ?? <span className="text-admin-text-placeholder">—</span>}
       </span>
     );
   }
@@ -43,10 +43,10 @@ export function EditableNumberCell({ value, rowId, field: _field, onEdit }: Prop
       <span
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={() => setEditing(true)}
-        className="cursor-text hover:ring-1 hover:ring-white/15 rounded px-1 -mx-1 py-0.5 transition-all text-muted-foreground tabular-nums"
+        className="cursor-text hover:ring-1 hover:ring-admin-border-muted rounded px-1 -mx-1 py-0.5 transition-all text-admin-text-muted tabular-nums"
         title="Double-click to edit"
       >
-        {value ?? <span className="text-[#303033]">—</span>}
+        {value ?? <span className="text-admin-text-placeholder">—</span>}
       </span>
     );
   }
@@ -64,7 +64,7 @@ export function EditableNumberCell({ value, rowId, field: _field, onEdit }: Prop
         if (e.key === 'Enter') save();
         if (e.key === 'Escape') { setDraft(value?.toString() ?? ''); setEditing(false); }
       }}
-      className="w-16 bg-black border border-white/20 rounded px-1.5 py-0.5 text-sm text-foreground focus:outline-none focus:border-white/40 tabular-nums"
+      className="w-16 bg-admin-bg-base border border-admin-border-emphasis rounded px-1.5 py-0.5 text-sm text-admin-text-primary focus:outline-none focus:border-admin-border-focus tabular-nums"
     />
   );
 }

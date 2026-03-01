@@ -141,13 +141,13 @@ export function MeetingsManager({
       sortValue: (row) => new Date(row.start_time).getTime(),
       render: (row) => (
         <div className="text-sm">
-          <div className="text-[#b3b3b3]">
+          <div className="text-admin-text-secondary">
             {new Date(row.start_time).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
             })}
           </div>
-          <div className="text-[#4d4d4d] text-xs">
+          <div className="text-admin-text-faint text-xs">
             {new Date(row.start_time).toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
@@ -166,7 +166,7 @@ export function MeetingsManager({
             new Date(row.start_time).getTime()) /
             60_000,
         );
-        return <span className="text-sm text-[#666]">{mins}m</span>;
+        return <span className="text-sm text-admin-text-dim">{mins}m</span>;
       },
     },
     {
@@ -174,7 +174,7 @@ export function MeetingsManager({
       label: 'Attendees',
       defaultWidth: 96,
       render: (row) => (
-        <span className="flex items-center gap-1 text-sm text-[#666]">
+        <span className="flex items-center gap-1 text-sm text-admin-text-dim">
           <Users size={12} />
           {row.meeting_attendees.length}
         </span>
@@ -195,12 +195,12 @@ export function MeetingsManager({
         <span
           className={`inline-flex items-center gap-1 text-xs ${
             row.transcript_status === 'ready'
-              ? 'text-emerald-400'
+              ? 'text-admin-success'
               : row.transcript_status === 'pending'
-                ? 'text-amber-400'
+                ? 'text-admin-warning'
                 : row.transcript_status === 'failed'
-                  ? 'text-red-400'
-                  : 'text-[#333]'
+                  ? 'text-admin-danger'
+                  : 'text-admin-text-ghost'
           }`}
         >
           <FileText size={12} />
@@ -214,20 +214,20 @@ export function MeetingsManager({
       render: (row) => {
         const companyRels = row.meeting_relationships.filter((r) => r.clients);
         if (companyRels.length === 0)
-          return <span className="text-white/15 text-xs">—</span>;
+          return <span className="text-admin-text-primary/15 text-xs">—</span>;
         return (
           <div className="flex items-center gap-1 flex-wrap">
             {companyRels.slice(0, 3).map((r) => (
               <span
                 key={r.id}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-300"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-admin-warning-bg text-admin-warning"
               >
                 <Building2 size={10} />
                 {r.clients!.name}
               </span>
             ))}
             {companyRels.length > 3 && (
-              <span className="text-[10px] text-[#4d4d4d]">
+              <span className="text-[10px] text-admin-text-faint">
                 +{companyRels.length - 3}
               </span>
             )}
@@ -244,12 +244,12 @@ export function MeetingsManager({
         <AdminPageHeader title="Meetings" />
         <div className="flex-1 flex items-center justify-center">
           <div className="max-w-lg w-full text-center space-y-8 px-6">
-            <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto">
-              <Calendar size={36} className="text-[#4d4d4d]" />
+            <div className="w-20 h-20 rounded-2xl bg-admin-bg-hover flex items-center justify-center mx-auto">
+              <Calendar size={36} className="text-admin-text-faint" />
             </div>
             <div>
               <h2 className="text-2xl font-semibold">Connect your calendar</h2>
-              <p className="text-base text-[#666] mt-3 leading-relaxed">
+              <p className="text-base text-admin-text-dim mt-3 leading-relaxed">
                 Paste your Google Calendar iCal feed URL to start automatically
                 tracking meetings and deploying Recall.AI bots.
               </p>
@@ -277,7 +277,7 @@ export function MeetingsManager({
                 </button>
               </div>
             </div>
-            <p className="text-sm text-[#404040] leading-relaxed">
+            <p className="text-sm text-admin-text-ghost leading-relaxed">
               Find this in Google Calendar → Settings → Calendar settings →
               Secret address in iCal format
             </p>
@@ -353,13 +353,13 @@ export function MeetingsManager({
                 onClick={() => setTab(t.value)}
                 className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
                   tab === t.value
-                    ? 'bg-white/10 text-white border-transparent'
-                    : 'text-[#666] hover:text-[#b3b3b3] hover:bg-white/5 border-transparent'
+                    ? 'bg-admin-bg-active text-admin-text-primary border-transparent'
+                    : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
                 }`}
               >
                 {t.label}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
-                  tab === t.value ? 'bg-white/10' : 'bg-white/5 text-[#515155]'
+                  tab === t.value ? 'bg-admin-bg-active' : 'bg-admin-bg-hover text-admin-text-faint'
                 }`}>
                   {t.value === 'all' ? meetings.length : meetings.filter((m) => m.status === t.value).length}
                 </span>
