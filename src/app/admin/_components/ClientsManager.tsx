@@ -111,6 +111,26 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     },
     { key: 'company_types', label: 'Types', type: 'tags' },
     { key: 'created_at', label: 'Added', type: 'date', sortable: true },
+    { key: 'email', label: 'Email', type: 'text', sortable: true },
+    { key: 'description', label: 'Description', type: 'text' },
+    { key: 'notes', label: 'Notes', type: 'text' },
+    { key: 'location', label: 'Location', type: 'text', sortable: true },
+    { key: 'company_size', label: 'Size', type: 'text', sortable: true },
+    { key: 'founded_year', label: 'Founded', type: 'number', sortable: true },
+    { key: 'website_url', label: 'Website', type: 'text', sortable: true },
+    { key: 'linkedin_url', label: 'LinkedIn', type: 'text' },
+    { key: 'twitter_url', label: 'Twitter', type: 'text' },
+    { key: 'instagram_url', label: 'Instagram', type: 'text' },
+    {
+      key: 'pipeline_stage', label: 'Pipeline', type: 'select', sortable: true,
+      options: [
+        { value: 'new', label: 'New' },
+        { value: 'qualified', label: 'Qualified' },
+        { value: 'proposal', label: 'Proposal' },
+        { value: 'negotiating', label: 'Negotiating' },
+        { value: 'closed', label: 'Closed' },
+      ],
+    },
   ], [localContacts, localProjects]);
 
   // ── Card state persistence ──────────────────────────────────────────────
@@ -565,6 +585,39 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                         <>
                           {cardVisibleFields.has('industry') && c.industry && (
                             <p className="text-xs mt-1 text-[#515155] truncate">{c.industry}</p>
+                          )}
+                          {cardVisibleFields.has('location') && c.location && (
+                            <p className="text-xs mt-0.5 text-[#515155] truncate">{c.location}</p>
+                          )}
+                          {cardVisibleFields.has('email') && c.email && (
+                            <p className="text-xs mt-0.5 text-[#515155] truncate">{c.email}</p>
+                          )}
+                          {cardVisibleFields.has('company_size') && c.company_size && (
+                            <p className="text-xs mt-0.5 text-[#515155] truncate">{c.company_size}</p>
+                          )}
+                          {cardVisibleFields.has('founded_year') && c.founded_year && (
+                            <p className="text-xs mt-0.5 text-[#515155] truncate">Est. {c.founded_year}</p>
+                          )}
+                          {cardVisibleFields.has('pipeline_stage') && c.pipeline_stage && c.pipeline_stage !== 'new' && (
+                            <p className="text-xs mt-0.5 text-amber-400/60 truncate capitalize">{c.pipeline_stage}</p>
+                          )}
+                          {cardVisibleFields.has('description') && c.description && (
+                            <p className="text-[10px] mt-0.5 text-[#404044] line-clamp-2">{c.description}</p>
+                          )}
+                          {cardVisibleFields.has('notes') && c.notes && (
+                            <p className="text-[10px] mt-0.5 text-[#404044] italic line-clamp-1">{c.notes}</p>
+                          )}
+                          {cardVisibleFields.has('website_url') && c.website_url && (
+                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.website_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                          )}
+                          {cardVisibleFields.has('linkedin_url') && c.linkedin_url && (
+                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.linkedin_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                          )}
+                          {cardVisibleFields.has('twitter_url') && c.twitter_url && (
+                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.twitter_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
+                          )}
+                          {cardVisibleFields.has('instagram_url') && c.instagram_url && (
+                            <p className="text-[10px] mt-0.5 text-blue-400/50 truncate">{c.instagram_url.replace(/^https?:\/\/(www\.)?/, '')}</p>
                           )}
                           {cardVisibleFields.has('created_at') && (
                             <p className="text-[10px] mt-0.5 text-[#404044]">{new Date(c.created_at).toLocaleDateString()}</p>
