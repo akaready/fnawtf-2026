@@ -89,9 +89,11 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
         id={`scene-${scene.id}`}
         onClick={e => e.stopPropagation()}
         onBlur={e => {
+          // Capture currentTarget before React recycles the event
+          const container = e.currentTarget;
           // Delay to allow dropdown click
           setTimeout(() => {
-            if (!e.currentTarget.contains(document.activeElement)) {
+            if (!container?.contains(document.activeElement)) {
               onEditingChange?.(false);
               setShowDropdown(false);
             }
