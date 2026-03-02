@@ -240,6 +240,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         linkedin_url: newLinkedin.trim() || null,
         instagram_url: newInstagram.trim() || null,
         imdb_url: newImdb.trim() || null,
+        appearance_prompt: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         pivot_id: pivotId,

@@ -827,6 +827,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
         linkedin_url: null,
         instagram_url: null,
         imdb_url: null,
+        appearance_prompt: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
