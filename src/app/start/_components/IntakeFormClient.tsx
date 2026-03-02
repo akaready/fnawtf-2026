@@ -1852,7 +1852,7 @@ export function IntakeFormClient() {
                   <span className="text-lg font-semibold text-white">Build a Quote</span>
                   <span className="text-sm leading-snug" style={{ color: '#666666' }}>Configure add-ons and options to estimate your investment.</span>
                 </button>
-                <button type="button" onClick={() => setWantsQuote('skip')}
+                <button type="button" onClick={() => { setWantsQuote('skip'); navigateTo(currentSlide + 1); }}
                   className="flex-1 flex flex-col items-center gap-3 py-8 px-6 rounded-xl border border-white/10 bg-black hover:border-white/20 hover:bg-white/[0.04] transition-all duration-200 group">
                   <ArrowRight className="w-7 h-7 text-white/40 group-hover:text-white/60 transition-colors" />
                   <span className="text-lg font-semibold text-white">Skip</span>
