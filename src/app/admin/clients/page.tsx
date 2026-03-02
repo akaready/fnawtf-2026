@@ -1,4 +1,4 @@
-import { getClients, getTestimonials, getContacts } from '../actions';
+import { getClients, getTestimonials, getContacts, getTagsByCategory } from '../actions';
 import { ClientsManager } from '../_components/ClientsManager';
 import { createClient } from '@/lib/supabase/server';
 
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
   const supabase = await createClient();
-  const [clients, { data: projects }, testimonials, contacts] = await Promise.all([
+  const [clients, { data: projects }, testimonials, contacts, industryTags] = await Promise.all([
     getClients(),
     supabase
       .from('projects')
@@ -14,6 +14,7 @@ export default async function ClientsPage() {
       .order('title'),
     getTestimonials(),
     getContacts(),
+    getTagsByCategory('industry'),
   ]);
 
   return (
@@ -38,6 +39,7 @@ export default async function ClientsPage() {
         client_id: t.client_id ?? null,
       }))}
       contacts={contacts}
+      industryTags={industryTags}
     />
   );
 }

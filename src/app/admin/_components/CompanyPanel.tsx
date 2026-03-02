@@ -7,6 +7,8 @@ import {
   Globe, Linkedin, Search, MapPin, Calendar, Users as UsersIcon, Tag, RefreshCw,
 } from 'lucide-react';
 import { SaveButton } from './SaveButton';
+import { TwoStateDeleteButton } from './TwoStateDeleteButton';
+import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import {
   type ClientRow,
@@ -88,6 +90,7 @@ export interface CompanyPanelProps {
   contacts: ContactRow[];
   projects: ClientProject[];
   testimonials: ClientTestimonial[];
+  industryTags?: string[];
   onClose: () => void;
   onCompanyUpdated: (updated: ClientRow) => void;
   onCompanyDeleted: (id: string) => void;
@@ -104,6 +107,7 @@ export function CompanyPanel({
   contacts,
   projects,
   testimonials,
+  industryTags = [],
   onClose,
   onCompanyUpdated,
   onCompanyDeleted,
@@ -267,7 +271,6 @@ export function CompanyPanel({
   const handleDelete = () => {
     startSave(async () => {
       await deleteClientRecord(localCompany.id);
-      setConfirmDeleteId(null);
       onCompanyDeleted(localCompany.id);
       onClose();
     });
@@ -286,7 +289,7 @@ export function CompanyPanel({
         if (!updated.linkedin_url && info.linkedin_url) updated.linkedin_url = info.linkedin_url;
         if (!updated.twitter_url && info.twitter_url) updated.twitter_url = info.twitter_url;
         if (!updated.instagram_url && info.instagram_url) updated.instagram_url = info.instagram_url;
-        if (!updated.industry && info.industry) updated.industry = info.industry;
+        if (!updated.industry?.length && info.industry) updated.industry = [info.industry];
         if (!updated.location && info.location) updated.location = info.location;
         if (!updated.founded_year && info.founded_year) updated.founded_year = info.founded_year;
         if (!updated.company_size && info.company_size) updated.company_size = info.company_size;
@@ -355,7 +358,7 @@ export function CompanyPanel({
         </div>
 
         {/* Tab strip */}
-        <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-wash">
+        <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-inset">
           {([
             { id: 'info',         label: 'Info',         count: null },
             { id: 'projects',     label: 'Projects',     count: clientProjects.length },
@@ -501,7 +504,14 @@ export function CompanyPanel({
                 </div>
                 <div className="flex items-center gap-2">
                   <Tag size={14} className="text-admin-text-placeholder flex-shrink-0" />
-                  <input type="text" value={localCompany.industry ?? ''} onChange={(e) => handleChange('industry', e.target.value || null)} placeholder="Industry" className={inputCls} />
+                  <AdminSelect
+                    options={industryTags.map((t) => ({ value: t, label: t }))}
+                    value={localCompany.industry ?? []}
+                    onChange={(v) => handleChange('industry', (v as string[]).length ? v : null)}
+                    placeholder="Industry…"
+                    multi
+                    className="flex-1"
+                  />
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin size={14} className="text-admin-text-placeholder flex-shrink-0" />
@@ -757,46 +767,17 @@ export function CompanyPanel({
               {fetchDone ? 'Fetched' : fetching ? 'Fetching…' : 'Fetch Data'}
             </button>
           </div>
-          <button
-            onClick={() => { !hasLinks && setConfirmDeleteId(localCompany.id); }}
+          <TwoStateDeleteButton
+            itemId={localCompany.id}
+            confirmId={confirmDeleteId}
+            onRequestConfirm={(id) => !hasLinks && setConfirmDeleteId(id)}
+            onConfirmDelete={handleDelete}
+            onCancel={() => setConfirmDeleteId(null)}
             disabled={hasLinks}
-            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-              hasLinks
-                ? 'text-admin-text-placeholder cursor-not-allowed'
-                : 'text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg'
-            }`}
-            title={hasLinks ? 'Unlink projects and testimonials to delete' : 'Delete company'}
-          >
-            <Trash2 size={14} />
-          </button>
+            size={14}
+          />
         </div>
       </PanelDrawer>
-
-      {/* Delete confirmation modal */}
-      {confirmDeleteId && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-admin-bg-raised border border-admin-border-subtle rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
-            <h3 className="font-medium text-base">Delete company?</h3>
-            <p className="text-sm text-admin-text-muted">
-              Projects and testimonials linked to this company will have their reference cleared.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-5 py-2.5 rounded-lg text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-admin-text-primary hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Nested project panel */}
       <ProjectPanel

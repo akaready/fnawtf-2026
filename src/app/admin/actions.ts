@@ -259,6 +259,8 @@ export type SeoRow = {
   og_image_url: string | null;
   canonical_url: string | null;
   no_index: boolean;
+  detail_title_template: string | null;
+  detail_description_template: string | null;
   updated_at: string;
   updated_by: string | null;
 };
@@ -373,7 +375,7 @@ export type ClientRow = {
   website_url: string | null;
   linkedin_url: string | null;
   description: string | null;
-  industry: string | null;
+  industry: string[] | null;
   location: string | null;
   founded_year: number | null;
   company_size: string | null;
@@ -1382,7 +1384,7 @@ export async function getTagSuggestions(): Promise<{
 
 // ── Tag CRUD ──────────────────────────────────────────────────────────────
 
-type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type';
+type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type' | 'industry';
 
 const CATEGORY_COLUMN: Record<TagCategory, string> = {
   style: 'style_tags',
@@ -1390,9 +1392,12 @@ const CATEGORY_COLUMN: Record<TagCategory, string> = {
   addon: 'premium_addons',
   deliverable: 'assets_delivered',
   project_type: 'category',
+  industry: 'industry',
 };
 
 const SCALAR_CATEGORIES = new Set<TagCategory>(['project_type']);
+// Tags whose values live on `clients`, not `projects`
+const CLIENT_CATEGORIES = new Set<TagCategory>(['industry']);
 
 export type TagWithCount = {
   id: string;
@@ -1407,13 +1412,15 @@ type ProjTagRow = { id: string; style_tags: string[] | null; premium_addons: str
 
 export async function getTags(): Promise<TagWithCount[]> {
   const { supabase } = await requireAuth();
-  const [{ data: tagsRaw }, { data: projectsRaw }] = await Promise.all([
+  const [{ data: tagsRaw }, { data: projectsRaw }, { data: clientsRaw }] = await Promise.all([
     supabase.from('tags').select('*').order('category').order('name'),
     supabase.from('projects').select('style_tags, premium_addons, camera_techniques, assets_delivered, category'),
+    supabase.from('clients').select('industry'),
   ]);
 
   const tags = (tagsRaw ?? []) as TagRow[];
   const rows = (projectsRaw ?? []) as Omit<ProjTagRow, 'id'>[];
+  const clients = (clientsRaw ?? []) as Array<{ industry: string[] | null }>;
 
   const countMap = new Map<string, number>();
   for (const row of rows) {
@@ -1423,6 +1430,9 @@ export async function getTags(): Promise<TagWithCount[]> {
     (row.assets_delivered ?? []).forEach((t) => countMap.set(`deliverable:${t}`, (countMap.get(`deliverable:${t}`) ?? 0) + 1));
     if (row.category) countMap.set(`project_type:${row.category}`, (countMap.get(`project_type:${row.category}`) ?? 0) + 1);
   }
+  for (const client of clients) {
+    (client.industry ?? []).forEach((t) => countMap.set(`industry:${t}`, (countMap.get(`industry:${t}`) ?? 0) + 1));
+  }
 
   return tags.map((tag) => ({
     id: tag.id,
@@ -1431,6 +1441,12 @@ export async function getTags(): Promise<TagWithCount[]> {
     color: tag.color,
     projectCount: countMap.get(`${tag.category}:${tag.name}`) ?? 0,
   }));
+}
+
+export async function getTagsByCategory(category: TagCategory): Promise<string[]> {
+  const { supabase } = await requireAuth();
+  const { data } = await supabase.from('tags').select('name').eq('category', category).order('name');
+  return (data ?? []).map((t: { name: string }) => t.name);
 }
 
 export async function createTag(name: string, category: TagCategory) {
@@ -1452,7 +1468,16 @@ export async function renameTag(id: string, newName: string) {
   const oldName = tag.name;
   const trimmed = newName.trim();
 
-  if (isScalar) {
+  if (CLIENT_CATEGORIES.has(tag.category as TagCategory)) {
+    const { data: affectedRaw } = await supabase.from('clients').select(`id, ${col}`).contains(col, [oldName]);
+    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    await Promise.all(
+      affected.map((c) => {
+        const arr = ((c[col] as string[]) ?? []).map((t) => (t === oldName ? trimmed : t));
+        return supabase.from('clients').update({ [col]: arr } as never).eq('id', c.id as string);
+      })
+    );
+  } else if (isScalar) {
     await supabase.from('projects').update({ [col]: trimmed } as never).eq(col, oldName);
   } else {
     const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [oldName]);
@@ -1483,7 +1508,16 @@ export async function deleteTag(id: string) {
   const col = CATEGORY_COLUMN[tag.category as TagCategory];
   const isScalar = SCALAR_CATEGORIES.has(tag.category as TagCategory);
 
-  if (isScalar) {
+  if (CLIENT_CATEGORIES.has(tag.category as TagCategory)) {
+    const { data: affectedRaw } = await supabase.from('clients').select(`id, ${col}`).contains(col, [tag.name]);
+    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    await Promise.all(
+      affected.map((c) => {
+        const arr = ((c[col] as string[]) ?? []).filter((t) => t !== tag.name);
+        return supabase.from('clients').update({ [col]: arr.length > 0 ? arr : null } as never).eq('id', c.id as string);
+      })
+    );
+  } else if (isScalar) {
     await supabase.from('projects').update({ [col]: null } as never).eq(col, tag.name);
   } else {
     const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [tag.name]);
@@ -1520,7 +1554,19 @@ export async function mergeTags(sourceIds: string[], targetId: string) {
     const source = sourceRaw as { name: string } | null;
     if (!source) continue;
 
-    if (isScalar) {
+    if (CLIENT_CATEGORIES.has(target.category as TagCategory)) {
+      const { data: affectedRaw } = await supabase.from('clients').select(`id, ${col}`).contains(col, [source.name]);
+      const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+      await Promise.all(
+        affected.map((c) => {
+          let arr = (c[col] as string[]) ?? [];
+          arr = arr.includes(target.name)
+            ? arr.filter((t) => t !== source.name)
+            : arr.map((t) => (t === source.name ? target.name : t));
+          return supabase.from('clients').update({ [col]: arr } as never).eq('id', c.id as string);
+        })
+      );
+    } else if (isScalar) {
       await supabase.from('projects').update({ [col]: target.name } as never).eq(col, source.name);
     } else {
       const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [source.name]);
@@ -2121,7 +2167,7 @@ export async function createScript(data: Record<string, unknown>): Promise<strin
   const { supabase, userId } = await requireAuth();
   const { data: script, error } = await supabase
     .from('scripts')
-    .insert({ ...data, created_by: userId } as never)
+    .insert({ content_mode: 'scratchpad', ...data, created_by: userId } as never)
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -2150,7 +2196,7 @@ export async function getScriptVersions(scriptGroupId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('scripts')
-    .select('id, title, version, status, created_at')
+    .select('id, title, version, status, created_at, content_mode')
     .eq('script_group_id', scriptGroupId)
     .order('version', { ascending: false });
   if (error) throw new Error(error.message);
@@ -2499,6 +2545,8 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
       status: 'draft',
       version: ((s.version as number) ?? 1) + 1,
       notes: s.notes,
+      scratch_content: s.scratch_content ?? null,
+      content_mode: s.content_mode ?? 'table',
       created_by: userId,
     } as never)
     .select('id')
@@ -2981,7 +3029,7 @@ export async function getActiveLocationsForSelect(): Promise<{ id: string; name:
 
 // ── Script Character Cast ─────────────────────────────────────────────────
 
-import type { CharacterCastWithContact } from '@/types/scripts';
+import type { CharacterCastWithContact, LocationOptionWithLocation } from '@/types/scripts';
 
 /** Bulk-load all cast assignments for every character in a script. */
 export async function getScriptCastMap(
@@ -3205,4 +3253,531 @@ export async function reorderCastMembers(characterId: string, orderedCastIds: st
       .eq('character_id', characterId),
   );
   await Promise.all(updates);
+}
+
+// ── Script Location Options ───────────────────────────────────────────────
+
+/** Bulk-load all location options for every script location in a script. */
+export async function getScriptLocationOptionsMap(
+  scriptId: string,
+): Promise<Record<string, LocationOptionWithLocation[]>> {
+  const { supabase } = await requireAuth();
+
+  // Get all script_location IDs for this script
+  const { data: locs, error: locsErr } = await supabase
+    .from('script_locations')
+    .select('id')
+    .eq('script_id', scriptId);
+  if (locsErr) throw new Error(locsErr.message);
+  const locIds = (locs ?? []).map((l: { id: string }) => l.id);
+  if (locIds.length === 0) return {};
+
+  // Get all option rows for those script locations
+  const { data: optionRows, error: optErr } = await supabase
+    .from('script_location_options')
+    .select('*')
+    .in('script_location_id', locIds)
+    .order('slot_order');
+  if (optErr) throw new Error(optErr.message);
+  if (!optionRows || optionRows.length === 0) return {};
+
+  // Get location details for all referenced global locations
+  const locationIds = [...new Set((optionRows as { location_id: string }[]).map(r => r.location_id))];
+  const { data: locations } = await supabase
+    .from('locations')
+    .select('id, name, featured_image, address, city, state, appearance_prompt')
+    .in('id', locationIds);
+
+  // Get top 5 images per location (featured first, then by sort_order)
+  const { data: allImages } = await supabase
+    .from('location_images')
+    .select('location_id, image_url, is_featured, sort_order')
+    .in('location_id', locationIds)
+    .order('is_featured', { ascending: false })
+    .order('sort_order');
+
+  const locationMap = new Map(
+    ((locations ?? []) as { id: string; name: string; featured_image: string | null; address: string | null; city: string | null; state: string | null; appearance_prompt: string | null }[]).map(l => [l.id, l]),
+  );
+
+  // Build top 5 images per location
+  const imagesMap = new Map<string, string[]>();
+  for (const img of (allImages ?? []) as { location_id: string; image_url: string }[]) {
+    const arr = imagesMap.get(img.location_id) ?? [];
+    if (arr.length < 5) arr.push(img.image_url);
+    imagesMap.set(img.location_id, arr);
+  }
+
+  // Build grouped result
+  const result: Record<string, LocationOptionWithLocation[]> = {};
+  for (const row of optionRows as Array<{
+    id: string;
+    script_location_id: string;
+    location_id: string;
+    slot_order: number;
+    is_featured: boolean;
+    appearance_prompt: string | null;
+    created_at: string;
+  }>) {
+    const loc = locationMap.get(row.location_id);
+    if (!loc) continue;
+    const entry: LocationOptionWithLocation = {
+      ...row,
+      appearance_prompt: row.appearance_prompt || loc.appearance_prompt || null,
+      location: {
+        id: loc.id,
+        name: loc.name,
+        featured_image: loc.featured_image,
+        address: loc.address,
+        city: loc.city,
+        state: loc.state,
+        appearance_prompt: loc.appearance_prompt,
+        top_images: imagesMap.get(loc.id) ?? [],
+      },
+    };
+    (result[row.script_location_id] ??= []).push(entry);
+  }
+  return result;
+}
+
+/** Assign a global location as an option for a script location. Auto-features first. */
+export async function assignLocationOption(
+  scriptLocationId: string,
+  locationId: string,
+): Promise<string> {
+  const { supabase } = await requireAuth();
+
+  // Check if already assigned
+  const { data: alreadyAssigned } = await supabase
+    .from('script_location_options')
+    .select('id')
+    .eq('script_location_id', scriptLocationId)
+    .eq('location_id', locationId)
+    .maybeSingle();
+  if (alreadyAssigned) return (alreadyAssigned as { id: string }).id;
+
+  // Determine slot order and whether to auto-feature
+  const { data: existing } = await supabase
+    .from('script_location_options')
+    .select('id, slot_order')
+    .eq('script_location_id', scriptLocationId)
+    .order('slot_order', { ascending: false })
+    .limit(1);
+
+  const nextOrder = existing && existing.length > 0
+    ? (existing[0] as { slot_order: number }).slot_order + 1
+    : 0;
+  const isFirst = !existing || existing.length === 0;
+
+  const { data: row, error } = await supabase
+    .from('script_location_options')
+    .insert({
+      script_location_id: scriptLocationId,
+      location_id: locationId,
+      slot_order: nextOrder,
+      is_featured: isFirst,
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as { id: string }).id;
+}
+
+/** Remove a location option. Promotes next in line if the removed one was featured. */
+export async function removeLocationOption(optionId: string) {
+  const { supabase } = await requireAuth();
+
+  const { data: row } = await supabase
+    .from('script_location_options')
+    .select('script_location_id, is_featured')
+    .eq('id', optionId)
+    .single() as { data: { script_location_id: string; is_featured: boolean } | null };
+
+  const { error } = await supabase.from('script_location_options').delete().eq('id', optionId);
+  if (error) throw new Error(error.message);
+
+  // Promote next if needed
+  if (row?.is_featured) {
+    const { data: next } = await supabase
+      .from('script_location_options')
+      .select('id')
+      .eq('script_location_id', row.script_location_id)
+      .order('slot_order')
+      .limit(1);
+    if (next && next.length > 0) {
+      await supabase
+        .from('script_location_options')
+        .update({ is_featured: true } as never)
+        .eq('id', (next[0] as { id: string }).id);
+    }
+  }
+}
+
+/** Reorder location options. Index 0 = featured. */
+export async function reorderLocationOptions(scriptLocationId: string, orderedOptionIds: string[]) {
+  const { supabase } = await requireAuth();
+  const updates = orderedOptionIds.map((id, i) =>
+    supabase
+      .from('script_location_options')
+      .update({ slot_order: i, is_featured: i === 0 } as never)
+      .eq('id', id)
+      .eq('script_location_id', scriptLocationId),
+  );
+  await Promise.all(updates);
+}
+
+/** Update location appearance prompt — dual-write to junction row + global locations table. */
+export async function updateLocationAppearancePrompt(optionId: string, prompt: string) {
+  const { supabase } = await requireAuth();
+  // Update junction table
+  const { error: optErr } = await supabase
+    .from('script_location_options')
+    .update({ appearance_prompt: prompt } as never)
+    .eq('id', optionId);
+  if (optErr) throw new Error(optErr.message);
+  // Look up location_id to persist on the global location for reuse across scripts
+  const { data: optRow } = await supabase
+    .from('script_location_options')
+    .select('location_id')
+    .eq('id', optionId)
+    .single() as { data: { location_id: string } | null };
+  if (optRow?.location_id) {
+    await supabase
+      .from('locations')
+      .update({ appearance_prompt: prompt, updated_at: new Date().toISOString() } as never)
+      .eq('id', optRow.location_id);
+  }
+}
+
+/** Get all active global locations with basic info for the location picker. */
+export async function getLocationsForPicker(): Promise<Array<{
+  id: string;
+  name: string;
+  featured_image: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+}>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('locations')
+    .select('id, name, featured_image, address, city, state')
+    .eq('status', 'active')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{
+    id: string;
+    name: string;
+    featured_image: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+  }>;
+}
+
+// ── AI Prompt Log ─────────────────────────────────────────────────────────
+
+import type { AiPromptLogRow } from '@/types/scripts';
+
+export async function getPromptLogs(filters?: {
+  scriptId?: string;
+  source?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AiPromptLogRow[]> {
+  const { supabase } = await requireAuth();
+  let query = supabase
+    .from('ai_prompt_log')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(filters?.limit ?? 50);
+
+  if (filters?.scriptId) query = query.eq('script_id', filters.scriptId);
+  if (filters?.source) query = query.eq('source', filters.source);
+  if (filters?.offset) query = query.range(filters.offset, filters.offset + (filters?.limit ?? 50) - 1);
+
+  const { data } = await query;
+  return (data ?? []) as AiPromptLogRow[];
+}
+
+export async function getPromptLogById(id: string): Promise<AiPromptLogRow | null> {
+  const { supabase } = await requireAuth();
+  const { data } = await supabase.from('ai_prompt_log').select('*').eq('id', id).single();
+  return data as AiPromptLogRow | null;
+}
+
+export async function getPromptLogForBeat(beatId: string): Promise<AiPromptLogRow | null> {
+  const { supabase } = await requireAuth();
+  const { data } = await supabase
+    .from('ai_prompt_log')
+    .select('*')
+    .eq('beat_id', beatId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data as AiPromptLogRow | null;
+}
+
+// ── Scratch Pad ─────────────────────────────────────────────────────
+
+export async function saveScratchContent(scriptId: string, content: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('scripts')
+    .update({ scratch_content: content } as never)
+    .eq('id', scriptId);
+  if (error) throw new Error(error.message);
+}
+
+import type { ScriptCharacterType, IntExt, StoryboardStylePreset, ContentMode } from '@/types/scripts';
+
+export interface ExtractedScriptData {
+  characters: Array<{ name: string; description: string; color: string; character_type: ScriptCharacterType }>;
+  locations: Array<{ name: string; description: string; color: string }>;
+  scenes: Array<{
+    location_name: string;
+    int_ext: IntExt;
+    time_of_day: string;
+    beats: Array<{ audio_content: string; visual_content: string; notes_content: string }>;
+  }>;
+  style?: { style_preset: StoryboardStylePreset | null; aspect_ratio: string; prompt: string } | null;
+}
+
+export async function createScriptFromExtract(scriptId: string, extractedData: ExtractedScriptData): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+
+  // 1. Fetch current script for version info
+  const { data: script, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('*')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
+  const s = script as Record<string, unknown>;
+
+  // 2. Create new script with bumped version
+  const { data: newScript, error: newScriptErr } = await supabase
+    .from('scripts')
+    .insert({
+      title: s.title,
+      project_id: s.project_id,
+      script_group_id: s.script_group_id,
+      status: 'draft',
+      version: ((s.version as number) ?? 1) + 1,
+      notes: s.notes,
+      scratch_content: s.scratch_content ?? null,
+      content_mode: 'table',
+      created_by: userId,
+    } as never)
+    .select('id')
+    .single();
+  if (newScriptErr || !newScript) throw new Error(newScriptErr?.message ?? 'Failed to create version');
+  const newScriptId = (newScript as { id: string }).id;
+
+  // 3. Insert characters
+  for (let i = 0; i < extractedData.characters.length; i++) {
+    const ch = extractedData.characters[i];
+    await supabase.from('script_characters').insert({
+      script_id: newScriptId,
+      name: ch.name,
+      description: ch.description,
+      color: ch.color,
+      character_type: ch.character_type,
+      sort_order: i,
+    } as never);
+  }
+
+  // 4. Insert locations and build name→id map
+  const locationIdMap = new Map<string, string>();
+  for (let i = 0; i < extractedData.locations.length; i++) {
+    const loc = extractedData.locations[i];
+    const { data: newLoc } = await supabase.from('script_locations').insert({
+      script_id: newScriptId,
+      name: loc.name,
+      description: loc.description,
+      color: loc.color,
+      sort_order: i,
+    } as never).select('id').single();
+    if (newLoc) locationIdMap.set(loc.name.toLowerCase(), (newLoc as { id: string }).id);
+  }
+
+  // 5. Insert scenes and beats
+  for (let i = 0; i < extractedData.scenes.length; i++) {
+    const scene = extractedData.scenes[i];
+    const matchedLocId = locationIdMap.get(scene.location_name.toLowerCase()) ?? null;
+
+    const { data: newScene, error: sceneErr } = await supabase.from('script_scenes').insert({
+      script_id: newScriptId,
+      sort_order: i,
+      location_name: scene.location_name,
+      location_id: matchedLocId,
+      int_ext: scene.int_ext,
+      time_of_day: scene.time_of_day,
+    } as never).select('id').single();
+    if (sceneErr || !newScene) continue;
+    const newSceneId = (newScene as { id: string }).id;
+
+    for (let j = 0; j < scene.beats.length; j++) {
+      const beat = scene.beats[j];
+      await supabase.from('script_beats').insert({
+        scene_id: newSceneId,
+        sort_order: j,
+        audio_content: beat.audio_content,
+        visual_content: beat.visual_content,
+        notes_content: beat.notes_content,
+      } as never);
+    }
+  }
+
+  // 6. Clone tags from source script
+  const { data: tagsData } = await supabase
+    .from('script_tags')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('name');
+  for (const tag of (tagsData ?? [])) {
+    const t = tag as Record<string, unknown>;
+    await supabase.from('script_tags').insert({
+      script_id: newScriptId,
+      name: t.name,
+      slug: t.slug,
+      category: t.category,
+      color: t.color,
+    } as never);
+  }
+
+  // 7. Optionally insert style
+  if (extractedData.style) {
+    await supabase.from('script_styles').insert({
+      script_id: newScriptId,
+      prompt: extractedData.style.prompt,
+      aspect_ratio: extractedData.style.aspect_ratio,
+      generation_mode: 'beat',
+      style_preset: extractedData.style.style_preset,
+    } as never);
+  }
+
+  revalidatePath('/admin/scripts');
+  return newScriptId;
+}
+
+// ── Create Mode Version (switch between scratchpad ↔ table) ──
+
+export async function createModeVersion(scriptId: string, targetMode: ContentMode): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+
+  // 1. Fetch current script
+  const { data: script, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('*')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
+  const s = script as Record<string, unknown>;
+
+  // 2. If switching to scratchpad, flatten existing beats into scratch_content
+  let scratchContent = (s.scratch_content as string) ?? '';
+  if (targetMode === 'scratchpad' && !scratchContent.trim()) {
+    const { data: scenes } = await supabase
+      .from('script_scenes')
+      .select('*')
+      .eq('script_id', scriptId)
+      .order('sort_order');
+    if (scenes && scenes.length > 0) {
+      const sceneIds = scenes.map((sc: Record<string, unknown>) => sc.id as string);
+      const { data: beats } = await supabase
+        .from('script_beats')
+        .select('*')
+        .in('scene_id', sceneIds)
+        .order('sort_order');
+      const beatsByScene = new Map<string, Record<string, unknown>[]>();
+      for (const b of (beats ?? []) as Record<string, unknown>[]) {
+        const sid = b.scene_id as string;
+        if (!beatsByScene.has(sid)) beatsByScene.set(sid, []);
+        beatsByScene.get(sid)!.push(b);
+      }
+      scratchContent = scenes.map((sc: Record<string, unknown>) => {
+        const heading = `${sc.int_ext}. ${sc.location_name} — ${sc.time_of_day}`;
+        const sceneBeats = beatsByScene.get(sc.id as string) ?? [];
+        const beatLines = sceneBeats.map(b => {
+          const parts = [b.audio_content, b.visual_content, b.notes_content].filter(Boolean) as string[];
+          return parts.join('\n');
+        }).filter(Boolean);
+        return [heading, ...beatLines].join('\n\n');
+      }).join('\n\n---\n\n');
+    }
+  }
+
+  // 3. Create new script with target mode
+  const { data: newScript, error: newScriptErr } = await supabase
+    .from('scripts')
+    .insert({
+      title: s.title,
+      project_id: s.project_id,
+      script_group_id: s.script_group_id,
+      status: 'draft',
+      version: ((s.version as number) ?? 1) + 1,
+      notes: s.notes,
+      scratch_content: scratchContent || null,
+      content_mode: targetMode,
+      created_by: userId,
+    } as never)
+    .select('id')
+    .single();
+  if (newScriptErr || !newScript) throw new Error(newScriptErr?.message ?? 'Failed to create version');
+  const newScriptId = (newScript as { id: string }).id;
+
+  // 4. Clone characters
+  const { data: chars } = await supabase
+    .from('script_characters')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  for (const ch of (chars ?? []) as Record<string, unknown>[]) {
+    await supabase.from('script_characters').insert({
+      script_id: newScriptId,
+      name: ch.name,
+      description: ch.description,
+      color: ch.color,
+      character_type: ch.character_type,
+      sort_order: ch.sort_order,
+      max_cast_slots: ch.max_cast_slots,
+    } as never);
+  }
+
+  // 5. Clone tags
+  const { data: tags } = await supabase
+    .from('script_tags')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  for (const tag of (tags ?? []) as Record<string, unknown>[]) {
+    await supabase.from('script_tags').insert({
+      script_id: newScriptId,
+      name: tag.name,
+      slug: tag.slug,
+      category: tag.category,
+      color: tag.color,
+    } as never);
+  }
+
+  // 6. Clone locations
+  const { data: locs } = await supabase
+    .from('script_locations')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  for (const loc of (locs ?? []) as Record<string, unknown>[]) {
+    await supabase.from('script_locations').insert({
+      script_id: newScriptId,
+      name: loc.name,
+      description: loc.description,
+      color: loc.color,
+      sort_order: loc.sort_order,
+      global_location_id: loc.global_location_id,
+    } as never);
+  }
+
+  revalidatePath('/admin/scripts');
+  return newScriptId;
 }

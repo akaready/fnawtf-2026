@@ -12,7 +12,7 @@ import { ToolbarButton } from '../../_components/table/TableToolbar';
 import { createTag, renameTag, deleteTag, mergeTags, getProjectsForTag, batchDeleteTags } from '../../actions';
 import type { TagWithCount } from '../../actions';
 
-type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type';
+type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type' | 'industry';
 type ProjectRef = { id: string; title: string; published: boolean; client_name: string };
 
 const CATEGORY_CONFIG: Record<TagCategory, { label: string; description: string }> = {
@@ -21,9 +21,10 @@ const CATEGORY_CONFIG: Record<TagCategory, { label: string; description: string 
   addon: { label: 'Premium Add-ons', description: 'Premium services included' },
   deliverable: { label: 'Assets Delivered', description: 'File formats and deliverables' },
   project_type: { label: 'Project Types', description: 'Type or format of the project' },
+  industry: { label: 'Industries', description: 'Industry verticals for clients' },
 };
 
-const CATEGORIES: TagCategory[] = ['project_type', 'deliverable', 'style', 'addon', 'technique'];
+const CATEGORIES: TagCategory[] = ['project_type', 'deliverable', 'style', 'addon', 'technique', 'industry'];
 
 interface MergeDialogProps {
   tags: TagWithCount[];

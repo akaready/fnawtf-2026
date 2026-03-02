@@ -57,9 +57,10 @@ interface Props {
   projects: ClientProject[];
   testimonials: ClientTestimonial[];
   contacts: ContactRow[];
+  industryTags: string[];
 }
 
-export function ClientsManager({ initialClients, projects, testimonials, contacts: initialContacts }: Props) {
+export function ClientsManager({ initialClients, projects, testimonials, contacts: initialContacts, industryTags }: Props) {
   const [clients, setClients] = useState(initialClients);
   const [localContacts, setLocalContacts] = useState(initialContacts);
   const [localTestimonials, setLocalTestimonials] = useState(testimonials);
@@ -567,9 +568,9 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                       )}
                       {cardSize >= 3 && (
                         <>
-                          {cardVisibleFields.has('industry') && c.industry && (
-                            <p className={`${sz.detailSize} mt-1 text-admin-text-faint truncate`}>{c.industry}</p>
-                          )}
+                          {cardVisibleFields.has('industry') && c.industry?.length ? (
+                            <p className={`${sz.detailSize} mt-1 text-admin-text-faint truncate`}>{c.industry.join(', ')}</p>
+                          ) : null}
                           {cardVisibleFields.has('location') && c.location && (
                             <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate`}>{c.location}</p>
                           )}
@@ -664,6 +665,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         contacts={localContacts}
         projects={localProjects}
         testimonials={localTestimonials}
+        industryTags={industryTags}
         onClose={() => setActiveId(null)}
         onCompanyUpdated={handleCompanyUpdated}
         onCompanyDeleted={handleCompanyDeleted}

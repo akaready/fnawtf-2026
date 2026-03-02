@@ -106,7 +106,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         .filter((c) =>
           c.name.toLowerCase().includes(contactCompany.toLowerCase()) ||
           (c.company ?? '').toLowerCase().includes(contactCompany.toLowerCase()) ||
-          (c.industry ?? '').toLowerCase().includes(contactCompany.toLowerCase()),
+          (c.industry ?? []).join(', ').toLowerCase().includes(contactCompany.toLowerCase()),
         )
         .slice(0, 8)
     : [];
@@ -137,7 +137,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         website_url: newCompanyWebsite.trim() || null,
         linkedin_url: null,
         description: null,
-        industry: newCompanyIndustry.trim() || null,
+        industry: newCompanyIndustry.trim() ? [newCompanyIndustry.trim()] : null,
         location: newCompanyLocation.trim() || null,
         founded_year: null,
         company_size: null,

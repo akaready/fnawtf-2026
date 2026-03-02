@@ -59,7 +59,7 @@ export type Database = {
           website_url: string | null;
           linkedin_url: string | null;
           description: string | null;
-          industry: string | null;
+          industry: string[] | null;
           location: string | null;
           founded_year: number | null;
           company_size: string | null;
@@ -502,6 +502,33 @@ export type Database = {
         };
         Insert: Omit<Database['public']['Tables']['script_tags']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['script_tags']['Row']>;
+      };
+      script_locations: {
+        Row: {
+          id: string;
+          script_id: string;
+          name: string;
+          description: string | null;
+          color: string;
+          sort_order: number;
+          global_location_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['script_locations']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['script_locations']['Row']>;
+      };
+      script_location_options: {
+        Row: {
+          id: string;
+          script_location_id: string;
+          location_id: string;
+          slot_order: number;
+          is_featured: boolean;
+          appearance_prompt: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['script_location_options']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['script_location_options']['Row']>;
       };
     };
     Views: {};
