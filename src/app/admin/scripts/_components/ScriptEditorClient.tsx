@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -9,6 +9,8 @@ import {
   createBeat, updateBeat, deleteBeat, reorderBeats,
   createScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
+  getScriptStyle, getStyleReferences, getStoryboardFrames,
+  getScriptCastMap,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
@@ -20,11 +22,14 @@ import { ScriptCharactersPanel } from './ScriptCharactersPanel';
 import { ScriptTagsPanel } from './ScriptTagsPanel';
 import { ScriptLocationsPanel } from './ScriptLocationsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
+import { ScriptStylePanel } from './ScriptStylePanel';
 import { ScriptFocusMode } from './ScriptFocusMode';
 import type {
   ScriptRow, ScriptSceneRow, ScriptBeatRow,
   ScriptCharacterRow, ScriptTagRow, ScriptLocationRow,
   ScriptColumnConfig, ScriptBeatReferenceRow,
+  ScriptStyleRow, ScriptStyleReferenceRow, ScriptStoryboardFrameRow,
+  CharacterCastWithContact,
 } from '@/types/scripts';
 
 interface Props {
@@ -35,6 +40,7 @@ interface Props {
   initialTags: ScriptTagRow[];
   initialLocations: ScriptLocationRow[];
   initialReferences: ScriptBeatReferenceRow[];
+  globalLocations?: { id: string; name: string; featured_image: string | null }[];
 }
 
 /** Rainbow version pill colors — cycles red → orange → yellow → green → cyan → blue → violet */
@@ -53,6 +59,7 @@ export function ScriptEditorClient({
   initialTags,
   initialLocations,
   initialReferences,
+  globalLocations = [],
 }: Props) {
   const [script, setScript] = useState(initialScript);
   const [scenes, setScenes] = useState(initialScenes);
@@ -67,6 +74,11 @@ export function ScriptEditorClient({
   const [showTags, setShowTags] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showStyle, setShowStyle] = useState(false);
+  const [scriptStyle, setScriptStyle] = useState<ScriptStyleRow | null>(null);
+  const [styleReferences, setStyleReferences] = useState<ScriptStyleReferenceRow[]>([]);
+  const [storyboardFrames, setStoryboardFrames] = useState<ScriptStoryboardFrameRow[]>([]);
+  const [castMap, setCastMap] = useState<Record<string, CharacterCastWithContact[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [showFocusMode, setShowFocusMode] = useState(false);
   const [focusTransition, setFocusTransition] = useState<'idle' | 'pushing-out' | 'bringing-in' | 'active' | 'pushing-focus-out' | 'bringing-back'>('idle');
@@ -75,7 +87,7 @@ export function ScriptEditorClient({
   const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string }[]>([]);
   const router = useRouter();
 
-  const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false };
+  const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false };
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>(defaultColumns);
   const [columnFractions, setColumnFractions] = useState<Record<string, number>>(DEFAULT_FRACTIONS);
 
@@ -96,6 +108,26 @@ export function ScriptEditorClient({
   useEffect(() => {
     localStorage.setItem('fna-script-col-widths', JSON.stringify(columnFractions));
   }, [columnFractions]);
+
+  // Load style + storyboard + cast data on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const [style, frames, castData] = await Promise.all([
+          getScriptStyle(script.id),
+          getStoryboardFrames(script.id),
+          getScriptCastMap(script.id),
+        ]);
+        if (style) {
+          setScriptStyle(style as ScriptStyleRow);
+          const refs = await getStyleReferences(style.id);
+          setStyleReferences(refs as ScriptStyleReferenceRow[]);
+        }
+        setStoryboardFrames(frames as ScriptStoryboardFrameRow[]);
+        setCastMap(castData);
+      } catch { /* tables may not exist yet */ }
+    })();
+  }, [script.id]);
 
   // Reset fractions to defaults when column visibility changes
   const handleColumnConfigChange = useCallback((config: ScriptColumnConfig) => {
@@ -265,6 +297,22 @@ export function ScriptEditorClient({
     setReferences(prev => prev.filter(r => r.id !== refId));
   }, []);
 
+  // ── Storyboard frame handler ──
+  const handleFrameChange = useCallback((frame: ScriptStoryboardFrameRow | null, beatId?: string) => {
+    if (frame) {
+      setStoryboardFrames(prev => {
+        const filtered = prev.filter(f => {
+          if (frame.beat_id && f.beat_id === frame.beat_id) return false;
+          if (frame.scene_id && f.scene_id === frame.scene_id) return false;
+          return true;
+        });
+        return [...filtered, frame];
+      });
+    } else if (beatId) {
+      setStoryboardFrames(prev => prev.filter(f => f.beat_id !== beatId));
+    }
+  }, []);
+
   // ── Save all (flush pending beat debounces + touch updated_at) ──
   const handleSaveAll = useCallback(async () => {
     setSaving(true);
@@ -369,6 +417,11 @@ export function ScriptEditorClient({
           tags={tags}
           locations={locations}
           references={refsByBeat}
+          storyboardFrames={storyboardFrames}
+          scriptStyle={scriptStyle}
+          styleReferences={styleReferences}
+          scriptId={script.id}
+          onFrameGenerated={handleFrameChange}
           onUpdateBeat={handleUpdateBeat}
           onDeleteBeat={handleDeleteBeat}
           onAddBeat={handleAddBeat}
@@ -381,6 +434,7 @@ export function ScriptEditorClient({
           onShowCharacters={() => setShowCharacters(true)}
           onShowTags={() => setShowTags(true)}
           onShowLocations={() => setShowLocations(true)}
+          onShowStyle={() => setShowStyle(true)}
           onShowSettings={() => setShowSettings(true)}
           onNewVersion={handleNewVersion}
           onSave={handleSaveAll}
@@ -390,6 +444,7 @@ export function ScriptEditorClient({
           scriptStatus={script.status}
           exiting={focusTransition === 'pushing-focus-out'}
           onExit={exitFocusMode}
+          castMap={castMap}
         />
       )}
 
@@ -480,40 +535,22 @@ export function ScriptEditorClient({
         }
         rightContent={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowCharacters(true)}
-              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-            >
+            <button onClick={() => setShowCharacters(true)} className="btn-secondary p-2" title="Characters">
               <Users size={14} />
-              Characters
             </button>
-            <button
-              onClick={() => setShowLocations(true)}
-              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-            >
+            <button onClick={() => setShowLocations(true)} className="btn-secondary p-2" title="Locations">
               <MapPin size={14} />
-              Locations
             </button>
-            <button
-              onClick={() => setShowTags(true)}
-              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-            >
+            <button onClick={() => setShowTags(true)} className="btn-secondary p-2" title="Tags">
               <Hash size={14} />
-              Tags
             </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="btn-secondary p-2"
-              title="Settings"
-            >
+            <button onClick={() => setShowStyle(true)} className="btn-secondary p-2" title="Style">
+              <Paintbrush size={14} />
+            </button>
+            <button onClick={() => setShowSettings(true)} className="btn-secondary p-2" title="Settings">
               <Settings size={14} />
             </button>
-            <button
-              onClick={handleNewVersion}
-              disabled={versioning}
-              className="btn-secondary p-2"
-              title="New version"
-            >
+            <button onClick={handleNewVersion} disabled={versioning} className="p-2 rounded-admin-md border transition-colors hover:bg-admin-bg-hover" style={{ borderColor: versionColor(script.version) + '40', color: versionColor(script.version) }} title="New version">
               {versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}
             </button>
             <button
@@ -576,6 +613,11 @@ export function ScriptEditorClient({
             tags={tags}
             locations={locations}
             references={refsByBeat}
+            storyboardFrames={storyboardFrames}
+            scriptStyle={scriptStyle}
+            styleReferences={styleReferences}
+            scriptId={script.id}
+            onFrameGenerated={handleFrameChange}
             activeSceneId={activeSceneId}
             onUpdateScene={handleUpdateScene}
             onAddScene={handleAddScene}
@@ -587,6 +629,7 @@ export function ScriptEditorClient({
             onSelectScene={setActiveSceneId}
             onUploadReference={handleUploadReference}
             onDeleteReference={handleDeleteReference}
+            castMap={castMap}
           />
         </div>
       </div>
@@ -599,6 +642,8 @@ export function ScriptEditorClient({
         characters={characters}
         beats={beats}
         onCharactersChange={setCharacters}
+        castMap={castMap}
+        onCastMapChange={setCastMap}
       />
       <ScriptTagsPanel
         open={showTags}
@@ -614,12 +659,21 @@ export function ScriptEditorClient({
         locations={locations}
         scenes={scenes}
         onLocationsChange={setLocations}
+        globalLocations={globalLocations}
       />
       <ScriptSettingsPanel
         open={showSettings}
         onClose={() => setShowSettings(false)}
         script={script}
         onScriptChange={setScript}
+      />
+      <ScriptStylePanel
+        open={showStyle}
+        onClose={() => setShowStyle(false)}
+        style={scriptStyle}
+        references={styleReferences}
+        onStyleChange={setScriptStyle}
+        onReferencesChange={setStyleReferences}
       />
     </div>
   );

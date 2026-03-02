@@ -9,18 +9,13 @@ import {
 } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { PanelDrawer } from '../../_components/PanelDrawer';
+import { StatusBadge } from '../../_components/StatusBadge';
+import { INTAKE_STATUSES } from '../../_components/statusConfigs';
 import { updateIntakeSubmission, deleteIntakeSubmission } from '../../actions';
 import type { IntakeSubmission, ClientRow } from '../../actions';
 import type { ContactRow } from '@/types/proposal';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  new:       { label: 'New',       color: 'bg-admin-info-bg text-admin-info border-admin-info-border' },
-  reviewed:  { label: 'Reviewed',  color: 'bg-admin-warning-bg text-admin-warning border-admin-warning-border' },
-  converted: { label: 'Converted', color: 'bg-admin-success-bg text-admin-success border-admin-success-border' },
-  archived:  { label: 'Archived',  color: 'bg-admin-bg-hover text-admin-text-dim border-admin-border' },
-};
 
 const TIMELINE_LABELS: Record<string, string> = {
   asap: 'Urgent',
@@ -70,15 +65,6 @@ const DELIVERABLE_LABELS: Record<string, string> = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_LABELS[status] || STATUS_LABELS.new;
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium border ${s.color}`} style={{ borderRadius: 'var(--admin-radius-full)' }}>
-      {s.label}
-    </span>
-  );
 }
 
 /** Extract YouTube video ID from a URL */
@@ -235,7 +221,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
                       {s.budget || '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={s.status} />
+                      <StatusBadge status={s.status} config={INTAKE_STATUSES} />
                     </td>
                     <td className="px-4 py-3 text-xs text-admin-text-dim">
                       {linkedClient ? (
@@ -608,7 +594,7 @@ function IntakeDetailPanel({
               onChange={(e) => onStatusChange(e.target.value)}
               className="admin-input py-2.5 pl-3 pr-8 text-sm appearance-none"
             >
-              {Object.entries(STATUS_LABELS).map(([val, { label }]) => (
+              {Object.entries(INTAKE_STATUSES).map(([val, { label }]) => (
                 <option key={val} value={val}>{label}</option>
               ))}
             </select>

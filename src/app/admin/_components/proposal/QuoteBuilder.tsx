@@ -117,7 +117,7 @@ function QuoteForm({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. Recommended, Budget Option"
-              className="w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-admin-border-emphasis transition-colors"
+              className="w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-ghost outline-none focus:border-admin-border-emphasis transition-colors"
             />
           </div>
 
@@ -131,7 +131,7 @@ function QuoteForm({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explain the choices in this quote..."
               rows={3}
-              className="w-full bg-admin-bg-selected border border-admin-border rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-admin-border-emphasis transition-colors resize-none"
+              className="w-full bg-admin-bg-selected border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-ghost outline-none focus:border-admin-border-emphasis transition-colors resize-none"
             />
           </div>
 
@@ -166,7 +166,7 @@ function QuoteForm({
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-admin-border-emphasis transition-colors"
+                className="w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-ghost outline-none focus:border-admin-border-emphasis transition-colors"
               />
             </div>
             <div>
@@ -178,7 +178,7 @@ function QuoteForm({
                 value={downAmount}
                 onChange={(e) => setDownAmount(e.target.value)}
                 placeholder="0"
-                className="w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-[#ccc] placeholder:text-white/15 outline-none focus:border-admin-border-emphasis transition-colors"
+                className="w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-ghost outline-none focus:border-admin-border-emphasis transition-colors"
               />
             </div>
           </div>
@@ -194,14 +194,14 @@ function QuoteForm({
               max="100"
               value={discountPct}
               onChange={(e) => setDiscountPct(e.target.value)}
-              className="w-32 bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-[#ccc] outline-none focus:border-admin-border-emphasis transition-colors"
+              className="w-32 bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-muted outline-none focus:border-admin-border-emphasis transition-colors"
             />
           </div>
 
           {/* Defer payment toggle */}
           <div className="flex items-center justify-between py-2">
             <div>
-              <p className="text-sm text-[#999]">Defer Payment</p>
+              <p className="text-sm text-admin-text-dim">Defer Payment</p>
               <p className="text-xs text-admin-text-ghost">Client pays after delivery</p>
             </div>
             <button
@@ -275,7 +275,7 @@ export function QuoteBuilder({ proposalId, existingQuotes }: Props) {
       ) : (
         <button
           onClick={() => setShowNew(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-admin-border-muted rounded-xl text-sm text-admin-text-dim hover:text-[#999] hover:border-admin-border-emphasis transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-admin-border-muted rounded-xl text-sm text-admin-text-dim hover:text-admin-text-dim hover:border-admin-border-emphasis transition-colors"
         >
           <Plus size={14} />
           New FNA Quote

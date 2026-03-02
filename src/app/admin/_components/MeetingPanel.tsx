@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { PanelDrawer } from './PanelDrawer';
 import { AdminTabBar } from './AdminTabBar';
-import { StatusBadge } from './AdminTable';
+import { StatusBadge } from './StatusBadge';
+import { MEETING_STATUSES } from './statusConfigs';
 import { TranscriptViewer } from './TranscriptViewer';
 import {
   linkMeetingToCompany,
@@ -64,7 +65,7 @@ export function MeetingPanel({
       value: 'transcript',
       label: 'Transcript',
       badge: transcript ? (
-        <span className="ml-1 text-[10px] rounded-full bg-admin-success-bg text-emerald-300 px-1.5 py-0.5">
+        <span className="ml-1 text-[10px] rounded-full bg-admin-success-bg text-admin-success px-2 py-0.5">
           ready
         </span>
       ) : undefined,
@@ -91,8 +92,8 @@ export function MeetingPanel({
       {/* Header */}
       <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border">
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-medium truncate">{meeting.title}</h2>
-          <div className="flex items-center gap-2 mt-1.5 text-sm text-admin-text-faint">
+          <h2 className="text-lg font-semibold truncate">{meeting.title}</h2>
+          <div className="flex items-center gap-2 mt-1.5 text-xs text-admin-text-faint">
             <span>
               {new Date(meeting.start_time).toLocaleDateString('en-US', {
                 weekday: 'short',
@@ -115,7 +116,7 @@ export function MeetingPanel({
             )}
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <StatusBadge value={meeting.status} />
+            <StatusBadge status={meeting.status} config={MEETING_STATUSES} />
             {meeting.recall_bot_status && (
               <span className="inline-flex items-center gap-1 text-[10px] text-admin-text-placeholder">
                 <Bot size={10} />
@@ -128,7 +129,7 @@ export function MeetingPanel({
           onClick={onClose}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
       </div>
 
@@ -313,7 +314,7 @@ export function MeetingPanel({
                         </span>
                       )}
                       {att.response_status && (
-                        <StatusBadge value={att.response_status} />
+                        <StatusBadge status={att.response_status} config={MEETING_STATUSES} />
                       )}
                     </div>
                   </div>

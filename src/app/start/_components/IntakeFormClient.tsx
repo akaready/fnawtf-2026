@@ -17,6 +17,9 @@ import confetti from 'canvas-confetti';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { submitIntakeForm, uploadIntakeFile } from '@/lib/intake/actions';
 import type { IntakeFormData } from '@/lib/intake/actions';
+import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
+import type { CalculatorStateSnapshot, PricingType } from '@/components/proposal/ProposalCalculatorEmbed';
+import type { ProposalType } from '@/types/proposal';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -103,9 +106,17 @@ const EMAIL_LIST_OPTIONS = [
   { value: '25000+', label: '25,000+' },
 ] as const;
 
-const SLIDE_NAMES = ['People', 'Project', 'Vision', 'Challenges', 'References', 'Deliverables', 'Timeline', 'Priorities', 'Experience', 'Partners', 'Goals', 'Extras', 'Submit'];
+const SLIDE_NAMES = ['People', 'Project', 'Vision', 'Challenges', 'References', 'Deliverables', 'Timeline', 'Priorities', 'Experience', 'Partners', 'Investment', 'Goals', 'Extras', 'Submit'];
 const TOTAL_SLIDES = SLIDE_NAMES.length;
-const GOALS_SLIDE_INDEX = 10;
+const GOALS_SLIDE_INDEX = 11;
+
+function phasesToQuoteType(phases: string[]): PricingType {
+  if (phases.includes('fundraising')) return 'fundraising';
+  if (phases.includes('build') && phases.includes('launch')) return 'build-launch';
+  if (phases.includes('launch')) return 'launch';
+  if (phases.includes('scale')) return 'scale';
+  return 'build';
+}
 
 const FIELD_META: Record<string, { label: string; explanation: string; slide: number }> = {
   name:          { label: 'Your name',        explanation: 'We need to know who we\'re working with.',                      slide: 0 },
@@ -846,7 +857,7 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
             const isHidden = hiddenIndices?.has(i);
             const isActive = i === activeIndex;
             const isHovered = hoveredIndex === i;
-            const dockScale = isHovered ? 1.2 : 1;
+            const dockScale = isHovered && !isActive ? 1.1 : 1;
 
             return (
               <div key={i} ref={(el) => { dotRefs.current[i] = el; }}
@@ -855,7 +866,9 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
                   width: isHidden ? 0 : 30,
                   opacity: isHidden ? 0 : 1,
                   transform: isHidden ? 'translateY(12px)' : 'translateY(0)',
-                  transition: 'width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
+                  marginLeft: isHidden ? -6 : 0,
+                  marginRight: isHidden ? -6 : 0,
+                  transition: 'width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), margin 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
                 }}
                 onMouseEnter={() => !isHidden ? setHoveredIndex(i) : undefined} onMouseLeave={() => setHoveredIndex(null)}
               >
@@ -906,7 +919,8 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
             return (
             <div key={i} className="overflow-hidden" style={{
               width: isHidden ? 0 : 'auto', opacity: isHidden ? 0 : 1,
-              transition: 'width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease',
+              marginLeft: isHidden ? -4 : 0, marginRight: isHidden ? -4 : 0,
+              transition: 'width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, margin 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
             }}>
               <button onClick={() => onNavigate(i)} aria-label={`Go to slide ${i + 1}`} className="flex items-center justify-center p-0.5">
                 {i === count - 1 ? (
@@ -1089,6 +1103,10 @@ export function IntakeFormClient() {
   const [anythingElse, setAnythingElse] = useState('');
   const [referral, setReferral] = useState('');
 
+  // Quote
+  const [wantsQuote, setWantsQuote] = useState<'undecided' | 'build' | 'skip' | 'cleared'>('undecided');
+  const [quoteState, setQuoteState] = useState<CalculatorStateSnapshot | null>(null);
+
   // ── Refs ─────────────────────────────────────────────
   const deckRef = useRef<HTMLDivElement>(null);
   const slideRefsArr = useRef<React.RefObject<HTMLElement>[]>(SLIDE_NAMES.map(() => createRef<HTMLElement>()));
@@ -1158,8 +1176,13 @@ export function IntakeFormClient() {
       if (d.internalGoal) setInternalGoal(d.internalGoal);
       if (d.budget) setBudget(d.budget);
       if (d.emailListSize) setEmailListSize(d.emailListSize);
+      if (d.companyName) setCompanyName(d.companyName);
       if (d.anythingElse) setAnythingElse(d.anythingElse);
       if (d.referral) setReferral(d.referral);
+      if (d.quoteState) setQuoteState(d.quoteState);
+      if (d.wantsQuote === 'build' || d.wantsQuote === 'skip' || d.wantsQuote === 'cleared') setWantsQuote(d.wantsQuote);
+      else if (d.wantsQuote === true) setWantsQuote('build');
+      else if (d.wantsQuote === false) setWantsQuote('skip');
     } catch { /* ignore */ }
   }, []);
 
@@ -1254,6 +1277,12 @@ export function IntakeFormClient() {
   // ── Navigation ───────────────────────────────────────
   const showGoals = phases.includes('crowdfunding');
 
+  const dotHiddenIndices = (() => {
+    const s = new Set<number>();
+    if (!showGoals) s.add(GOALS_SLIDE_INDEX);
+    return s.size > 0 ? s : undefined;
+  })();
+
   const navigateTo = useCallback((idx: number) => {
     // Skip goals slide when crowdfunding not selected
     if (idx === GOALS_SLIDE_INDEX && !showGoals) {
@@ -1305,20 +1334,20 @@ export function IntakeFormClient() {
     const timer = setTimeout(() => {
       try {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-          name, email, title, stakeholders, projectName, phases, pitch, excitement, keyFeature,
+          name, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
           vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
           deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
           experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
-          budget, emailListSize, anythingElse, referral,
+          budget, emailListSize, anythingElse, referral, wantsQuote, quoteState,
         }));
       } catch { /* ignore */ }
     }, 500);
     return () => clearTimeout(timer);
-  }, [started, name, email, title, stakeholders, projectName, phases, pitch, excitement, keyFeature,
+  }, [started, name, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
       vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
       deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
       experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
-      budget, emailListSize, anythingElse, referral]);
+      budget, emailListSize, anythingElse, referral, wantsQuote, quoteState]);
 
   // ── File handling ────────────────────────────────────
   const handleFileAdd = useCallback(async (fileList: FileList) => {
@@ -1391,6 +1420,7 @@ export function IntakeFormClient() {
         internal_goal: internalGoal.trim() || undefined, budget: budget.trim() || undefined,
         email_list_size: emailListSize || undefined, file_urls: files.map((f) => f.url),
         anything_else: anythingElse.trim() || undefined, referral: referral.trim() || undefined,
+        quote_data: quoteState ? (quoteState as unknown as Record<string, unknown>) : undefined,
       };
       await submitIntakeForm(data);
       sessionStorage.removeItem(STORAGE_KEY);
@@ -1461,7 +1491,7 @@ export function IntakeFormClient() {
 
   // ── Render: Intro (matching TitleSlide exactly) ──────
   if (!started) {
-    const titleWords = ["Let's", 'build', 'something', 'great.'];
+    const titleLines = [["Let's", 'build'], ['something', 'great.']];
     return (
       <>
       <section
@@ -1483,13 +1513,17 @@ export function IntakeFormClient() {
           </p>
 
           <h1 className="font-display font-bold text-white leading-[0.95] mb-6"
-            style={{ fontSize: 'clamp(3.5rem, 9vw, 10rem)' }}
+            style={{ fontSize: 'clamp(3.25rem, 6.5vw, 7rem)' }}
           >
-            {titleWords.map((word, i) => (
-              <span key={i} className="inline-block overflow-hidden pb-[0.22em]" style={{ verticalAlign: 'top' }}>
-                <span data-word className="inline-block" style={{ transform: 'translateY(115%)' }}>
-                  {word}{i < titleWords.length - 1 ? '\u00a0' : ''}
-                </span>
+            {titleLines.map((line, li) => (
+              <span key={li} className="block">
+                {line.map((word, wi) => (
+                    <span key={wi} className="inline-block overflow-hidden pb-[0.22em]" style={{ verticalAlign: 'top' }}>
+                      <span data-word className="inline-block" style={{ transform: 'translateY(115%)' }}>
+                        {word}{wi < line.length - 1 ? '\u00a0' : ''}
+                      </span>
+                    </span>
+                ))}
               </span>
             ))}
           </h1>
@@ -1543,7 +1577,7 @@ export function IntakeFormClient() {
           </p>
         </div>
       </section>
-      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={-1} onNavigate={(i) => { setStarted(true); setTimeout(() => navigateTo(i), 50); }} onHome={() => {}} onExit={handleExit} onRevealed={() => { dotsRevealed.current = true; }} hiddenIndices={showGoals ? undefined : new Set([GOALS_SLIDE_INDEX])} />
+      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={-1} onNavigate={(i) => { setStarted(true); setTimeout(() => navigateTo(i), 50); }} onHome={() => {}} onExit={handleExit} onRevealed={() => { dotsRevealed.current = true; }} hiddenIndices={dotHiddenIndices} />
       </>
     );
   }
@@ -1795,10 +1829,79 @@ export function IntakeFormClient() {
           </div>
         </section>
 
-        {/* ── Slide 10: Goals & Budget (crowdfunding only) ── */}
-        <section ref={slideRefsArr.current[10] as React.RefObject<HTMLElement>} className={showGoals ? slideClass : ''} style={showGoals ? undefined : { width: 0, minWidth: 0, overflow: 'hidden', padding: 0 }}>
+        {/* ── Slide 10: Investment (optional quote builder) ── */}
+        <section ref={slideRefsArr.current[10] as React.RefObject<HTMLElement>} className={slideClass}>
+          <div className="max-w-4xl mx-auto">
+            <SlideHeader eyebrow="11" title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
+
+            {!(phases.includes('build') || phases.includes('launch') || phases.includes('fundraising')) ? (
+              /* ── No quotable service selected ── */
+              <div className="flex flex-col items-center gap-2 mt-4">
+                <p className="text-base" style={{ color: '#666666' }}>
+                  {phases.length === 0
+                    ? 'Select a service on the Project page to get started.'
+                    : 'Pricing for this service is custom \u2014 we\u2019ll discuss on our call.'}
+                </p>
+              </div>
+            ) : wantsQuote === 'undecided' || wantsQuote === 'skip' ? (
+              /* ── Opt-in gate (default + skip state) ── */
+              <div className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto mt-4">
+                <button type="button" onClick={() => setWantsQuote('build')}
+                  className="flex-1 flex flex-col items-center gap-3 py-8 px-6 rounded-xl border border-white/10 bg-black hover:border-accent/40 hover:bg-accent/[0.06] transition-all duration-200 group">
+                  <Coins className="w-7 h-7 text-white/40 group-hover:text-accent transition-colors" />
+                  <span className="text-lg font-semibold text-white">Build a Quote</span>
+                  <span className="text-sm leading-snug" style={{ color: '#666666' }}>Configure add-ons and options to estimate your investment.</span>
+                </button>
+                <button type="button" onClick={() => setWantsQuote('skip')}
+                  className="flex-1 flex flex-col items-center gap-3 py-8 px-6 rounded-xl border border-white/10 bg-black hover:border-white/20 hover:bg-white/[0.04] transition-all duration-200 group">
+                  <ArrowRight className="w-7 h-7 text-white/40 group-hover:text-white/60 transition-colors" />
+                  <span className="text-lg font-semibold text-white">Skip</span>
+                  <span className="text-sm leading-snug" style={{ color: '#666666' }}>We&apos;ll discuss pricing on our call instead.</span>
+                </button>
+              </div>
+            ) : wantsQuote === 'cleared' ? (
+              /* ── Cleared quote ── */
+              <div className="max-w-md mx-auto mt-4">
+                <p className="text-base text-center mb-6" style={{ color: '#666666' }}>No problem — we&apos;ll cover pricing on the call.</p>
+                <button type="button" onClick={() => setWantsQuote('build')}
+                  className="w-full flex items-center gap-5 h-[88px] px-6 rounded-xl border border-white/10 bg-black hover:border-accent/40 hover:bg-accent/[0.06] transition-all duration-200 group">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(161,77,253,0.12)' }}>
+                    <Coins className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-base font-medium text-white">Changed your mind?</span>
+                    <p className="text-sm mt-0.5" style={{ color: '#666666' }}>Build a quote to bring into our call.</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0" />
+                </button>
+              </div>
+            ) : (
+              /* ── Quote builder (wantsQuote === 'build') ── */
+              <div>
+                <div className="flex justify-end mb-4">
+                  <button type="button" onClick={() => { setWantsQuote('cleared'); setQuoteState(null); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-sm text-red-400/60 hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/[0.06] transition-all duration-200">
+                    <X className="w-4 h-4" /> Clear quote
+                  </button>
+                </div>
+
+                <ProposalCalculatorEmbed
+                  proposalId=""
+                  proposalType={phasesToQuoteType(phases) as ProposalType}
+                  standalone
+                  typeOverride={phasesToQuoteType(phases)}
+                  crowdfundingOverride={phases.includes('crowdfunding')}
+                  onStateChange={(state) => setQuoteState(state)}
+                />
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── Slide 11: Goals & Budget (crowdfunding only) ── */}
+        <section ref={slideRefsArr.current[11] as React.RefObject<HTMLElement>} className={showGoals ? slideClass : ''} style={showGoals ? undefined : { width: 0, minWidth: 0, overflow: 'hidden', padding: 0 }}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="11" title="Goals" subtitle="Help us understand your campaign targets." />
+            <SlideHeader eyebrow="12" title="Goals" subtitle="Help us understand your campaign targets." />
             <div className="space-y-6">
               <div><FieldLabel icon={Target} label="Public goal (e.g. crowdfunding target)" />
                 <input type="text" placeholder='e.g. "Raise $25,000 on Kickstarter"' value={publicGoal} onChange={(e) => setPublicGoal(e.target.value)} className={inputClass} /></div>
@@ -1824,10 +1927,10 @@ export function IntakeFormClient() {
           </div>
         </section>
 
-        {/* ── Slide 11: Wrap Up ────────────────────────── */}
-        <section ref={slideRefsArr.current[11] as React.RefObject<HTMLElement>} className={slideClass}>
+        {/* ── Slide 12: Wrap Up ────────────────────────── */}
+        <section ref={slideRefsArr.current[12] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="12" title="Extras" subtitle="Upload files and add any final context." />
+            <SlideHeader eyebrow="13" title="Extras" subtitle="Upload files and add any final context." />
             <div className="space-y-8">
               <div><FieldLabel icon={Upload} label="Files to share" />
                 <p className={`${helperClass} mb-3`}>Market research, brand guidelines, NDAs, assets — anything relevant.</p>
@@ -1840,8 +1943,8 @@ export function IntakeFormClient() {
           </div>
         </section>
 
-        {/* ── Slide 12: Submit ────────────────────────── */}
-        <section ref={slideRefsArr.current[12] as React.RefObject<HTMLElement>} className={slideClass}>
+        {/* ── Slide 13: Submit ────────────────────────── */}
+        <section ref={slideRefsArr.current[13] as React.RefObject<HTMLElement>} className={slideClass}>
           <div ref={submitSlideRef} className="max-w-4xl mx-auto">
             {missingFields.length > 0 ? (
               <>
@@ -1956,7 +2059,7 @@ export function IntakeFormClient() {
       </div>
 
       {/* Progress dots + exit */}
-      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={currentSlide} onNavigate={navigateTo} onHome={() => setStarted(false)} onExit={handleExit} skipReveal={dotsRevealed.current} hiddenIndices={showGoals ? undefined : new Set([GOALS_SLIDE_INDEX])} />
+      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={currentSlide} onNavigate={navigateTo} onHome={() => setStarted(false)} onExit={handleExit} skipReveal={dotsRevealed.current} hiddenIndices={dotHiddenIndices} />
 
       {/* Nav arrows — matching ProposalNavArrows */}
       <IntakeNavArrows

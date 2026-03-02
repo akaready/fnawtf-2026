@@ -111,7 +111,7 @@ function InlineEdit({ value, onSave, onCancel }: { value: string; onSave: (v: st
           if (e.key === 'Enter') onSave(draft);
           if (e.key === 'Escape') onCancel();
         }}
-        className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis"
+        className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded-lg px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis"
       />
       <button onClick={() => onSave(draft)} className="text-admin-success hover:text-admin-success transition-colors flex-shrink-0">
         <Check size={13} />
@@ -255,7 +255,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
         subtitle={`${roles.length} production roles`}
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search roles..."
+        searchPlaceholder="Search roles…"
         actions={
           <>
             {canMerge && (
@@ -275,6 +275,28 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
             >
               <Plus size={16} />
               Add Role
+            </button>
+          </>
+        }
+        mobileActions={
+          <>
+            {canMerge && (
+              <button
+                onClick={() => setMergeState({ sourceIds: [...selectedIds] })}
+                disabled={isPending}
+                className="btn-secondary p-2.5 text-sm"
+                title={`Merge ${selectedIds.size}`}
+              >
+                <GitMerge size={13} />
+              </button>
+            )}
+            <button
+              onClick={() => { if (viewMode === 'table') setViewMode('list'); setAddingNew(true); }}
+              disabled={isPending}
+              className="btn-primary p-2.5 text-sm"
+              title="Add Role"
+            >
+              <Plus size={16} />
             </button>
           </>
         }
@@ -332,12 +354,12 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
           <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
         </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
+      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         <div>
           <div className="bg-admin-bg-sidebar border border-admin-border-subtle rounded-xl">
             <div className="divide-y divide-admin-border">
               {filtered.length === 0 && !addingNew && (
-                <div className="px-5 py-8 text-center text-xs text-admin-text-ghost">
+                <div className="px-5 py-12 text-center text-xs text-admin-text-ghost">
                   {search ? 'No matching roles' : 'No roles yet'}
                 </div>
               )}
@@ -461,7 +483,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
                         if (e.key === 'Escape') { setAddingNew(false); setNewValue(''); }
                       }}
                       placeholder="New role name..."
-                      className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis placeholder:text-admin-text-ghost"
+                      className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded-lg px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis placeholder:text-admin-text-ghost"
                     />
                     <button onClick={handleAdd} className="text-admin-success hover:text-admin-success transition-colors flex-shrink-0">
                       <Check size={13} />

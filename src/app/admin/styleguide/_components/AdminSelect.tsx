@@ -158,7 +158,7 @@ export function AdminSelect({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-1 w-full bg-admin-bg-raised border border-admin-border rounded-lg shadow-lg overflow-hidden animate-dropdown-in">
+        <div className="absolute z-50 mt-1 w-full min-w-[140px] bg-admin-bg-raised border border-admin-border rounded-lg shadow-lg overflow-hidden animate-dropdown-in">
           {/* Search */}
           {searchable && (
             <div className="p-2 border-b border-admin-border-subtle">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback, useId } from 'react';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Sparkles, X } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -19,7 +19,8 @@ import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow } from '@/types/scripts';
+import { buildRichPrompt } from './storyboardUtils';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact } from '@/types/scripts';
 
 interface Props {
   scenes: ComputedScene[];
@@ -30,6 +31,11 @@ interface Props {
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
   references: Record<string, ScriptBeatReferenceRow[]>;
+  storyboardFrames: ScriptStoryboardFrameRow[];
+  scriptStyle: ScriptStyleRow | null;
+  styleReferences: ScriptStyleReferenceRow[];
+  scriptId: string;
+  onFrameGenerated: (frame: ScriptStoryboardFrameRow | null, beatId?: string) => void;
   activeSceneId: string | null;
   onUpdateScene: (sceneId: string, data: Partial<ScriptSceneRow>) => void;
   onAddScene: () => void;
@@ -41,6 +47,7 @@ interface Props {
   onSelectScene: (sceneId: string) => void;
   onUploadReference: (beatId: string, files: FileList) => void;
   onDeleteReference: (refId: string) => void;
+  castMap?: Record<string, CharacterCastWithContact[]>;
 }
 
 export function ScriptEditorCanvas({
@@ -52,6 +59,11 @@ export function ScriptEditorCanvas({
   tags,
   locations,
   references,
+  storyboardFrames,
+  scriptStyle,
+  styleReferences,
+  scriptId,
+  onFrameGenerated,
   activeSceneId,
   onUpdateScene,
   onAddScene,
@@ -63,6 +75,7 @@ export function ScriptEditorCanvas({
   onSelectScene,
   onUploadReference,
   onDeleteReference,
+  castMap,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -235,6 +248,93 @@ export function ScriptEditorCanvas({
     }
   }, [columnConfig]);
 
+  // ── Batch storyboard generation ──
+  const [generatingScope, setGeneratingScope] = useState<string | null>(null); // null | 'all' | sceneId
+  const [generatingBeatIds, setGeneratingBeatIds] = useState<Set<string>>(new Set());
+  const abortRef = useRef(false);
+
+  const generateForScenes = useCallback(async (targetScenes: ComputedScene[], scope: string) => {
+    if (!scriptStyle || generatingScope) return;
+    abortRef.current = false;
+    setGeneratingScope(scope);
+    // Collect all beat IDs that need generation
+    const queuedIds = new Set<string>();
+    for (const scene of targetScenes) {
+      for (const beat of scene.beats) {
+        if (!storyboardFrames.some(f => f.beat_id === beat.id)) {
+          queuedIds.add(beat.id);
+        }
+      }
+    }
+    setGeneratingBeatIds(queuedIds);
+    try {
+      for (const scene of targetScenes) {
+        for (let i = 0; i < scene.beats.length; i++) {
+          if (abortRef.current) break;
+          const beat = scene.beats[i];
+          if (storyboardFrames.some(f => f.beat_id === beat.id)) continue;
+          const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap);
+          const beatRefs = references[beat.id] ?? [];
+
+          // Collect cast headshot URLs for mentioned characters
+          const castRefUrls: string[] = [];
+          if (castMap) {
+            const mentionPat = /\]\(([0-9a-f-]{36})\)/g;
+            const beatText = `${beat.audio_content} ${beat.visual_content} ${beat.notes_content}`;
+            let found;
+            while ((found = mentionPat.exec(beatText)) !== null) {
+              const feat = castMap[found[1]]?.find(c => c.is_featured);
+              if (feat?.contact.headshot_url) {
+                castRefUrls.push(feat.contact.headshot_url);
+              }
+            }
+          }
+
+          try {
+            const res = await fetch('/api/admin/storyboard', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                scriptId,
+                beatId: beat.id,
+                contentPrompt,
+                stylePrompt: scriptStyle.prompt,
+                stylePreset: scriptStyle.style_preset,
+                aspectRatio: scriptStyle.aspect_ratio,
+                referenceImageUrls: styleReferences.map(r => r.image_url),
+                beatReferenceUrls: beatRefs.map(r => r.image_url),
+                castReferenceUrls: castRefUrls,
+              }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.frame) onFrameGenerated(data.frame, beat.id);
+            }
+          } catch { /* continue */ }
+          setGeneratingBeatIds(prev => {
+            const next = new Set(prev);
+            next.delete(beat.id);
+            return next;
+          });
+        }
+        if (abortRef.current) break;
+      }
+    } finally {
+      setGeneratingScope(null);
+      setGeneratingBeatIds(new Set());
+    }
+  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap]);
+
+  const handleGenerateAll = useCallback(() => {
+    generateForScenes(scenes, 'all');
+  }, [scenes, generateForScenes]);
+
+  const handleGenerateScene = useCallback((sceneId: string) => {
+    const scene = scenes.find(s => s.id === sceneId);
+    if (!scene) return;
+    generateForScenes([scene], sceneId);
+  }, [scenes, generateForScenes]);
+
   return (
     <div ref={scrollRef} className="relative flex-1 overflow-y-auto admin-scrollbar" onClick={handleCanvasClick}>
       {/* Persistent right border — above scene headers */}
@@ -245,9 +345,28 @@ export function ScriptEditorCanvas({
           {visibleColumns.map((col, idx) => (
             <div
               key={col.key}
-              className={`relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} opacity-60 border-l ${col.borderColor}`}
+              className={`group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} opacity-60 border-l ${col.borderColor}`}
             >
               {col.label}
+              {col.key === 'storyboard' && scriptStyle && (
+                generatingScope ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); abortRef.current = true; }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                    title="Cancel generation"
+                  >
+                    <X size={10} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                    title="Generate all storyboards"
+                  >
+                    <Sparkles size={10} />
+                  </button>
+                )
+              )}
               {idx < visibleColumns.length - 1 && (
                 <span
                   onMouseDown={(e) => handleResize(col.key, e)}
@@ -279,7 +398,7 @@ export function ScriptEditorCanvas({
             >
               {/* Scene heading — click to collapse/expand, sticky below column headers */}
               <div
-                className={`sticky z-[15] flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer${needsTopBorder ? ' border-t' : ''}`}
+                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer${needsTopBorder ? ' border-t' : ''}`}
                 style={{ top: colHeaderHeight }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -303,6 +422,8 @@ export function ScriptEditorCanvas({
                     onDelete={onDeleteScene}
                     editing={isEditing}
                     onEditingChange={(editing) => setEditingSceneId(editing ? scene.id : null)}
+                    onGenerate={columnConfig.storyboard && scriptStyle ? () => handleGenerateScene(scene.id) : undefined}
+                    generating={generatingScope === scene.id}
                   />
                 </div>
               </div>
@@ -328,6 +449,12 @@ export function ScriptEditorCanvas({
                         characters={characters}
                         tags={tags}
                         references={references[beat.id] ?? []}
+                        storyboardFrame={storyboardFrames.find(f => f.beat_id === beat.id) ?? null}
+                        scriptStyle={scriptStyle}
+                        styleReferences={styleReferences}
+                        scriptId={scriptId}
+                        sceneId={scene.id}
+                        onFrameChange={(frame) => onFrameGenerated(frame, beat.id)}
                         onUpdate={onUpdateBeat}
                         onDelete={onDeleteBeat}
                         onAddBeat={() => onAddBeat(scene.id)}
@@ -339,6 +466,11 @@ export function ScriptEditorCanvas({
                         isSelected={selectedBeatIds.has(beat.id)}
                         onSelect={handleBeatSelect}
                         onDragSelectStart={handleDragSelectStart}
+                        batchGenerating={generatingBeatIds.has(beat.id)}
+                        onCancelGeneration={() => { abortRef.current = true; }}
+                        scene={scene}
+                        locations={locations}
+                        castMap={castMap}
                       />
                     ))}
                   </SortableContext>

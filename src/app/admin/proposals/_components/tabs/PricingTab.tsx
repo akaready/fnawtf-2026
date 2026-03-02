@@ -352,14 +352,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 <>
                   <button
                     onClick={() => handleConfirmDelete(activeQuote.id)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger-hover hover:bg-admin-danger-bg transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger-hover hover:bg-admin-danger-bg transition-colors"
                     title="Confirm delete"
                   >
                     <Check size={13} />
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(null)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
                     title="Cancel"
                   >
                     <X size={13} />
@@ -368,7 +368,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               ) : (
                 <button
                   onClick={() => setConfirmDeleteId(activeQuote.id)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-danger/40 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/40 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
                   title="Delete this quote"
                 >
                   <Trash2 size={13} />

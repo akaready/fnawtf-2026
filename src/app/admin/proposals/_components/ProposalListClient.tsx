@@ -7,9 +7,10 @@ import { deleteProposal, createProposalDraft, batchDeleteProposals } from '@/app
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
   AdminDeleteModal,
-  StatusBadge,
   relativeTime,
 } from '@/app/admin/_components/AdminTable';
+import { StatusBadge } from '../../_components/StatusBadge';
+import { PROPOSAL_STATUSES } from '../../_components/statusConfigs';
 import { AdminDataTable, type ColDef, type RowAction } from '@/app/admin/_components/table';
 import { ProposalPanel } from './ProposalPanel';
 import type { ProposalRow, ProposalStatus } from '@/types/proposal';
@@ -141,7 +142,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       type: 'select',
       sortable: true,
       options: STATUS_TABS.filter((t) => t.value !== 'all').map((t) => ({ value: t.value, label: t.label })),
-      render: (row) => <StatusBadge value={row.status} />,
+      render: (row) => <StatusBadge status={row.status} config={PROPOSAL_STATUSES} />,
     },
     {
       key: 'slug',
@@ -251,7 +252,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             disabled={isCreating}
             className="btn-primary px-5 py-2.5 text-sm"
           >
-            {isCreating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
             New Proposal
           </button>
         }
@@ -291,7 +292,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
               <button
                 key={tab.value}
                 onClick={() => setStatusFilter(tab.value)}
-                className={`flex items-center gap-1.5 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
+                className={`flex items-center gap-1 px-[15px] py-[4px] rounded-lg text-sm font-medium transition-colors border ${
                   statusFilter === tab.value
                     ? 'bg-admin-bg-active text-admin-text-primary border-transparent'
                     : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'

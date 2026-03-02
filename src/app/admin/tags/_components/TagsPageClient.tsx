@@ -131,7 +131,7 @@ function InlineEdit({ value, onSave, onCancel }: InlineEditProps) {
           if (e.key === 'Enter') onSave(draft);
           if (e.key === 'Escape') onCancel();
         }}
-        className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis"
+        className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded-lg px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis"
       />
       <button onClick={() => onSave(draft)} className="text-admin-success hover:text-admin-success transition-colors flex-shrink-0">
         <Check size={13} />
@@ -261,7 +261,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
       {/* Tag list */}
       <div className="flex-1 divide-y divide-admin-border">
         {tags.length === 0 && !addingNew && (
-          <div className="px-5 py-8 text-center text-xs text-admin-text-ghost">No tags yet</div>
+          <div className="px-5 py-12 text-center text-xs text-admin-text-ghost">No tags yet</div>
         )}
         {tags.map((tag) => {
           const isEditing = editingId === tag.id;
@@ -377,7 +377,7 @@ function CategorySection({ category, tags, selectedIds, onToggleSelect, onRename
                   if (e.key === 'Escape') { setAddingNew(false); setNewValue(''); }
                 }}
                 placeholder="New tag name…"
-                className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis placeholder:text-admin-text-ghost"
+                className="flex-1 min-w-0 bg-admin-bg-hover border border-admin-border-emphasis rounded-lg px-2 py-0.5 text-sm text-admin-text-primary outline-none focus:border-admin-border-emphasis placeholder:text-admin-text-ghost"
               />
               <button onClick={handleAdd} className="text-admin-success hover:text-admin-success transition-colors flex-shrink-0">
                 <Check size={13} />
@@ -576,7 +576,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
             <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 py-6">
+        <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
           <div className="flex flex-col gap-4">
             {/* Top row — Project Types + Deliverables */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">

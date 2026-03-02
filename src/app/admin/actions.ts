@@ -2064,6 +2064,7 @@ export interface IntakeSubmission {
   file_urls: string[];
   anything_else: string | null;
   referral: string | null;
+  quote_data: Record<string, unknown> | null;
 }
 
 export async function getIntakeSubmissions(): Promise<IntakeSubmission[]> {
@@ -2590,4 +2591,618 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
 
   revalidatePath('/admin/scripts');
   return newScriptId;
+}
+
+// ── Storyboard Styles ────────────────────────────────────────────────
+
+export async function getScriptStyle(scriptId: string) {
+  const { supabase } = await requireAuth();
+
+  // Try to fetch existing style
+  const { data, error } = await supabase
+    .from('script_styles')
+    .select('*')
+    .eq('script_id', scriptId)
+    .single();
+
+  if (data) return data as { id: string; script_id: string; prompt: string; aspect_ratio: string; generation_mode: string; created_at: string; updated_at: string };
+
+  // Create default style if none exists
+  if (error?.code === 'PGRST116') {
+    const { data: newStyle, error: insertErr } = await supabase
+      .from('script_styles')
+      .insert({ script_id: scriptId } as never)
+      .select('*')
+      .single();
+    if (insertErr) throw new Error(insertErr.message);
+    return newStyle as { id: string; script_id: string; prompt: string; aspect_ratio: string; generation_mode: string; created_at: string; updated_at: string };
+  }
+
+  // Gracefully handle table not yet created
+  if (error?.message?.includes('schema cache')) return null;
+  if (error) throw new Error(error.message);
+  return null;
+}
+
+export async function updateScriptStyle(styleId: string, data: Record<string, string | null>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_styles')
+    .update({ ...data, updated_at: new Date().toISOString() } as never)
+    .eq('id', styleId);
+  if (error) throw new Error(error.message);
+}
+
+export async function getStyleReferences(styleId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_style_references')
+    .select('*')
+    .eq('style_id', styleId)
+    .order('sort_order');
+  if (error?.message?.includes('schema cache')) return [];
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function uploadStyleReference(styleId: string, formData: FormData): Promise<{ id: string; image_url: string; storage_path: string }> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `style-refs/${styleId}/${Date.now()}.${ext}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from('script-storyboards')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(path);
+  const image_url = urlData.publicUrl;
+
+  const { data: existing } = await supabase
+    .from('script_style_references')
+    .select('sort_order')
+    .eq('style_id', styleId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = ((existing?.[0] as { sort_order: number } | undefined)?.sort_order ?? -1) + 1;
+
+  const { data: ref, error: insertErr } = await supabase
+    .from('script_style_references')
+    .insert({ style_id: styleId, image_url, storage_path: path, sort_order: nextOrder } as never)
+    .select('id')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+
+  return { id: (ref as { id: string }).id, image_url, storage_path: path };
+}
+
+export async function deleteStyleReference(id: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const { data: ref } = await supabase
+    .from('script_style_references')
+    .select('storage_path')
+    .eq('id', id)
+    .single();
+  if (ref) {
+    await supabase.storage.from('script-storyboards').remove([(ref as { storage_path: string }).storage_path]);
+  }
+  await supabase.from('script_style_references').delete().eq('id', id);
+}
+
+// ── Storyboard Frames ────────────────────────────────────────────────
+
+export async function getStoryboardFrames(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_storyboard_frames')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('created_at');
+  if (error?.message?.includes('schema cache')) return [];
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function uploadStoryboardFrame(
+  scriptId: string,
+  target: { beatId?: string; sceneId?: string },
+  formData: FormData,
+): Promise<{ id: string; image_url: string; storage_path: string }> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const folder = target.beatId ?? target.sceneId ?? 'unknown';
+  const path = `frames/${folder}/${Date.now()}.${ext}`;
+
+  const { error: uploadErr } = await supabase.storage
+    .from('script-storyboards')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(path);
+  const image_url = urlData.publicUrl;
+
+  // Delete existing frame for this beat/scene (single image per beat)
+  if (target.beatId) {
+    const { data: old } = await supabase
+      .from('script_storyboard_frames')
+      .select('id, storage_path')
+      .eq('beat_id', target.beatId);
+    if (old && old.length > 0) {
+      const paths = (old as { storage_path: string }[]).map(r => r.storage_path);
+      await supabase.storage.from('script-storyboards').remove(paths);
+      await supabase.from('script_storyboard_frames').delete().eq('beat_id', target.beatId);
+    }
+  } else if (target.sceneId) {
+    const { data: old } = await supabase
+      .from('script_storyboard_frames')
+      .select('id, storage_path')
+      .eq('scene_id', target.sceneId);
+    if (old && old.length > 0) {
+      const paths = (old as { storage_path: string }[]).map(r => r.storage_path);
+      await supabase.storage.from('script-storyboards').remove(paths);
+      await supabase.from('script_storyboard_frames').delete().eq('scene_id', target.sceneId);
+    }
+  }
+
+  const { data: frame, error: insertErr } = await supabase
+    .from('script_storyboard_frames')
+    .insert({
+      script_id: scriptId,
+      beat_id: target.beatId ?? null,
+      scene_id: target.sceneId ?? null,
+      image_url,
+      storage_path: path,
+      source: 'uploaded',
+    } as never)
+    .select('id')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+
+  return { id: (frame as { id: string }).id, image_url, storage_path: path };
+}
+
+export async function deleteStoryboardFrame(id: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const { data: frame } = await supabase
+    .from('script_storyboard_frames')
+    .select('storage_path')
+    .eq('id', id)
+    .single();
+  if (frame) {
+    await supabase.storage.from('script-storyboards').remove([(frame as { storage_path: string }).storage_path]);
+  }
+  await supabase.from('script_storyboard_frames').delete().eq('id', id);
+}
+
+// ── Locations ─────────────────────────────────────────────────────────
+
+import type { LocationWithImages, LocationImageRow } from '@/types/locations';
+
+export async function getLocations(): Promise<LocationWithImages[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('locations')
+    .select('*, location_images(*)')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as LocationWithImages[];
+}
+
+export async function getLocation(id: string): Promise<LocationWithImages> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('locations')
+    .select('*, location_images(*)')
+    .eq('id', id)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LocationWithImages;
+}
+
+export async function createLocationRecord(data: Record<string, unknown>): Promise<string> {
+  const { supabase } = await requireAuth();
+  const { data: loc, error } = await supabase
+    .from('locations')
+    .insert(data as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/locations');
+  return (loc as { id: string }).id;
+}
+
+export async function updateLocationRecord(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('locations')
+    .update({ ...data, updated_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/locations');
+}
+
+export async function deleteLocationRecord(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('locations').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/locations');
+}
+
+export async function batchDeleteLocations(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('locations').delete().in('id', ids);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/locations');
+}
+
+export async function addLocationImage(locationId: string, data: {
+  image_url: string;
+  storage_path?: string;
+  alt_text?: string;
+  source: 'uploaded' | 'peerspace';
+  sort_order: number;
+}): Promise<LocationImageRow> {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('location_images')
+    .insert({ ...data, location_id: locationId } as never)
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return row as LocationImageRow;
+}
+
+export async function deleteLocationImage(id: string, storagePath?: string) {
+  const { supabase } = await requireAuth();
+  if (storagePath) {
+    const { createServiceClient } = await import('@/lib/supabase/service');
+    const service = createServiceClient();
+    await service.storage.from('location-images').remove([storagePath]);
+  }
+  const { error } = await supabase.from('location_images').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function uploadLocationImage(locationId: string, formData: FormData): Promise<LocationImageRow> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const storagePath = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from('location-images')
+    .upload(storagePath, buffer, { contentType: file.type, upsert: false });
+  if (upErr) throw new Error(upErr.message);
+
+  const { data: urlData } = supabase.storage.from('location-images').getPublicUrl(storagePath);
+
+  const { data: row, error: dbErr } = await supabase
+    .from('location_images')
+    .insert({
+      location_id: locationId,
+      image_url: urlData.publicUrl,
+      storage_path: storagePath,
+      source: 'uploaded',
+      sort_order: 0,
+    } as never)
+    .select('*')
+    .single();
+  if (dbErr) throw new Error(dbErr.message);
+
+  return row as LocationImageRow;
+}
+
+export async function setFeaturedImage(locationId: string, imageId: string) {
+  const { supabase } = await requireAuth();
+  // Unset all featured flags for this location
+  await supabase
+    .from('location_images')
+    .update({ is_featured: false } as never)
+    .eq('location_id', locationId);
+  // Set the new featured image
+  const { data: img } = await supabase
+    .from('location_images')
+    .update({ is_featured: true } as never)
+    .eq('id', imageId)
+    .select('image_url')
+    .single();
+  // Update the featured_image URL on the location record
+  if (img) {
+    await supabase
+      .from('locations')
+      .update({ featured_image: (img as { image_url: string }).image_url, updated_at: new Date().toISOString() } as never)
+      .eq('id', locationId);
+  }
+  revalidatePath('/admin/locations');
+}
+
+export async function linkLocationToProject(locationId: string, projectId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('location_projects')
+    .insert({ location_id: locationId, project_id: projectId } as never);
+  if (error && !error.message.includes('duplicate')) throw new Error(error.message);
+}
+
+export async function unlinkLocationFromProject(locationId: string, projectId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('location_projects')
+    .delete()
+    .eq('location_id', locationId)
+    .eq('project_id', projectId);
+  if (error) throw new Error(error.message);
+}
+
+export async function getLocationProjects(locationId: string): Promise<{ id: string; title: string }[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('location_projects')
+    .select('project_id, projects(id, title)')
+    .eq('location_id', locationId);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: Record<string, unknown>) => (r as { projects: { id: string; title: string } }).projects);
+}
+
+export async function getActiveLocationsForSelect(): Promise<{ id: string; name: string; featured_image: string | null }[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('locations')
+    .select('id, name, featured_image')
+    .eq('status', 'active')
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { id: string; name: string; featured_image: string | null }[];
+}
+
+// ── Script Character Cast ─────────────────────────────────────────────────
+
+import type { CharacterCastWithContact } from '@/types/scripts';
+
+/** Bulk-load all cast assignments for every character in a script. */
+export async function getScriptCastMap(
+  scriptId: string,
+): Promise<Record<string, CharacterCastWithContact[]>> {
+  const { supabase } = await requireAuth();
+
+  // Get all character IDs for this script
+  const { data: chars, error: charsErr } = await supabase
+    .from('script_characters')
+    .select('id')
+    .eq('script_id', scriptId);
+  if (charsErr) throw new Error(charsErr.message);
+  const charIds = (chars ?? []).map((c: { id: string }) => c.id);
+  if (charIds.length === 0) return {};
+
+  // Get all cast rows for those characters
+  const { data: castRows, error: castErr } = await supabase
+    .from('script_character_cast')
+    .select('*')
+    .in('character_id', charIds)
+    .order('slot_order');
+  if (castErr) throw new Error(castErr.message);
+  if (!castRows || castRows.length === 0) return {};
+
+  // Get contact details + ALL headshots for all referenced contacts
+  const contactIds = [...new Set((castRows as { contact_id: string }[]).map(r => r.contact_id))];
+  const { data: contacts } = await supabase
+    .from('contacts')
+    .select('id, first_name, last_name, appearance_prompt')
+    .in('id', contactIds);
+  const { data: allHeadshots } = await supabase
+    .from('headshots')
+    .select('contact_id, url, featured')
+    .in('contact_id', contactIds)
+    .order('featured', { ascending: false }) as { data: Array<{ contact_id: string; url: string; featured: boolean }> | null };
+
+  const contactMap = new Map(
+    ((contacts ?? []) as { id: string; first_name: string; last_name: string; appearance_prompt: string | null }[]).map(c => [c.id, c]),
+  );
+  // Featured headshot per contact (first featured or first overall)
+  const featuredHeadshotMap = new Map<string, string>();
+  // All headshot URLs per contact
+  const allHeadshotsMap = new Map<string, string[]>();
+  for (const h of (allHeadshots ?? [])) {
+    if (!allHeadshotsMap.has(h.contact_id)) allHeadshotsMap.set(h.contact_id, []);
+    allHeadshotsMap.get(h.contact_id)!.push(h.url);
+    if (!featuredHeadshotMap.has(h.contact_id) && h.featured) {
+      featuredHeadshotMap.set(h.contact_id, h.url);
+    }
+  }
+  // Fallback: if no featured, use first headshot
+  for (const [cid, urls] of allHeadshotsMap) {
+    if (!featuredHeadshotMap.has(cid) && urls.length > 0) {
+      featuredHeadshotMap.set(cid, urls[0]);
+    }
+  }
+
+  // Build grouped result
+  const result: Record<string, CharacterCastWithContact[]> = {};
+  for (const row of castRows as Array<{
+    id: string;
+    character_id: string;
+    contact_id: string;
+    slot_order: number;
+    is_featured: boolean;
+    appearance_prompt: string | null;
+    created_at: string;
+  }>) {
+    const contact = contactMap.get(row.contact_id);
+    if (!contact) continue;
+    const entry: CharacterCastWithContact = {
+      ...row,
+      // Use contact-level appearance_prompt if junction table doesn't have one
+      appearance_prompt: row.appearance_prompt || contact.appearance_prompt || null,
+      contact: {
+        id: contact.id,
+        first_name: contact.first_name,
+        last_name: contact.last_name,
+        headshot_url: featuredHeadshotMap.get(contact.id) ?? null,
+        all_headshot_urls: allHeadshotsMap.get(contact.id) ?? [],
+        appearance_prompt: contact.appearance_prompt,
+      },
+    };
+    (result[row.character_id] ??= []).push(entry);
+  }
+  return result;
+}
+
+/** Assign a cast member to a character. Auto-features first assignment. Returns existing row if already assigned. */
+export async function assignCastMember(
+  characterId: string,
+  contactId: string,
+): Promise<string> {
+  const { supabase } = await requireAuth();
+
+  // Check if this contact is already assigned to this character
+  const { data: alreadyAssigned } = await supabase
+    .from('script_character_cast')
+    .select('id')
+    .eq('character_id', characterId)
+    .eq('contact_id', contactId)
+    .maybeSingle();
+  if (alreadyAssigned) return (alreadyAssigned as { id: string }).id;
+
+  // Determine slot order and whether to auto-feature
+  const { data: existing } = await supabase
+    .from('script_character_cast')
+    .select('id, slot_order')
+    .eq('character_id', characterId)
+    .order('slot_order', { ascending: false })
+    .limit(1);
+
+  const nextOrder = existing && existing.length > 0
+    ? (existing[0] as { slot_order: number }).slot_order + 1
+    : 0;
+  const isFirst = !existing || existing.length === 0;
+
+  const { data: row, error } = await supabase
+    .from('script_character_cast')
+    .insert({
+      character_id: characterId,
+      contact_id: contactId,
+      slot_order: nextOrder,
+      is_featured: isFirst,
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as { id: string }).id;
+}
+
+/** Remove a cast member. Promotes next in line if the removed one was featured. */
+export async function removeCastMember(castId: string) {
+  const { supabase } = await requireAuth();
+
+  // Check if this was featured
+  const { data: row } = await supabase
+    .from('script_character_cast')
+    .select('character_id, is_featured')
+    .eq('id', castId)
+    .single() as { data: { character_id: string; is_featured: boolean } | null };
+
+  const { error } = await supabase.from('script_character_cast').delete().eq('id', castId);
+  if (error) throw new Error(error.message);
+
+  // Promote next if needed
+  if (row?.is_featured) {
+    const { data: next } = await supabase
+      .from('script_character_cast')
+      .select('id')
+      .eq('character_id', row.character_id)
+      .order('slot_order')
+      .limit(1);
+    if (next && next.length > 0) {
+      await supabase
+        .from('script_character_cast')
+        .update({ is_featured: true } as never)
+        .eq('id', (next[0] as { id: string }).id);
+    }
+  }
+}
+
+/** Set a specific cast member as the featured one for their character. */
+export async function setFeaturedCastMember(castId: string, characterId: string) {
+  const { supabase } = await requireAuth();
+  // Unset all featured for this character
+  await supabase
+    .from('script_character_cast')
+    .update({ is_featured: false } as never)
+    .eq('character_id', characterId);
+  // Set the selected one
+  const { error } = await supabase
+    .from('script_character_cast')
+    .update({ is_featured: true } as never)
+    .eq('id', castId);
+  if (error) throw new Error(error.message);
+}
+
+/** Update the AI-generated appearance prompt — saves to both the junction row and the contact. */
+export async function updateCastAppearancePrompt(castId: string, prompt: string) {
+  const { supabase } = await requireAuth();
+  // Update junction table
+  const { error: castErr } = await supabase
+    .from('script_character_cast')
+    .update({ appearance_prompt: prompt } as never)
+    .eq('id', castId);
+  if (castErr) throw new Error(castErr.message);
+  // Look up the contact_id to persist on the contact for reuse across scripts
+  const { data: castRow } = await supabase
+    .from('script_character_cast')
+    .select('contact_id')
+    .eq('id', castId)
+    .single() as { data: { contact_id: string } | null };
+  if (castRow?.contact_id) {
+    await supabase
+      .from('contacts')
+      .update({ appearance_prompt: prompt } as never)
+      .eq('id', castRow.contact_id);
+  }
+}
+
+/** Update max cast slots for a character (1–6). */
+export async function updateCharacterMaxSlots(characterId: string, maxSlots: number) {
+  const { supabase } = await requireAuth();
+  const clamped = Math.max(1, Math.min(10, maxSlots));
+  const { error } = await supabase
+    .from('script_characters')
+    .update({ max_cast_slots: clamped } as never)
+    .eq('id', characterId);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderCastMembers(characterId: string, orderedCastIds: string[]) {
+  const { supabase } = await requireAuth();
+  const updates = orderedCastIds.map((id, i) =>
+    supabase
+      .from('script_character_cast')
+      .update({ slot_order: i, is_featured: i === 0 } as never)
+      .eq('id', id)
+      .eq('character_id', characterId),
+  );
+  await Promise.all(updates);
 }

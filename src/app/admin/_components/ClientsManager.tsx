@@ -546,7 +546,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                   onClick={() => setActiveId(c.id)}
                   className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
                 >
-                  <div className={`rounded-[11px] ${sz.padding} flex items-start gap-3 h-full transition-colors ${isFocused ? 'bg-admin-bg-raised' : 'bg-admin-bg-raised hover:bg-[#131313]'}`}>
+                  <div className={`rounded-[11px] ${sz.padding} flex items-start gap-3 h-full transition-colors ${isFocused ? 'bg-admin-bg-raised' : 'bg-admin-bg-raised hover:bg-admin-bg-hover'}`}>
                     {cardVisibleFields.has('logo_url') && (
                       <GalleryLogoDropzone
                         logoUrl={c.logo_url}

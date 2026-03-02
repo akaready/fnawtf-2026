@@ -77,7 +77,7 @@ function ProjectListItem({
         value={blurb}
         onChange={(e) => setBlurb(e.target.value)}
         placeholder="What to look for..."
-        className="w-full bg-black/40 border border-admin-border rounded text-sm text-admin-text-secondary placeholder:text-admin-text-ghost px-2.5 py-2 resize-none focus:outline-none focus:border-admin-border-emphasis transition-colors leading-relaxed"
+        className="w-full bg-black/40 border border-admin-border rounded-lg text-sm text-admin-text-secondary placeholder:text-admin-text-ghost px-3 py-2 resize-none focus:outline-none focus:border-admin-border-emphasis transition-colors leading-relaxed"
       />
 
       {/* Action row */}

@@ -260,7 +260,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           {/* Page title */}
           {titlePlaceholder && (
             <div className="flex-shrink-0 max-w-3xl w-full px-8 pt-5 pb-2">
-              <label className="text-[10px] uppercase tracking-widest text-admin-text-faint mb-1.5 block">Slide Title</label>
+              <label className="text-xs text-admin-text-secondary uppercase tracking-wide mb-1 block">Slide Title</label>
               <input
                 type="text"
                 value={title}
@@ -445,7 +445,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           </div>
           <div className="flex-1 overflow-y-auto admin-scrollbar p-3 space-y-2">
             {visibleSnippets.length === 0 ? (
-              <p className="text-xs text-admin-text-placeholder pt-2">No snippets match.</p>
+              <p className="text-xs text-admin-text-ghost pt-2">No snippets match.</p>
             ) : (
               visibleSnippets.map((snippet) => (
                 <button

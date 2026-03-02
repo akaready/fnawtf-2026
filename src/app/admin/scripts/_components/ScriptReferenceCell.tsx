@@ -89,9 +89,9 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete }: 
           </div>
         </>
       ) : (
-        /* Empty state — drop zone */
+        /* Empty state — drop zone fills cell */
         <div
-          className={`flex items-center justify-center min-h-[2.5rem] cursor-pointer transition-colors ${
+          className={`absolute inset-0 flex items-center justify-center cursor-pointer transition-colors ${
             dragOver
               ? 'bg-admin-success-bg border-2 border-dashed border-admin-success-border'
               : 'hover:bg-admin-bg-hover'

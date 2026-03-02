@@ -11,7 +11,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
-import { StatusBadge } from './AdminTable';
+import { StatusBadge } from './StatusBadge';
+import { MEETING_STATUSES } from './statusConfigs';
 import { AdminDataTable, type ColDef } from './table';
 import { MeetingPanel } from './MeetingPanel';
 import {
@@ -185,7 +186,7 @@ export function MeetingsManager({
       label: 'Status',
       defaultWidth: 128,
       sortable: true,
-      render: (row) => <StatusBadge value={row.status} />,
+      render: (row) => <StatusBadge status={row.status} config={MEETING_STATUSES} />,
     },
     {
       key: 'transcript',
@@ -309,7 +310,7 @@ export function MeetingsManager({
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="btn-primary px-4 py-2 text-sm cursor-pointer"
+            className="btn-primary px-4 py-2.5 text-sm cursor-pointer"
           >
             <RefreshCw
               size={14}

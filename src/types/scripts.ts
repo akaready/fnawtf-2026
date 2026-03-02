@@ -56,7 +56,32 @@ export interface ScriptCharacterRow {
   color: string;
   character_type: ScriptCharacterType;
   sort_order: number;
+  max_cast_slots: number;
   created_at: string;
+}
+
+export interface CharacterCastRow {
+  id: string;
+  character_id: string;
+  contact_id: string;
+  slot_order: number;
+  is_featured: boolean;
+  appearance_prompt: string | null;
+  created_at: string;
+}
+
+/** Cast member with joined contact + headshot data for UI */
+export interface CharacterCastWithContact extends CharacterCastRow {
+  contact: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    headshot_url: string | null;
+    /** All headshot URLs for this contact (for multi-image appearance extraction) */
+    all_headshot_urls: string[];
+    /** Global appearance description stored on the contact */
+    appearance_prompt: string | null;
+  };
 }
 
 export interface ScriptLocationRow {
@@ -65,6 +90,7 @@ export interface ScriptLocationRow {
   name: string;
   description: string | null;
   sort_order: number;
+  global_location_id: string | null;
   created_at: string;
 }
 
@@ -92,6 +118,43 @@ export interface ScriptColumnConfig {
   visual: boolean;
   notes: boolean;
   reference: boolean;
+  storyboard: boolean;
+}
+
+export type StoryboardGenerationMode = 'beat' | 'scene';
+export type StoryboardFrameSource = 'generated' | 'uploaded';
+export type StoryboardStylePreset = 'sketch' | 'comic' | 'studio' | 'cinematic';
+
+export interface ScriptStyleRow {
+  id: string;
+  script_id: string;
+  prompt: string;
+  aspect_ratio: string;
+  generation_mode: StoryboardGenerationMode;
+  style_preset: StoryboardStylePreset | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScriptStyleReferenceRow {
+  id: string;
+  style_id: string;
+  image_url: string;
+  storage_path: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ScriptStoryboardFrameRow {
+  id: string;
+  script_id: string;
+  beat_id: string | null;
+  scene_id: string | null;
+  image_url: string;
+  storage_path: string;
+  source: StoryboardFrameSource;
+  prompt_used: string | null;
+  created_at: string;
 }
 
 /** Script with joined project name for list view */

@@ -74,7 +74,7 @@ function FilterSelect({ value, onChange, placeholder, options }: {
               type="button"
               onClick={() => { onChange(''); setOpen(false); }}
               className={`w-full text-left px-2.5 py-1.5 text-xs transition-colors ${
-                !value ? 'text-[#999] bg-white/[0.06]' : 'text-white/35 hover:bg-white/[0.06] hover:text-admin-text-secondary'
+                !value ? 'text-admin-text-dim bg-white/[0.06]' : 'text-white/35 hover:bg-white/[0.06] hover:text-admin-text-secondary'
               }`}
             >
               All
@@ -86,7 +86,7 @@ function FilterSelect({ value, onChange, placeholder, options }: {
                 onClick={() => { onChange(opt); setOpen(false); }}
                 className={`w-full text-left px-2.5 py-1.5 text-xs transition-colors flex items-center justify-between ${
                   value === opt
-                    ? 'text-[#ccc] bg-white/[0.06]'
+                    ? 'text-admin-text-muted bg-white/[0.06]'
                     : 'text-admin-text-secondary hover:bg-white/[0.06] hover:text-admin-text-secondary'
                 }`}
               >
@@ -239,14 +239,14 @@ export function ProjectBrowser({
                 <button
                   type="button"
                   onClick={() => set(stepNum(value, step, min))}
-                  className="px-1 py-px rounded hover:bg-white/[0.08] text-admin-text-faint hover:text-[#999] transition-colors leading-none"
+                  className="px-1 py-px rounded hover:bg-white/[0.08] text-admin-text-faint hover:text-admin-text-dim transition-colors leading-none"
                 >
                   <ChevronUp size={12} strokeWidth={2.5} />
                 </button>
                 <button
                   type="button"
                   onClick={() => set(stepNum(value, -step, min))}
-                  className="px-1 py-px rounded hover:bg-white/[0.08] text-admin-text-faint hover:text-[#999] transition-colors leading-none"
+                  className="px-1 py-px rounded hover:bg-white/[0.08] text-admin-text-faint hover:text-admin-text-dim transition-colors leading-none"
                 >
                   <ChevronDown size={12} strokeWidth={2.5} />
                 </button>
@@ -259,7 +259,7 @@ export function ProjectBrowser({
       {/* Project list */}
       <div className="flex-1 overflow-y-auto admin-scrollbar p-2">
         {filtered.length === 0 ? (
-          <p className="text-center text-xs text-admin-text-placeholder py-8">No matching projects.</p>
+          <p className="text-center text-xs text-admin-text-ghost py-8">No matching projects.</p>
         ) : (
           <div className="flex flex-col gap-0.5">
             {filtered.map((project) => {

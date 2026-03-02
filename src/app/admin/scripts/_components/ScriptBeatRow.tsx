@@ -5,8 +5,9 @@ import { Trash2, Check, X, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
-import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow } from '@/types/scripts';
+import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
+import { ScriptStoryboardCell } from './ScriptStoryboardCell';
 
 interface Props {
   beat: BeatRow;
@@ -20,12 +21,23 @@ interface Props {
   onAddScene?: () => void;
   onUploadReference: (beatId: string, files: FileList) => void;
   onDeleteReference: (refId: string) => void;
+  storyboardFrame: ScriptStoryboardFrameRow | null;
+  scriptStyle: ScriptStyleRow | null;
+  styleReferences: ScriptStyleReferenceRow[];
+  scriptId: string;
+  sceneId: string;
+  scene: import('@/types/scripts').ComputedScene;
+  locations: import('@/types/scripts').ScriptLocationRow[];
+  onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
   gridTemplate: string;
   isOnly: boolean;
   beatNumber: number;
   isSelected?: boolean;
   onSelect?: (beatId: string, shiftKey: boolean, metaKey: boolean) => void;
   onDragSelectStart?: (beatId: string) => void;
+  batchGenerating?: boolean;
+  onCancelGeneration?: () => void;
+  castMap?: Record<string, CharacterCastWithContact[]>;
 }
 
 function beatLetter(n: number): string {
@@ -52,12 +64,23 @@ export function ScriptBeatRow({
   onUploadReference,
   onDeleteReference,
   references,
+  storyboardFrame,
+  scriptStyle,
+  styleReferences,
+  scriptId,
+  sceneId,
+  scene,
+  locations,
+  onFrameChange,
   gridTemplate,
   isOnly,
   beatNumber,
   isSelected,
   onSelect,
   onDragSelectStart,
+  batchGenerating,
+  onCancelGeneration,
+  castMap,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -77,6 +100,7 @@ export function ScriptBeatRow({
   };
 
   // Determine last text column for Tab→new beat
+  const hasNonTextAfter = columnConfig.reference || columnConfig.storyboard;
   const lastTextCol = columnConfig.notes ? 'notes_content' : columnConfig.visual ? 'visual_content' : 'audio_content';
 
   return (
@@ -128,7 +152,8 @@ export function ScriptBeatRow({
           {columnConfig.audio && <div className="border-l border-l-[var(--admin-accent)]" />}
           {columnConfig.visual && <div className="border-l border-l-[var(--admin-info)]" />}
           {columnConfig.notes && <div className="border-l border-l-[var(--admin-warning)]" />}
-          {columnConfig.reference && <div className="border-l border-l-[var(--admin-success)]" />}
+          {columnConfig.reference && <div className="border-l border-l-[var(--admin-danger)]" />}
+          {columnConfig.storyboard && <div className="border-l border-l-[var(--admin-success)]" />}
         </div>
 
         <div className="grid items-stretch" style={{ gridTemplateColumns: gridTemplate }}>
@@ -139,7 +164,7 @@ export function ScriptBeatRow({
               onChange={(v) => onUpdate(beat.id, 'audio_content', v)}
               onAddBeat={onAddBeat}
               onAddScene={onAddScene}
-              isLastColumn={lastTextCol === 'audio_content' && !columnConfig.reference}
+              isLastColumn={lastTextCol === 'audio_content' && !hasNonTextAfter}
               characters={characters}
               tags={tags}
               beatId={beat.id}
@@ -152,7 +177,7 @@ export function ScriptBeatRow({
               onChange={(v) => onUpdate(beat.id, 'visual_content', v)}
               onAddBeat={onAddBeat}
               onAddScene={onAddScene}
-              isLastColumn={lastTextCol === 'visual_content' && !columnConfig.reference}
+              isLastColumn={lastTextCol === 'visual_content' && !hasNonTextAfter}
               characters={characters}
               tags={tags}
               beatId={beat.id}
@@ -165,7 +190,7 @@ export function ScriptBeatRow({
               onChange={(v) => onUpdate(beat.id, 'notes_content', v)}
               onAddBeat={onAddBeat}
               onAddScene={onAddScene}
-              isLastColumn={lastTextCol === 'notes_content' && !columnConfig.reference}
+              isLastColumn={lastTextCol === 'notes_content' && !hasNonTextAfter}
               characters={characters}
               tags={tags}
               beatId={beat.id}
@@ -177,6 +202,28 @@ export function ScriptBeatRow({
               references={references}
               onUpload={(files) => onUploadReference(beat.id, files)}
               onDelete={onDeleteReference}
+            />
+          )}
+          {columnConfig.storyboard && (
+            <ScriptStoryboardCell
+              frame={storyboardFrame}
+              beatId={beat.id}
+              sceneId={sceneId}
+              scriptId={scriptId}
+              audioContent={beat.audio_content}
+              visualContent={beat.visual_content}
+              notesContent={beat.notes_content}
+              beatReferenceUrls={references.map(r => r.image_url)}
+              style={scriptStyle}
+              styleReferences={styleReferences}
+              onFrameChange={onFrameChange}
+              batchGenerating={batchGenerating}
+              onCancelGeneration={onCancelGeneration}
+              scene={scene}
+              beatIndex={beatNumber - 1}
+              characters={characters}
+              locations={locations}
+              castMap={castMap}
             />
           )}
         </div>

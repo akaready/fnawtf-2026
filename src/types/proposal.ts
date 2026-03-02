@@ -24,6 +24,7 @@ export interface ContactRow {
   linkedin_url: string | null;
   instagram_url: string | null;
   imdb_url: string | null;
+  appearance_prompt: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -43,7 +43,7 @@ function displayLabel(m: ProposalMilestoneRow): string {
 // ── Month dropdown options ───────────────────────────────────────────────────
 
 const dateInputCls =
-  'text-xs bg-black/40 border border-admin-border rounded px-3 py-1.5 text-admin-text-secondary ' +
+  'text-sm bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-admin-text-secondary ' +
   'focus:outline-none focus:border-admin-border-emphasis focus:text-white/90 transition-colors ' +
   '[color-scheme:dark]';
 
@@ -392,7 +392,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           Schedule window
         </p>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-admin-text-dim flex-shrink-0">Kickoff</label>
+          <label className="text-xs text-admin-text-secondary uppercase tracking-wide flex-shrink-0">Kickoff</label>
           <input
             type="date"
             value={scheduleStart}
@@ -401,7 +401,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           />
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-admin-text-dim flex-shrink-0">Go Live</label>
+          <label className="text-xs text-admin-text-secondary uppercase tracking-wide flex-shrink-0">Go Live</label>
           <div className={`relative${goLiveShake ? ' animate-shake' : ''}`}>
             <input
               type="date"
@@ -444,7 +444,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
               {canRemoveMonthAt(i) && (
                 <button
                   onClick={() => setExtraMonths(n => n - 1)}
-                  className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-active transition-all"
+                  className="absolute top-1.5 right-1.5 z-10 w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-active transition-all"
                   title="Remove month"
                 >
                   <X size={12} />

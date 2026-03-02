@@ -62,6 +62,10 @@ interface Props {
   crowdfundingOverride?: boolean;
   /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
   onAnyChange?: () => void;
+  /** Standalone mode — no server saves, emits state via onStateChange instead */
+  standalone?: boolean;
+  /** Called on every state change in standalone mode (debounced) */
+  onStateChange?: (state: CalculatorStateSnapshot) => void;
 }
 
 function initSelectedType(proposalType: ProposalType, savedQuoteType?: string): PricingType {
@@ -83,7 +87,7 @@ function sectionsForType(type: PricingType): Set<string> {
   return s;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAnyChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAnyChange, standalone, onStateChange }: Props) {
   const [selectedType, setSelectedType] = useState<PricingType>(
     () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
@@ -236,6 +240,19 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [effectiveType, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, effectiveCrowdfunding, crowdfundingTierIndex, friendlyDiscountPct]);
 
+  // Standalone mode: emit state changes to parent instead of server saves
+  const standaloneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (!standalone || !onStateChange) return;
+    if (!hasMountedRef.current) return; // skip initial mount
+    if (standaloneTimeoutRef.current) clearTimeout(standaloneTimeoutRef.current);
+    standaloneTimeoutRef.current = setTimeout(() => {
+      onStateChange(buildSavePayload() as CalculatorStateSnapshot);
+    }, 300);
+    return () => { if (standaloneTimeoutRef.current) clearTimeout(standaloneTimeoutRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [standalone, buildSavePayload]);
+
   // Expose imperative save handle so parent can trigger an immediate persist
   useEffect(() => {
     if (!saveRef) return;
@@ -257,6 +274,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
 
   // Auto-save: only for unlocked (client) quotes; skipped in admin context (onFnaSave present = admin mode)
   useEffect(() => {
+    if (standalone) return; // standalone mode — no server saves
     if (isLocked) return;
     if (onFnaSave) return; // admin mode — saves explicitly, not on auto-save
     if (!activeQuoteId) return;
@@ -414,11 +432,11 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   const allAddOns = [...buildAddOns, ...launchAddOns, ...fundraisingIncluded, ...fundraisingAddOns];
 
   // Compute recommended (first FNA) quote data for comparison coloring on add-on rows
-  const recommendedRef = allQuotes?.find((q) => q.is_fna_quote);
+  const recommendedRef = standalone ? undefined : allQuotes?.find((q) => q.is_fna_quote);
   // Only show comparison after the calculator state has synced to the current quote
   // (prevQuoteId tracks what the state currently represents)
   const stateSynced = prevQuoteId.current === initialQuote?.id;
-  const isCompare = !isLocked && !!recommendedRef && stateSynced;
+  const isCompare = !standalone && !isLocked && !!recommendedRef && stateSynced;
   const recommendedAddOnsMap = recommendedRef?.selected_addons
     ? new Map(Object.entries(recommendedRef.selected_addons).map(([k, v]) => [k, v as number]))
     : undefined;
@@ -585,16 +603,16 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               saving={saving}
               saved={saved}
               hideGetStarted
-              hideSaveQuote={!onFnaSave}
+              hideSaveQuote={standalone || !onFnaSave}
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
               crowdfundingApproved={crowdfundingApproved}
               crowdfundingDeferred={crowdfundingDeferred}
               isReadOnly={isReadOnly}
               isLocked={isLocked}
-              allQuotes={allQuotes}
-              activeQuoteId={activeQuoteId}
+              allQuotes={standalone ? undefined : allQuotes}
+              activeQuoteId={standalone ? undefined : activeQuoteId}
               onFriendlyDiscountChange={setFriendlyDiscountPct}
-              onActiveQuoteChange={onActiveQuoteChange}
+              onActiveQuoteChange={standalone ? undefined : onActiveQuoteChange}
             />
           </div>
         </div>

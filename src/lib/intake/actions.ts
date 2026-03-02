@@ -61,6 +61,9 @@ export interface IntakeFormData {
   // Additional
   anything_else?: string;
   referral?: string;
+
+  // Quote
+  quote_data?: Record<string, unknown>;
 }
 
 export async function submitIntakeForm(data: IntakeFormData) {
@@ -100,6 +103,7 @@ export async function submitIntakeForm(data: IntakeFormData) {
     file_urls: data.file_urls,
     anything_else: data.anything_else || null,
     referral: data.referral || null,
+    quote_data: data.quote_data || null,
   });
 
   if (error) throw new Error(error.message);

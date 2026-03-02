@@ -397,7 +397,7 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
         </div>
       </div>
       {/* Kanban board — horizontal scroll */}
-      <div className="flex-1 min-h-0 overflow-y-hidden admin-scrollbar px-8 pt-4 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-hidden admin-scrollbar px-8 pt-4 pb-8">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="flex gap-4 h-full">
             {PIPELINE_COLUMNS.map((col) => {

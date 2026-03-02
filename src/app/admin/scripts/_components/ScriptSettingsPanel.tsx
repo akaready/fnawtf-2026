@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Loader2, Trash2, Check, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { SaveButton } from '@/app/admin/_components/SaveButton';
 import { updateScript, deleteScript } from '@/app/admin/actions';
 import { createClient } from '@/lib/supabase/client';
@@ -29,8 +30,8 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   const [projectSearch, setProjectSearch] = useState('');
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
@@ -40,6 +41,32 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
     setNotes(script.notes ?? '');
     setConfirmDelete(false);
   }, [script]);
+
+  // Dirty detection
+  const isDirty = useMemo(() => {
+    return (
+      title !== script.title ||
+      status !== script.status ||
+      (notes ?? '') !== (script.notes ?? '')
+    );
+  }, [title, status, notes, script]);
+
+  // Close guard
+  const handleClose = useCallback(() => {
+    if (isDirty) {
+      setConfirmClose(true);
+    } else {
+      onClose();
+    }
+  }, [isDirty, onClose]);
+
+  const handleDiscard = useCallback(() => {
+    setTitle(script.title);
+    setStatus(script.status);
+    setNotes(script.notes ?? '');
+    setConfirmClose(false);
+    onClose();
+  }, [script, onClose]);
 
   // Search projects
   useEffect(() => {
@@ -61,8 +88,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
     try {
       await updateScript(script.id, { title, status, notes: notes || null });
       onScriptChange({ ...script, title, status, notes: notes || null });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      onClose();
     } finally {
       setSaving(false);
     }
@@ -85,11 +111,11 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   };
 
   return (
-    <PanelDrawer open={open} onClose={onClose} width="w-[420px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[420px]">
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border">
           <h2 className="text-lg font-bold text-admin-text-primary">Script Settings</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <X size={16} />
           </button>
         </div>
@@ -181,7 +207,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
         {/* Footer action bar — matches CompanyPanel pattern */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <SaveButton saving={saving} saved={saved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
+          <SaveButton saving={saving} saved={false} onClick={handleSave} className="px-5 py-2.5 text-sm" />
 
           {confirmDelete ? (
             <div className="flex items-center gap-1">
@@ -212,6 +238,13 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
             </button>
           )}
         </div>
+
+        {/* Discard changes dialog */}
+        <DiscardChangesDialog
+          open={confirmClose}
+          onKeepEditing={() => setConfirmClose(false)}
+          onDiscard={handleDiscard}
+        />
       </div>
     </PanelDrawer>
   );

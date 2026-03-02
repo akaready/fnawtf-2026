@@ -333,7 +333,7 @@ export function CompanyPanel({
               value={localCompany.name}
               onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Company name"
-              className="w-full bg-transparent text-lg font-medium text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none border-b border-transparent focus:border-admin-border-emphasis pb-1"
+              className="w-full bg-transparent text-lg font-semibold text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none border-b border-transparent focus:border-admin-border-emphasis pb-1"
             />
             {clientProjects.length > 0 && (
               <p className="text-xs text-admin-text-ghost mt-0.5">
@@ -399,7 +399,7 @@ export function CompanyPanel({
         )}
 
         {/* Tab content */}
-        <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-5">
           {activeTab === 'info' && (
             <div className="space-y-4">
               {/* Type + status controls */}

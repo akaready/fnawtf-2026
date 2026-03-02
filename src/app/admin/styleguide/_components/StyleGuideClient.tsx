@@ -11,6 +11,7 @@ import { StatusSection } from './sections/StatusSection';
 import { SurfacesSection } from './sections/SurfacesSection';
 import { RadiusSection } from './sections/RadiusSection';
 import { PatternsSection } from './sections/PatternsSection';
+import { ExamplesSection } from './sections/ExamplesSection';
 
 const STORAGE_KEY = 'fna-admin-custom-tokens';
 
@@ -23,6 +24,7 @@ const SECTIONS = [
   { id: 'status',     label: 'Status' },
   { id: 'surfaces',   label: 'Surfaces' },
   { id: 'patterns',   label: 'Patterns' },
+  { id: 'examples',   label: 'Examples' },
 ];
 
 // All CSS variables we manage
@@ -199,12 +201,17 @@ export function StyleGuideClient() {
           <button
             key={s.id}
             onClick={() => {
-              scrollRef.current?.querySelector(`#${s.id}`)?.scrollIntoView({ behavior: 'smooth' });
+              const container = scrollRef.current;
+              const target = container?.querySelector(`#${s.id}`);
+              if (container && target) {
+                const top = (target as HTMLElement).offsetTop - container.offsetTop;
+                container.scrollTo({ top, behavior: 'smooth' });
+              }
               setActiveSection(s.id);
             }}
             className={`flex items-center px-[15px] py-[7px] text-sm font-medium rounded-lg transition-colors whitespace-nowrap border ${
               activeSection === s.id
-                ? 'bg-admin-bg-active text-admin-text-primary border-white/15'
+                ? 'bg-admin-bg-active text-admin-text-primary border-admin-border-subtle'
                 : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover border-transparent'
             }`}
           >
@@ -214,7 +221,7 @@ export function StyleGuideClient() {
       </div>
 
       {/* Scrollable content — only this area scrolls */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto admin-scrollbar p-6 pb-12 space-y-12">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto admin-scrollbar p-6 pb-6 space-y-12 overscroll-contain">
         {(!search || 'colors'.includes(searchLower) || ALL_TOKEN_VARS.some(v => v.includes(searchLower) && (
           v.startsWith('--admin-bg') || v.startsWith('--admin-border') || v.startsWith('--admin-text') ||
           v.startsWith('--admin-danger') || v.startsWith('--admin-success') || v.startsWith('--admin-warning') ||
@@ -242,6 +249,9 @@ export function StyleGuideClient() {
         )}
         {(!search || 'patterns'.includes(searchLower) || 'progressive'.includes(searchLower) || 'delete'.includes(searchLower) || 'inline'.includes(searchLower)) && (
           <PatternsSection />
+        )}
+        {(!search || 'examples'.includes(searchLower) || 'breadcrumb'.includes(searchLower) || 'panel'.includes(searchLower) || 'toolbar'.includes(searchLower) || 'responsive'.includes(searchLower) || 'header'.includes(searchLower)) && (
+          <ExamplesSection />
         )}
       </div>
     </div>

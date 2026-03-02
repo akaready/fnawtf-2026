@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useId, useRef } from 'react';
-import { ArrowLeft, Users, Hash, MapPin, Settings, CopyPlus, Save, Loader2, ChevronRight, ChevronDown, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Users, Hash, MapPin, Settings, CopyPlus, Save, Loader2, ChevronRight, ChevronDown, MoreVertical, Paintbrush, Sparkles, X } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -20,7 +20,8 @@ import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptSceneRow } from '@/types/scripts';
+import { buildRichPrompt } from './storyboardUtils';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptSceneRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact } from '@/types/scripts';
 
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
 function versionColor(v: number): string { return VERSION_COLORS[(v - 1) % VERSION_COLORS.length]; }
@@ -35,6 +36,11 @@ interface Props {
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
   references: Record<string, ScriptBeatReferenceRow[]>;
+  storyboardFrames: ScriptStoryboardFrameRow[];
+  scriptStyle: ScriptStyleRow | null;
+  styleReferences: ScriptStyleReferenceRow[];
+  scriptId: string;
+  onFrameGenerated: (frame: ScriptStoryboardFrameRow | null, beatId?: string) => void;
   onUpdateBeat: (beatId: string, field: string, value: string) => void;
   onDeleteBeat: (beatId: string) => void;
   onAddBeat: (sceneId: string) => void;
@@ -47,6 +53,7 @@ interface Props {
   onShowCharacters: () => void;
   onShowTags: () => void;
   onShowLocations: () => void;
+  onShowStyle: () => void;
   onShowSettings: () => void;
   onNewVersion: () => void;
   onSave: () => void;
@@ -56,6 +63,7 @@ interface Props {
   scriptStatus: string;
   exiting?: boolean;
   onExit: () => void;
+  castMap?: Record<string, CharacterCastWithContact[]>;
 }
 
 export function ScriptFocusMode({
@@ -68,6 +76,11 @@ export function ScriptFocusMode({
   tags,
   locations,
   references,
+  storyboardFrames,
+  scriptStyle,
+  styleReferences,
+  scriptId,
+  onFrameGenerated,
   onUpdateBeat,
   onDeleteBeat,
   onAddBeat,
@@ -80,6 +93,7 @@ export function ScriptFocusMode({
   onShowCharacters,
   onShowTags,
   onShowLocations,
+  onShowStyle,
   onShowSettings,
   onNewVersion,
   onSave,
@@ -89,6 +103,7 @@ export function ScriptFocusMode({
   scriptStatus,
   exiting,
   onExit,
+  castMap,
 }: Props) {
   const [entered, setEntered] = useState(false);
   const [iconsEntered, setIconsEntered] = useState(false);
@@ -159,6 +174,87 @@ export function ScriptFocusMode({
     }
   }, [columnConfig]);
 
+  // ── Batch storyboard generation ──
+  const [generatingScope, setGeneratingScope] = useState<string | null>(null);
+  const [generatingBeatIds, setGeneratingBeatIds] = useState<Set<string>>(new Set());
+  const abortRef = useRef(false);
+
+  const generateForScenes = useCallback(async (targetScenes: ComputedScene[], scope: string) => {
+    if (!scriptStyle || generatingScope) return;
+    abortRef.current = false;
+    setGeneratingScope(scope);
+    const queuedIds = new Set<string>();
+    for (const scene of targetScenes) {
+      for (const beat of scene.beats) {
+        if (!storyboardFrames.some(f => f.beat_id === beat.id)) {
+          queuedIds.add(beat.id);
+        }
+      }
+    }
+    setGeneratingBeatIds(queuedIds);
+    try {
+      for (const scene of targetScenes) {
+        for (let i = 0; i < scene.beats.length; i++) {
+          if (abortRef.current) break;
+          const beat = scene.beats[i];
+          if (storyboardFrames.some(f => f.beat_id === beat.id)) continue;
+          const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap);
+          const beatRefs = references[beat.id] ?? [];
+          const castRefUrls: string[] = [];
+          if (castMap) {
+            const pat = /\]\(([0-9a-f-]{36})\)/g;
+            const txt = `${beat.audio_content} ${beat.visual_content} ${beat.notes_content}`;
+            let r;
+            while ((r = pat.exec(txt)) !== null) {
+              const f = castMap[r[1]]?.find(c => c.is_featured);
+              if (f?.contact.headshot_url) castRefUrls.push(f.contact.headshot_url);
+            }
+          }
+          try {
+            const res = await fetch('/api/admin/storyboard', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                scriptId,
+                beatId: beat.id,
+                contentPrompt,
+                stylePrompt: scriptStyle.prompt,
+                stylePreset: scriptStyle.style_preset,
+                aspectRatio: scriptStyle.aspect_ratio,
+                referenceImageUrls: styleReferences.map(r => r.image_url),
+                beatReferenceUrls: beatRefs.map(r => r.image_url),
+                castReferenceUrls: castRefUrls,
+              }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.frame) onFrameGenerated(data.frame, beat.id);
+            }
+          } catch { /* continue */ }
+          setGeneratingBeatIds(prev => {
+            const next = new Set(prev);
+            next.delete(beat.id);
+            return next;
+          });
+        }
+        if (abortRef.current) break;
+      }
+    } finally {
+      setGeneratingScope(null);
+      setGeneratingBeatIds(new Set());
+    }
+  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap]);
+
+  const handleGenerateAll = useCallback(() => {
+    generateForScenes(scenes, 'all');
+  }, [scenes, generateForScenes]);
+
+  const handleGenerateScene = useCallback((sceneId: string) => {
+    const scene = scenes.find(s => s.id === sceneId);
+    if (!scene) return;
+    generateForScenes([scene], sceneId);
+  }, [scenes, generateForScenes]);
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'var(--admin-bg-base)' }}>
       {/* Toolbar — slides down from above */}
@@ -188,8 +284,9 @@ export function ScriptFocusMode({
               <button onClick={() => { onShowCharacters(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Characters"><Users size={14} /><span className="hidden sm:inline">Characters</span></button>
               <button onClick={() => { onShowLocations(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Locations"><MapPin size={14} /><span className="hidden sm:inline">Locations</span></button>
               <button onClick={() => { onShowTags(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Tags"><Hash size={14} /><span className="hidden sm:inline">Tags</span></button>
+              <button onClick={() => { onShowStyle(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Style"><Paintbrush size={14} /><span className="hidden sm:inline">Style</span></button>
               <button onClick={() => { onShowSettings(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button>
-              <button onClick={() => { onNewVersion(); setMenuOpen(false); }} disabled={versioning} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="New Version">{versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}<span className="hidden sm:inline">Version</span></button>
+              <button onClick={() => { onNewVersion(); setMenuOpen(false); }} disabled={versioning} className="p-1.5 sm:px-2.5 sm:py-1.5 rounded border transition-colors hover:bg-admin-bg-hover flex items-center gap-1.5 text-xs" style={{ borderColor: versionColor(scriptVersion) + '40', color: versionColor(scriptVersion) }} title="New Version">{versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}<span className="hidden sm:inline">Version</span></button>
               <button onClick={() => { onSave(); setMenuOpen(false); }} disabled={saving} className="bg-white text-black p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-base hover:text-white hover:ring-1 hover:ring-white transition-all flex items-center gap-1.5 text-xs" title="Save">{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}<span className="hidden sm:inline">Save</span></button>
             </div>
           </div>
@@ -215,9 +312,28 @@ export function ScriptFocusMode({
               {visibleColumns.map((col, idx) => (
                 <div
                   key={col.key}
-                  className={`relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} opacity-60 min-w-0 overflow-hidden border-l ${col.borderColor}`}
+                  className={`group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} opacity-60 min-w-0 overflow-hidden border-l ${col.borderColor}`}
                 >
                   {col.label}
+                  {col.key === 'storyboard' && scriptStyle && (
+                    generatingScope ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); abortRef.current = true; }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                        title="Cancel generation"
+                      >
+                        <X size={10} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                        title="Generate all storyboards"
+                      >
+                        <Sparkles size={10} />
+                      </button>
+                    )
+                  )}
                   {idx < visibleColumns.length - 1 && (
                     <span
                       onMouseDown={(e) => handleResize(col.key, e)}
@@ -261,6 +377,8 @@ export function ScriptFocusMode({
                       onDelete={onDeleteScene}
                       editing={isEditing}
                       onEditingChange={(editing) => setEditingSceneId(editing ? scene.id : null)}
+                      onGenerate={columnConfig.storyboard && scriptStyle ? () => handleGenerateScene(scene.id) : undefined}
+                      generating={generatingScope === scene.id}
                     />
                   </div>
                 </div>
@@ -286,6 +404,12 @@ export function ScriptFocusMode({
                           characters={characters}
                           tags={tags}
                           references={references[beat.id] ?? []}
+                          storyboardFrame={storyboardFrames.find(f => f.beat_id === beat.id) ?? null}
+                          scriptStyle={scriptStyle}
+                          styleReferences={styleReferences}
+                          scriptId={scriptId}
+                          sceneId={scene.id}
+                          onFrameChange={(frame) => onFrameGenerated(frame, beat.id)}
                           onUpdate={onUpdateBeat}
                           onDelete={onDeleteBeat}
                           onAddBeat={() => onAddBeat(scene.id)}
@@ -294,6 +418,11 @@ export function ScriptFocusMode({
                           onDeleteReference={onDeleteReference}
                           isOnly={scene.beats.length <= 1}
                           beatNumber={i + 1}
+                          batchGenerating={generatingBeatIds.has(beat.id)}
+                          onCancelGeneration={() => { abortRef.current = true; }}
+                          scene={scene}
+                          locations={locations}
+                          castMap={castMap}
                         />
                       ))}
                     </SortableContext>

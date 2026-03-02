@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Pencil, Trash2, Check, X, Plus } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Plus, Sparkles, Loader2, MapPin } from 'lucide-react';
 import { createLocation } from '@/app/admin/actions';
 import type { ComputedScene, IntExt, ScriptLocationRow } from '@/types/scripts';
 
@@ -12,12 +12,14 @@ interface Props {
   onDelete?: (sceneId: string) => void;
   editing?: boolean;
   onEditingChange?: (editing: boolean) => void;
+  onGenerate?: () => void;
+  generating?: boolean;
 }
 
 const INT_EXT_OPTIONS: IntExt[] = ['INT', 'EXT', 'INT/EXT'];
 const TIME_OPTIONS = ['DAY', 'NIGHT', 'DAWN', 'DUSK', 'CONTINUOUS', 'LATER'];
 
-export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, editing, onEditingChange }: Props) {
+export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [locQuery, setLocQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -194,6 +196,10 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
     scene.time_of_day ? `— ${scene.time_of_day}` : '',
   ].filter(Boolean).join('. ').replace('. —', ' —');
 
+  // Check if this scene's location is linked to a global location
+  const sceneLocation = locations?.find(l => l.id === scene.location_id);
+  const hasGlobalLink = !!sceneLocation?.global_location_id;
+
   return (
     <div
       className="flex items-center gap-2 px-2 py-3 group/scene"
@@ -202,6 +208,11 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
       <span className="text-admin-text-faint font-mono text-xs flex-shrink-0">
         {scene.sceneNumber}
       </span>
+      {hasGlobalLink && (
+        <span className="flex-shrink-0" title="Linked to locations library">
+          <MapPin size={10} className="text-admin-info" />
+        </span>
+      )}
       <span className="text-xs font-medium text-admin-text-secondary uppercase tracking-wider flex-1 min-w-0 truncate">
         {heading}
       </span>
@@ -226,6 +237,16 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
           </>
         ) : (
           <>
+            {onGenerate && (
+              <button
+                onClick={e => { e.stopPropagation(); onGenerate(); }}
+                disabled={generating}
+                className="text-admin-text-ghost hover:text-admin-text-primary p-1 transition-colors"
+                title={generating ? 'Generating…' : 'Generate storyboards for scene'}
+              >
+                {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              </button>
+            )}
             <button
               onClick={e => { e.stopPropagation(); onEditingChange?.(true); }}
               className="text-admin-text-ghost hover:text-admin-text-primary p-1 transition-colors"
