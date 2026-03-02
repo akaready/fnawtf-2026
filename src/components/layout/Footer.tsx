@@ -67,7 +67,7 @@ export function Footer() {
                   className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
                 >
                   <Rocket className="w-4 h-4" />
-                  Start a Project
+                  Get Started
                 </a>
                 <ClientLoginButton />
                 <AdminDashboardLink />

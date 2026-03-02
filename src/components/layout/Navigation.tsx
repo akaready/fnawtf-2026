@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import gsap from 'gsap';
 import { NavLogo } from './NavLogo';
 import { NavButton } from './NavButton';
-import { CalBookingButton } from '@/components/cal/CalBookingButton';
 import { MobileMenu } from './MobileMenu';
 import { ProposalNavButton } from './ProposalNavButton';
 import { useGsap } from '@/hooks/useGsap';
@@ -238,12 +237,9 @@ export function Navigation({ currentPage }: NavigationProps) {
         >
           <ProposalNavButton />
           {!pathname.startsWith('/admin') && (
-            <CalBookingButton
-              buttonText="Let's Talk"
-              namespace="introduction"
-              calLink="fnawtf/introduction"
-              isPrimary
-            />
+            <NavButton href="/start" isPrimary iconName="rocket">
+              Get Started
+            </NavButton>
           )}
         </div>
 

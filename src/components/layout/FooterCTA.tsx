@@ -1,7 +1,8 @@
-import { NavButton } from './NavButton';
-import { CalBookingButton } from '@/components/cal/CalBookingButton';
+'use client';
 
-export async function FooterCTA() {
+import { NavButton } from './NavButton';
+
+export function FooterCTA() {
   return (
     <section
       className="py-16 px-6 border-t border-border"
@@ -17,16 +18,14 @@ export async function FooterCTA() {
             Like what you see?
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Snag some time on our calendar and let's chat about your project.
+            Tell us about your project and let&apos;s build something great together.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <CalBookingButton
-            buttonText="Schedule a Call"
-            namespace="introduction"
-            calLink="fnawtf/introduction"
-          />
+          <NavButton href="/start" isPrimary iconName="rocket">
+            Get Started
+          </NavButton>
           <NavButton href="/services" iconName="clipboard-list">
             Explore Services
           </NavButton>

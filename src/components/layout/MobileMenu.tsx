@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
-import { CalBookingButton } from '@/components/cal/CalBookingButton';
+import { NavButton } from './NavButton';
 import gsap from 'gsap';
 
 interface MobileMenuProps {
@@ -159,12 +159,9 @@ export function MobileMenu({ currentPage }: MobileMenuProps) {
 
         {!pathname.startsWith('/admin') && (
           <div ref={ctaRef} style={{ opacity: 0 }}>
-            <CalBookingButton
-              buttonText="Let's Talk"
-              namespace="introduction"
-              calLink="fnawtf/introduction"
-              isPrimary
-            />
+            <NavButton href="/start" isPrimary iconName="rocket">
+              Get Started
+            </NavButton>
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import gsap from 'gsap';
 import { motion } from 'framer-motion';
-import { Home, Play, ClipboardList, DollarSign, Info, ExternalLink } from 'lucide-react';
+import { Home, Play, ClipboardList, DollarSign, Info, ExternalLink, Rocket } from 'lucide-react';
 
 interface NavButtonProps {
   href: string;
@@ -12,7 +12,7 @@ interface NavButtonProps {
   inverted?: boolean;
   size?: 'default' | 'lg';
   onClick?: () => void;
-  iconName?: 'home' | 'play' | 'clipboard-list' | 'dollar-sign' | 'info' | 'external-link';
+  iconName?: 'home' | 'play' | 'clipboard-list' | 'dollar-sign' | 'info' | 'external-link' | 'rocket';
   isActive?: boolean;
 }
 
@@ -42,6 +42,7 @@ const iconComponentMap: Record<string, React.ComponentType<any>> = {
   'dollar-sign': DollarSign,
   'info': Info,
   'external-link': ExternalLink,
+  'rocket': Rocket,
 };
 
 export function NavButton({ href, children, isPrimary = false, inverted = false, size = 'default', onClick, iconName, isActive = false }: NavButtonProps) {
@@ -121,12 +122,14 @@ export function NavButton({ href, children, isPrimary = false, inverted = false,
   const baseClass = inverted
     ? `relative inline-block ${padding} font-medium text-black bg-white border border-white/20 rounded-lg overflow-hidden`
     : isPrimary
-      ? `relative inline-block ${padding} font-medium text-purple-400 bg-black border border-gray-600 rounded-lg overflow-hidden`
+      ? `relative inline-block ${padding} font-medium text-purple-400 bg-black border border-purple-400 rounded-lg overflow-hidden`
       : `relative inline-block ${padding} font-medium text-white bg-black border border-gray-600 rounded-lg overflow-hidden`;
 
   const fillClass = inverted
     ? 'absolute inset-0 bg-black pointer-events-none'
-    : 'absolute inset-0 bg-white pointer-events-none';
+    : isPrimary
+      ? 'absolute inset-0 bg-purple-500 pointer-events-none'
+      : 'absolute inset-0 bg-white pointer-events-none';
 
   return (
     <a
