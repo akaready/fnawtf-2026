@@ -605,8 +605,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               hideGetStarted
               hideSaveQuote={standalone || !onFnaSave}
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
-              crowdfundingApproved={crowdfundingApproved}
+              crowdfundingApproved={crowdfundingApproved || crowdfundingOverride}
               crowdfundingDeferred={crowdfundingDeferred}
+              hideCrowdfundingToggle={crowdfundingOverride !== undefined}
               isReadOnly={isReadOnly}
               isLocked={isLocked}
               allQuotes={standalone ? undefined : allQuotes}

@@ -1731,7 +1731,7 @@ export function IntakeFormClient() {
                 <textarea placeholder="Styles, tones, or approaches that aren't right for your brand" value={avoid} onChange={(e) => setAvoid(e.target.value)} rows={3} className={textareaClass} /></div>
               <div><FieldLabel icon={AlertTriangle} label="Biggest communication challenge" required />
                 <textarea placeholder="What's been the hardest part to convey?" value={challenge} onChange={(e) => setChallenge(e.target.value)} rows={3} className={textareaClass} /></div>
-              <div><FieldLabel icon={Shield} label="Top competitors" required />
+              <div><FieldLabel icon={Shield} label="Top competitors" />
                 <p className={`${helperClass} mb-3`}>Add links to competitor websites. We will pull their info automatically.</p>
                 <CompetitorLinkInputs links={competitors} onChange={setCompetitors} /></div>
             </div>

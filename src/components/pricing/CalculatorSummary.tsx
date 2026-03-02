@@ -37,6 +37,7 @@ interface CalculatorSummaryProps {
   hideSaveQuote?: boolean;
   crowdfundingApproved?: boolean;
   crowdfundingDeferred?: boolean;
+  hideCrowdfundingToggle?: boolean;
   isReadOnly?: boolean;
   isLocked?: boolean;
   initialFriendlyDiscountPct?: number;
@@ -256,9 +257,7 @@ function CrowdfundingSlider({
   const currentTier = tiers[tierIndex];
   const isActive = tierIndex > 0;
   return (
-    <div className={`mt-3 p-4 rounded-lg border transition-colors duration-200 ${
-      isActive ? 'bg-green-950/30 border-green-600/40' : 'bg-muted/20 border-border'
-    }`}>
+    <>
       <input
         type="range"
         min={0}
@@ -272,7 +271,7 @@ function CrowdfundingSlider({
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
           [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
           isActive
-            ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
+            ? '[&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(161,77,253,0.4)] [&::-moz-range-thumb]:bg-purple-500'
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
@@ -284,13 +283,13 @@ function CrowdfundingSlider({
       </div>
       <div className="text-center mt-2">
         <span className={`text-lg font-bold transition-colors duration-200 ${
-          isActive ? 'text-green-600' : 'text-muted-foreground'
-        }`}>{currentTier.discount}% off discount</span>
+          isActive ? 'text-purple-400' : 'text-muted-foreground'
+        }`}>{currentTier.discount}% crowdfunding discount</span>
         <p className="text-xs text-muted-foreground">
           {currentTier.percentage > 0 ? `for ${currentTier.percentage}% of your campaign raise` : currentTier.label}
         </p>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -303,9 +302,9 @@ function DeferredPaymentCheckbox({
   deferPayment: boolean;
   onToggle: () => void;
 }) {
-  const borderColor = deferPayment ? 'border-muted-foreground/40' : 'border-border';
-  const bgColor = deferPayment ? 'bg-muted/20' : 'bg-muted/20 hover:bg-muted/30';
-  const checkBorder = deferPayment ? 'border-[#6e6e74] bg-[#6e6e74]' : 'border-muted-foreground/40';
+  const borderColor = deferPayment ? 'border-purple-500/40' : 'border-border';
+  const bgColor = deferPayment ? 'bg-purple-900/25' : 'bg-muted/20 hover:bg-muted/30';
+  const checkBorder = deferPayment ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground/40';
 
   return (
     <button
@@ -316,7 +315,7 @@ function DeferredPaymentCheckbox({
         className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${checkBorder}`}
       >
         {deferPayment && (
-          <svg className="w-4 h-4 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         )}
@@ -328,6 +327,41 @@ function DeferredPaymentCheckbox({
         <span className="text-xs text-muted-foreground">
           Defer the balance owed until after you launch
         </span>
+      </div>
+    </button>
+  );
+}
+
+// ── Crowdfunding Toggle Checkbox ─────────────────────────────────────────────
+
+function CrowdfundingToggle({
+  enabled,
+  onToggle,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  const borderColor = enabled ? 'border-purple-500/40' : 'border-border';
+  const bgColor = enabled ? 'bg-purple-900/25' : 'bg-muted/20 hover:bg-muted/30';
+  const checkBorder = enabled ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground/40';
+
+  return (
+    <button
+      onClick={onToggle}
+      className={`w-full flex items-center gap-4 p-4 rounded-lg border transition-all duration-200 text-left ${borderColor} ${bgColor}`}
+    >
+      <div
+        className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${checkBorder}`}
+      >
+        {enabled && (
+          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+      <div>
+        <span className="text-base font-semibold text-foreground block">Crowdfunding Campaign</span>
+        <span className="text-xs text-muted-foreground">Discounts offered in exchange for % of raise</span>
       </div>
     </button>
   );
@@ -765,6 +799,7 @@ export function CalculatorSummary({
   hideSaveQuote,
   crowdfundingApproved,
   crowdfundingDeferred,
+  hideCrowdfundingToggle,
   isReadOnly,
   isLocked,
   initialFriendlyDiscountPct,
@@ -943,8 +978,8 @@ export function CalculatorSummary({
     <div>
     <div className="sticky top-[121px]">
       {/* Collapsible Discounts section — above the quote card */}
-      {!fundraisingEnabled && (showFriendlyDiscount || effectiveCrowdfundingEnabled || !!crowdfundingDeferred) && (
-        <div className="mb-4 rounded-lg border border-green-900 overflow-hidden bg-green-950/25">
+      {!fundraisingEnabled && (
+        <div className="mb-4 rounded-lg border border-purple-800 overflow-hidden bg-purple-900/20">
           <button
             data-no-intercept
             onClick={() => setDiscountsOpen((o) => !o)}
@@ -952,19 +987,21 @@ export function CalculatorSummary({
             aria-expanded={discountsOpen}
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-green-950 flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-green-400" />
+              <div className="w-10 h-10 rounded-lg bg-purple-900 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-purple-400" />
               </div>
               <h3 className="font-display text-lg font-bold text-foreground">Discounts</h3>
             </div>
             <ChevronDown
-              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-green-400 group-hover:scale-110 ${discountsOpen ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110 ${discountsOpen ? 'rotate-180' : ''}`}
             />
           </button>
           <div ref={discountContentRef} className="overflow-hidden">
             <div className="relative px-5 pt-2 pb-5 space-y-4">
               {isLocked && <div className="absolute inset-0 z-10" style={{ cursor: 'not-allowed' }} />}
-              {showFriendlyDiscount && (
+
+              {/* Friendly discount slider — hidden when crowdfunding is active */}
+              {!effectiveCrowdfundingEnabled && (
                 <>
                   <input
                     type="range"
@@ -980,7 +1017,7 @@ export function CalculatorSummary({
                       [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
                       [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
                       friendlyDiscountPercent > 0
-                        ? '[&::-webkit-slider-thumb]:bg-green-600 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(22,163,74,0.4)] [&::-moz-range-thumb]:bg-green-600'
+                        ? '[&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(161,77,253,0.4)] [&::-moz-range-thumb]:bg-purple-500'
                         : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
                     }`}
                   />
@@ -989,18 +1026,30 @@ export function CalculatorSummary({
                   </div>
                   <div className="text-center mt-2">
                     <span className={`text-lg font-bold transition-colors duration-200 ${
-                      friendlyDiscountPercent > 0 ? 'text-green-400' : 'text-muted-foreground'
+                      friendlyDiscountPercent > 0 ? 'text-purple-400' : 'text-muted-foreground'
                     }`}>{friendlyDiscountPercent}% friendly discount</span>
                   </div>
                 </>
               )}
+
+              {/* Crowdfunding slider — shown when crowdfunding is active */}
               {effectiveCrowdfundingEnabled && (
                 <CrowdfundingSlider
                   tierIndex={crowdfundingTierIndex}
                   onTierChange={(i) => { if (onInteraction?.()) return; onCrowdfundingTierChange(i); }}
                 />
               )}
-              {(!!crowdfundingDeferred || effectiveCrowdfundingEnabled) && (
+
+              {/* Crowdfunding toggle checkbox — hidden on start form and proposals */}
+              {!crowdfundingApproved && !hideCrowdfundingToggle && (
+                <CrowdfundingToggle
+                  enabled={crowdfundingEnabled}
+                  onToggle={() => { if (onInteraction?.()) return; _onCrowdfundingToggle(); }}
+                />
+              )}
+
+              {/* Deferred payment — shown when crowdfunding is active */}
+              {effectiveCrowdfundingEnabled && (
                 <DeferredPaymentCheckbox
                   deferPayment={deferPayment}
                   onToggle={() => { if (onInteraction?.()) return; setDeferPayment(!deferPayment); }}
@@ -1263,7 +1312,7 @@ export function CalculatorSummary({
               {effectiveCrowdfundingEnabled && deferPayment && deferredFeePercent > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Deferred payment (+{deferredFeePercent}%)</span>
-                  <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>+{formatPrice(deferredFee)}</span>
+                  <span className="text-muted-foreground">+{formatPrice(deferredFee)}</span>
                 </div>
               )}
 
