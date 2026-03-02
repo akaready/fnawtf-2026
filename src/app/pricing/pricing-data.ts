@@ -13,8 +13,8 @@ export const pricingTiers: PricingTier[] = [
       'We learn your brand from you. Let its voice speak through us. Then deliver it back. 32 hours, allocated to what you actually need.',
     price: '$3,500+',
     priceNumber: 3500,
-    ctaText: 'Start a Project',
-    ctaHref: '/contact',
+    ctaText: 'Get Started',
+    ctaHref: '/start',
     highlighted: false,
     icon: 'hammer',
     summary: [
@@ -32,8 +32,8 @@ export const pricingTiers: PricingTier[] = [
       'We bring talent and your product to a location with a camera. We turn a series of shots into a story for your brand (and your customers).',
     price: '$7,000+',
     priceNumber: 7000,
-    ctaText: 'Start a Project',
-    ctaHref: '/contact',
+    ctaText: 'Get Started',
+    ctaHref: '/start',
     highlighted: true,
     icon: 'rocket',
     summary: [

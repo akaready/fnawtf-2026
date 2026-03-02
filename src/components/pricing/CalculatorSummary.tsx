@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, Fragment } from 'react';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Save, Loader2, Check, X, Plus, ChevronDown, Star, User, TrendingDown } from 'lucide-react';
-import { getCalApi } from '@calcom/embed-react';
+import { Rocket, Save, Loader2, Check, X, Plus, ChevronDown, Star, User, TrendingDown } from 'lucide-react';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { AddOn } from '@/types/pricing';
 import { QuoteModal } from './QuoteModal';
@@ -389,24 +388,9 @@ const iconVariants = {
 };
 
 function GetStartedButton() {
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLAnchorElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-    (async function () {
-      const cal = await getCalApi({ namespace: 'pricing' });
-      cal('ui', {
-        cssVarsPerTheme: {
-          light: { 'cal-brand': '#9752f4' },
-          dark: { 'cal-brand': '#9752f4' },
-        },
-        theme: 'dark',
-        hideEventTypeDetails: true,
-        layout: 'month_view',
-      });
-    })();
-  }, []);
 
   useEffect(() => {
     if (!buttonRef.current || !fillRef.current) return;
@@ -464,18 +448,12 @@ function GetStartedButton() {
 
   return (
     <div className="flex-1">
-      <motion.button
+      <motion.a
         ref={buttonRef}
-        data-cal-namespace="pricing"
-        data-cal-link="fnawtf/introduction"
-        data-cal-config={JSON.stringify({
-          layout: 'month_view',
-          useSlotsViewOnSmallScreen: true,
-          theme: 'dark',
-        })}
+        href="/start"
         whileHover={{ scale: 1.02 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="relative w-full px-4 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden"
+        className="relative block w-full px-4 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden text-center"
       >
         <div
           ref={fillRef}
@@ -489,11 +467,11 @@ function GetStartedButton() {
             animate={isHovered ? "visible" : "hidden"}
             className="flex items-center"
           >
-            <Calendar size={18} strokeWidth={2} />
+            <Rocket size={18} strokeWidth={2} />
           </motion.span>
           Get Started
         </span>
-      </motion.button>
+      </motion.a>
     </div>
   );
 }

@@ -1184,6 +1184,28 @@ export function IntakeFormClient() {
       else if (d.wantsQuote === true) setWantsQuote('build');
       else if (d.wantsQuote === false) setWantsQuote('skip');
     } catch { /* ignore */ }
+
+    // Check for quote state passed from /pricing page
+    try {
+      const pricingRaw = sessionStorage.getItem('fna-pricing-quote');
+      if (pricingRaw) {
+        const pq = JSON.parse(pricingRaw);
+        const typeToPhases: Record<string, string[]> = {
+          'build': ['build'],
+          'launch': ['launch'],
+          'build-launch': ['build', 'launch'],
+          'fundraising': ['fundraising'],
+        };
+        if (pq.quote_type && typeToPhases[pq.quote_type]) {
+          const phasesToSet = [...typeToPhases[pq.quote_type]];
+          if (pq.crowdfunding_enabled) phasesToSet.push('crowdfunding');
+          setPhases(phasesToSet);
+        }
+        setQuoteState(pq as CalculatorStateSnapshot);
+        setWantsQuote('build');
+        sessionStorage.removeItem('fna-pricing-quote');
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // Track whether the user has already seen the intro animation

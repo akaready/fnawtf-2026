@@ -1112,6 +1112,24 @@ export function AddOnCalculator() {
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(0);
   const [fundraisingEnabled, setFundraisingEnabled] = useState(false);
 
+  // Persist calculator state to sessionStorage so /start can pick it up
+  const PRICING_QUOTE_KEY = 'fna-pricing-quote';
+  useEffect(() => {
+    const snapshot = {
+      quote_type: activeTab,
+      selected_addons: Object.fromEntries(selectedAddOns),
+      slider_values: Object.fromEntries(sliderValues),
+      tier_selections: Object.fromEntries(tierSelections),
+      location_days: Object.fromEntries([...locationDays].map(([k, v]) => [k, v])),
+      photo_count: photoCount,
+      crowdfunding_enabled: crowdfundingEnabled,
+      crowdfunding_tier: crowdfundingTierIndex,
+      fundraising_enabled: fundraisingEnabled,
+      friendly_discount_pct: 0,
+    };
+    sessionStorage.setItem(PRICING_QUOTE_KEY, JSON.stringify(snapshot));
+  }, [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled]);
+
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
