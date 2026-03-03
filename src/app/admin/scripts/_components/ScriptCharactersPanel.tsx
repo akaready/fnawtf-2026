@@ -546,7 +546,7 @@ export function ScriptCharactersPanel({
   );
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[750px]">
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">

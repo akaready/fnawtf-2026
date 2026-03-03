@@ -120,6 +120,10 @@
   --admin-radius-xl:   1rem;
   --admin-radius-full: 9999px;
 
+  /* Button heights */
+  --admin-btn-h:       2.125rem;
+  --admin-btn-h-sm:    1.75rem;
+
   /* Typography */
   --admin-font-display:          'Space Grotesk', sans-serif;
   --admin-font-body:             'Manrope', sans-serif;
@@ -241,19 +245,19 @@ html[data-admin-light] .admin-shell .admin-logo {
 @layer components {
   /* Primary: white fill → black on hover */
   .btn-primary {
-    @apply inline-flex items-center gap-2 border border-white bg-white text-black font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap;
+    @apply inline-flex items-center justify-center gap-2 border border-white bg-white text-black font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap;
     border-radius: var(--admin-radius-md);
   }
 
   /* Secondary: ghost with subtle border → bg fill on hover */
   .btn-secondary {
-    @apply inline-flex items-center gap-2 border border-admin-border-subtle text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors disabled:opacity-40 whitespace-nowrap;
+    @apply inline-flex items-center justify-center gap-2 border border-admin-border-subtle text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors disabled:opacity-40 whitespace-nowrap;
     border-radius: var(--admin-radius-md);
   }
 
   /* Info: off-site / external links — blue tint, text brightens on hover */
   .btn-info {
-    @apply inline-flex items-center gap-2 bg-admin-info-bg text-admin-info border border-admin-info-border transition-colors disabled:opacity-50 whitespace-nowrap;
+    @apply inline-flex items-center justify-center gap-2 bg-admin-info-bg text-admin-info border border-admin-info-border transition-colors disabled:opacity-50 whitespace-nowrap;
     border-radius: var(--admin-radius-md);
   }
   .btn-info:hover {
@@ -261,9 +265,19 @@ html[data-admin-light] .admin-shell .admin-logo {
     color: #7dd3fc !important;
   }
 
+  /* Success: published / active state — green tint, text brightens on hover */
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 bg-admin-success-bg text-admin-success border border-admin-success-border transition-colors disabled:opacity-50 whitespace-nowrap;
+    border-radius: var(--admin-radius-md);
+  }
+  .btn-success:hover {
+    @apply bg-admin-success-bg-strong;
+    color: #6ee7b7 !important;
+  }
+
   /* Danger: used for inline delete confirmations — always inline (never flex-col) */
   .btn-danger {
-    @apply inline-flex items-center gap-2 bg-admin-danger-bg text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-admin-danger-bg text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors disabled:opacity-50;
     border-radius: var(--admin-radius-md);
   }
 

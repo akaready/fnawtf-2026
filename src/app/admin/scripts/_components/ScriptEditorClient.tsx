@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, Upload, StickyNote, Table2, X } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, StickyNote, Table2, X, Check } from 'lucide-react';
+import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import Link from 'next/link';
@@ -89,6 +90,7 @@ export function ScriptEditorClient({
   const [focusTransition, setFocusTransition] = useState<'idle' | 'pushing-out' | 'bringing-in' | 'active' | 'pushing-focus-out' | 'bringing-back'>('idle');
   const [versioning, setVersioning] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean; content_mode?: string }[]>([]);
   const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'table');
@@ -576,58 +578,84 @@ export function ScriptEditorClient({
                   </>
                 )}
               </div>
-              {/* Draft / Published pill */}
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border ${
-                script.is_published
-                  ? 'border-admin-success-border bg-admin-success-bg text-admin-success'
-                  : 'border-admin-border bg-admin-bg-active text-admin-text-secondary'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  script.is_published ? 'bg-admin-success' : 'bg-admin-text-faint'
-                }`} />
-                {script.is_published ? 'Published' : 'Draft'}
-              </span>
             </div>
         }
-        rightContent={
-          <div className="flex items-center gap-2">
-            <SaveDot status={autoSave.status} />
-            <button
-              onClick={handlePublish}
-              disabled={publishing || script.is_published}
-              className="btn-ghost p-2"
-              title={script.is_published ? 'Already published' : 'Publish version'}
-            >
-              {publishing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-            </button>
+        rightContent={<SaveDot status={autoSave.status} />}
+        actions={
+          <>
             <button
               onClick={handleNewVersion}
               disabled={versioning}
-              className="btn-ghost p-2"
-              style={{ color: versionColor(script.major_version) }}
+              className="btn-secondary px-2.5"
               title="New version"
             >
               {versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}
             </button>
-            <button onClick={() => setShowSettings(true)} className="btn-secondary p-2" title="Settings">
+            <button onClick={() => setShowSettings(true)} className="btn-secondary px-2.5" title="Settings">
               <Settings size={14} />
             </button>
             {contentMode === 'scratchpad' && scratchContent.trim() && (
               <button
                 onClick={() => setShowExtractModal(true)}
-                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+                className="btn-secondary px-4 text-sm"
               >
                 Extract to Scenes
               </button>
             )}
+            {/* Status dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowStatusDropdown(p => !p)}
+                className={`${script.is_published ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 text-sm font-medium`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  script.is_published ? 'bg-admin-success' : 'bg-admin-text-faint'
+                }`} />
+                {script.is_published ? 'Published' : 'Internal Draft'}
+                <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showStatusDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
+                    <button
+                      onClick={() => { setShowStatusDropdown(false); }}
+                      disabled={!script.is_published}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                        !script.is_published ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                        Internal Draft
+                      </span>
+                      {!script.is_published && <Check size={12} />}
+                    </button>
+                    <button
+                      onClick={() => { setShowStatusDropdown(false); handlePublish(); }}
+                      disabled={publishing || script.is_published}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                        script.is_published ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                        Published
+                      </span>
+                      {script.is_published && <Check size={12} />}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={handleSaveAll}
-              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+              className="btn-primary px-5 text-sm"
             >
-              <Save size={13} />
+              <Save size={14} />
               Save
             </button>
-          </div>
+          </>
         }
       />
 
@@ -679,25 +707,17 @@ export function ScriptEditorClient({
         </div>
         {/* Center zone */}
         <div className="flex-1 flex justify-center items-center gap-4">
-          <div ref={toolbarSlotRef} />
           {contentMode === 'table' && (
-            <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} />
+            <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} compact />
           )}
         </div>
         {/* Right zone — panel toggles */}
-        <div className="flex items-center gap-1">
-          <button onClick={() => setShowCharacters(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-blue hover:bg-admin-bg-hover" title="Characters">
-            <Users size={16} />
-          </button>
-          <button onClick={() => setShowLocations(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-green hover:bg-admin-bg-hover" title="Locations">
-            <MapPin size={16} />
-          </button>
-          <button onClick={() => setShowTags(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-orange hover:bg-admin-bg-hover" title="Tags">
-            <Hash size={16} />
-          </button>
-          <button onClick={() => setShowStyle(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-violet hover:bg-admin-bg-hover" title="Style">
-            <Paintbrush size={16} />
-          </button>
+        <div className="flex items-center gap-0">
+          <div ref={toolbarSlotRef} className="w-8 h-8 flex-shrink-0" />
+          <ToolbarButton icon={Users} label="" onClick={() => setShowCharacters(true)} />
+          <ToolbarButton icon={MapPin} label="" onClick={() => setShowLocations(true)} />
+          <ToolbarButton icon={Hash} label="" onClick={() => setShowTags(true)} />
+          <ToolbarButton icon={Paintbrush} label="" onClick={() => setShowStyle(true)} />
         </div>
       </div>
       </div>
@@ -747,6 +767,7 @@ export function ScriptEditorClient({
               onDeleteReference={handleDeleteReference}
               castMap={castMap}
               toolbarPortalRef={toolbarSlotRef}
+              onReorderScenes={handleReorderScenes}
             />
           ) : (
             <ScriptScratchPad

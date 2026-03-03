@@ -69,11 +69,18 @@ export function ChatWidget() {
             style={{ transformOrigin: 'bottom right' }}
             className="fixed bottom-24 right-6 z-[90] w-[380px] h-[550px]"
           >
-            {/* Chat bubble tail */}
-            <div
-              className="absolute -bottom-[7px] right-4 w-4 h-4 bg-admin-bg-nav border-r border-b border-admin-border rotate-45"
-            />
-            <ChatPanel />
+            {/* Outer glow for lift */}
+            <div className="absolute -inset-10 rounded-[2rem] bg-radial from-transparent via-black/20 to-black/60 pointer-events-none blur-md" />
+            {/* Chat bubble tail — overlaps card bottom to hide border seam */}
+            <div className="absolute -bottom-[8px] right-8 z-20 w-4 h-4">
+              {/* Cover strip to mask card border behind triangle */}
+              <div className="absolute -top-[2px] left-[1px] w-[14px] h-[4px] bg-admin-bg-nav" />
+              {/* Triangle with only outer edges */}
+              <div className="w-4 h-4 bg-admin-bg-nav border-r border-b border-admin-border rotate-45" />
+            </div>
+            <div className="relative h-full z-10">
+              <ChatPanel />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -86,7 +93,7 @@ export function ChatWidget() {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-        className="fixed bottom-6 right-6 z-[90] w-12 h-12 rounded-full bg-white text-black shadow-xl flex items-center justify-center"
+        className="fixed bottom-6 right-10 z-[90] w-12 h-12 rounded-full bg-white text-black shadow-xl flex items-center justify-center"
         title="Chat (⌘+J)"
       >
         <MessageCircle size={20} />

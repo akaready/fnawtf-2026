@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Trash2, Save, Loader2, Check } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, Check, ExternalLink, CheckCircle2 } from 'lucide-react';
 
 export function ButtonsSection() {
   return (
@@ -36,6 +36,28 @@ export function ButtonsSection() {
           <button className="btn-danger px-4 py-2 text-sm"><Trash2 size={14} /> Delete</button>
           <button className="btn-danger px-4 py-2 text-sm">Remove</button>
           <button className="btn-danger px-4 py-2 text-sm" disabled>Disabled</button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div>
+        <h3 className="text-admin-lg font-semibold text-admin-text-secondary mb-3">Info (.btn-info)</h3>
+        <p className="text-admin-xs text-admin-text-faint mb-3">Blue tint for external links and informational actions.</p>
+        <div className="flex flex-wrap gap-3 p-6 border border-admin-border rounded-xl bg-admin-bg-inset">
+          <button className="btn-info px-4 py-2 text-sm"><ExternalLink size={14} /> Peerspace</button>
+          <button className="btn-info px-3 py-2 text-xs">Small</button>
+          <button className="btn-info px-4 py-2 text-sm" disabled>Disabled</button>
+        </div>
+      </div>
+
+      {/* Success */}
+      <div>
+        <h3 className="text-admin-lg font-semibold text-admin-text-secondary mb-3">Success (.btn-success)</h3>
+        <p className="text-admin-xs text-admin-text-faint mb-3">Green tint for published, active, or approved states.</p>
+        <div className="flex flex-wrap gap-3 p-6 border border-admin-border rounded-xl bg-admin-bg-inset">
+          <button className="btn-success px-4 py-2 text-sm"><CheckCircle2 size={14} /> Published</button>
+          <button className="btn-success px-3 py-2 text-xs">Small</button>
+          <button className="btn-success px-4 py-2 text-sm" disabled>Disabled</button>
         </div>
       </div>
 

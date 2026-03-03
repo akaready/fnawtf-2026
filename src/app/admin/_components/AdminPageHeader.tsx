@@ -88,7 +88,7 @@ export function AdminPageHeader({
                 </div>
               )}
               {actions && (
-                <div className="flex items-center gap-2 flex-shrink-0 [&_button]:py-1.5 [&_a]:py-1.5 [&_button]:whitespace-nowrap">
+                <div className="flex items-center gap-2 flex-shrink-0 [&_button]:py-1.5 [&_a]:py-1.5 [&_button]:min-h-[var(--admin-btn-h)] [&_a]:min-h-[var(--admin-btn-h)] [&_button]:whitespace-nowrap">
                   {actions}
                 </div>
               )}

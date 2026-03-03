@@ -193,7 +193,7 @@ export function ScriptStoryboardCell({
   // Empty state — split cell: upload left, generate right
   return (
     <div
-      className={`group/sb relative min-w-0 overflow-hidden border-b border-b-[#0e0e0e] transition-colors ${
+      className={`group/sb relative min-w-0 min-h-[2.5rem] overflow-hidden border-b border-b-[#0e0e0e] transition-colors ${
         dragOver ? 'bg-admin-info-bg/20' : ''
       }`}
       onDragOver={(e) => {
@@ -204,7 +204,7 @@ export function ScriptStoryboardCell({
       onDrop={handleDrop}
     >
       {/* Split buttons fill cell */}
-      <div className="absolute inset-0 flex opacity-0 group-hover/sb:opacity-100 transition-opacity">
+      <div className="absolute inset-0 flex">
         <button
           onClick={() => fileRef.current?.click()}
           className="flex-1 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-primary bg-admin-bg-hover/50 hover:bg-admin-bg-active transition-colors border-r border-admin-border-subtle"

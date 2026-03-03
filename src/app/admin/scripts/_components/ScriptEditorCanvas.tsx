@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check } from 'lucide-react';
+import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check, GripVertical } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -15,7 +15,9 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   arrayMove,
+  useSortable,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
@@ -50,6 +52,7 @@ interface Props {
   onDeleteReference: (refId: string) => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
   toolbarPortalRef?: React.RefObject<HTMLDivElement | null>;
+  onReorderScenes?: (orderedIds: string[]) => void;
 }
 
 export function ScriptEditorCanvas({
@@ -79,6 +82,7 @@ export function ScriptEditorCanvas({
   onDeleteReference,
   castMap,
   toolbarPortalRef,
+  onReorderScenes,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -86,6 +90,8 @@ export function ScriptEditorCanvas({
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [selectedBeatIds, setSelectedBeatIds] = useState<Set<string>>(new Set());
   const lastSelectedBeatId = useRef<string | null>(null);
+  const skipScrollRef = useRef(false);
+  const selectionModeRef = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -100,17 +106,40 @@ export function ScriptEditorCanvas({
     });
   };
 
-  // Scroll to active scene when it changes — container-relative so last scene can reach top
+  // Scroll to active scene when it changes — only from sidebar navigation
   useEffect(() => {
     if (!activeSceneId || !scrollRef.current) return;
-    const el = document.getElementById(`scene-${activeSceneId}`);
-    if (!el) return;
-    const container = scrollRef.current;
-    const headerH = colHeaderRef.current?.offsetHeight ?? 0;
-    const elTop = el.getBoundingClientRect().top;
-    const containerTop = container.getBoundingClientRect().top;
-    const scrollTarget = container.scrollTop + (elTop - containerTop) - headerH;
-    container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+    // Skip scroll when scene was selected from within the canvas (collapse toggle, etc.)
+    if (skipScrollRef.current) {
+      skipScrollRef.current = false;
+      return;
+    }
+    // Ensure scene is uncollapsed so beats are visible
+    setCollapsedScenes(prev => {
+      if (!prev.has(activeSceneId)) return prev;
+      const next = new Set(prev);
+      next.delete(activeSceneId);
+      return next;
+    });
+    // Defer scroll to next frame so uncollapse renders first
+    requestAnimationFrame(() => {
+      if (!scrollRef.current) return;
+      const container = scrollRef.current;
+      const colH = colHeaderRef.current?.offsetHeight ?? 0;
+      // Find the scene header — then get its outer scene wrapper (parent of sticky header + beats)
+      const sceneEl = document.getElementById(`scene-${activeSceneId}`);
+      if (!sceneEl) return;
+      // Walk up to the outer scene wrapper div (direct child of the scrollable container)
+      let outerWrapper = sceneEl.parentElement;
+      while (outerWrapper && outerWrapper.parentElement !== container) {
+        outerWrapper = outerWrapper.parentElement;
+      }
+      if (!outerWrapper) return;
+      const elTop = outerWrapper.getBoundingClientRect().top;
+      const containerTop = container.getBoundingClientRect().top;
+      const scrollTarget = container.scrollTop + (elTop - containerTop) - colH;
+      container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+    });
   }, [activeSceneId]);
 
   // Keyboard handler for batch delete, Cmd+Delete instant delete, and deselect
@@ -149,15 +178,38 @@ export function ScriptEditorCanvas({
       }
       if (e.key === 'Escape') {
         setSelectedBeatIds(new Set());
+        setSelectionMode(false);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedBeatIds, onDeleteBeat]);
 
-  // Click on canvas background clears selection
+  // Click on canvas background clears selection, exits selection mode,
+  // and snaps back if user clicked into dead space below content
   const handleCanvasClick = useCallback(() => {
     setSelectedBeatIds(new Set());
+    setSelectionMode(false);
+
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    // Find the last actual scene wrapper (direct child, not the spacer)
+    const children = Array.from(container.children);
+    // Last scene wrapper is the one before the bottom spacer div
+    const spacer = children[children.length - 1];
+    const lastContent = children[children.length - 2]; // scenes wrapper or empty state
+    if (!lastContent || !spacer) return;
+    const lastContentBottom = lastContent.getBoundingClientRect().bottom;
+    const containerTop = container.getBoundingClientRect().top;
+    const colH = colHeaderRef.current?.offsetHeight ?? 0;
+    const visibleTop = containerTop + colH;
+    // If the bottom of all content is above the midpoint of the visible area, snap back
+    const visibleHeight = container.clientHeight - colH;
+    if (lastContentBottom < visibleTop + visibleHeight * 0.4) {
+      // Scroll so the last content's bottom sits near the bottom of the visible area
+      const targetScroll = container.scrollTop - (visibleTop + visibleHeight * 0.8 - lastContentBottom);
+      container.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+    }
   }, []);
 
   const handleBeatSelect = useCallback((beatId: string, shiftKey: boolean, metaKey: boolean) => {
@@ -172,12 +224,12 @@ export function ScriptEditorCanvas({
         for (let i = from; i <= to; i++) {
           next.add(allBeatIds[i]);
         }
-      } else if (metaKey) {
-        // Toggle individual
+      } else if (metaKey || selectionModeRef.current) {
+        // Toggle individual — always toggle in selection mode (checkboxes)
         if (next.has(beatId)) next.delete(beatId);
         else next.add(beatId);
       } else {
-        // Single select
+        // Single select (outside selection mode)
         next.clear();
         next.add(beatId);
       }
@@ -195,6 +247,8 @@ export function ScriptEditorCanvas({
   scenesRef.current = scenes;
 
   const handleDragSelectStart = useCallback((beatId: string) => {
+    // In selection mode, checkboxes handle selection via onClick — skip drag-select
+    if (selectionModeRef.current) return;
     isDragSelecting.current = true;
     dragStartBeat.current = beatId;
     setSelectedBeatIds(new Set([beatId]));
@@ -237,6 +291,20 @@ export function ScriptEditorCanvas({
     const reordered = arrayMove(scene.beats.map(b => b.id), oldIndex, newIndex);
     onReorderBeats(sceneId, reordered);
   }, [scenes, onReorderBeats]);
+
+  const handleSceneDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onReorderScenes) return;
+    const oldIndex = scenes.findIndex(s => s.id === active.id);
+    const newIndex = scenes.findIndex(s => s.id === over.id);
+    const reordered = arrayMove(scenes.map(s => s.id), oldIndex, newIndex);
+    onReorderScenes(reordered);
+  }, [scenes, onReorderScenes]);
+
+  const sceneDndId = useId();
+  const sceneSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const visibleColumns = getVisibleColumns(columnConfig);
   const visibleKeys = getVisibleColumnKeys(columnConfig);
@@ -352,22 +420,37 @@ export function ScriptEditorCanvas({
   }, [selectedBeatIds, onDeleteBeat]);
 
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
-  const selectionActive = selectedBeatIds.size > 0;
+  const [selectionMode, _setSelectionMode] = useState(false);
+  const setSelectionMode = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
+    _setSelectionMode(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      selectionModeRef.current = next;
+      return next;
+    });
+  }, []);
   const allBeatIds = scenes.flatMap(s => s.beats.map(b => b.id));
   const allSelected = allBeatIds.length > 0 && allBeatIds.every(id => selectedBeatIds.has(id));
 
+  // 3-stage header checkbox: off → reveal checkboxes → select all → off
   const handleSelectAll = useCallback(() => {
-    const all = scenes.flatMap(s => s.beats.map(b => b.id));
-    if (all.every(id => selectedBeatIds.has(id))) {
-      setSelectedBeatIds(new Set());
-    } else {
+    if (!selectionMode) {
+      // Stage 1: enter selection mode (checkboxes visible, nothing selected)
+      setSelectionMode(true);
+    } else if (!allSelected) {
+      // Stage 2: select all
+      const all = scenes.flatMap(s => s.beats.map(b => b.id));
       setSelectedBeatIds(new Set(all));
+    } else {
+      // Stage 3: deselect all and exit selection mode
+      setSelectedBeatIds(new Set());
+      setSelectionMode(false);
     }
-  }, [scenes, selectedBeatIds]);
+  }, [selectionMode, allSelected, scenes]);
 
   const handleSelectScene = useCallback((sceneId: string) => {
     const scene = scenes.find(s => s.id === sceneId);
     if (!scene) return;
+    if (!selectionMode) setSelectionMode(true);
     const sceneBeatIds = scene.beats.map(b => b.id);
     const allSceneSelected = sceneBeatIds.every(id => selectedBeatIds.has(id));
     setSelectedBeatIds(prev => {
@@ -379,7 +462,7 @@ export function ScriptEditorCanvas({
       }
       return next;
     });
-  }, [scenes, selectedBeatIds]);
+  }, [scenes, selectedBeatIds, selectionMode]);
 
   // Reset confirm state when selection clears
   useEffect(() => {
@@ -390,30 +473,29 @@ export function ScriptEditorCanvas({
     <>
     {/* Portal: toolbar delete button when beats are selected */}
     {toolbarPortalRef?.current && selectedBeatIds.size > 0 && createPortal(
-      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-        <span className="text-[10px] text-admin-text-faint">{selectedBeatIds.size} selected</span>
+      <div className="relative w-8 h-8 flex-shrink-0" onClick={e => e.stopPropagation()}>
         {confirmBatchDelete ? (
-          <div className="flex items-center gap-0.5">
+          <div className="absolute right-0 top-0 flex items-center gap-0.5">
             <button
               onClick={e => { e.stopPropagation(); handleBatchDelete(); setConfirmBatchDelete(false); }}
-              className="text-admin-danger hover:text-red-300 p-1 transition-colors"
+              className="btn-ghost-danger w-8 h-8"
               title="Confirm delete"
             >
-              <Trash2 size={14} />
+              <Check size={14} strokeWidth={2} />
             </button>
             <button
               onClick={e => { e.stopPropagation(); setConfirmBatchDelete(false); }}
-              className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors"
+              className="btn-ghost w-8 h-8"
               title="Cancel"
             >
-              <X size={14} />
+              <X size={14} strokeWidth={2} />
             </button>
           </div>
         ) : (
           <button
             onClick={e => { e.stopPropagation(); setConfirmBatchDelete(true); }}
-            className="text-admin-text-ghost hover:text-admin-danger p-1 transition-colors"
-            title="Delete selected beats"
+            className="btn-ghost-danger w-8 h-8"
+            title={`Delete ${selectedBeatIds.size} selected`}
           >
             <Trash2 size={14} />
           </button>
@@ -487,16 +569,18 @@ export function ScriptEditorCanvas({
           No scenes yet. Add one to start writing.
         </div>
       ) : (
-        scenes.map((scene, sceneIdx) => {
+        <DndContext id={sceneDndId} sensors={sceneSensors} collisionDetection={closestCenter} onDragEnd={handleSceneDragEnd}>
+          <SortableContext items={scenes.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        {scenes.map((scene, sceneIdx) => {
           const isCollapsed = collapsedScenes.has(scene.id);
           const isEditing = editingSceneId === scene.id;
           const prevCollapsed = sceneIdx > 0 && collapsedScenes.has(scenes[sceneIdx - 1].id);
           const needsTopBorder = sceneIdx === 0 || !prevCollapsed;
           return (
+            <SortableSceneItem key={scene.id} sceneId={scene.id}>
+            {(sceneDragListeners) => (
             <div
-              key={scene.id}
-              className={activeSceneId === scene.id ? 'ring-1 ring-admin-accent/20' : ''}
-              onClick={(e) => { e.stopPropagation(); onSelectScene(scene.id); }}
+              onClick={(e) => { e.stopPropagation(); skipScrollRef.current = true; onSelectScene(scene.id); }}
             >
               {/* Scene heading — click to collapse/expand, sticky below column headers */}
               <div
@@ -506,40 +590,42 @@ export function ScriptEditorCanvas({
                   e.stopPropagation();
                   if (!isEditing) {
                     toggleCollapse(scene.id);
+                    skipScrollRef.current = true;
                     onSelectScene(scene.id);
                   }
                 }}
               >
                 <div className="group/scenegutter flex-shrink-0 w-10 flex items-center justify-center py-3 text-admin-text-faint">
                   {(() => {
-                    const sceneBeatIds = scene.beats.map(b => b.id);
-                    const allSceneSelected = sceneBeatIds.length > 0 && sceneBeatIds.every(id => selectedBeatIds.has(id));
-                    const showCheckbox = selectionActive;
-                    return showCheckbox ? (
-                      <div
-                        className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors cursor-pointer ${
-                          allSceneSelected
-                            ? 'bg-white border-white'
-                            : 'border-admin-text-ghost hover:border-admin-text-faint'
-                        }`}
-                        onClick={(e) => { e.stopPropagation(); handleSelectScene(scene.id); }}
-                      >
-                        {allSceneSelected && <Check size={10} className="text-black" strokeWidth={3} />}
-                      </div>
-                    ) : (
-                      <>
-                        <span className="group-hover/scenegutter:hidden">
-                          {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
-                        </span>
+                    if (selectionMode) {
+                      const sceneBeatIds = scene.beats.map(b => b.id);
+                      const allSceneSelected = sceneBeatIds.length > 0 && sceneBeatIds.every(id => selectedBeatIds.has(id));
+                      return (
                         <div
-                          className="hidden group-hover/scenegutter:flex"
+                          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors cursor-pointer ${
+                            allSceneSelected
+                              ? 'bg-white border-white'
+                              : 'border-admin-text-ghost hover:border-admin-text-faint'
+                          }`}
                           onClick={(e) => { e.stopPropagation(); handleSelectScene(scene.id); }}
                         >
-                          <div className="w-3.5 h-3.5 rounded-sm border border-admin-text-ghost hover:border-admin-text-faint flex items-center justify-center transition-colors cursor-pointer" />
+                          {allSceneSelected && <Check size={10} className="text-black" strokeWidth={3} />}
                         </div>
-                      </>
+                      );
+                    }
+                    // Normal mode: grip on hover — drag handle for scene reorder
+                    return (
+                      <div
+                        className="opacity-0 group-hover/scenegutter:opacity-100 transition-opacity cursor-grab"
+                        {...sceneDragListeners}
+                      >
+                        <GripVertical size={12} className="text-admin-text-ghost" />
+                      </div>
                     );
                   })()}
+                </div>
+                <div className="flex-shrink-0 text-admin-text-faint mr-1">
+                  {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <ScriptSceneHeader
@@ -593,7 +679,7 @@ export function ScriptEditorCanvas({
                         isSelected={selectedBeatIds.has(beat.id)}
                         onSelect={handleBeatSelect}
                         onDragSelectStart={handleDragSelectStart}
-                        selectionActive={selectionActive}
+                        selectionActive={selectionMode}
                         batchGenerating={generatingBeatIds.has(beat.id)}
                         onCancelGeneration={() => { abortRef.current = true; }}
                         scene={scene}
@@ -605,13 +691,45 @@ export function ScriptEditorCanvas({
                 </DndContext>
               )}
             </div>
+            )}
+            </SortableSceneItem>
           );
-        })
+        })}
+          </SortableContext>
+        </DndContext>
       )}
 
-      {/* Bottom padding */}
-      <div className="h-32" />
+      {/* Bottom padding — fill 90% of viewport so any scene can scroll to top */}
+      <div style={{ height: '95vh' }} />
     </div>
     </>
+  );
+}
+
+function SortableSceneItem({ sceneId, children }: {
+  sceneId: string;
+  children: (listeners: ReturnType<typeof useSortable>['listeners']) => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sceneId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 30 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {children(listeners)}
+    </div>
   );
 }

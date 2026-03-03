@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { Trash2, Check, X, GripVertical } from 'lucide-react';
+import { Check, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
@@ -59,7 +58,7 @@ export function ScriptBeatRow({
   characters,
   tags,
   onUpdate,
-  onDelete,
+  onDelete: _onDelete,
   onAddBeat,
   onAddScene,
   onUploadReference,
@@ -74,7 +73,7 @@ export function ScriptBeatRow({
   locations,
   onFrameChange,
   gridTemplate,
-  isOnly,
+  isOnly: _isOnly,
   beatNumber,
   isSelected,
   onSelect,
@@ -84,8 +83,6 @@ export function ScriptBeatRow({
   onCancelGeneration,
   castMap,
 }: Props) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
   const {
     attributes,
     listeners,
@@ -128,14 +125,8 @@ export function ScriptBeatRow({
           onSelect?.(beat.id, e.shiftKey, e.metaKey || e.ctrlKey);
         }}
       >
-        {/* Beat letter — visible when not in selection mode and not hovered */}
-        {!selectionActive && (
-          <span className="text-[10px] text-admin-text-ghost font-mono group-hover/beat:hidden">
-            {beatLetter(beatNumber)}
-          </span>
-        )}
-        {/* Checkbox — visible on hover (when not in selection mode) or always (when in selection mode) */}
-        <div className={`${selectionActive ? 'flex' : 'hidden group-hover/beat:flex'} items-center gap-1`}>
+        {selectionActive ? (
+          /* Selection mode: always show checkbox, no grip */
           <div
             className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
               isSelected
@@ -145,17 +136,23 @@ export function ScriptBeatRow({
           >
             {isSelected && <Check size={10} className="text-black" strokeWidth={3} />}
           </div>
-          {/* Reorder grip */}
-          <div
-            data-grip
-            {...attributes}
-            {...listeners}
-            className="flex items-center cursor-grab"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <GripVertical size={12} className="text-admin-text-ghost" />
-          </div>
-        </div>
+        ) : (
+          /* Normal mode: beat letter, grip on hover */
+          <>
+            <span className="text-[10px] text-admin-text-ghost font-mono group-hover/beat:hidden">
+              {beatLetter(beatNumber)}
+            </span>
+            <div
+              data-grip
+              {...attributes}
+              {...listeners}
+              className="hidden group-hover/beat:flex items-center cursor-grab"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <GripVertical size={12} className="text-admin-text-ghost" />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Content grid */}
@@ -248,37 +245,6 @@ export function ScriptBeatRow({
         </div>
       </div>
 
-      {/* Delete with confirm */}
-      {!isOnly && (
-        <div className="absolute right-2 top-2 opacity-0 group-hover/beat:opacity-100 transition-all flex items-center gap-0.5">
-          {confirmDelete ? (
-            <>
-              <button
-                onClick={() => onDelete(beat.id)}
-                className="text-admin-danger hover:text-red-300 p-1 transition-colors"
-                title="Confirm delete"
-              >
-                <Check size={12} />
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors"
-                title="Cancel"
-              >
-                <X size={12} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-admin-text-ghost hover:text-admin-danger p-1 transition-colors"
-              title="Delete beat"
-            >
-              <Trash2 size={12} />
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
