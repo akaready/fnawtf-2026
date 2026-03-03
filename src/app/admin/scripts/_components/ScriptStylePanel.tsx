@@ -46,6 +46,26 @@ export const STYLE_PRESETS: Record<StoryboardStylePreset, { label: string; promp
     prompt: 'Cinematic 35mm film photograph with the texture and character of analog filmmaking. Shallow depth of field with creamy bokeh from a fast prime lens (f/1.4–f/2.0). Rich, warm color grading reminiscent of golden hour — ambers, deep teals in the shadows, warm highlights. Natural available light with motivated practical sources visible in frame. Subtle film grain texture throughout. Anamorphic lens characteristics — gentle horizontal flares, slightly oval bokeh, mild barrel distortion at edges. Atmospheric haze or dust particles catching light. Feels like a still frame pulled from a Terrence Malick or Roger Deakins-shot film. Contemplative mood, cinematic aspect ratio framing with purposeful negative space. NEVER include any text, letters, words, captions, labels, titles, or watermarks of any kind.',
     image: '/images/storyboard-presets/cinematic.png',
   },
+  watercolor: {
+    label: 'Watercolor',
+    prompt: 'Soft watercolor painting with translucent washes of color bleeding into wet paper. Loose, expressive brushwork with visible paper texture. Colors blend organically at edges with beautiful granulation effects. Warm and cool tones coexist naturally. Composition is suggested rather than rigidly defined — some areas left as white paper for breathing room. Feels like a fine art storyboard from a Hayao Miyazaki pre-production bible. Dreamy, atmospheric, with a handmade quality that digital art cannot replicate. NEVER include any text, letters, words, captions, labels, titles, or watermarks of any kind.',
+    image: '/images/storyboard-presets/watercolor.png',
+  },
+  noir: {
+    label: 'Noir',
+    prompt: 'High-contrast black and white film noir aesthetic. Deep, inky blacks and bright, blown-out highlights with minimal midtones. Dramatic chiaroscuro lighting — hard shadows cast by venetian blinds, streetlamps, or single overhead bulbs. Moody, atmospheric compositions with strong diagonal lines and Dutch angles. Smoke, rain, or fog catching shafts of light. Feels like a still from a 1940s detective film — Double Indemnity, The Third Man, or Touch of Evil. Gritty film grain, slightly soft focus. NEVER include any text, letters, words, captions, labels, titles, or watermarks of any kind.',
+    image: '/images/storyboard-presets/noir.png',
+  },
+  documentary: {
+    label: 'Documentary',
+    prompt: 'Naturalistic documentary photography with an observational, fly-on-the-wall quality. Available light only — no studio setups. Slightly desaturated, true-to-life color palette. Medium depth of field keeping subject and environment both legible. Candid, unposed compositions that feel captured rather than constructed. Subtle motion blur on peripheral elements suggesting real-time observation. Feels like a frame from a Frederick Wiseman or Werner Herzog documentary — honest, unflinching, deeply human. Mild lens distortion from a wide-angle zoom. NEVER include any text, letters, words, captions, labels, titles, or watermarks of any kind.',
+    image: '/images/storyboard-presets/documentary.png',
+  },
+  anime: {
+    label: 'Anime',
+    prompt: 'High-quality anime illustration in the style of modern theatrical anime production. Clean, precise linework with consistent line weights. Vibrant, saturated color palette with beautiful gradient shading. Detailed backgrounds with atmospheric perspective — lush environments rendered with care. Characters have expressive features with large, detailed eyes. Dynamic lighting with visible light rays, lens flares, and bloom effects. Feels like a key frame from a Studio Ghibli, Makoto Shinkai, or Ufotable production. Rich environmental storytelling with attention to small details. NEVER include any text, letters, words, captions, labels, titles, or watermarks of any kind.',
+    image: '/images/storyboard-presets/anime.png',
+  },
 };
 
 const PRESET_KEYS = Object.keys(STYLE_PRESETS) as StoryboardStylePreset[];

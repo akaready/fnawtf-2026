@@ -84,6 +84,7 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
         script_id: scriptId,
         name: 'New Location',
         description: null,
+        color: '#38bdf8',
         sort_order: locations.length,
         global_location_id: null,
         created_at: new Date().toISOString(),

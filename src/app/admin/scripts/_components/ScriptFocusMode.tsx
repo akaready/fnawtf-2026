@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useId, useRef } from 'react';
-import { ArrowLeft, Users, Hash, MapPin, Settings, CopyPlus, Save, Loader2, ChevronRight, ChevronDown, MoreVertical, Paintbrush, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Users, Hash, MapPin, Settings, CopyPlus, Upload, Save, Loader2, ChevronRight, ChevronDown, MoreVertical, Paintbrush, Sparkles, X } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -21,10 +21,11 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
+import { formatScriptVersion } from '@/types/scripts';
 import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptSceneRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact } from '@/types/scripts';
 
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
-function versionColor(v: number): string { return VERSION_COLORS[(v - 1) % VERSION_COLORS.length]; }
+function versionColor(majorVersion: number): string { return VERSION_COLORS[majorVersion % VERSION_COLORS.length]; }
 
 interface Props {
   scenes: ComputedScene[];
@@ -55,12 +56,15 @@ interface Props {
   onShowLocations: () => void;
   onShowStyle: () => void;
   onShowSettings: () => void;
+  onPublish: () => void;
   onNewVersion: () => void;
   onSave: () => void;
   saving?: boolean;
+  publishing?: boolean;
   versioning?: boolean;
-  scriptVersion: number;
-  scriptStatus: string;
+  scriptMajorVersion: number;
+  scriptMinorVersion: number;
+  scriptIsPublished: boolean;
   exiting?: boolean;
   onExit: () => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
@@ -95,12 +99,15 @@ export function ScriptFocusMode({
   onShowLocations,
   onShowStyle,
   onShowSettings,
+  onPublish,
   onNewVersion,
   onSave,
   saving,
+  publishing,
   versioning,
-  scriptVersion,
-  scriptStatus,
+  scriptMajorVersion,
+  scriptMinorVersion,
+  scriptIsPublished,
   exiting,
   onExit,
   castMap,
@@ -275,18 +282,19 @@ export function ScriptFocusMode({
         <div ref={menuRef} className="overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ maxHeight: menuOpen ? '3rem' : '0px', opacity: menuOpen ? 1 : 0 }}>
           <div className="h-[3rem] flex items-center justify-between px-4 border-t border-admin-border-subtle">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full border" style={{ borderColor: versionColor(scriptVersion) + '40', backgroundColor: versionColor(scriptVersion) + '15', color: versionColor(scriptVersion) }}>v{String(scriptVersion).padStart(2, '0')}</span>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize border ${scriptStatus === 'locked' ? 'border-admin-success-border bg-admin-success-bg text-admin-success' : scriptStatus === 'review' ? 'border-admin-info-border bg-admin-info-bg text-admin-info' : 'border-admin-border bg-admin-bg-active text-admin-text-secondary'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${scriptStatus === 'locked' ? 'bg-admin-success' : scriptStatus === 'review' ? 'bg-admin-info' : 'bg-admin-text-faint'}`} />{scriptStatus}
+              <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full border" style={{ borderColor: versionColor(scriptMajorVersion) + '40', backgroundColor: versionColor(scriptMajorVersion) + '15', color: versionColor(scriptMajorVersion) }}>{formatScriptVersion(scriptMajorVersion, scriptMinorVersion, scriptIsPublished)}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${scriptIsPublished ? 'border-admin-success-border bg-admin-success-bg text-admin-success' : 'border-admin-border bg-admin-bg-active text-admin-text-secondary'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${scriptIsPublished ? 'bg-admin-success' : 'bg-admin-text-faint'}`} />{scriptIsPublished ? 'Published' : 'Draft'}
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => { onShowCharacters(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Characters"><Users size={14} /><span className="hidden sm:inline">Characters</span></button>
-              <button onClick={() => { onShowLocations(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Locations"><MapPin size={14} /><span className="hidden sm:inline">Locations</span></button>
-              <button onClick={() => { onShowTags(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Tags"><Hash size={14} /><span className="hidden sm:inline">Tags</span></button>
-              <button onClick={() => { onShowStyle(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Style"><Paintbrush size={14} /><span className="hidden sm:inline">Style</span></button>
+              <button onClick={() => { onShowCharacters(); setMenuOpen(false); }} className="text-admin-toolbar-blue hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Characters"><Users size={14} /><span className="hidden sm:inline">Characters</span></button>
+              <button onClick={() => { onShowLocations(); setMenuOpen(false); }} className="text-admin-toolbar-green hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Locations"><MapPin size={14} /><span className="hidden sm:inline">Locations</span></button>
+              <button onClick={() => { onShowTags(); setMenuOpen(false); }} className="text-admin-toolbar-orange hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Tags"><Hash size={14} /><span className="hidden sm:inline">Tags</span></button>
+              <button onClick={() => { onShowStyle(); setMenuOpen(false); }} className="text-admin-toolbar-violet hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Style"><Paintbrush size={14} /><span className="hidden sm:inline">Style</span></button>
               <button onClick={() => { onShowSettings(); setMenuOpen(false); }} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs" title="Settings"><Settings size={14} /><span className="hidden sm:inline">Settings</span></button>
-              <button onClick={() => { onNewVersion(); setMenuOpen(false); }} disabled={versioning} className="p-1.5 sm:px-2.5 sm:py-1.5 rounded border transition-colors hover:bg-admin-bg-hover flex items-center gap-1.5 text-xs" style={{ borderColor: versionColor(scriptVersion) + '40', color: versionColor(scriptVersion) }} title="New Version">{versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}<span className="hidden sm:inline">Version</span></button>
+              <button onClick={() => { onPublish(); setMenuOpen(false); }} disabled={publishing || scriptIsPublished} className="text-admin-text-muted hover:text-admin-text-primary p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-hover transition-colors flex items-center gap-1.5 text-xs disabled:opacity-40" title={scriptIsPublished ? 'Already published' : 'Publish'}>{publishing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}<span className="hidden sm:inline">Publish</span></button>
+              <button onClick={() => { onNewVersion(); setMenuOpen(false); }} disabled={versioning} className="p-1.5 sm:px-2.5 sm:py-1.5 rounded border transition-colors hover:bg-admin-bg-hover flex items-center gap-1.5 text-xs" style={{ borderColor: versionColor(scriptMajorVersion) + '40', color: versionColor(scriptMajorVersion) }} title="New Version">{versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}<span className="hidden sm:inline">Version</span></button>
               <button onClick={() => { onSave(); setMenuOpen(false); }} disabled={saving} className="bg-white text-black p-1.5 sm:px-2.5 sm:py-1.5 rounded hover:bg-admin-bg-base hover:text-white hover:ring-1 hover:ring-white transition-all flex items-center gap-1.5 text-xs" title="Save">{saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}<span className="hidden sm:inline">Save</span></button>
             </div>
           </div>

@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, Upload } from 'lucide-react';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   updateScript, createScene, updateScene, deleteScene, reorderScenes,
   createBeat, updateBeat, deleteBeat, reorderBeats,
-  createScriptVersion, getScriptVersions,
+  createScriptVersion, publishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
   getScriptCastMap,
@@ -24,6 +26,7 @@ import { ScriptLocationsPanel } from './ScriptLocationsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
 import { ScriptStylePanel } from './ScriptStylePanel';
 import { ScriptFocusMode } from './ScriptFocusMode';
+import { formatScriptVersion } from '@/types/scripts';
 import type {
   ScriptRow, ScriptSceneRow, ScriptBeatRow,
   ScriptCharacterRow, ScriptTagRow, ScriptLocationRow,
@@ -47,8 +50,8 @@ interface Props {
 const VERSION_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6',
 ];
-function versionColor(version: number): string {
-  return VERSION_COLORS[(version - 1) % VERSION_COLORS.length];
+function versionColor(majorVersion: number): string {
+  return VERSION_COLORS[majorVersion % VERSION_COLORS.length];
 }
 
 export function ScriptEditorClient({
@@ -69,7 +72,6 @@ export function ScriptEditorClient({
   const [locations, setLocations] = useState(initialLocations);
   const [references, setReferences] = useState(initialReferences);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(scenes[0]?.id ?? null);
-  const [saving, setSaving] = useState(false);
   const [showCharacters, setShowCharacters] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
@@ -83,8 +85,9 @@ export function ScriptEditorClient({
   const [showFocusMode, setShowFocusMode] = useState(false);
   const [focusTransition, setFocusTransition] = useState<'idle' | 'pushing-out' | 'bringing-in' | 'active' | 'pushing-focus-out' | 'bringing-back'>('idle');
   const [versioning, setVersioning] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
-  const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string }[]>([]);
+  const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean }[]>([]);
   const router = useRouter();
 
   const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false };
@@ -151,6 +154,27 @@ export function ScriptEditorClient({
 
   // Debounced save refs
   const saveTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Ref to capture latest beats for the autoSave closure
+  const beatsRef = useRef(beats);
+  useEffect(() => { beatsRef.current = beats; }, [beats]);
+
+  const autoSave = useAutoSave(async () => {
+    // Flush all pending beat debounce timers
+    for (const [beatId, timer] of saveTimers.current.entries()) {
+      clearTimeout(timer);
+      const beat = beatsRef.current.find(b => b.id === beatId);
+      if (beat) {
+        await updateBeat(beatId, {
+          audio_content: beat.audio_content,
+          visual_content: beat.visual_content,
+          notes_content: beat.notes_content,
+        });
+      }
+    }
+    saveTimers.current.clear();
+    await updateScript(script.id, { updated_at: new Date().toISOString() });
+  });
 
   // Compute scene numbers
   const beatsByScene: Record<string, ScriptBeatRow[]> = {};
@@ -251,13 +275,14 @@ export function ScriptEditorClient({
 
   const handleUpdateBeat = useCallback((beatId: string, field: string, value: string) => {
     setBeats(prev => prev.map(b => b.id === beatId ? { ...b, [field]: value } : b));
+    autoSave.trigger();
     const existing = saveTimers.current.get(beatId);
     if (existing) clearTimeout(existing);
     saveTimers.current.set(beatId, setTimeout(async () => {
       await updateBeat(beatId, { [field]: value });
       saveTimers.current.delete(beatId);
     }, 1500));
-  }, []);
+  }, [autoSave]);
 
   const handleDeleteBeat = useCallback(async (beatId: string) => {
     await deleteBeat(beatId);
@@ -313,40 +338,10 @@ export function ScriptEditorClient({
     }
   }, []);
 
-  // ── Save all (flush pending beat debounces + touch updated_at) ──
+  // ── Save all (flush via autoSave) ──
   const handleSaveAll = useCallback(async () => {
-    setSaving(true);
-    try {
-      for (const [beatId, timer] of saveTimers.current.entries()) {
-        clearTimeout(timer);
-        const beat = beats.find(b => b.id === beatId);
-        if (beat) {
-          await updateBeat(beatId, {
-            audio_content: beat.audio_content,
-            visual_content: beat.visual_content,
-            notes_content: beat.notes_content,
-          });
-        }
-      }
-      saveTimers.current.clear();
-      await updateScript(script.id, { updated_at: new Date().toISOString() });
-    } finally {
-      setSaving(false);
-    }
-  }, [beats, script.id]);
-
-  // ── Auto-save: flush pending changes every 30 seconds ──
-  const handleSaveAllRef = useRef(handleSaveAll);
-  handleSaveAllRef.current = handleSaveAll;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (saveTimers.current.size > 0) {
-        handleSaveAllRef.current();
-      }
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, []);
+    await autoSave.flush();
+  }, [autoSave]);
 
   // Warn before unload if there are unsaved changes
   useEffect(() => {
@@ -368,6 +363,18 @@ export function ScriptEditorClient({
       router.push(`/admin/scripts/${newId}`);
     } finally {
       setVersioning(false);
+    }
+  }, [handleSaveAll, script.id, router]);
+
+  // ── Publish (create client-visible version) ──
+  const handlePublish = useCallback(async () => {
+    setPublishing(true);
+    try {
+      await handleSaveAll();
+      const newId = await publishScriptVersion(script.id);
+      router.push(`/admin/scripts/${newId}`);
+    } finally {
+      setPublishing(false);
     }
   }, [handleSaveAll, script.id, router]);
 
@@ -436,12 +443,14 @@ export function ScriptEditorClient({
           onShowLocations={() => setShowLocations(true)}
           onShowStyle={() => setShowStyle(true)}
           onShowSettings={() => setShowSettings(true)}
+          onPublish={handlePublish}
           onNewVersion={handleNewVersion}
           onSave={handleSaveAll}
-          saving={saving}
+          publishing={publishing}
           versioning={versioning}
-          scriptVersion={script.version}
-          scriptStatus={script.status}
+          scriptMajorVersion={script.major_version}
+          scriptMinorVersion={script.minor_version}
+          scriptIsPublished={script.is_published}
           exiting={focusTransition === 'pushing-focus-out'}
           onExit={exitFocusMode}
           castMap={castMap}
@@ -480,15 +489,15 @@ export function ScriptEditorClient({
                 <button
                   onClick={() => setVersionPickerOpen(prev => !prev)}
                   className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold rounded-full border transition-colors"
-                  style={{ borderColor: versionColor(script.version) + '40', backgroundColor: versionColor(script.version) + '15', color: versionColor(script.version) }}
+                  style={{ borderColor: versionColor(script.major_version) + '40', backgroundColor: versionColor(script.major_version) + '15', color: versionColor(script.major_version) }}
                 >
-                  v{String(script.version).padStart(2, '0')}
+                  {formatScriptVersion(script.major_version, script.minor_version, script.is_published)}
                   <ChevronDown size={10} />
                 </button>
                 {versionPickerOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setVersionPickerOpen(false)} />
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[180px] py-1 animate-dropdown-in">
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[220px] py-1 animate-dropdown-in">
                       {versions.map(v => (
                         <button
                           key={v.id}
@@ -496,19 +505,22 @@ export function ScriptEditorClient({
                             setVersionPickerOpen(false);
                             if (v.id !== script.id) router.push(`/admin/scripts/${v.id}`);
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-xs flex items-center justify-between transition-colors ${
+                          className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
                             v.id === script.id
                               ? 'bg-admin-bg-active text-admin-text-primary'
                               : 'text-admin-text-secondary hover:bg-admin-bg-hover'
-                          }`}
+                          } ${!v.is_published ? 'pl-6' : ''}`}
                         >
                           <span
                             className="font-mono font-bold px-1.5 py-0.5 rounded-full text-[10px]"
-                            style={{ backgroundColor: versionColor(v.version) + '20', color: versionColor(v.version) }}
+                            style={{ backgroundColor: versionColor(v.major_version) + '20', color: versionColor(v.major_version) }}
                           >
-                            v{String(v.version).padStart(2, '0')}
+                            {formatScriptVersion(v.major_version, v.minor_version, v.is_published)}
                           </span>
-                          <span className="text-admin-text-ghost">{new Date(v.created_at).toLocaleDateString()}</span>
+                          {v.is_published && (
+                            <span className="text-[10px] font-medium text-admin-success">Published</span>
+                          )}
+                          <span className="text-admin-text-ghost ml-auto">{new Date(v.created_at).toLocaleDateString()}</span>
                         </button>
                       ))}
                       {versions.length === 0 && (
@@ -518,63 +530,57 @@ export function ScriptEditorClient({
                   </>
                 )}
               </div>
-              {/* Status pill */}
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize border ${
-                script.status === 'locked' ? 'border-admin-success-border bg-admin-success-bg text-admin-success'
-                  : script.status === 'review' ? 'border-admin-info-border bg-admin-info-bg text-admin-info'
+              {/* Draft / Published pill */}
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border ${
+                script.is_published
+                  ? 'border-admin-success-border bg-admin-success-bg text-admin-success'
                   : 'border-admin-border bg-admin-bg-active text-admin-text-secondary'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${
-                  script.status === 'locked' ? 'bg-admin-success'
-                    : script.status === 'review' ? 'bg-admin-info'
-                    : 'bg-admin-text-faint'
+                  script.is_published ? 'bg-admin-success' : 'bg-admin-text-faint'
                 }`} />
-                {script.status}
+                {script.is_published ? 'Published' : 'Draft'}
               </span>
             </div>
         }
         rightContent={
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowCharacters(true)} className="btn-secondary p-2" title="Characters">
-              <Users size={14} />
+            <SaveDot status={autoSave.status} />
+            <button
+              onClick={handlePublish}
+              disabled={publishing || script.is_published}
+              className="btn-ghost p-2"
+              title={script.is_published ? 'Already published' : 'Publish version'}
+            >
+              {publishing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
             </button>
-            <button onClick={() => setShowLocations(true)} className="btn-secondary p-2" title="Locations">
-              <MapPin size={14} />
-            </button>
-            <button onClick={() => setShowTags(true)} className="btn-secondary p-2" title="Tags">
-              <Hash size={14} />
-            </button>
-            <button onClick={() => setShowStyle(true)} className="btn-secondary p-2" title="Style">
-              <Paintbrush size={14} />
+            <button
+              onClick={handleNewVersion}
+              disabled={versioning}
+              className="btn-ghost p-2"
+              style={{ color: versionColor(script.major_version) }}
+              title="New version"
+            >
+              {versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}
             </button>
             <button onClick={() => setShowSettings(true)} className="btn-secondary p-2" title="Settings">
               <Settings size={14} />
             </button>
-            <button onClick={handleNewVersion} disabled={versioning} className="p-2 rounded-admin-md border transition-colors hover:bg-admin-bg-hover" style={{ borderColor: versionColor(script.version) + '40', color: versionColor(script.version) }} title="New version">
-              {versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}
-            </button>
             <button
               onClick={handleSaveAll}
-              disabled={saving}
-              className="btn-primary px-4 py-1.5 text-sm flex items-center gap-1.5"
+              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
             >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              <Save size={13} />
               Save
             </button>
           </div>
         }
       />
 
-      {/* Toolbar row — focus + sidebar toggle (left) + column toggles (right) */}
-      <div className="flex-shrink-0 h-[3rem] flex items-center justify-between px-4 border-b border-admin-border bg-admin-bg-inset">
+      {/* Toolbar row — 3-zone: left (sidebar+focus), center (column toggles), right (panels) */}
+      <div className="flex-shrink-0 h-[3rem] flex items-center px-4 border-b border-admin-border bg-admin-bg-inset">
+        {/* Left zone */}
         <div className="flex items-center gap-1">
-          <button
-            onClick={enterFocusMode}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-            title="Focus mode"
-          >
-            <Expand size={16} />
-          </button>
           <button
             onClick={() => setShowSidebar(prev => !prev)}
             className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
@@ -582,8 +588,33 @@ export function ScriptEditorClient({
           >
             {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
           </button>
+          <button
+            onClick={enterFocusMode}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            title="Focus mode"
+          >
+            <Expand size={16} />
+          </button>
         </div>
-        <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} />
+        {/* Center zone */}
+        <div className="flex-1 flex justify-center">
+          <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} />
+        </div>
+        {/* Right zone — panel toggles */}
+        <div className="flex items-center gap-1">
+          <button onClick={() => setShowCharacters(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-blue hover:bg-admin-bg-hover" title="Characters">
+            <Users size={16} />
+          </button>
+          <button onClick={() => setShowLocations(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-green hover:bg-admin-bg-hover" title="Locations">
+            <MapPin size={16} />
+          </button>
+          <button onClick={() => setShowTags(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-orange hover:bg-admin-bg-hover" title="Tags">
+            <Hash size={16} />
+          </button>
+          <button onClick={() => setShowStyle(true)} className="p-1.5 rounded transition-colors text-admin-toolbar-violet hover:bg-admin-bg-hover" title="Style">
+            <Paintbrush size={16} />
+          </button>
+        </div>
       </div>
       </div>
 

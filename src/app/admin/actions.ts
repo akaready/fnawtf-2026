@@ -2196,9 +2196,10 @@ export async function getScriptVersions(scriptGroupId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('scripts')
-    .select('id, title, version, status, created_at, content_mode')
+    .select('id, title, version, status, created_at, content_mode, major_version, minor_version, is_published')
     .eq('script_group_id', scriptGroupId)
-    .order('version', { ascending: false });
+    .order('major_version', { ascending: false })
+    .order('minor_version', { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
 }
@@ -2501,7 +2502,11 @@ export async function deleteBeatReference(id: string) {
 
 // ── Script Versioning ──────────────────────────────────────────────────
 
-export async function createScriptVersion(scriptId: string): Promise<string> {
+/** Shared duplication helper — clones script + scenes/beats/characters/tags/locations */
+async function duplicateScriptCore(
+  scriptId: string,
+  overrides: Record<string, unknown>,
+): Promise<string> {
   const { supabase, userId } = await requireAuth();
 
   // 1. Fetch current script
@@ -2522,7 +2527,7 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
   ]);
 
   const scenes = scenesRes.data ?? [];
-  const sceneIds = scenes.map((s: { id: string }) => s.id);
+  const sceneIds = scenes.map((sc: { id: string }) => sc.id);
 
   // Fetch beats for all scenes
   let allBeats: Record<string, unknown>[] = [];
@@ -2535,7 +2540,7 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
     allBeats = beatsData ?? [];
   }
 
-  // 3. Create new script with bumped version
+  // 3. Create new script with overrides
   const { data: newScript, error: newScriptErr } = await supabase
     .from('scripts')
     .insert({
@@ -2547,7 +2552,11 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
       notes: s.notes,
       scratch_content: s.scratch_content ?? null,
       content_mode: s.content_mode ?? 'table',
+      major_version: s.major_version ?? 0,
+      minor_version: s.minor_version ?? 1,
+      is_published: false,
       created_by: userId,
+      ...overrides,
     } as never)
     .select('id')
     .single();
@@ -2557,21 +2566,21 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
   // 4. Clone scenes — map old scene IDs to new ones
   const sceneIdMap = new Map<string, string>();
   for (const scene of scenes) {
-    const s = scene as Record<string, unknown>;
+    const sc = scene as Record<string, unknown>;
     const { data: newScene, error: sceneErr } = await supabase
       .from('script_scenes')
       .insert({
         script_id: newScriptId,
-        sort_order: s.sort_order,
-        location_name: s.location_name,
-        time_of_day: s.time_of_day,
-        int_ext: s.int_ext,
-        scene_notes: s.scene_notes,
+        sort_order: sc.sort_order,
+        location_name: sc.location_name,
+        time_of_day: sc.time_of_day,
+        int_ext: sc.int_ext,
+        scene_notes: sc.scene_notes,
       } as never)
       .select('id')
       .single();
     if (sceneErr || !newScene) throw new Error(sceneErr?.message ?? 'Failed to clone scene');
-    sceneIdMap.set(s.id as string, (newScene as { id: string }).id);
+    sceneIdMap.set(sc.id as string, (newScene as { id: string }).id);
   }
 
   // 5. Clone beats with mapped scene IDs
@@ -2596,7 +2605,9 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
       name: c.name,
       description: c.description,
       color: c.color,
+      character_type: c.character_type,
       sort_order: c.sort_order,
+      max_cast_slots: c.max_cast_slots,
     } as never);
   }
 
@@ -2620,17 +2631,19 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
       script_id: newScriptId,
       name: l.name,
       description: l.description,
+      color: l.color,
       sort_order: l.sort_order,
+      global_location_id: l.global_location_id,
     } as never).select('id').single();
     if (newLoc) locationIdMap.set(l.id as string, (newLoc as { id: string }).id);
   }
 
   // Remap location_id on cloned scenes
   for (const scene of scenes) {
-    const s = scene as Record<string, unknown>;
-    const oldLocId = s.location_id as string | null;
+    const sc = scene as Record<string, unknown>;
+    const oldLocId = sc.location_id as string | null;
     if (oldLocId && locationIdMap.has(oldLocId)) {
-      const newSceneId = sceneIdMap.get(s.id as string);
+      const newSceneId = sceneIdMap.get(sc.id as string);
       if (newSceneId) {
         await supabase.from('script_scenes').update({ location_id: locationIdMap.get(oldLocId) } as never).eq('id', newSceneId);
       }
@@ -2639,6 +2652,72 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
 
   revalidatePath('/admin/scripts');
   return newScriptId;
+}
+
+/** Create a new draft version (same major, bumped minor) */
+export async function createScriptVersion(scriptId: string): Promise<string> {
+  const { supabase } = await requireAuth();
+
+  // Fetch current script to get group + major version
+  const { data: script, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('script_group_id, major_version, version')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
+  const s = script as Record<string, unknown>;
+  const groupId = s.script_group_id as string;
+  const major = (s.major_version as number) ?? 0;
+
+  // Find max minor_version for this group+major
+  const { data: maxRow } = await supabase
+    .from('scripts')
+    .select('minor_version')
+    .eq('script_group_id', groupId)
+    .eq('major_version', major)
+    .order('minor_version', { ascending: false })
+    .limit(1)
+    .single();
+  const nextMinor = ((maxRow as Record<string, unknown> | null)?.minor_version as number ?? 0) + 1;
+
+  return duplicateScriptCore(scriptId, {
+    major_version: major,
+    minor_version: nextMinor,
+    is_published: false,
+    version: ((s.version as number) ?? 1) + 1,
+  });
+}
+
+/** Publish: duplicate at next major version (client-visible) */
+export async function publishScriptVersion(scriptId: string): Promise<string> {
+  const { supabase } = await requireAuth();
+
+  // Fetch current script to get group
+  const { data: script, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('script_group_id, version')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
+  const s = script as Record<string, unknown>;
+  const groupId = s.script_group_id as string;
+
+  // Find max major_version in group
+  const { data: maxRow } = await supabase
+    .from('scripts')
+    .select('major_version')
+    .eq('script_group_id', groupId)
+    .order('major_version', { ascending: false })
+    .limit(1)
+    .single();
+  const nextMajor = ((maxRow as Record<string, unknown> | null)?.major_version as number ?? 0) + 1;
+
+  return duplicateScriptCore(scriptId, {
+    major_version: nextMajor,
+    minor_version: 0,
+    is_published: true,
+    version: ((s.version as number) ?? 1) + 1,
+  });
 }
 
 // ── Storyboard Styles ────────────────────────────────────────────────
@@ -3664,9 +3743,9 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
 // ── Create Mode Version (switch between scratchpad ↔ table) ──
 
 export async function createModeVersion(scriptId: string, targetMode: ContentMode): Promise<string> {
-  const { supabase, userId } = await requireAuth();
+  const { supabase } = await requireAuth();
 
-  // 1. Fetch current script
+  // 1. Fetch current script for version info + scratch content generation
   const { data: script, error: scriptErr } = await supabase
     .from('scripts')
     .select('*')
@@ -3674,6 +3753,8 @@ export async function createModeVersion(scriptId: string, targetMode: ContentMod
     .single();
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
+  const groupId = s.script_group_id as string;
+  const major = (s.major_version as number) ?? 0;
 
   // 2. If switching to scratchpad, flatten existing beats into scratch_content
   let scratchContent = (s.scratch_content as string) ?? '';
@@ -3708,76 +3789,24 @@ export async function createModeVersion(scriptId: string, targetMode: ContentMod
     }
   }
 
-  // 3. Create new script with target mode
-  const { data: newScript, error: newScriptErr } = await supabase
+  // 3. Find max minor_version for this group+major
+  const { data: maxRow } = await supabase
     .from('scripts')
-    .insert({
-      title: s.title,
-      project_id: s.project_id,
-      script_group_id: s.script_group_id,
-      status: 'draft',
-      version: ((s.version as number) ?? 1) + 1,
-      notes: s.notes,
-      scratch_content: scratchContent || null,
-      content_mode: targetMode,
-      created_by: userId,
-    } as never)
-    .select('id')
+    .select('minor_version')
+    .eq('script_group_id', groupId)
+    .eq('major_version', major)
+    .order('minor_version', { ascending: false })
+    .limit(1)
     .single();
-  if (newScriptErr || !newScript) throw new Error(newScriptErr?.message ?? 'Failed to create version');
-  const newScriptId = (newScript as { id: string }).id;
+  const nextMinor = ((maxRow as Record<string, unknown> | null)?.minor_version as number ?? 0) + 1;
 
-  // 4. Clone characters
-  const { data: chars } = await supabase
-    .from('script_characters')
-    .select('*')
-    .eq('script_id', scriptId)
-    .order('sort_order');
-  for (const ch of (chars ?? []) as Record<string, unknown>[]) {
-    await supabase.from('script_characters').insert({
-      script_id: newScriptId,
-      name: ch.name,
-      description: ch.description,
-      color: ch.color,
-      character_type: ch.character_type,
-      sort_order: ch.sort_order,
-      max_cast_slots: ch.max_cast_slots,
-    } as never);
-  }
-
-  // 5. Clone tags
-  const { data: tags } = await supabase
-    .from('script_tags')
-    .select('*')
-    .eq('script_id', scriptId)
-    .order('sort_order');
-  for (const tag of (tags ?? []) as Record<string, unknown>[]) {
-    await supabase.from('script_tags').insert({
-      script_id: newScriptId,
-      name: tag.name,
-      slug: tag.slug,
-      category: tag.category,
-      color: tag.color,
-    } as never);
-  }
-
-  // 6. Clone locations
-  const { data: locs } = await supabase
-    .from('script_locations')
-    .select('*')
-    .eq('script_id', scriptId)
-    .order('sort_order');
-  for (const loc of (locs ?? []) as Record<string, unknown>[]) {
-    await supabase.from('script_locations').insert({
-      script_id: newScriptId,
-      name: loc.name,
-      description: loc.description,
-      color: loc.color,
-      sort_order: loc.sort_order,
-      global_location_id: loc.global_location_id,
-    } as never);
-  }
-
-  revalidatePath('/admin/scripts');
-  return newScriptId;
+  // 4. Use shared duplication with mode + version overrides
+  return duplicateScriptCore(scriptId, {
+    content_mode: targetMode,
+    scratch_content: scratchContent || null,
+    major_version: major,
+    minor_version: nextMinor,
+    is_published: false,
+    version: ((s.version as number) ?? 1) + 1,
+  });
 }

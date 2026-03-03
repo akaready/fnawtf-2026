@@ -1,5 +1,6 @@
 export type ScriptStatus = 'draft' | 'review' | 'locked';
 export type IntExt = 'INT' | 'EXT' | 'INT/EXT';
+export type ContentMode = 'table' | 'scratchpad';
 
 export interface ScriptRow {
   id: string;
@@ -8,10 +9,20 @@ export interface ScriptRow {
   script_group_id: string | null;
   status: ScriptStatus;
   version: number;
+  major_version: number;
+  minor_version: number;
+  is_published: boolean;
   notes: string | null;
+  scratch_content: string | null;
+  content_mode: ContentMode;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export function formatScriptVersion(major: number, minor: number, isPublished: boolean): string {
+  const maj = String(major).padStart(2, '0');
+  return isPublished ? `v${maj}` : `v${maj}.${String(minor).padStart(2, '0')}`;
 }
 
 export interface ScriptBeatReferenceRow {
@@ -89,9 +100,33 @@ export interface ScriptLocationRow {
   script_id: string;
   name: string;
   description: string | null;
+  color: string;
   sort_order: number;
   global_location_id: string | null;
   created_at: string;
+}
+
+export interface ScriptLocationOptionRow {
+  id: string;
+  script_location_id: string;
+  location_id: string;
+  slot_order: number;
+  is_featured: boolean;
+  appearance_prompt: string | null;
+  created_at: string;
+}
+
+export interface LocationOptionWithLocation extends ScriptLocationOptionRow {
+  location: {
+    id: string;
+    name: string;
+    featured_image: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    appearance_prompt: string | null;
+    top_images: string[];
+  };
 }
 
 export interface ScriptTagRow {
@@ -123,7 +158,7 @@ export interface ScriptColumnConfig {
 
 export type StoryboardGenerationMode = 'beat' | 'scene';
 export type StoryboardFrameSource = 'generated' | 'uploaded';
-export type StoryboardStylePreset = 'sketch' | 'comic' | 'studio' | 'cinematic';
+export type StoryboardStylePreset = 'sketch' | 'comic' | 'studio' | 'cinematic' | 'watercolor' | 'noir' | 'documentary' | 'anime';
 
 export interface ScriptStyleRow {
   id: string;
@@ -154,6 +189,24 @@ export interface ScriptStoryboardFrameRow {
   storage_path: string;
   source: StoryboardFrameSource;
   prompt_used: string | null;
+  created_at: string;
+}
+
+export interface AiPromptLogRow {
+  id: string;
+  script_id: string | null;
+  beat_id: string | null;
+  scene_id: string | null;
+  model: string;
+  prompt_text: string;
+  response_summary: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cost_estimate: number | null;
+  duration_ms: number | null;
+  status: string;
+  source: string;
+  image_url: string | null;
   created_at: string;
 }
 

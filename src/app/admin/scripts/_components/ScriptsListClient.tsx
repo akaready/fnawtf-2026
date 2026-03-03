@@ -12,6 +12,7 @@ import {
 import { StatusBadge } from '../../_components/StatusBadge';
 import { SCRIPT_STATUSES } from '../../_components/statusConfigs';
 import { AdminDataTable, type ColDef, type RowAction } from '@/app/admin/_components/table';
+import { formatScriptVersion } from '@/types/scripts';
 import type { ScriptWithProject, ScriptStatus } from '@/types/scripts';
 
 interface Props {
@@ -53,7 +54,7 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
     const counts: Record<string, number> = {};
 
     for (const [, group] of groups) {
-      group.sort((a, b) => b.version - a.version);
+      group.sort((a, b) => b.major_version - a.major_version || b.minor_version - a.minor_version);
       latest.push(group[0]);
       counts[group[0].id] = group.length;
     }
@@ -128,7 +129,10 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
         const count = versionCounts[row.id] ?? 1;
         return (
           <span className="text-admin-text-dim font-mono text-xs">
-            v{row.version}
+            {formatScriptVersion(row.major_version, row.minor_version, row.is_published)}
+            {row.is_published && (
+              <span className="text-admin-success ml-1.5 text-[10px] font-medium">Published</span>
+            )}
             {count > 1 && (
               <span className="text-admin-text-faint ml-1">({count})</span>
             )}
