@@ -218,9 +218,6 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search locations…"
-        rightContent={
-          <ViewSwitcher views={VIEWS} activeView={viewMode} onChange={setViewMode} />
-        }
         actions={
           <>
             <button onClick={() => setShowImport(true)} className="btn-secondary px-4 py-2.5 text-sm inline-flex items-center gap-2">
@@ -246,26 +243,31 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
       />
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto admin-scrollbar">
-        {viewMode === 'table' ? (
-          <AdminDataTable
-            data={locations}
-            columns={columns}
-            storageKey="fna-locations-table"
-            toolbar
-            sortable
-            filterable
-            columnVisibility
-            columnResize
-            selectable
-            onRowClick={(row) => setActiveId(row.id)}
-            selectedId={activeId ?? undefined}
-            onBatchDelete={handleBatchDelete}
-            search={search}
-            emptyMessage="No locations yet. Add one or import from Peerspace."
-          />
-        ) : (
-          <div className="p-6">
+      {viewMode === 'table' ? (
+        <AdminDataTable
+          data={locations}
+          columns={columns}
+          storageKey="fna-locations-table"
+          toolbar
+          toolbarSlot={<ViewSwitcher views={VIEWS} activeView={viewMode} onChange={setViewMode} />}
+          sortable
+          filterable
+          columnVisibility
+          columnResize
+          selectable
+          onRowClick={(row) => setActiveId(row.id)}
+          selectedId={activeId ?? undefined}
+          onBatchDelete={handleBatchDelete}
+          search={search}
+          emptyMessage="No locations yet. Add one or import from Peerspace."
+        />
+      ) : (
+        <>
+          {/* Toolbar — gallery view */}
+          <div className="h-[3rem] bg-admin-bg-inset border-b border-admin-border flex-shrink-0 flex items-center px-6">
+            <ViewSwitcher views={VIEWS} activeView={viewMode} onChange={setViewMode} />
+          </div>
+          <div className="flex-1 overflow-y-auto admin-scrollbar p-6">
             {galleryData.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-admin-text-faint">
                 <MapPin size={40} strokeWidth={1} className="mb-3 opacity-40" />
@@ -285,8 +287,8 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Detail panel */}
       <LocationDetailPanel

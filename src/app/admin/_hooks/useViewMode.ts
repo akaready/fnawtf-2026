@@ -10,10 +10,13 @@ export function useViewMode<K extends string>(
   storageKey: string,
   defaultView: K,
 ): [K, (v: K) => void] {
-  const [view, setViewRaw] = useState<K>(() => {
-    if (typeof window === 'undefined') return defaultView;
-    return (localStorage.getItem(storageKey) as K) || defaultView;
-  });
+  const [view, setViewRaw] = useState<K>(defaultView);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(storageKey) as K | null;
+    if (stored && stored !== view) setViewRaw(stored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
 
   useEffect(() => {
     localStorage.setItem(storageKey, view);

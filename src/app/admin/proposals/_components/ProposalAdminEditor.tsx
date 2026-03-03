@@ -1,10 +1,8 @@
 'use client';
 
 import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign } from 'lucide-react';
+import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save } from 'lucide-react';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import type { LucideIcon } from 'lucide-react';
 import { deleteProposal, type ClientRow } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
@@ -73,10 +71,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const welcomeRef = useRef<WelcomeTabHandle>(null);
   const approachRef = useRef<ApproachTabHandle>(null);
   const pricingRef = useRef<PricingTabHandle>(null);
-  const [detailsSaving, setDetailsSaving] = useState(false);
-  const [detailsSaved, setDetailsSaved] = useState(false);
-  const { saving: pricingSaving, saved: pricingSaved, wrap: wrapPricing } = useSaveState();
-  const { saving: markdownSaving, saved: markdownSaved, wrap: wrapMarkdown } = useSaveState();
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -193,10 +187,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             clients={clients}
             onUpdated={handleUpdated}
             onProposalTypeChange={(type) => setProposalType(type)}
-            onSaveStateChange={(pending, saved) => {
-              setDetailsSaving(pending);
-              setDetailsSaved(saved);
-            }}
           />
         </div>
         <div className={activeTab === 'welcome' ? 'h-full overflow-hidden' : 'hidden'}>
@@ -255,23 +245,18 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       {/* Footer: action buttons (left) | delete (right) */}
       <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-admin-border bg-admin-bg-wash">
         <div className="flex items-center gap-3">
-          <SaveButton
-            saving={activeTab === 'pricing' ? pricingSaving : activeTab === 'welcome' || activeTab === 'approach' ? markdownSaving : detailsSaving}
-            saved={activeTab === 'pricing' ? pricingSaved : activeTab === 'welcome' || activeTab === 'approach' ? markdownSaved : detailsSaved}
-            disabled={detailsSaving || pricingSaving || markdownSaving}
+          <button
             onClick={async () => {
-              if (activeTab === 'pricing') {
-                await wrapPricing(() => pricingRef.current!.save());
-              } else if (activeTab === 'welcome') {
-                await wrapMarkdown(() => welcomeRef.current!.save());
-              } else if (activeTab === 'approach') {
-                await wrapMarkdown(() => approachRef.current!.save());
-              } else {
-                detailsRef.current?.save();
-              }
+              if (activeTab === 'pricing') await pricingRef.current?.save();
+              else if (activeTab === 'welcome') await welcomeRef.current?.save();
+              else if (activeTab === 'approach') await approachRef.current?.save();
+              else await detailsRef.current?.save();
             }}
-            className="px-5 py-2.5 text-sm"
-          />
+            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+          >
+            <Save size={14} />
+            Save
+          </button>
           <a
             href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
             target="_blank"

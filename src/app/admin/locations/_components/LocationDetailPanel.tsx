@@ -246,12 +246,25 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               </Field>
 
               <Field label="Street Address">
-                <input
-                  value={local.address ?? ''}
-                  onChange={e => updateField('address', e.target.value)}
-                  className="admin-input w-full text-sm py-2 px-3"
-                  placeholder="123 Main St"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    value={local.address ?? ''}
+                    onChange={e => updateField('address', e.target.value)}
+                    className="admin-input flex-1 text-sm py-2 px-3"
+                    placeholder="123 Main St"
+                  />
+                  {googleMapsUrl && (
+                    <a
+                      href={googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-info w-[38px] h-[38px] !p-0 flex-shrink-0 justify-center"
+                      title="View on Google Maps"
+                    >
+                      <MapPin size={14} />
+                    </a>
+                  )}
+                </div>
               </Field>
 
               <div className="grid grid-cols-3 gap-3">
@@ -281,17 +294,6 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 </Field>
               </div>
 
-              {googleMapsUrl && (
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-admin-info hover:underline"
-                >
-                  <MapPin size={12} /> View on Google Maps
-                </a>
-              )}
-
               <Field label="Status">
                 <select
                   value={local.status}
@@ -313,22 +315,21 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 />
               </Field>
 
-              {local.peerspace_url && (
-                <a
-                  href={local.peerspace_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm text-admin-info hover:underline"
-                >
-                  <ExternalLink size={12} /> View on Peerspace
-                </a>
-              )}
+              <Field label="Peerspace URL">
+                <input
+                  value={local.peerspace_url ?? ''}
+                  onChange={e => updateField('peerspace_url', e.target.value || null)}
+                  className="admin-input w-full text-sm py-2 px-3"
+                  placeholder="https://www.peerspace.com/pages/listings/…"
+                />
+              </Field>
+
             </div>
           )}
 
           {tab === 'images' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="space-y-5">
+              <div className="flex items-start justify-between">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
                   {local.location_images.length} image{local.location_images.length !== 1 ? 's' : ''}
                 </p>
@@ -383,20 +384,19 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 
           {tab === 'peerspace' && hasPeerspace && (
             <div className="space-y-5">
-              {ps.space_type && <InfoRow label="Space Type">{ps.space_type}</InfoRow>}
-              {ps.pricing && (
-                <InfoRow label="Pricing">
-                  ${ps.pricing.amount}/{ps.pricing.unit}
-                  {ps.pricing.minimum && <span className="text-admin-text-faint ml-1">({ps.pricing.minimum} minimum)</span>}
-                </InfoRow>
-              )}
-              {ps.capacity && <InfoRow label="Capacity">{ps.capacity} people</InfoRow>}
-              {ps.sqft && <InfoRow label="Size">{ps.sqft.toLocaleString()} sqft</InfoRow>}
-              {ps.rating && (
-                <InfoRow label="Rating">
-                  {ps.rating.score} ({ps.rating.count} review{ps.rating.count !== 1 ? 's' : ''})
-                </InfoRow>
-              )}
+              {/* Top stats — compact 4-col grid */}
+              <div className="grid grid-cols-4 gap-3">
+                {ps.space_type && <InfoRow label="Space Type">{ps.space_type}</InfoRow>}
+                {ps.pricing && (
+                  <InfoRow label="Pricing">
+                    ${ps.pricing.amount}/{ps.pricing.unit}
+                    {ps.pricing.minimum && <span className="text-admin-text-faint ml-1">({ps.pricing.minimum} min)</span>}
+                  </InfoRow>
+                )}
+                {ps.capacity && <InfoRow label="Capacity">{ps.capacity}</InfoRow>}
+                {ps.sqft && <InfoRow label="Size">{ps.sqft.toLocaleString()} sqft</InfoRow>}
+              </div>
+
               {ps.host && (
                 <InfoRow label="Host">
                   <span className="flex items-center gap-2">
@@ -453,29 +453,25 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               {ps.reviews && ps.reviews.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
-                    Reviews ({ps.reviews.length})
+                    Reviews{ps.rating ? ` (${ps.rating.score} via ${ps.rating.count} review${ps.rating.count !== 1 ? 's' : ''})` : ` (${ps.reviews.length})`}
                   </p>
                   <div className="space-y-3">
                     {ps.reviews.map((r, idx) => (
                       <div key={idx} className="px-3 py-2.5 rounded-admin-sm bg-admin-bg-hover space-y-1">
                         <div className="flex items-center gap-2 text-xs">
+                          {r.date && <span className="text-admin-text-faint">{r.date}</span>}
+                          {r.booking_type && <span className="text-admin-text-faint">· {r.booking_type}</span>}
+                          {r.guest_count && <span className="text-admin-text-faint">· {r.guest_count} people</span>}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
                           <span className="font-medium text-admin-text-primary">{r.reviewer_name}</span>
                           {r.reviewer_role && <span className="text-admin-text-faint">· {r.reviewer_role}</span>}
                         </div>
                         <p className="text-sm text-admin-text-muted leading-relaxed">{r.text}</p>
-                        <div className="flex items-center gap-2 text-[10px] text-admin-text-faint">
-                          {r.date && <span>{r.date}</span>}
-                          {r.booking_type && <span>· {r.booking_type} for {r.guest_count} people</span>}
-                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-              {ps.coordinates && (
-                <InfoRow label="Coordinates">
-                  {ps.coordinates.lat.toFixed(6)}, {ps.coordinates.lng.toFixed(6)}
-                </InfoRow>
               )}
               {ps.scraped_at && (
                 <p className="text-[10px] text-admin-text-faint">
@@ -486,8 +482,8 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           )}
 
           {tab === 'scout' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="space-y-5">
+              <div className="flex items-start justify-between">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
                   {scoutImages.length} scout photo{scoutImages.length !== 1 ? 's' : ''}
                 </p>
@@ -559,7 +555,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           )}
 
           {tab === 'projects' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="space-y-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Linked Projects</p>
                 {loadingProjects ? (
@@ -616,6 +612,16 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               onClick={handleSave}
               className="px-5 py-2.5 text-sm"
             />
+            {local.peerspace_url && (
+              <a
+                href={local.peerspace_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-info px-4 py-2.5 text-sm"
+              >
+                <ExternalLink size={12} /> Peerspace
+              </a>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {confirmDelete ? (
@@ -673,7 +679,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1.5">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">{label}</p>
       <div className="text-sm text-admin-text-primary">{children}</div>
     </div>

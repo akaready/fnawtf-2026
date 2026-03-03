@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Loader2, Trash2, Check, X } from 'lucide-react';
+import { Loader2, Trash2, Check, X, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { updateScript, deleteScript } from '@/app/admin/actions';
 import { createClient } from '@/lib/supabase/client';
 import type { ScriptRow, ScriptStatus } from '@/types/scripts';
@@ -83,6 +84,8 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
     p.title.toLowerCase().includes(projectSearch.toLowerCase())
   );
 
+  const dotStatus: AutoSaveStatus = saving ? 'saving' : 'idle';
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -113,8 +116,9 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[420px]">
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-inset">
           <h2 className="text-lg font-bold text-admin-text-primary">Script Settings</h2>
+          <SaveDot status={dotStatus} />
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <X size={16} />
           </button>
@@ -207,7 +211,10 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
         {/* Footer action bar — matches CompanyPanel pattern */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <SaveButton saving={saving} saved={false} onClick={handleSave} className="px-5 py-2.5 text-sm" />
+          <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Save size={14} />
+            Save
+          </button>
 
           {confirmDelete ? (
             <div className="flex items-center gap-1">

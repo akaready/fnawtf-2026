@@ -249,6 +249,18 @@ html[data-admin-light] .admin-shell .admin-logo {
     border-radius: var(--admin-radius-md);
   }
 
+  /* Info: off-site / external links — blue tint, deepens on hover */
+  .btn-info {
+    @apply inline-flex items-center gap-2 bg-admin-info-bg text-admin-info border transition-colors disabled:opacity-50 whitespace-nowrap;
+    border-color: color-mix(in srgb, var(--admin-info) 20%, transparent);
+    border-radius: var(--admin-radius-md);
+  }
+  .btn-info:hover {
+    background: color-mix(in srgb, var(--admin-info) 20%, transparent);
+    border-color: color-mix(in srgb, var(--admin-info) 40%, transparent);
+  }
+  }
+
   /* Danger: used for inline delete confirmations — always inline (never flex-col) */
   .btn-danger {
     @apply inline-flex items-center gap-2 bg-admin-danger-bg text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors disabled:opacity-50;
