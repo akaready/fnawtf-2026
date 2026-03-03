@@ -135,6 +135,14 @@ function calcTierTotal(
   return { total, castCrewTotal, items };
 }
 
+// ── Balance label helper ─────────────────────────────────────────────────
+function balanceLabel(opts: { crowdfunding: boolean; deferred: boolean; fundraising: boolean }): React.ReactNode {
+  if (opts.fundraising) return 'Balance due after raise';
+  if (opts.crowdfunding && opts.deferred) return <>Balance due <u>after</u> crowdfunding raise</>;
+  if (opts.crowdfunding) return <>Balance due <u>before</u> crowdfunding launch</>;
+  return 'Balance due upon delivery';
+}
+
 // ── Compute totals from a stored ProposalQuoteRow ────────────────────────
 
 interface QuoteColumnData {
@@ -157,6 +165,7 @@ interface QuoteColumnData {
   crowdDiscount: number;
   total: number;
   downAmount: number;
+  deferPayment: boolean;
   downPercent: number;
 }
 
@@ -235,6 +244,7 @@ function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColu
     total,
     downAmount,
     downPercent: downPct,
+    deferPayment: quote.defer_payment,
   };
 }
 
@@ -942,6 +952,7 @@ export function CalculatorSummary({
     total,
     downAmount,
     downPercent,
+    deferPayment,
   };
 
   // ── FNA (left) column — always locked to the first/recommended FNA quote ──
@@ -1179,6 +1190,12 @@ export function CalculatorSummary({
                     </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(fnaColumnData.downAmount)}</span>
                   </div>
+                  <div className="flex justify-between items-center mt-1.5">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {balanceLabel({ crowdfunding: fnaColumnData.crowdfundingEnabled, deferred: fnaColumnData.deferPayment, fundraising: fnaColumnData.isFundraising })}
+                    </span>
+                    <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.total - fnaColumnData.downAmount)}</span>
+                  </div>
                 </div>
                 <div className={`pl-4 ${fundraisingEnabled ? 'border-l border-green-900/50' : 'border-l border-border'}`}>
                   <div className={`flex justify-between items-baseline mb-2 pb-2 border-b border-dashed ${fundraisingEnabled ? 'border-green-900/60' : 'border-border'}`}>
@@ -1191,6 +1208,12 @@ export function CalculatorSummary({
                       <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
                     </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(liveColumnData.downAmount)}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1.5">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {balanceLabel({ crowdfunding: liveColumnData.crowdfundingEnabled, deferred: liveColumnData.deferPayment, fundraising: liveColumnData.isFundraising })}
+                    </span>
+                    <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.total - liveColumnData.downAmount)}</span>
                   </div>
                 </div>
               </div>
@@ -1327,6 +1350,12 @@ export function CalculatorSummary({
               <span className="text-sm text-muted-foreground block mt-1">Minimum payment to begin</span>
             </div>
             <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>
+          </div>
+          <div className="flex justify-between items-center mt-2">
+            <span className="font-semibold text-muted-foreground">
+              {balanceLabel({ crowdfunding: effectiveCrowdfundingEnabled, deferred: deferPayment, fundraising: fundraisingEnabled })}
+            </span>
+            <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(total - downAmount)}</span>
           </div>
         </div>
           </motion.div>

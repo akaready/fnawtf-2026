@@ -223,6 +223,16 @@ const S = StyleSheet.create({
     fontWeight: 700,
     color: '#15803d',
   },
+  balanceLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#6b7280',
+  },
+  balanceAmount: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#6b7280',
+  },
   // Prepared for
   preparedLabel: {
     fontSize: 8,
@@ -443,6 +453,17 @@ export function ProposalDocument({ data }: ProposalDocumentProps) {
                         <Text style={S.paymentLabel}>Due at signing</Text>
                         <Text style={S.paymentAmount}>{fmt(fnaQuote.down_amount)}</Text>
                       </View>
+                      {fnaQuote.total_amount != null && (
+                        <View style={[S.paymentRow, { marginTop: 6 }]}>
+                          <Text style={S.balanceLabel}>
+                            {fnaQuote.fundraising_enabled ? 'Balance due after raise'
+                              : fnaQuote.crowdfunding_enabled && fnaQuote.defer_payment ? <>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</>
+                              : fnaQuote.crowdfunding_enabled ? <>Balance due <Text style={{ textDecoration: 'underline' }}>before</Text> crowdfunding launch</>
+                              : 'Balance due upon delivery'}
+                          </Text>
+                          <Text style={S.balanceAmount}>{fmt(fnaQuote.total_amount - fnaQuote.down_amount)}</Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>

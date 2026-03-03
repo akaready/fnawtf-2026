@@ -211,6 +211,19 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
             </span>
           </div>
         )}
+        {quote.down_amount != null && quote.total_amount != null && (
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm text-muted-foreground">
+              {quote.fundraising_enabled ? 'Balance due after raise'
+                : quote.crowdfunding_enabled && quote.defer_payment ? <>Balance due <u>after</u> crowdfunding raise</>
+                : quote.crowdfunding_enabled ? <>Balance due <u>before</u> crowdfunding launch</>
+                : 'Balance due upon delivery'}
+            </span>
+            <span className="text-base font-display font-bold text-muted-foreground">
+              ${(quote.total_amount - quote.down_amount).toLocaleString()}
+            </span>
+          </div>
+        )}
         {quote.defer_payment && (
           <p className="text-xs text-muted-foreground/40 italic">
             Deferred payment plan available

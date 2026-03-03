@@ -12,6 +12,15 @@ import type { QuoteData, ContactInfo } from '@/lib/pdf/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+function BalanceLabelPdf({ data }: { data: QuoteData }) {
+  if (data.specialProgram === 'fundraising') return <Text style={S.balanceLabel}>Balance due after raise</Text>;
+  if (data.specialProgram === 'crowdfunding' && data.deferPayment)
+    return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</Text>;
+  if (data.specialProgram === 'crowdfunding')
+    return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>before</Text> crowdfunding launch</Text>;
+  return <Text style={S.balanceLabel}>Balance due upon delivery</Text>;
+}
+
 function fmt(n: number) {
   return '$' + n.toLocaleString('en-US');
 }
@@ -288,6 +297,16 @@ const S = StyleSheet.create({
     color: '#6b7280',
     marginTop: 4,
   },
+  balanceLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#6b7280',
+  },
+  balanceAmount: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#6b7280',
+  },
 
   // Special program note
   programNote: {
@@ -553,6 +572,10 @@ export function QuoteDocument({ data, contact }: QuoteDocumentProps) {
               <Text style={S.paymentAmount}>{fmt(data.downAmount)}</Text>
             </View>
             <Text style={S.paymentSub}>Minimum payment to begin</Text>
+            <View style={[S.paymentRow, { marginTop: 8 }]}>
+              <BalanceLabelPdf data={data} />
+              <Text style={S.balanceAmount}>{fmt(data.total - data.downAmount)}</Text>
+            </View>
           </View>
 
           {/* ── Special program note (never split) ── */}
