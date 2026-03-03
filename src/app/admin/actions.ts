@@ -3110,14 +3110,14 @@ export async function unlinkLocationFromProject(locationId: string, projectId: s
   if (error) throw new Error(error.message);
 }
 
-export async function getLocationProjects(locationId: string): Promise<{ id: string; title: string }[]> {
+export async function getLocationProjects(locationId: string): Promise<{ id: string; title: string; thumbnail_url: string | null; client_name: string | null }[]> {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('location_projects')
-    .select('project_id, projects(id, title)')
+    .select('project_id, projects(id, title, thumbnail_url, client_name)')
     .eq('location_id', locationId);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((r: Record<string, unknown>) => (r as { projects: { id: string; title: string } }).projects);
+  return (data ?? []).map((r: Record<string, unknown>) => (r as { projects: { id: string; title: string; thumbnail_url: string | null; client_name: string | null } }).projects);
 }
 
 export async function getActiveLocationsForSelect(): Promise<{ id: string; name: string; featured_image: string | null }[]> {

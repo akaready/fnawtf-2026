@@ -699,7 +699,7 @@ export function ScriptCharactersPanel({
                 {/* ── Casting Options — Row List ────────────────────────── */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
-                    Casting Options
+                    Character Options
                   </label>
 
                   {selectedCast.length > 0 && (

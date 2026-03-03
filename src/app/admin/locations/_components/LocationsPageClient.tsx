@@ -28,7 +28,7 @@ const VIEWS: ViewDef<ViewMode>[] = [
 
 interface Props {
   initialLocations: LocationWithImages[];
-  projects: { id: string; title: string }[];
+  projects: { id: string; title: string; thumbnail_url: string | null; client_name: string | null }[];
 }
 
 export function LocationsPageClient({ initialLocations, projects }: Props) {

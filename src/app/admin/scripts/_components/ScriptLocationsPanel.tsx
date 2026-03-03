@@ -1,14 +1,30 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Check, X, Loader2, MapPin, Link2, Unlink, ExternalLink, Save } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo, useId } from 'react';
+import { Plus, Trash2, Check, X, Loader2, MapPin, Save } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
-import { AdminCombobox } from '../../_components/AdminCombobox';
 import { ColorPicker } from './ColorPicker';
-import { createLocation, updateLocation, deleteLocation } from '@/app/admin/actions';
-import type { ScriptLocationRow, ScriptSceneRow } from '@/types/scripts';
+import {
+  createLocation, updateLocation, deleteLocation,
+  assignLocationOption, removeLocationOption, reorderLocationOptions,
+} from '@/app/admin/actions';
+import type { ScriptLocationRow, ScriptSceneRow, LocationOptionWithLocation } from '@/types/scripts';
 
 interface Props {
   open: boolean;
@@ -18,16 +34,174 @@ interface Props {
   scenes: ScriptSceneRow[];
   onLocationsChange: (locs: ScriptLocationRow[]) => void;
   globalLocations?: { id: string; name: string; featured_image: string | null }[];
+  locationOptionsMap: Record<string, LocationOptionWithLocation[]>;
+  onLocationOptionsMapChange: (map: Record<string, LocationOptionWithLocation[]>) => void;
 }
 
-export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scenes, onLocationsChange, globalLocations = [] }: Props) {
+// ── Sortable Location Option Row ──────────────────────────────────────────
+
+function SortableLocationRow({
+  option,
+  isFeatured,
+  onRemove,
+}: {
+  option: LocationOptionWithLocation;
+  isFeatured: boolean;
+  onRemove: (optionId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: option.id });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...style, borderColor: isFeatured ? 'var(--admin-warning)' : 'var(--admin-border-subtle)' }}
+      {...attributes}
+      {...listeners}
+      className="group/loc rounded-admin-md transition-colors cursor-grab active:cursor-grabbing border bg-admin-bg-overlay hover:bg-admin-bg-hover"
+    >
+      <div className="px-3 py-2.5">
+        <div className="flex items-center gap-3">
+          {option.location.featured_image ? (
+            <img
+              src={option.location.featured_image}
+              alt=""
+              className="w-10 h-10 rounded-admin-sm object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-admin-sm bg-admin-bg-inset flex items-center justify-center flex-shrink-0">
+              <MapPin size={20} className="text-admin-text-ghost" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-semibold text-admin-text-primary truncate">
+              {option.location.name}
+            </div>
+            {(option.location.city || option.location.state) && (
+              <div className="text-xs text-admin-text-muted truncate">
+                {[option.location.city, option.location.state].filter(Boolean).join(', ')}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/loc:opacity-100 transition-opacity flex-shrink-0">
+            <button
+              onClick={() => onRemove(option.id)}
+              className="w-6 h-6 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
+              title="Remove"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Location Picker Popover ───────────────────────────────────────────────
+
+function LocationPickerPopover({
+  globalLocations,
+  assignedLocationIds,
+  onSelect,
+  onClose,
+}: {
+  globalLocations: { id: string; name: string; featured_image: string | null }[];
+  assignedLocationIds: Set<string>;
+  onSelect: (loc: { id: string; name: string; featured_image: string | null }) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  const filtered = search
+    ? globalLocations.filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
+    : globalLocations;
+
+  return (
+    <div
+      ref={popoverRef}
+      className="w-full bg-admin-bg-overlay border border-admin-border rounded-admin-lg shadow-xl overflow-hidden"
+    >
+      <div className="p-2 border-b border-admin-border-subtle">
+        <input
+          autoFocus
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search locations…"
+          className="admin-input w-full text-xs py-1.5 px-2.5"
+        />
+      </div>
+      <div className="max-h-[200px] overflow-y-auto admin-scrollbar">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-admin-text-faint text-center py-4">No locations found.</p>
+        ) : (
+          filtered.map(g => {
+            const assigned = assignedLocationIds.has(g.id);
+            return (
+              <button
+                key={g.id}
+                onClick={() => !assigned && onSelect(g)}
+                disabled={assigned}
+                className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors ${
+                  assigned
+                    ? 'opacity-40 cursor-default'
+                    : 'hover:bg-admin-bg-hover'
+                }`}
+              >
+                {g.featured_image ? (
+                  <img
+                    src={g.featured_image}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-admin-bg-inset flex items-center justify-center flex-shrink-0">
+                    <MapPin size={16} className="text-admin-text-ghost" />
+                  </div>
+                )}
+                <span className="text-sm text-admin-text-primary">{g.name}</span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Panel ────────────────────────────────────────────────────────────
+
+export function ScriptLocationsPanel({
+  open, onClose, scriptId, locations, scenes, onLocationsChange,
+  globalLocations = [], locationOptionsMap, onLocationOptionsMapChange,
+}: Props) {
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
   // Local edits for dirty state tracking
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptLocationRow>>>({});
   const localEditsRef = useRef(localEdits);
   useEffect(() => { localEditsRef.current = localEdits; });
+
+  const dndId = useId();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   // Auto-select first location, or clear if deleted
   useEffect(() => {
@@ -39,22 +213,32 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
     }
   }, [locations, selectedId]);
 
-  // Clear local edits when panel closes
+  // Clear local edits + picker when panel closes
   useEffect(() => {
-    if (!open) setLocalEdits({});
+    if (!open) {
+      setLocalEdits({});
+      setShowPicker(false);
+    }
   }, [open]);
+
+  // Reset picker when switching locations
+  useEffect(() => {
+    setShowPicker(false);
+  }, [selectedId]);
 
   const sceneCountByLocation = (locationId: string) =>
     scenes.filter(s => s.location_id === locationId).length;
 
   const selected = locations.find(l => l.id === selectedId) ?? null;
-  // Merge local edits with actual data for display
   const selectedWithEdits = selected
     ? { ...selected, ...localEdits[selected.id] }
     : null;
-  const linkedGlobal = selectedWithEdits?.global_location_id
-    ? globalLocations.find(g => g.id === selectedWithEdits.global_location_id)
-    : null;
+  const selectedOptions = selected ? (locationOptionsMap[selected.id] ?? []) : [];
+
+  const assignedLocationIds = useMemo(
+    () => new Set(selectedOptions.map(o => o.location_id)),
+    [selectedOptions],
+  );
 
   // ── Auto-save ───────────────────────────────────────────────────
   const autoSave = useAutoSave(async () => {
@@ -98,7 +282,6 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
     }
   };
 
-  // Local-only update — marks dirty, triggers auto-save
   const handleLocalUpdate = (locId: string, field: string, value: string | null) => {
     setLocalEdits(prev => ({
       ...prev,
@@ -111,7 +294,6 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
     await deleteLocation(locId);
     onLocationsChange(locations.filter(l => l.id !== locId));
     setConfirmDeleteId(null);
-    // Clear any local edits for this location
     setLocalEdits(prev => {
       const next = { ...prev };
       delete next[locId];
@@ -119,17 +301,66 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
     });
   };
 
-  const handleLinkGlobal = async (globalId: string) => {
-    if (!selected) return;
-    onLocationsChange(locations.map(l => l.id === selected.id ? { ...l, global_location_id: globalId } : l));
-    await updateLocation(selected.id, { global_location_id: globalId });
-  };
+  // ── Location option handlers ──────────────────────────────────────
 
-  const handleUnlinkGlobal = async () => {
+  const handleAssignLocation = useCallback(async (globalLoc: { id: string; name: string; featured_image: string | null }) => {
     if (!selected) return;
-    onLocationsChange(locations.map(l => l.id === selected.id ? { ...l, global_location_id: null } : l));
-    await updateLocation(selected.id, { global_location_id: null });
-  };
+    setShowPicker(false);
+
+    const optionId = await assignLocationOption(selected.id, globalLoc.id);
+    const isFirst = selectedOptions.length === 0;
+
+    const newEntry: LocationOptionWithLocation = {
+      id: optionId,
+      script_location_id: selected.id,
+      location_id: globalLoc.id,
+      slot_order: selectedOptions.length,
+      is_featured: isFirst,
+      appearance_prompt: null,
+      created_at: new Date().toISOString(),
+      location: {
+        id: globalLoc.id,
+        name: globalLoc.name,
+        featured_image: globalLoc.featured_image,
+        address: null,
+        city: null,
+        state: null,
+        appearance_prompt: null,
+        top_images: [],
+      },
+    };
+
+    const updated = [...selectedOptions, newEntry];
+    onLocationOptionsMapChange({ ...locationOptionsMap, [selected.id]: updated });
+  }, [selected, selectedOptions, locationOptionsMap, onLocationOptionsMapChange]);
+
+  const handleRemoveLocation = useCallback(async (optionId: string) => {
+    if (!selected) return;
+    await removeLocationOption(optionId);
+    const updated = selectedOptions.filter(o => o.id !== optionId);
+    // Re-feature first if needed
+    if (updated.length > 0 && !updated.some(o => o.is_featured)) {
+      updated[0] = { ...updated[0], is_featured: true };
+    }
+    onLocationOptionsMapChange({ ...locationOptionsMap, [selected.id]: updated });
+  }, [selected, selectedOptions, locationOptionsMap, onLocationOptionsMapChange]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    if (!selected) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = selectedOptions.findIndex(o => o.id === active.id);
+    const newIndex = selectedOptions.findIndex(o => o.id === over.id);
+    const reordered = arrayMove(selectedOptions, oldIndex, newIndex).map((o, i) => ({
+      ...o,
+      slot_order: i,
+      is_featured: i === 0,
+    }));
+
+    onLocationOptionsMapChange({ ...locationOptionsMap, [selected.id]: reordered });
+    await reorderLocationOptions(selected.id, reordered.map(o => o.id));
+  }, [selected, selectedOptions, locationOptionsMap, onLocationOptionsMapChange]);
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[580px]">
@@ -169,7 +400,8 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
               {locations.map(loc => {
                 const count = sceneCountByLocation(loc.id);
                 const isSelected = selectedId === loc.id;
-                const isLinked = !!loc.global_location_id;
+                const locOptions = locationOptionsMap[loc.id] ?? [];
+                const featured = locOptions.find(o => o.is_featured);
                 return (
                   <div
                     key={loc.id}
@@ -181,9 +413,21 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
                   >
                     <button
                       onClick={() => setSelectedId(loc.id)}
-                      className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                      className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
                     >
-                      <MapPin size={12} className={`flex-shrink-0 ${isLinked ? 'text-admin-info' : 'text-admin-text-ghost'}`} />
+                      {featured?.location.featured_image ? (
+                        <img
+                          src={featured.location.featured_image}
+                          alt=""
+                          className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                          style={{ boxShadow: `0 0 0 2px ${loc.color}` }}
+                        />
+                      ) : (
+                        <span
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: loc.color }}
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate uppercase">{loc.name}</div>
                         {count > 0 && (
@@ -254,50 +498,53 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
                   />
                 </div>
 
-                {/* Global location link */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Locations Library</label>
-                  {linkedGlobal ? (
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-admin-sm bg-admin-bg-hover border border-admin-border">
-                      {linkedGlobal.featured_image ? (
-                        <img src={linkedGlobal.featured_image} alt="" className="w-8 h-8 rounded-admin-sm object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-admin-sm bg-admin-bg-active flex items-center justify-center flex-shrink-0">
-                          <MapPin size={12} className="text-admin-text-faint" />
+                {/* ── Location Options — Row List ────────────────────── */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
+                    Location Options
+                  </label>
+
+                  {selectedOptions.length > 0 && (
+                    <DndContext
+                      id={dndId}
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={selectedOptions.map(o => o.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-1">
+                          {selectedOptions.map((opt, i) => (
+                            <SortableLocationRow
+                              key={opt.id}
+                              option={opt}
+                              isFeatured={i === 0}
+                              onRemove={handleRemoveLocation}
+                            />
+                          ))}
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-admin-text-primary truncate">{linkedGlobal.name}</div>
-                        <div className="text-[10px] text-admin-info flex items-center gap-1">
-                          <Link2 size={8} /> Linked to library
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <a
-                          href="/admin/locations"
-                          target="_blank"
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-info hover:bg-admin-bg-hover transition-colors"
-                          title="View in Locations"
-                        >
-                          <ExternalLink size={12} />
-                        </a>
-                        <button
-                          onClick={handleUnlinkGlobal}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-danger hover:bg-admin-bg-hover transition-colors"
-                          title="Unlink"
-                        >
-                          <Unlink size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <AdminCombobox
-                      value={null}
-                      options={globalLocations.map(g => ({ id: g.id, label: g.name }))}
-                      onChange={(v) => { if (v) handleLinkGlobal(v); }}
-                      placeholder="Link to a location from library..."
-                      nullable={false}
+                      </SortableContext>
+                    </DndContext>
+                  )}
+
+                  {/* Add location option */}
+                  {showPicker ? (
+                    <LocationPickerPopover
+                      globalLocations={globalLocations}
+                      assignedLocationIds={assignedLocationIds}
+                      onSelect={handleAssignLocation}
+                      onClose={() => setShowPicker(false)}
                     />
+                  ) : (
+                    <button
+                      onClick={() => setShowPicker(true)}
+                      className="w-full py-2 rounded-admin-md border-2 border-dashed border-admin-border text-xs text-admin-text-faint hover:border-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <MapPin size={14} />
+                      Add Location Option
+                    </button>
                   )}
                 </div>
 

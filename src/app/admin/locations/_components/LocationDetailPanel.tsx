@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Trash2, Upload, Star, MapPin, ExternalLink, Camera, Save,
-  Image as ImageIcon, Loader2, Link2, Unlink, Download, Expand, Check,
+  Image as ImageIcon, Loader2, Link2, Download, Expand, Check,
 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminLightbox } from '@/app/admin/_components/AdminLightbox';
@@ -12,7 +12,6 @@ import { downloadSingleImage, downloadStoryboardZip } from '@/lib/scripts/downlo
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
-import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
   updateLocationRecord,
   deleteLocationRecord,
@@ -33,7 +32,7 @@ interface Props {
   onClose: () => void;
   onUpdate: (loc: LocationWithImages) => void;
   onDelete: (id: string) => void;
-  projects: { id: string; title: string }[];
+  projects: { id: string; title: string; thumbnail_url: string | null; client_name: string | null }[];
 }
 
 export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelete, projects }: Props) {
@@ -41,9 +40,10 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [linkedProjects, setLinkedProjects] = useState<{ id: string; title: string }[]>([]);
+  const [linkedProjects, setLinkedProjects] = useState<{ id: string; title: string; thumbnail_url: string | null; client_name: string | null }[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [scoutDragOver, setScoutDragOver] = useState(false);
   const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -154,7 +154,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
     if (!local) return;
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-    setLinkedProjects(prev => [...prev, project]);
+    setLinkedProjects(prev => [...prev, { id: project.id, title: project.title, thumbnail_url: project.thumbnail_url, client_name: project.client_name }]);
     await linkLocationToProject(local.id, projectId);
   };
 
@@ -637,46 +637,60 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 
           {tab === 'projects' && (
             <div className="space-y-5">
-              <div className="space-y-1.5">
-                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Linked Projects</p>
-                {loadingProjects ? (
-                  <div className="flex items-center gap-2 py-4 text-admin-text-faint text-sm">
-                    <Loader2 size={14} className="animate-spin" /> Loading…
-                  </div>
-                ) : linkedProjects.length === 0 ? (
-                  <p className="text-sm text-admin-text-faint py-4">No projects linked yet.</p>
+              {/* Picker */}
+              <div className="space-y-2">
+                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Projects</p>
+                {showProjectPicker ? (
+                  <ProjectPickerPopover
+                    projects={projects}
+                    assignedProjectIds={new Set(linkedProjects.map(p => p.id))}
+                    onSelect={(p) => { handleLinkProject(p.id); setShowProjectPicker(false); }}
+                    onClose={() => setShowProjectPicker(false)}
+                  />
                 ) : (
-                  <div className="space-y-1">
-                    {linkedProjects.map(p => (
-                      <div key={p.id} className="flex items-center gap-2 px-3 py-2 rounded-admin-sm bg-admin-bg-hover group/proj">
-                        <Link2 size={12} className="text-admin-text-faint" />
-                        <span className="text-sm text-admin-text-primary flex-1">{p.title}</span>
-                        <button
-                          onClick={() => handleUnlinkProject(p.id)}
-                          className="opacity-0 group-hover/proj:opacity-100 transition-opacity text-admin-text-faint hover:text-admin-danger"
-                          title="Unlink project"
-                        >
-                          <Unlink size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => setShowProjectPicker(true)}
+                    className="w-full py-2 rounded-admin-md border-2 border-dashed border-admin-border text-xs text-admin-text-faint hover:border-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Link2 size={14} />
+                    Add Project
+                  </button>
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Add Project</p>
-                <AdminCombobox
-                  value={null}
-                  options={projects
-                    .filter(p => !linkedProjects.some(lp => lp.id === p.id))
-                    .map(p => ({ id: p.id, label: p.title }))
-                  }
-                  onChange={(v) => { if (v) handleLinkProject(v); }}
-                  placeholder="Select a project…"
-                  nullable={false}
-                />
-              </div>
+              {/* Linked project cards */}
+              {loadingProjects ? (
+                <div className="flex items-center gap-2 py-4 text-admin-text-faint text-sm">
+                  <Loader2 size={14} className="animate-spin" /> Loading…
+                </div>
+              ) : linkedProjects.length > 0 && (
+                <div className="space-y-1">
+                  {linkedProjects.map(p => (
+                    <div key={p.id} className="group/proj flex items-center gap-3 px-3 py-2.5 rounded-admin-md border border-admin-border-subtle bg-admin-bg-overlay hover:bg-admin-bg-hover transition-colors">
+                      {p.thumbnail_url ? (
+                        <img src={p.thumbnail_url} alt="" className="w-10 h-10 rounded-admin-sm object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-admin-sm bg-admin-bg-inset flex items-center justify-center flex-shrink-0">
+                          <ImageIcon size={16} className="text-admin-text-ghost" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-admin-text-primary truncate">{p.title}</div>
+                        {p.client_name && (
+                          <div className="text-xs text-admin-text-muted truncate">{p.client_name}</div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleUnlinkProject(p.id)}
+                        className="opacity-0 group-hover/proj:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-danger hover:bg-admin-danger-bg"
+                        title="Unlink project"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -749,6 +763,90 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
         )}
       </div>
     </PanelDrawer>
+  );
+}
+
+function ProjectPickerPopover({
+  projects,
+  assignedProjectIds,
+  onSelect,
+  onClose,
+}: {
+  projects: { id: string; title: string; thumbnail_url: string | null; client_name: string | null }[];
+  assignedProjectIds: Set<string>;
+  onSelect: (p: { id: string; title: string; thumbnail_url: string | null; client_name: string | null }) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  const filtered = search
+    ? projects.filter(p =>
+        p.title.toLowerCase().includes(search.toLowerCase()) ||
+        (p.client_name?.toLowerCase().includes(search.toLowerCase()) ?? false),
+      )
+    : projects;
+
+  return (
+    <div
+      ref={popoverRef}
+      className="w-full bg-admin-bg-overlay border border-admin-border rounded-admin-lg shadow-xl overflow-hidden"
+    >
+      <div className="p-2 border-b border-admin-border-subtle">
+        <input
+          autoFocus
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search projects…"
+          className="admin-input w-full text-xs py-1.5 px-2.5"
+        />
+      </div>
+      <div className="max-h-[200px] overflow-y-auto admin-scrollbar">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-admin-text-faint text-center py-4">No projects found.</p>
+        ) : (
+          filtered.map(p => {
+            const assigned = assignedProjectIds.has(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => !assigned && onSelect(p)}
+                disabled={assigned}
+                className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors ${
+                  assigned
+                    ? 'opacity-40 cursor-default'
+                    : 'hover:bg-admin-bg-hover'
+                }`}
+              >
+                {p.thumbnail_url ? (
+                  <img src={p.thumbnail_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-admin-bg-inset flex items-center justify-center flex-shrink-0">
+                    <ImageIcon size={16} className="text-admin-text-ghost" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-admin-text-primary block truncate">{p.title}</span>
+                  {p.client_name && (
+                    <span className="text-xs text-admin-text-muted block truncate">{p.client_name}</span>
+                  )}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
   );
 }
 

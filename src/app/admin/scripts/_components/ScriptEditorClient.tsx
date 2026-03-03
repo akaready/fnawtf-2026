@@ -13,7 +13,7 @@ import {
   createScriptVersion, publishScriptVersion, unpublishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
-  getScriptCastMap, saveScratchContent, createModeVersion,
+  getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -37,6 +37,7 @@ import type {
   ScriptColumnConfig, ScriptBeatReferenceRow,
   ScriptStyleRow, ScriptStyleReferenceRow, ScriptStoryboardFrameRow,
   CharacterCastWithContact,
+  LocationOptionWithLocation,
 } from '@/types/scripts';
 
 interface Props {
@@ -85,6 +86,7 @@ export function ScriptEditorClient({
   const [styleReferences, setStyleReferences] = useState<ScriptStyleReferenceRow[]>([]);
   const [storyboardFrames, setStoryboardFrames] = useState<ScriptStoryboardFrameRow[]>([]);
   const [castMap, setCastMap] = useState<Record<string, CharacterCastWithContact[]>>({});
+  const [locationOptionsMap, setLocationOptionsMap] = useState<Record<string, LocationOptionWithLocation[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
@@ -129,10 +131,11 @@ export function ScriptEditorClient({
   useEffect(() => {
     (async () => {
       try {
-        const [style, frames, castData] = await Promise.all([
+        const [style, frames, castData, locOptionsData] = await Promise.all([
           getScriptStyle(script.id),
           getStoryboardFrames(script.id),
           getScriptCastMap(script.id),
+          getScriptLocationOptionsMap(script.id),
         ]);
         if (style) {
           setScriptStyle(style as ScriptStyleRow);
@@ -141,6 +144,7 @@ export function ScriptEditorClient({
         }
         setStoryboardFrames(frames as ScriptStoryboardFrameRow[]);
         setCastMap(castData);
+        setLocationOptionsMap(locOptionsData);
       } catch { /* tables may not exist yet */ }
     })();
   }, [script.id]);
@@ -781,6 +785,8 @@ export function ScriptEditorClient({
         scenes={scenes}
         onLocationsChange={setLocations}
         globalLocations={globalLocations}
+        locationOptionsMap={locationOptionsMap}
+        onLocationOptionsMapChange={setLocationOptionsMap}
       />
       <ScriptSettingsPanel
         open={showSettings}

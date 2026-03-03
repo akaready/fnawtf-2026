@@ -9,13 +9,13 @@ export default async function LocationsPage() {
 
   const [locations, projectsResult] = await Promise.all([
     getLocations(),
-    supabase.from('projects').select('id, title').order('title'),
+    supabase.from('projects').select('id, title, thumbnail_url, client_name').order('title'),
   ]);
 
   return (
     <LocationsPageClient
       initialLocations={locations}
-      projects={(projectsResult.data ?? []) as { id: string; title: string }[]}
+      projects={(projectsResult.data ?? []) as { id: string; title: string; thumbnail_url: string | null; client_name: string | null }[]}
     />
   );
 }
