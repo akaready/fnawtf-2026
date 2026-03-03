@@ -6,6 +6,9 @@ import { ChevronDown } from 'lucide-react';
 const inputCls =
   'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
 
+const inputClsCompact =
+  'w-full rounded border border-admin-border-subtle bg-admin-bg-base px-2 h-7 text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-border-focus';
+
 interface AdminComboboxProps {
   /** Selected option ID (null = nothing selected) */
   value: string | null;
@@ -25,6 +28,8 @@ interface AdminComboboxProps {
   disabled?: boolean;
   /** Enable type-to-search filtering (default true). Set false for enum/fixed-option selects. */
   searchable?: boolean;
+  /** Compact sizing (h-7, text-xs) for inline/row contexts like scene headers */
+  compact?: boolean;
 }
 
 export function AdminCombobox({
@@ -37,7 +42,10 @@ export function AdminCombobox({
   nullable = true,
   disabled = false,
   searchable = true,
+  compact = false,
 }: AdminComboboxProps) {
+  const cls = compact ? inputClsCompact : inputCls;
+  const itemCls = compact ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm';
   const selected = value ? options.find((o) => o.id === value) : null;
   const [query, setQuery] = useState(selected?.label ?? '');
   const [open, setOpen] = useState(false);
@@ -154,7 +162,7 @@ export function AdminCombobox({
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className={`${inputCls} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`${cls} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
       ) : (
         <button
@@ -167,7 +175,7 @@ export function AdminCombobox({
               if (!ref.current?.contains(document.activeElement)) setOpen(false);
             }, 150);
           }}
-          className={`${inputCls} text-left flex items-center ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          className={`${cls} text-left flex items-center ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           <span className={`flex-1 min-w-0 truncate ${selected ? 'text-admin-text-primary' : 'text-admin-text-placeholder'}`}>
             {selected?.label ?? placeholder}
@@ -186,7 +194,7 @@ export function AdminCombobox({
               data-combobox-item
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(null)}
-              className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+              className={`w-full text-left ${itemCls} transition-colors ${
                 highlightIdx === 0
                   ? 'bg-admin-bg-active text-admin-text-muted'
                   : 'text-admin-text-muted hover:bg-admin-bg-hover'
@@ -204,7 +212,7 @@ export function AdminCombobox({
                 data-combobox-item
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(opt.id)}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors truncate ${
+                className={`w-full text-left ${itemCls} transition-colors truncate ${
                   itemIdx === highlightIdx
                     ? 'bg-admin-bg-active text-admin-text-primary'
                     : opt.id === value
@@ -222,7 +230,7 @@ export function AdminCombobox({
               data-combobox-item
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => { onCreate(query.trim()); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-sm transition-colors border-t border-admin-border ${
+              className={`w-full text-left ${itemCls} transition-colors border-t border-admin-border ${
                 highlightIdx === totalItems - 1
                   ? 'bg-admin-bg-active text-admin-info'
                   : 'text-admin-info hover:bg-admin-bg-hover'

@@ -99,7 +99,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
   if (editing) {
     return (
       <div
-        className="flex items-center gap-2 py-3 pr-2"
+        className="flex items-center gap-2 py-2 pr-2"
         id={`scene-${scene.id}`}
         onClick={e => e.stopPropagation()}
         onBlur={e => {
@@ -122,6 +122,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
             nullable={false}
             placeholder="INT/EXT"
             searchable={false}
+            compact
           />
         </div>
 
@@ -129,7 +130,6 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
         <div className="relative w-44 flex-shrink-0">
           <input
             ref={inputRef}
-            autoFocus
             value={showDropdown ? locQuery : scene.location_name}
             onChange={e => {
               setLocQuery(e.target.value);
@@ -137,7 +137,6 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
             }}
             onFocus={() => {
               setLocQuery(scene.location_name);
-              setShowDropdown(true);
             }}
             onKeyDown={handleKeyDown}
             placeholder="LOCATION NAME"
@@ -190,6 +189,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
             nullable={false}
             placeholder="TIME"
             searchable={false}
+            compact
           />
         </div>
 
