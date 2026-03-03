@@ -327,12 +327,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               ) : (
                 <span className="text-admin-lg font-semibold text-admin-text-primary truncate">{title}</span>
               )}
-              <SaveDot status={autoSave.status} />
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-admin-xs font-medium ${STATUS_COLORS[contract.status]}`}>
                 {STATUS_LABELS[contract.status]}
               </span>
+              <SaveDot status={autoSave.status} />
               <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center">
                 <X size={16} />
               </button>

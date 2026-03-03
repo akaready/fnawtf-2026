@@ -178,7 +178,7 @@ export function AdminCombobox({
       {open && totalItems > 0 && (
         <div
           ref={listRef}
-          className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl"
+          className="absolute z-50 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl"
         >
           {hasNone && (
             <button

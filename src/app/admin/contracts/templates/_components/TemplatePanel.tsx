@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Trash2, Save, FileText } from 'lucide-react';
+import { X, Trash2, Save, FileText, ChevronDown, Check } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
@@ -120,6 +120,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -258,21 +259,13 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
-            <h2 className="text-admin-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1 min-w-0 flex-1">
+            <h2 className="text-admin-lg font-semibold text-admin-text-primary truncate min-w-0 flex-1">
               {name || 'Untitled'}
-              <SaveDot status={autoSave.status} />
             </h2>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => { setIsActive(!isActive); autoSave.trigger(); }}
-                className={`text-[10px] px-2.5 py-1 rounded-full font-medium border transition-colors ${isActive ? 'bg-admin-success-bg text-admin-success border-admin-success-border hover:opacity-80' : 'bg-admin-bg-hover text-admin-text-faint border-admin-border hover:border-admin-border-emphasis'}`}
-              >
-                {isActive ? 'Active' : 'Inactive'}
-              </button>
-              <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center">
-                <X size={16} />
-              </button>
-            </div>
+            <SaveDot status={autoSave.status} />
+            <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center flex-shrink-0">
+              <X size={16} />
+            </button>
           </div>
 
           {/* Tabs */}
@@ -283,9 +276,9 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
 
             {/* Details tab */}
             {activeTab === 'details' && (
-              <div className="overflow-y-auto admin-scrollbar h-full p-5 space-y-4 max-w-lg">
+              <div className="overflow-y-auto admin-scrollbar h-full px-6 py-5 space-y-5">
                 <div className="space-y-1.5">
-                  <label className="block text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Template Name</label>
+                  <label className="admin-label">Template Name</label>
                   <input
                     value={name}
                     onChange={(e) => { setName(e.target.value); autoSave.trigger(); }}
@@ -294,7 +287,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Type</label>
+                  <label className="admin-label">Type</label>
                   <AdminCombobox
                     options={TYPE_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
                     value={contractType}
@@ -305,7 +298,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Description</label>
+                  <label className="admin-label">Description</label>
                   <textarea
                     value={description}
                     onChange={(e) => { setDescription(e.target.value); autoSave.trigger(); }}
@@ -371,6 +364,46 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                 <Save size={14} />
                 Save
               </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatusDropdown(p => !p)}
+                  className={`${isActive ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
+                >
+                  {isActive ? 'Active' : 'Inactive'}
+                  <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showStatusDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
+                      <button
+                        onClick={() => { setShowStatusDropdown(false); if (!isActive) { setIsActive(true); autoSave.trigger(); } }}
+                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                          isActive ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                          Active
+                        </span>
+                        {isActive && <Check size={12} />}
+                      </button>
+                      <button
+                        onClick={() => { setShowStatusDropdown(false); if (isActive) { setIsActive(false); autoSave.trigger(); } }}
+                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                          !isActive ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                          Inactive
+                        </span>
+                        {!isActive && <Check size={12} />}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 onClick={() => window.open(`/admin/contracts/templates/${template.id}/preview`, '_blank')}
                 className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"

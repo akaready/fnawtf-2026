@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
-import { X, Trash2, Loader2, ChevronDown, Save } from 'lucide-react';
+import { X, Trash2, Loader2, ChevronDown, Check, Save } from 'lucide-react';
 import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { PanelDrawer } from './PanelDrawer';
@@ -214,21 +214,11 @@ export function ProjectPanel({
           <h2 className="text-lg font-semibold text-admin-text-primary truncate">
             {isNew ? 'New Project' : String(project?.title || 'Untitled')}
           </h2>
-          {!isNew && project?.slug ? (
-            <p className="text-xs text-admin-text-faint truncate">{String(project.slug)}</p>
+          {!isNew && project?.client_name ? (
+            <p className="text-sm text-admin-text-muted truncate">{String(project.client_name)}</p>
           ) : null}
         </div>
         <SaveDot status={autoSave.status} />
-        {!isNew && (
-          <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-            published
-              ? 'bg-admin-success-bg text-admin-success'
-              : 'bg-admin-bg-hover text-admin-text-faint'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${published ? 'bg-admin-success' : 'bg-admin-text-ghost'}`} />
-            {published ? 'Published' : 'Draft'}
-          </span>
-        )}
         <button
           onClick={handleClose}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
@@ -313,39 +303,43 @@ export function ProjectPanel({
               <button
                 type="button"
                 onClick={() => setStatusOpen((o) => !o)}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                  published
-                    ? 'text-admin-success bg-admin-success-bg hover:bg-admin-success-bg/80'
-                    : 'text-admin-text-muted bg-admin-bg-hover hover:bg-admin-bg-active'
-                }`}
+                className={`${published ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${published ? 'bg-admin-success' : 'bg-admin-text-ghost'}`} />
                 {published ? 'Published' : 'Draft'}
-                <ChevronDown size={12} />
+                <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
               </button>
               {statusOpen && (
-                <div className="absolute bottom-full mb-1 left-0 w-36 bg-admin-bg-raised border border-admin-border rounded-lg shadow-xl overflow-hidden z-50">
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange(true)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
-                      published ? 'bg-admin-bg-selected text-admin-text-primary' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
-                    Published
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange(false)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
-                      !published ? 'bg-admin-bg-selected text-admin-text-primary' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-admin-text-ghost" />
-                    Draft
-                  </button>
-                </div>
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
+                  <div className="absolute bottom-full mb-1 left-0 min-w-[160px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(true)}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                        published ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                        Published
+                      </span>
+                      {published && <Check size={12} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange(false)}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                        !published ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                        Draft
+                      </span>
+                      {!published && <Check size={12} />}
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>

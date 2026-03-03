@@ -179,10 +179,8 @@ export function ScriptStylePanel({
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-admin-text-primary tracking-tight">Style</h2>
-            <SaveDot status={status} />
-          </div>
+          <h2 className="text-lg font-bold text-admin-text-primary tracking-tight">Style</h2>
+          <SaveDot status={status} />
           <button
             onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"

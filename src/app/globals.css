@@ -314,6 +314,17 @@ html[data-admin-light] .admin-shell .admin-logo {
     padding: 0.1em 0.3em;
     font-weight: 500;
   }
+
+  /* TipTap placeholder for empty editors */
+  .prose-snippet p.is-editor-empty:first-child::before,
+  .prose-contract p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    color: var(--admin-text-faint);
+    pointer-events: none;
+    height: 0;
+    white-space: pre-line;
+  }
 }
 
 body {
@@ -389,14 +400,18 @@ a[data-btn-hover]:hover {
   color: inherit;
 }
 
-/* Focus mode — push AdminShell sidebar off-screen to the left */
+/* Focus mode — collapse AdminShell sidebar to reclaim layout space */
 .admin-shell.focus-push > aside {
-  transform: translateX(-100%);
-  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  width: 0 !important;
+  min-width: 0;
+  overflow: hidden;
+  border-right-width: 0;
+  transition: width 500ms cubic-bezier(0.22, 1, 0.36, 1) !important,
+              border-right-width 500ms cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 .admin-shell:not(.focus-push) > aside {
-  transform: translateX(0);
-  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 500ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-right-width 500ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Prevent iOS Safari auto-zoom on input focus (requires >= 16px) */

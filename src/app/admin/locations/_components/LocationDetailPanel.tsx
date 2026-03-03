@@ -220,8 +220,9 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={autoSave.status} /></h2>
+            <h2 className="text-lg font-semibold text-admin-text-primary truncate">{local.name}</h2>
           </div>
+          <SaveDot status={autoSave.status} />
           <button
             onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"

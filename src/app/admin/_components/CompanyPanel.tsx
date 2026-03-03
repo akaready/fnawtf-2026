@@ -357,12 +357,12 @@ export function CompanyPanel({
               </p>
             )}
           </div>
-          <SaveDot status={autoSave.status} />
           {/* Status pill — read-only */}
           <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap bg-admin-bg-selected flex-shrink-0 ${statusCfg.color}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
             {statusCfg.label}
           </span>
+          <SaveDot status={autoSave.status} />
           <button
             onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"

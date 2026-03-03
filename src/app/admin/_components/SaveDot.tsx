@@ -13,7 +13,7 @@ const colorMap: Record<AutoSaveStatus, string> = {
 export function SaveDot({ status }: { status: AutoSaveStatus }) {
   const isPulsing = status === 'pending' || status === 'saving';
   return (
-    <span className="inline-flex items-center ml-2 flex-shrink-0">
+    <span className="inline-flex items-center mx-3 flex-shrink-0">
       <span
         className={`w-2.5 h-2.5 rounded-full transition-colors duration-700 ${colorMap[status]} ${isPulsing ? 'animate-pulse' : ''}`}
       />

@@ -126,7 +126,8 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
       <div className="flex flex-col h-full relative">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
-          <h2 className="text-admin-lg font-semibold text-admin-text-primary inline-flex items-center gap-1">Tags <SaveDot status={autoSave.status} /></h2>
+          <h2 className="text-admin-lg font-semibold text-admin-text-primary">Tags</h2>
+          <SaveDot status={autoSave.status} />
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <XIcon size={16} />
           </button>
