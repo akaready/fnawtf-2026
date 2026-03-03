@@ -21,7 +21,7 @@ export interface ScriptRow {
 }
 
 export function formatScriptVersion(major: number, minor: number, isPublished: boolean): string {
-  return isPublished ? `v${major}` : `v${major}.${minor}`;
+  return isPublished ? `${major}` : `${major}.${minor}`;
 }
 
 export interface ScriptBeatReferenceRow {

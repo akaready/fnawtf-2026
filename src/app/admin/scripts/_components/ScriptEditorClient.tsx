@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import {
   updateScript, createScene, updateScene, deleteScene, reorderScenes,
   createBeat, updateBeat, deleteBeat, reorderBeats,
-  createScriptVersion, publishScriptVersion, getScriptVersions,
+  createScriptVersion, publishScriptVersion, unpublishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
   getScriptCastMap, saveScratchContent, createModeVersion,
@@ -412,17 +412,33 @@ export function ScriptEditorClient({
     }
   }, [handleSaveAll, script.id, router]);
 
-  // ── Publish (create client-visible version) ──
+  // ── Publish / Unpublish (toggle client-portal visibility) ──
   const handlePublish = useCallback(async () => {
     setPublishing(true);
     try {
       await handleSaveAll();
-      const newId = await publishScriptVersion(script.id);
-      router.push(`/admin/scripts/${newId}`);
+      await publishScriptVersion(script.id);
+      // Optimistic: compute next major and update local state
+      const nextMajor = versions.length > 0
+        ? Math.max(...versions.map(v => v.major_version)) + 1
+        : 1;
+      setScript(prev => ({ ...prev, major_version: nextMajor, minor_version: 0, is_published: true }));
+      setVersions(prev => prev.map(v => v.id === script.id ? { ...v, major_version: nextMajor, minor_version: 0, is_published: true } : v));
     } finally {
       setPublishing(false);
     }
-  }, [handleSaveAll, script.id, router]);
+  }, [handleSaveAll, script.id, versions]);
+
+  const handleUnpublish = useCallback(async () => {
+    setPublishing(true);
+    try {
+      await unpublishScriptVersion(script.id);
+      setScript(prev => ({ ...prev, is_published: false }));
+      setVersions(prev => prev.map(v => v.id === script.id ? { ...v, is_published: false } : v));
+    } finally {
+      setPublishing(false);
+    }
+  }, [script.id]);
 
   // ── Focus mode transition ──
   // ENTER: Everything exits simultaneously, then mount focus mode
@@ -535,7 +551,7 @@ export function ScriptEditorClient({
               <div className="relative">
                 <button
                   onClick={() => setVersionPickerOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-mono font-bold rounded-full border transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-admin-mono font-bold rounded-full border transition-colors"
                   style={{ borderColor: versionColor(script.major_version) + '40', backgroundColor: versionColor(script.major_version) + '15', color: versionColor(script.major_version) }}
                 >
                   {formatScriptVersion(script.major_version, script.minor_version, script.is_published)}
@@ -544,8 +560,11 @@ export function ScriptEditorClient({
                 {versionPickerOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setVersionPickerOpen(false)} />
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[220px] py-1 animate-dropdown-in">
-                      {versions.map(v => (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 animate-dropdown-in">
+                      {versions
+                        .slice()
+                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        .map(v => (
                         <button
                           key={v.id}
                           onClick={() => {
@@ -556,19 +575,19 @@ export function ScriptEditorClient({
                             v.id === script.id
                               ? 'bg-admin-bg-active text-admin-text-primary'
                               : 'text-admin-text-secondary hover:bg-admin-bg-hover'
-                          } ${!v.is_published ? 'pl-6' : ''}`}
+                          }`}
                         >
                           <span
-                            className="font-mono font-bold px-1.5 py-0.5 rounded-full text-[10px]"
+                            className="font-admin-mono font-bold px-2 py-0.5 rounded-full text-xs"
                             style={{ backgroundColor: versionColor(v.major_version) + '20', color: versionColor(v.major_version) }}
                           >
                             {formatScriptVersion(v.major_version, v.minor_version, v.is_published)}
                           </span>
-                          {v.content_mode === 'scratchpad' ? <StickyNote size={11} className="text-admin-text-faint" /> : <Table2 size={11} className="text-admin-text-faint" />}
+                          {v.content_mode === 'scratchpad' ? <StickyNote size={14} className="text-admin-text-faint" /> : <Table2 size={14} className="text-admin-text-faint" />}
                           {v.is_published && (
                             <span className="text-[10px] font-medium text-admin-success">Published</span>
                           )}
-                          <span className="text-admin-text-ghost ml-auto">{new Date(v.created_at).toLocaleDateString()}</span>
+                          <span className="text-admin-text-ghost font-admin-mono ml-auto">{new Date(v.created_at).toLocaleDateString()}</span>
                         </button>
                       ))}
                       {versions.length === 0 && (
@@ -608,9 +627,6 @@ export function ScriptEditorClient({
                 onClick={() => setShowStatusDropdown(p => !p)}
                 className={`${script.is_published ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 text-sm font-medium`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  script.is_published ? 'bg-admin-success' : 'bg-admin-text-faint'
-                }`} />
                 {script.is_published ? 'Published' : 'Internal Draft'}
                 <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
               </button>
@@ -619,8 +635,8 @@ export function ScriptEditorClient({
                   <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
                   <div className="absolute right-0 top-full mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
                     <button
-                      onClick={() => { setShowStatusDropdown(false); }}
-                      disabled={!script.is_published}
+                      onClick={() => { setShowStatusDropdown(false); if (script.is_published) handleUnpublish(); }}
+                      disabled={publishing || !script.is_published}
                       className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
                         !script.is_published ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
                       }`}

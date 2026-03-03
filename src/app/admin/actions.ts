@@ -2698,18 +2698,19 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
   });
 }
 
-/** Publish: duplicate at next major version (client-visible) */
+/** Publish: promote current version in-place to next major version */
 export async function publishScriptVersion(scriptId: string): Promise<string> {
   const { supabase } = await requireAuth();
 
-  // Fetch current script to get group
+  // Fetch current script
   const { data: script, error: scriptErr } = await supabase
     .from('scripts')
-    .select('script_group_id, version')
+    .select('script_group_id, major_version, minor_version, is_published')
     .eq('id', scriptId)
     .single();
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
+  if (s.is_published) throw new Error('Script is already published');
   const groupId = s.script_group_id as string;
 
   // Find max major_version in group
@@ -2722,12 +2723,27 @@ export async function publishScriptVersion(scriptId: string): Promise<string> {
     .single();
   const nextMajor = ((maxRow as Record<string, unknown> | null)?.major_version as number ?? 0) + 1;
 
-  return duplicateScriptCore(scriptId, {
-    major_version: nextMajor,
-    minor_version: 0,
-    is_published: true,
-    version: ((s.version as number) ?? 1) + 1,
-  });
+  // Update in-place: promote to next major version
+  const { error: updateErr } = await supabase
+    .from('scripts')
+    .update({ major_version: nextMajor, minor_version: 0, is_published: true } as never)
+    .eq('id', scriptId);
+  if (updateErr) throw new Error(updateErr.message);
+
+  return scriptId;
+}
+
+/** Unpublish: flip is_published to false, keep version number */
+export async function unpublishScriptVersion(scriptId: string): Promise<string> {
+  const { supabase } = await requireAuth();
+
+  const { error } = await supabase
+    .from('scripts')
+    .update({ is_published: false } as never)
+    .eq('id', scriptId);
+  if (error) throw new Error(error.message);
+
+  return scriptId;
 }
 
 // ── Storyboard Styles ────────────────────────────────────────────────

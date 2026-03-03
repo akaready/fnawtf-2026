@@ -546,7 +546,7 @@ export function ScriptCharactersPanel({
   );
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[750px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[620px]">
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
@@ -677,6 +677,7 @@ export function ScriptCharactersPanel({
                         searchable={false}
                       />
                     </div>
+                    <ColorPicker value={draftColor} onChange={c => { setDraftColor(c); autoSave.trigger(); }} />
                   </div>
                 </div>
 
@@ -691,9 +692,6 @@ export function ScriptCharactersPanel({
                     className="admin-input w-full text-sm resize-none py-2.5 px-3 leading-relaxed"
                   />
                 </div>
-
-                {/* Color presets */}
-                <ColorPicker value={draftColor} onChange={c => { setDraftColor(c); autoSave.trigger(); }} />
 
                 {/* ── Casting Options — Row List ────────────────────────── */}
                 <div className="space-y-2">

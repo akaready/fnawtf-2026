@@ -132,7 +132,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
   };
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[750px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[580px]">
       <div className="flex flex-col h-full relative">
         {/* Header */}
         <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
@@ -237,9 +237,9 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
                       placeholder="tag-name"
                       className="admin-input flex-1 text-base font-mono py-2 px-3"
                     />
+                    <ColorPicker value={newColor} onChange={setNewColor} />
                   </div>
                 </div>
-                <ColorPicker value={newColor} onChange={setNewColor} />
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleAdd}
@@ -257,16 +257,16 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
                 {/* Name */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Name</label>
-                  <input
-                    value={selectedWithEdits.name}
-                    onChange={e => handleLocalUpdate(selectedWithEdits.id, 'name', e.target.value)}
-                    className="admin-input w-full text-base font-semibold py-2 px-3"
-                    placeholder="Tag name"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={selectedWithEdits.name}
+                      onChange={e => handleLocalUpdate(selectedWithEdits.id, 'name', e.target.value)}
+                      className="admin-input flex-1 min-w-0 text-base font-semibold py-2 px-3"
+                      placeholder="Tag name"
+                    />
+                    <ColorPicker value={selectedWithEdits.color} onChange={c => handleLocalUpdate(selectedWithEdits.id, 'color', c)} />
+                  </div>
                 </div>
-
-                {/* Color */}
-                <ColorPicker value={selectedWithEdits.color} onChange={c => handleLocalUpdate(selectedWithEdits.id, 'color', c)} />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-sm text-admin-text-faint">

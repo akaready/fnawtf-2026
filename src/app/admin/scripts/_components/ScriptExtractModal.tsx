@@ -1,63 +1,14 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, AlertCircle, Trash2 } from 'lucide-react';
 import { StylePresetCard } from './StylePresetCard';
-import { PRESET_COLORS_LIGHT, PRESET_COLORS_DARK } from './ColorPicker';
+import { ColorPicker } from './ColorPicker';
 import { STYLE_PRESETS } from './ScriptStylePanel';
 import { createScriptFromExtract } from '@/app/admin/actions';
 import type { ExtractedScriptData } from '@/app/admin/actions';
 import type { ScriptCharacterRow, ScriptLocationRow, ScriptCharacterType, StoryboardStylePreset, IntExt } from '@/types/scripts';
 import type { RewriteLevel } from '@/app/api/admin/script-extract/route';
-
-/** Compact color swatch that reveals a popover picker on click */
-function ColorSwatch({ value, onChange }: { value: string; onChange: (color: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        className="w-7 h-7 rounded-full border-2 border-admin-border hover:border-admin-border-subtle transition-colors flex-shrink-0"
-        style={{ backgroundColor: value }}
-      />
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl p-2.5 space-y-1.5">
-          <div className="flex items-center gap-1">
-            {PRESET_COLORS_LIGHT.map(color => (
-              <button
-                key={color}
-                onClick={() => { onChange(color); setOpen(false); }}
-                className={`w-5 h-5 rounded-full transition-transform hover:scale-110 ${value === color ? 'ring-2 ring-white ring-offset-1 ring-offset-admin-bg-overlay scale-110' : ''}`}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-1">
-            {PRESET_COLORS_DARK.map(color => (
-              <button
-                key={color}
-                onClick={() => { onChange(color); setOpen(false); }}
-                className={`w-5 h-5 rounded-full transition-transform hover:scale-110 ${value === color ? 'ring-2 ring-white ring-offset-1 ring-offset-admin-bg-overlay scale-110' : ''}`}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface Props {
   open: boolean;
@@ -325,7 +276,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <div key={i} className="rounded-admin-md overflow-hidden" style={{ borderTop: `1px solid ${ch.color}40`, borderRight: `1px solid ${ch.color}40`, borderBottom: `1px solid ${ch.color}40`, borderLeft: `3px solid ${ch.color}` }}>
                   <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset" style={{ borderBottom: `1px solid ${ch.color}20` }}>
                     <div className="flex items-center gap-2.5">
-                      <ColorSwatch value={ch.color} onChange={color => updateCharacter(i, { color })} />
+                      <ColorPicker value={ch.color} onChange={color => updateCharacter(i, { color })} />
                       <input
                         value={ch.name}
                         onChange={e => updateCharacter(i, { name: e.target.value })}
@@ -406,7 +357,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <div key={i} className="rounded-admin-md overflow-hidden" style={{ borderTop: `1px solid ${loc.color}40`, borderRight: `1px solid ${loc.color}40`, borderBottom: `1px solid ${loc.color}40`, borderLeft: `3px solid ${loc.color}` }}>
                   <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset" style={{ borderBottom: `1px solid ${loc.color}20` }}>
                     <div className="flex items-center gap-2.5">
-                      <ColorSwatch value={loc.color} onChange={color => updateLocation(i, { color })} />
+                      <ColorPicker value={loc.color} onChange={color => updateLocation(i, { color })} />
                       <input
                         value={loc.name}
                         onChange={e => updateLocation(i, { name: e.target.value.toUpperCase() })}
