@@ -58,11 +58,11 @@ export function ReelPlayer({
       setIsLoading(false);
     };
 
-    video.addEventListener('canplaythrough', handleCanPlay, { once: true });
+    video.addEventListener('canplay', handleCanPlay, { once: true });
     video.addEventListener('error', handleError, { once: true });
 
     return () => {
-      video.removeEventListener('canplaythrough', handleCanPlay);
+      video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('error', handleError);
     };
   }, [videoSrc]);
@@ -253,11 +253,10 @@ export function ReelPlayer({
         ref={videoRef}
         className="w-full h-full object-cover"
         poster={placeholderSrc}
+        muted
         playsInline
         onClick={togglePlay}
-      >
-        Your browser does not support video playback.
-      </video>
+      />
 
       {/* Loading Indicator */}
       {isLoading && !error && (

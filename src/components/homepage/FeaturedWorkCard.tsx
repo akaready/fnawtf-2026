@@ -100,11 +100,11 @@ export function FeaturedWorkCard({ project, index: _index = 0, className }: Feat
           />
         )}
 
-        {/* Gradient Overlay - Dark at bottom, transparent at top */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* Gradient Overlay — always visible on mobile, hover-reveal on desktop */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300" />
 
-        {/* Hover Details - White text, animates up */}
-        <div className="absolute bottom-0 left-0 right-0 text-white translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out px-4 py-3 md:px-6 md:py-4">
+        {/* Details — always visible on mobile, hover-reveal on desktop */}
+        <div className="absolute bottom-0 left-0 right-0 text-white translate-y-0 md:translate-y-full md:group-hover:translate-y-0 transition-transform duration-300 ease-out px-4 py-3 md:px-6 md:py-4">
           <h3 className="font-bold text-sm md:text-base mb-2">
             {project.title}
           </h3>

@@ -119,20 +119,29 @@ export function BackgroundVideo({
 
   return (
     <>
-      {/* Background Video */}
+      {/* Always-visible poster — provides background if video can't autoplay (e.g. iOS Low Power Mode) */}
+      {posterSrc && (
+        <img
+          src={posterSrc}
+          alt=""
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+            hasStarted ? 'opacity-0' : 'opacity-100'
+          }`}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Background Video — fades in once playing */}
       <video
         ref={videoRef}
         muted
         loop
         playsInline
-        poster={posterSrc}
         className={`absolute inset-0 w-full h-full object-cover ${className} ${
           hasStarted ? 'opacity-100' : 'opacity-0'
         } transition-opacity duration-1000`}
         aria-hidden="true"
-      >
-        Your browser does not support video playback.
-      </video>
+      />
 
       {/* Dark Overlay */}
       {overlayClassName && (

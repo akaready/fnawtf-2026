@@ -125,7 +125,7 @@ export function TestimonialsSection({ testimonials }: { testimonials: Testimonia
 
         {/* Three-column scrolling grid */}
         <div
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[720px] overflow-hidden"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[720px] overflow-hidden"
           style={maskStyle}
         >
           {/* Left column — hidden on mobile, scrolls down */}
