@@ -308,7 +308,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       ) : (
         <div className="flex flex-col h-full">
           {/* Header — title + status pill + close */}
-          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
+          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-admin-xs font-admin-mono text-admin-text-faint flex-shrink-0">#{contract.contract_number}</span>
               {isEditable ? (

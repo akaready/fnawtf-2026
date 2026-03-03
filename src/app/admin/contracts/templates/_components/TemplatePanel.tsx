@@ -257,7 +257,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
       ) : (
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
+          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
             <h2 className="text-admin-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1 min-w-0 flex-1">
               {name || 'Untitled'}
               <SaveDot status={autoSave.status} />
@@ -322,7 +322,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
               <div className="flex flex-col h-full">
 
                 {/* Token pills bar — grouped by category, one row per group */}
-                <div className="flex-shrink-0 border-b border-admin-border bg-admin-bg-inset divide-y divide-admin-border-subtle">
+                <div className="flex-shrink-0 border-b border-admin-border bg-admin-bg-sidebar divide-y divide-admin-border-subtle">
                   {FIELD_GROUPS.map((group) => (
                     <div key={group.label} className="flex items-center gap-1.5 px-6 py-2">
                       <span className="text-[10px] text-admin-text-faint uppercase tracking-wider w-14 flex-shrink-0">{group.label}</span>

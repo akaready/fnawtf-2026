@@ -43,7 +43,7 @@ export function ChatPanel() {
   };
 
   return (
-    <div className={`flex flex-col h-full bg-admin-bg-sidebar overflow-hidden ${
+    <div className={`flex flex-col h-full bg-admin-bg-nav overflow-hidden ${
       isSidebarMode
         ? ''
         : 'border border-admin-border rounded-2xl shadow-2xl'

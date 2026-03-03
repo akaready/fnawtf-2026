@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react';
-import { Plus, Trash2, Loader2, X, UserCircle, RefreshCw, Pencil, Sparkles, Check } from 'lucide-react';
+import { Plus, Trash2, Loader2, X, UserCircle, RefreshCw, Pencil, Sparkles, Check, Save } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -21,8 +21,8 @@ import { createClient } from '@/lib/supabase/client';
 import { AdminCombobox } from '../../_components/AdminCombobox';
 import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
-import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
 import {
   createCharacter, updateCharacter, deleteCharacter,
   getContactsWithHeadshots,
@@ -302,15 +302,25 @@ export function ScriptCharactersPanel({
   const [appearanceDraft, setAppearanceDraft] = useState('');
   const [extractingCastId, setExtractingCastId] = useState<string | null>(null);
 
-  // ── Draft state (buffered until Save) ───────────────────────────────
+  // ── Draft state ───────────────────────────────────────────────────
   const [draftName, setDraftName] = useState('');
   const [draftDescription, setDraftDescription] = useState('');
   const [draftColor, setDraftColor] = useState('');
   const [draftType, setDraftType] = useState<ScriptCharacterType>('actor');
-  const [saving, setSaving] = useState(false);
-  const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Refs for autoSave closure
+  const draftNameRef = useRef(draftName);
+  const draftDescriptionRef = useRef(draftDescription);
+  const draftColorRef = useRef(draftColor);
+  const draftTypeRef = useRef(draftType);
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => { draftNameRef.current = draftName; });
+  useEffect(() => { draftDescriptionRef.current = draftDescription; });
+  useEffect(() => { draftColorRef.current = draftColor; });
+  useEffect(() => { draftTypeRef.current = draftType; });
+  useEffect(() => { selectedIdRef.current = selectedId; });
 
   const dndId = useId();
   const sensors = useSensors(
@@ -343,57 +353,26 @@ export function ScriptCharactersPanel({
     }
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Dirty detection
-  const isDirty = useMemo(() => {
-    if (!selected) return false;
-    return (
-      draftName !== selected.name ||
-      draftDescription !== (selected.description ?? '') ||
-      draftColor !== selected.color ||
-      draftType !== (selected.character_type === 'animated' ? 'actor' : selected.character_type)
-    );
-  }, [draftName, draftDescription, draftColor, draftType, selected]);
+  // ── Auto-save ───────────────────────────────────────────────────
+  const autoSave = useAutoSave(async () => {
+    const charId = selectedIdRef.current;
+    if (!charId) return;
+    const updates = {
+      name: draftNameRef.current,
+      description: draftDescriptionRef.current || null,
+      color: draftColorRef.current,
+      character_type: draftTypeRef.current,
+    };
+    await updateCharacter(charId, updates);
+    onCharactersChange(characters.map(c =>
+      c.id === charId ? { ...c, ...updates, description: draftDescriptionRef.current || null } : c,
+    ));
+  });
 
-  // Close guard
   const handleClose = useCallback(() => {
-    if (isDirty) {
-      setConfirmClose(true);
-    } else {
-      onClose();
-    }
-  }, [isDirty, onClose]);
-
-  const handleDiscard = useCallback(() => {
-    if (selected) {
-      setDraftName(selected.name);
-      setDraftDescription(selected.description ?? '');
-      setDraftColor(selected.color);
-      setDraftType(selected.character_type === 'animated' ? 'actor' : selected.character_type);
-    }
-    setConfirmClose(false);
+    autoSave.flush();
     onClose();
-  }, [selected, onClose]);
-
-  // Save all draft fields for selected character
-  const handleSave = useCallback(async () => {
-    if (!selected) return;
-    setSaving(true);
-    try {
-      const updates = {
-        name: draftName,
-        description: draftDescription || null,
-        color: draftColor,
-        character_type: draftType,
-      };
-      await updateCharacter(selected.id, updates);
-      onCharactersChange(characters.map(c =>
-        c.id === selected.id ? { ...c, ...updates, description: draftDescription || null } : c,
-      ));
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  }, [selected, draftName, draftDescription, draftColor, draftType, characters, onCharactersChange, onClose]);
+  }, [autoSave, onClose]);
 
   // Memoize mention counts
   const mentionCounts = useMemo(() => {
@@ -570,8 +549,8 @@ export function ScriptCharactersPanel({
     <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
-          <h2 className="text-admin-lg font-semibold text-admin-text-primary">Characters</h2>
+        <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
+          <h2 className="text-admin-lg font-semibold text-admin-text-primary inline-flex items-center gap-1">Characters <SaveDot status={autoSave.status} /></h2>
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <X size={16} />
           </button>
@@ -581,6 +560,17 @@ export function ScriptCharactersPanel({
         <div className="flex-1 flex min-h-0">
           {/* Left: Character list */}
           <div className="w-[220px] flex-shrink-0 border-r border-admin-border flex flex-col">
+            {/* Add button at top */}
+            <div className="flex-shrink-0 border-b border-admin-border px-3 py-3 flex items-center">
+              <button
+                onClick={handleAdd}
+                disabled={adding}
+                className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"
+              >
+                {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                Add Character
+              </button>
+            </div>
             <div className="flex-1 overflow-y-auto admin-scrollbar py-2">
               {characters.length === 0 && (
                 <p className="text-xs text-admin-text-faint text-center py-6 px-3">
@@ -593,41 +583,71 @@ export function ScriptCharactersPanel({
                 const charCast = castMap[char.id] ?? [];
                 const featured = charCast.find(c => c.is_featured);
                 return (
-                  <button
+                  <div
                     key={char.id}
-                    onClick={() => {
-                      if (isDirty && selectedId !== char.id) {
-                        handleSave().then(() => setSelectedId(char.id));
-                        return;
-                      }
-                      setSelectedId(char.id);
-                    }}
-                    className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors ${
+                    className={`group/row w-full flex items-center px-4 py-2.5 gap-2.5 transition-colors ${
                       isSelected
                         ? 'bg-admin-bg-active text-admin-text-primary'
                         : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary'
                     }`}
                   >
-                    {featured?.contact.headshot_url ? (
-                      <img
-                        src={featured.contact.headshot_url}
-                        alt=""
-                        className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                        style={{ boxShadow: `0 0 0 2px ${char.color}` }}
-                      />
-                    ) : (
-                      <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: char.color }}
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{char.name}</div>
-                      {count > 0 && (
-                        <div className="text-[10px] text-admin-text-faint">{count} beat{count !== 1 ? 's' : ''}</div>
+                    <button
+                      onClick={() => {
+                        if (selectedId !== char.id) {
+                          autoSave.flush();
+                        }
+                        setSelectedId(char.id);
+                      }}
+                      className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                    >
+                      {featured?.contact.headshot_url ? (
+                        <img
+                          src={featured.contact.headshot_url}
+                          alt=""
+                          className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                          style={{ boxShadow: `0 0 0 2px ${char.color}` }}
+                        />
+                      ) : (
+                        <span
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: char.color }}
+                        />
                       )}
-                    </div>
-                  </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{char.name}</div>
+                        {count > 0 && (
+                          <div className="text-[10px] text-admin-text-faint">{count} beat{count !== 1 ? 's' : ''}</div>
+                        )}
+                      </div>
+                    </button>
+                    {/* Two-step delete */}
+                    {confirmDeleteId === char.id ? (
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button
+                          onClick={() => handleDelete(char.id)}
+                          className="p-1 text-admin-danger hover:text-red-300 transition-colors"
+                          title="Confirm delete"
+                        >
+                          {deleting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="p-1 text-admin-text-faint hover:text-admin-text-primary transition-colors"
+                          title="Cancel"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(char.id)}
+                        className="opacity-0 group-hover/row:opacity-100 p-1 text-admin-text-ghost hover:text-admin-danger transition-all flex-shrink-0"
+                        title="Delete character"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -643,7 +663,7 @@ export function ScriptCharactersPanel({
                   <div className="flex items-center gap-2">
                     <input
                       value={draftName}
-                      onChange={e => setDraftName(e.target.value)}
+                      onChange={e => { setDraftName(e.target.value); autoSave.trigger(); }}
                       className="admin-input flex-1 min-w-0 text-base font-semibold py-2 px-3"
                       placeholder="Character name"
                     />
@@ -651,7 +671,7 @@ export function ScriptCharactersPanel({
                       <AdminCombobox
                         value={draftType}
                         options={CHARACTER_TYPES}
-                        onChange={(v) => { if (v) setDraftType(v as ScriptCharacterType); }}
+                        onChange={(v) => { if (v) { setDraftType(v as ScriptCharacterType); autoSave.trigger(); } }}
                         nullable={false}
                         placeholder="Type"
                         searchable={false}
@@ -665,7 +685,7 @@ export function ScriptCharactersPanel({
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Description</label>
                   <textarea
                     value={draftDescription}
-                    onChange={e => setDraftDescription(e.target.value)}
+                    onChange={e => { setDraftDescription(e.target.value); autoSave.trigger(); }}
                     placeholder="Physical description, voice notes…"
                     rows={4}
                     className="admin-input w-full text-sm resize-none py-2.5 px-3 leading-relaxed"
@@ -673,7 +693,7 @@ export function ScriptCharactersPanel({
                 </div>
 
                 {/* Color presets */}
-                <ColorPicker value={draftColor} onChange={setDraftColor} />
+                <ColorPicker value={draftColor} onChange={c => { setDraftColor(c); autoSave.trigger(); }} />
 
                 {/* ── Casting Options — Row List ────────────────────────── */}
                 <div className="space-y-2">
@@ -752,57 +772,12 @@ export function ScriptCharactersPanel({
         </div>
 
         {/* Footer action bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <div className="flex items-center gap-2">
-            <SaveButton saving={saving} saved={false} onClick={handleSave} className="px-5 py-2.5 text-sm" />
-            <button
-              onClick={handleAdd}
-              disabled={adding}
-              className="btn-secondary px-4 py-2.5 text-sm"
-            >
-              {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              Add Character
-            </button>
-          </div>
-
-          {selected && (
-            confirmDelete ? (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-admin-danger mr-1">Delete?</span>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                  title="Confirm delete"
-                >
-                  {deleting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-                  title="Cancel"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                title="Delete character"
-              >
-                <Trash2 size={14} />
-              </button>
-            )
-          )}
+        <div className="flex items-center px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
+          <button onClick={handleClose} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Save size={14} />
+            Save
+          </button>
         </div>
-
-        {/* Discard changes dialog */}
-        <DiscardChangesDialog
-          open={confirmClose}
-          onKeepEditing={() => setConfirmClose(false)}
-          onDiscard={handleDiscard}
-        />
       </div>
     </PanelDrawer>
   );

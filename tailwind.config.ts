@@ -49,6 +49,8 @@ const config: Config = {
             inset:          'var(--admin-bg-inset)',
             sidebar:        'var(--admin-bg-sidebar)',
             'sidebar-hover': 'var(--admin-bg-sidebar-hover)',
+            nav:            'var(--admin-bg-nav)',
+            'nav-hover':    'var(--admin-bg-nav-hover)',
             raised:         'var(--admin-bg-raised)',
             overlay:        'var(--admin-bg-overlay)',
             wash:           'var(--admin-bg-wash)',

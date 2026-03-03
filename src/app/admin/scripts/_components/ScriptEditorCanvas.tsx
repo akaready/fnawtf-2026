@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronDown, Sparkles, X, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -352,6 +352,34 @@ export function ScriptEditorCanvas({
   }, [selectedBeatIds, onDeleteBeat]);
 
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
+  const selectionActive = selectedBeatIds.size > 0;
+  const allBeatIds = scenes.flatMap(s => s.beats.map(b => b.id));
+  const allSelected = allBeatIds.length > 0 && allBeatIds.every(id => selectedBeatIds.has(id));
+
+  const handleSelectAll = useCallback(() => {
+    const all = scenes.flatMap(s => s.beats.map(b => b.id));
+    if (all.every(id => selectedBeatIds.has(id))) {
+      setSelectedBeatIds(new Set());
+    } else {
+      setSelectedBeatIds(new Set(all));
+    }
+  }, [scenes, selectedBeatIds]);
+
+  const handleSelectScene = useCallback((sceneId: string) => {
+    const scene = scenes.find(s => s.id === sceneId);
+    if (!scene) return;
+    const sceneBeatIds = scene.beats.map(b => b.id);
+    const allSceneSelected = sceneBeatIds.every(id => selectedBeatIds.has(id));
+    setSelectedBeatIds(prev => {
+      const next = new Set(prev);
+      if (allSceneSelected) {
+        for (const id of sceneBeatIds) next.delete(id);
+      } else {
+        for (const id of sceneBeatIds) next.add(id);
+      }
+      return next;
+    });
+  }, [scenes, selectedBeatIds]);
 
   // Reset confirm state when selection clears
   useEffect(() => {
@@ -398,7 +426,23 @@ export function ScriptEditorCanvas({
       <div className="absolute top-0 bottom-0 right-0 w-px bg-admin-border z-[18] pointer-events-none" style={{ right: 0, left: 'auto' }} />
       {/* Column headers */}
       <div ref={colHeaderRef} className="sticky top-0 z-20 bg-admin-bg-base">
-        <div ref={headerGridRef} className="grid ml-10 border-r border-admin-border" style={{ gridTemplateColumns: gridTemplate }}>
+        <div className="flex">
+          {/* Select-all checkbox */}
+          <div
+            className="w-10 flex items-center justify-center flex-shrink-0 cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); handleSelectAll(); }}
+          >
+            <div
+              className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors ${
+                allSelected
+                  ? 'bg-white border-white'
+                  : 'border-admin-text-ghost hover:border-admin-text-faint'
+              }`}
+            >
+              {allSelected && <Check size={10} className="text-black" strokeWidth={3} />}
+            </div>
+          </div>
+        <div ref={headerGridRef} className="grid flex-1 border-r border-admin-border" style={{ gridTemplateColumns: gridTemplate }}>
           {visibleColumns.map((col, idx) => (
             <div
               key={col.key}
@@ -434,6 +478,7 @@ export function ScriptEditorCanvas({
             </div>
           ))}
         </div>
+        </div>{/* /flex */}
       </div>
 
       {/* Scenes */}
@@ -465,11 +510,36 @@ export function ScriptEditorCanvas({
                   }
                 }}
               >
-                <div className="flex-shrink-0 w-10 flex items-center justify-center py-3 text-admin-text-faint">
-                  {isCollapsed
-                    ? <ChevronRight size={13} />
-                    : <ChevronDown size={13} />
-                  }
+                <div className="group/scenegutter flex-shrink-0 w-10 flex items-center justify-center py-3 text-admin-text-faint">
+                  {(() => {
+                    const sceneBeatIds = scene.beats.map(b => b.id);
+                    const allSceneSelected = sceneBeatIds.length > 0 && sceneBeatIds.every(id => selectedBeatIds.has(id));
+                    const showCheckbox = selectionActive;
+                    return showCheckbox ? (
+                      <div
+                        className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors cursor-pointer ${
+                          allSceneSelected
+                            ? 'bg-white border-white'
+                            : 'border-admin-text-ghost hover:border-admin-text-faint'
+                        }`}
+                        onClick={(e) => { e.stopPropagation(); handleSelectScene(scene.id); }}
+                      >
+                        {allSceneSelected && <Check size={10} className="text-black" strokeWidth={3} />}
+                      </div>
+                    ) : (
+                      <>
+                        <span className="group-hover/scenegutter:hidden">
+                          {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                        </span>
+                        <div
+                          className="hidden group-hover/scenegutter:flex"
+                          onClick={(e) => { e.stopPropagation(); handleSelectScene(scene.id); }}
+                        >
+                          <div className="w-3.5 h-3.5 rounded-sm border border-admin-text-ghost hover:border-admin-text-faint flex items-center justify-center transition-colors cursor-pointer" />
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <ScriptSceneHeader
@@ -523,6 +593,7 @@ export function ScriptEditorCanvas({
                         isSelected={selectedBeatIds.has(beat.id)}
                         onSelect={handleBeatSelect}
                         onDragSelectStart={handleDragSelectStart}
+                        selectionActive={selectionActive}
                         batchGenerating={generatingBeatIds.has(beat.id)}
                         onCancelGeneration={() => { abortRef.current = true; }}
                         scene={scene}

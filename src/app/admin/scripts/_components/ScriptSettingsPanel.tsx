@@ -117,7 +117,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[420px]">
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-inset">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">
           <h2 className="text-admin-lg font-bold text-admin-text-primary">Script Settings</h2>
           <SaveDot status={dotStatus} />
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">

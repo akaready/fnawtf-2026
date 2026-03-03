@@ -48,7 +48,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
   return (
     <div className="space-y-1.5">
       <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Color</label>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-1.5">
           {PRESET_COLORS_LIGHT.map(color => (
             <button

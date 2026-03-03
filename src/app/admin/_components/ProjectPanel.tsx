@@ -201,7 +201,7 @@ export function ProjectPanel({
       />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-sidebar">
         {project?.thumbnail_url ? (
           <div className="w-14 h-9 rounded overflow-hidden bg-admin-bg-hover flex-shrink-0">
             <img src={String(project.thumbnail_url)} alt="" className="w-full h-full object-cover" />

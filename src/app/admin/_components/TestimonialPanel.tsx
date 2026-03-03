@@ -176,7 +176,7 @@ export function TestimonialPanel({
       />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-sidebar">
         <h2 className="flex-1 min-w-0 text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">
           {isNew ? 'New Testimonial' : (quote.length > 50 ? quote.slice(0, 50) + '…' : quote || 'Untitled')}
           <SaveDot status={autoSave.status} />

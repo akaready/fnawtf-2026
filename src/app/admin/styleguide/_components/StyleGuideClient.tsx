@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RotateCcw, Save, Download, Palette } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { ColorsSection } from './sections/ColorsSection';
 import { TypographySection } from './sections/TypographySection';
 import { ButtonsSection } from './sections/ButtonsSection';
@@ -71,7 +73,8 @@ function readTokensFromDOM(): Record<string, string> {
 export function StyleGuideClient() {
   const [tokens, setTokens] = useState<Record<string, string>>({});
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState(false);
+  const overridesRef = useRef(overrides);
+  useEffect(() => { overridesRef.current = overrides; });
   const [activeSection, setActiveSection] = useState('colors');
   const [search, setSearch] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,18 +91,20 @@ export function StyleGuideClient() {
     } catch {}
   }, []);
 
+  const autoSave = useAutoSave(async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overridesRef.current));
+  });
+
   const handleChange = useCallback((variable: string, value: string) => {
     document.documentElement.style.setProperty(variable, value);
     setTokens((prev) => ({ ...prev, [variable]: value }));
     setOverrides((prev) => ({ ...prev, [variable]: value }));
-    setSaved(false);
-  }, []);
+    autoSave.trigger();
+  }, [autoSave]);
 
   const handleSave = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }, [overrides]);
+    autoSave.flush();
+  }, [autoSave]);
 
   const handleReset = useCallback(() => {
     for (const v of Object.keys(overrides)) {
@@ -108,8 +113,8 @@ export function StyleGuideClient() {
     localStorage.removeItem(STORAGE_KEY);
     setOverrides({});
     setTokens(readTokensFromDOM());
-    setSaved(false);
-  }, [overrides]);
+    autoSave.reset();
+  }, [overrides, autoSave]);
 
   const handleExport = useCallback(() => {
     const lines = Object.entries(overrides)
@@ -173,11 +178,12 @@ export function StyleGuideClient() {
             >
               <Download size={14} /> Export CSS
             </button>
+            <SaveDot status={autoSave.status} />
             <button
               onClick={handleSave}
               className="btn-primary px-5 py-2.5 text-sm"
             >
-              <Save size={14} /> {saved ? 'Saved!' : 'Save'}
+              <Save size={14} /> Save
             </button>
           </>
         }

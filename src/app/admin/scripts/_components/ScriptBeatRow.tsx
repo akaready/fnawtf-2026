@@ -35,6 +35,7 @@ interface Props {
   isSelected?: boolean;
   onSelect?: (beatId: string, shiftKey: boolean, metaKey: boolean) => void;
   onDragSelectStart?: (beatId: string) => void;
+  selectionActive?: boolean;
   batchGenerating?: boolean;
   onCancelGeneration?: () => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
@@ -78,6 +79,7 @@ export function ScriptBeatRow({
   isSelected,
   onSelect,
   onDragSelectStart,
+  selectionActive,
   batchGenerating,
   onCancelGeneration,
   castMap,
@@ -111,7 +113,7 @@ export function ScriptBeatRow({
         isSelected ? 'bg-admin-bg-selected' : ''
       }`}
     >
-      {/* Beat letter gutter — selection via click + drag-select */}
+      {/* Beat gutter — checkbox + grip */}
       <div
         className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#0e0e0e] select-none"
         data-beat-gutter={beat.id}
@@ -126,19 +128,33 @@ export function ScriptBeatRow({
           onSelect?.(beat.id, e.shiftKey, e.metaKey || e.ctrlKey);
         }}
       >
-        {/* Beat letter — hidden on hover, replaced by grip */}
-        <span className="text-[10px] text-admin-text-ghost font-mono group-hover/beat:hidden">
-          {beatLetter(beatNumber)}
-        </span>
-        {/* Reorder grip — replaces letter on hover */}
-        <div
-          data-grip
-          {...attributes}
-          {...listeners}
-          className="hidden group-hover/beat:flex items-center cursor-grab"
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <GripVertical size={12} className="text-admin-text-ghost" />
+        {/* Beat letter — visible when not in selection mode and not hovered */}
+        {!selectionActive && (
+          <span className="text-[10px] text-admin-text-ghost font-mono group-hover/beat:hidden">
+            {beatLetter(beatNumber)}
+          </span>
+        )}
+        {/* Checkbox — visible on hover (when not in selection mode) or always (when in selection mode) */}
+        <div className={`${selectionActive ? 'flex' : 'hidden group-hover/beat:flex'} items-center gap-1`}>
+          <div
+            className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+              isSelected
+                ? 'bg-white border-white'
+                : 'border-admin-text-ghost hover:border-admin-text-faint'
+            }`}
+          >
+            {isSelected && <Check size={10} className="text-black" strokeWidth={3} />}
+          </div>
+          {/* Reorder grip */}
+          <div
+            data-grip
+            {...attributes}
+            {...listeners}
+            className="flex items-center cursor-grab"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={12} className="text-admin-text-ghost" />
+          </div>
         </div>
       </div>
 

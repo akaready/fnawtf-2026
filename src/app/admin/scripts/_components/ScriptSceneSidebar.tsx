@@ -52,12 +52,6 @@ export function ScriptSceneSidebar({
 
   return (
     <div className="bg-admin-bg-sidebar flex flex-col h-full">
-      <div className="flex items-center px-3 py-2 border-b border-admin-border">
-        <span className="text-[10px] uppercase tracking-widest text-admin-text-faint font-semibold">
-          Scenes
-        </span>
-      </div>
-
       <div className="flex-1 overflow-y-auto admin-scrollbar">
         <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={scenes.map(s => s.id)} strategy={verticalListSortingStrategy}>

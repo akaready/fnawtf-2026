@@ -88,7 +88,7 @@ export function MeetingPanel({
   return (
     <PanelDrawer open={open} onClose={onClose} width="w-[540px]">
       {/* Header */}
-      <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-inset">
+      <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-sidebar">
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold truncate">{meeting.title}</h2>
           <div className="flex items-center gap-2 mt-1.5 text-xs text-admin-text-faint">

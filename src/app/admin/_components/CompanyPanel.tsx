@@ -325,7 +325,7 @@ export function CompanyPanel({
         />
 
         {/* Header: logo + name + project count + status pill + close */}
-        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-inset">
+        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-sidebar">
           <LogoDropzone
             logoUrl={localCompany.logo_url}
             uploading={uploadingId === localCompany.id}
@@ -361,7 +361,7 @@ export function CompanyPanel({
         </div>
 
         {/* Tab strip */}
-        <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-inset">
+        <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-sidebar">
           {([
             { id: 'info',         label: 'Info',         count: null },
             { id: 'projects',     label: 'Projects',     count: clientProjects.length },

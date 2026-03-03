@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Loader2, X as XIcon, Check } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Trash2, Loader2, X as XIcon, Check, Save } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
-import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { createScriptTag, updateScriptTag, deleteScriptTag } from '@/app/admin/actions';
 import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import type { ScriptTagRow } from '@/types/scripts';
@@ -34,8 +33,8 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   // Local edits for dirty state tracking
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptTagRow>>>({});
-  const [showDiscard, setShowDiscard] = useState(false);
-  const { saving, saved, wrap } = useSaveState();
+  const localEditsRef = useRef(localEdits);
+  useEffect(() => { localEditsRef.current = localEdits; });
 
   // Auto-select first tag, or clear if deleted
   useEffect(() => {
@@ -57,21 +56,22 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
     ? { ...selected, ...localEdits[selected.id] }
     : null;
 
-  const dirty = Object.keys(localEdits).length > 0;
-
-  const handleClose = () => {
-    if (dirty) {
-      setShowDiscard(true);
-    } else {
-      onClose();
+  // ── Auto-save ───────────────────────────────────────────────────
+  const autoSave = useAutoSave(async () => {
+    const entries = Object.entries(localEditsRef.current);
+    if (entries.length === 0) return;
+    for (const [tagId, edits] of entries) {
+      await updateScriptTag(tagId, edits);
     }
-  };
-
-  const handleDiscard = () => {
+    const updated = tags.map(t => localEditsRef.current[t.id] ? { ...t, ...localEditsRef.current[t.id] } : t);
+    onTagsChange(updated);
     setLocalEdits({});
-    setShowDiscard(false);
+  });
+
+  const handleClose = useCallback(() => {
+    autoSave.flush();
     onClose();
-  };
+  }, [autoSave, onClose]);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -107,6 +107,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
   // Local-only update — marks dirty, no server call
   const handleLocalUpdate = (tagId: string, field: string, value: string) => {
     const existing = tags.find(t => t.id === tagId);
+    if (field === 'name') value = value.toLowerCase();
     const updates: Partial<ScriptTagRow> = { [field]: value };
     // Auto-update slug when name changes (unless it's a default tag)
     if (field === 'name' && existing && !DEFAULT_SLUGS.has(existing.slug)) {
@@ -116,22 +117,8 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
       ...prev,
       [tagId]: { ...prev[tagId], ...updates },
     }));
+    autoSave.trigger();
   };
-
-  // Save all dirty edits to server
-  const handleSave = useCallback(() => {
-    wrap(async () => {
-      const entries = Object.entries(localEdits);
-      for (const [tagId, edits] of entries) {
-        await updateScriptTag(tagId, edits);
-        onTagsChange(
-          tags.map(t => t.id === tagId ? { ...t, ...edits } : t)
-        );
-      }
-      setLocalEdits({});
-      onClose();
-    });
-  }, [localEdits, tags, onTagsChange, wrap, onClose]);
 
   const handleDelete = async (tagId: string) => {
     await deleteScriptTag(tagId);
@@ -147,16 +134,9 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
       <div className="flex flex-col h-full relative">
-        {/* Discard changes guard */}
-        <DiscardChangesDialog
-          open={showDiscard}
-          onKeepEditing={() => setShowDiscard(false)}
-          onDiscard={handleDiscard}
-        />
-
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border">
-          <h2 className="text-lg font-bold text-admin-text-primary tracking-tight">Tags</h2>
+        <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
+          <h2 className="text-admin-lg font-semibold text-admin-text-primary inline-flex items-center gap-1">Tags <SaveDot status={autoSave.status} /></h2>
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <XIcon size={16} />
           </button>
@@ -166,6 +146,16 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
         <div className="flex-1 flex min-h-0">
           {/* Left: Tag list */}
           <div className="w-[220px] flex-shrink-0 border-r border-admin-border flex flex-col">
+            {/* Add button at top */}
+            <div className="flex-shrink-0 border-b border-admin-border px-3 py-3 flex items-center">
+              <button
+                onClick={() => { setShowNew(true); setSelectedId(null); }}
+                className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"
+              >
+                <Plus size={12} />
+                New Tag
+              </button>
+            </div>
             <div className="flex-1 overflow-y-auto admin-scrollbar-auto py-2">
               {tags.length === 0 && (
                 <p className="text-xs text-admin-text-faint text-center py-6 px-3">
@@ -174,22 +164,58 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
               )}
               {tags.map(tag => {
                 const isSelected = selectedId === tag.id;
+                const edits = localEdits[tag.id];
+                const displayName = edits?.name ?? tag.name;
+                const displayColor = edits?.color ?? tag.color;
                 return (
-                  <button
+                  <div
                     key={tag.id}
-                    onClick={() => setSelectedId(tag.id)}
-                    className={`w-full text-left px-4 py-2.5 flex items-center gap-2.5 transition-colors ${
+                    className={`group/row w-full flex items-center px-4 py-2.5 gap-2.5 transition-colors ${
                       isSelected
                         ? 'bg-admin-bg-active text-admin-text-primary'
                         : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary'
                     }`}
                   >
-                    <span
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: tag.color }}
-                    />
-                    <span className="text-sm font-mono font-medium truncate">#{tag.slug}</span>
-                  </button>
+                    <button
+                      onClick={() => setSelectedId(tag.id)}
+                      className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+                    >
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-sm font-bold font-mono flex-shrink-0"
+                        style={{ color: displayColor, backgroundColor: `${displayColor}20` }}
+                      >
+                        #
+                      </span>
+                      <span className="text-sm font-medium truncate">{displayName}</span>
+                    </button>
+                    {/* Two-step delete */}
+                    {confirmDeleteId === tag.id ? (
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button
+                          onClick={() => handleDelete(tag.id)}
+                          className="p-1 text-admin-danger hover:text-red-300 transition-colors"
+                          title="Confirm delete"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="p-1 text-admin-text-faint hover:text-admin-text-primary transition-colors"
+                          title="Cancel"
+                        >
+                          <XIcon size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(tag.id)}
+                        className="opacity-0 group-hover/row:opacity-100 p-1 text-admin-text-ghost hover:text-admin-danger transition-all flex-shrink-0"
+                        title="Delete tag"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -206,7 +232,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
                     <input
                       autoFocus
                       value={newName}
-                      onChange={e => setNewName(e.target.value)}
+                      onChange={e => setNewName(e.target.value.toLowerCase())}
                       onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setShowNew(false); }}
                       placeholder="tag-name"
                       className="admin-input flex-1 text-base font-mono py-2 px-3"
@@ -239,12 +265,6 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
                   />
                 </div>
 
-                {/* Slug (read-only) */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Slug</label>
-                  <div className="text-sm font-mono text-admin-text-muted px-3 py-2">#{selectedWithEdits.slug}</div>
-                </div>
-
                 {/* Color */}
                 <ColorPicker value={selectedWithEdits.color} onChange={c => handleLocalUpdate(selectedWithEdits.id, 'color', c)} />
               </div>
@@ -258,50 +278,12 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
           </div>
         </div>
 
-        {/* Footer action bar — full width */}
-        <div className="px-6 py-4 border-t border-admin-border bg-admin-bg-wash flex items-center gap-2">
-          <SaveButton
-            saving={saving}
-            saved={saved}
-            onClick={handleSave}
-            className="px-5 py-2.5 text-sm"
-          />
-          <button
-            onClick={() => { setShowNew(true); setSelectedId(null); }}
-            className="btn-secondary px-4 py-2.5 text-sm"
-          >
-            <Plus size={14} />
-            New Tag
+        {/* Footer action bar */}
+        <div className="flex items-center px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
+          <button onClick={handleClose} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Save size={14} />
+            Save
           </button>
-          <div className="flex-1" />
-          {selected && !showNew && (
-            confirmDeleteId === selected.id ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleDelete(selected.id)}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                  title="Confirm delete"
-                >
-                  <Check size={16} />
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-                  title="Cancel"
-                >
-                  <XIcon size={16} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDeleteId(selected.id)}
-                className="btn-ghost-danger w-10 h-10"
-                title="Delete tag"
-              >
-                <Trash2 size={16} />
-              </button>
-            )
-          )}
         </div>
       </div>
     </PanelDrawer>

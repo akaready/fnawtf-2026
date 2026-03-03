@@ -71,7 +71,7 @@ export function ChatWidget() {
           >
             {/* Chat bubble tail */}
             <div
-              className="absolute -bottom-[7px] right-4 w-4 h-4 bg-admin-bg-sidebar border-r border-b border-admin-border rotate-45"
+              className="absolute -bottom-[7px] right-4 w-4 h-4 bg-admin-bg-nav border-r border-b border-admin-border rotate-45"
             />
             <ChatPanel />
           </motion.div>

@@ -821,7 +821,7 @@ export function ScriptEditorClient({
       {modeConfirm && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setModeConfirm(null)} />
-          <div className="relative bg-admin-bg-sidebar border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div className="relative bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-sm overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-raised">
               <h2 className="text-admin-lg font-admin-display font-semibold text-admin-text-primary">Convert to Scratchpad</h2>

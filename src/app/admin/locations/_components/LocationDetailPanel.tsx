@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Trash2, Upload, Star, MapPin, ExternalLink, Camera, Save,
-  Image as ImageIcon, Loader2, Link2, Unlink, Download, Expand,
+  Image as ImageIcon, Loader2, Link2, Unlink, Download, Expand, Check,
 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminLightbox } from '@/app/admin/_components/AdminLightbox';
@@ -47,6 +47,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   const [deleting, setDeleting] = useState(false);
   const [scoutDragOver, setScoutDragOver] = useState(false);
   const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scoutInputRef = useRef<HTMLInputElement>(null);
 
@@ -205,7 +206,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
     <PanelDrawer open={open} onClose={handleClose} width="w-[600px]">
       <div className="flex flex-col h-full relative">
         {/* Header */}
-        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-inset">
+        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-sidebar">
           {local.featured_image ? (
             <img src={local.featured_image} alt="" className="w-10 h-10 rounded-admin-sm object-cover flex-shrink-0" />
           ) : (
@@ -374,7 +375,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   {local.location_images
                     .sort((a, b) => a.sort_order - b.sort_order)
                     .map(img => (
-                    <div key={img.id} className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover">
+                    <div key={img.id} className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover" onMouseLeave={() => setConfirmDeleteId(null)}>
                       <img src={img.image_url} alt={img.alt_text ?? ''} loading="lazy" className="w-full h-full object-cover" />
                       {img.is_featured && (
                         <div className="absolute top-1 left-1 p-1 rounded-admin-sm bg-admin-warning/20 text-admin-warning">
@@ -383,17 +384,25 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                       )}
                       <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100">
                         {!img.is_featured && (
-                          <ImageActionButton icon={Star} color="warning" title="Set as featured" onClick={() => handleSetFeatured(img)} />
+                          <ImageActionButton icon={Star} color="warning" title="Set as featured" onClick={() => handleSetFeatured(img)} hidden={confirmDeleteId === img.id} />
                         )}
-                        <ImageActionButton icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `${local.name || 'location'}-${img.id}.jpg`)} />
-                        <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
-                          const sorted = [...local.location_images].sort((a, b) => a.sort_order - b.sort_order);
-                          setLightbox({
-                            images: sorted.map(i => ({ url: i.image_url, label: i.alt_text ?? undefined })),
-                            index: sorted.findIndex(i => i.id === img.id),
-                          });
-                        }} />
-                        <ImageActionButton icon={Trash2} color="danger" title="Delete image" onClick={() => handleDeleteImage(img)} />
+                        <ImageActionButton icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `${local.name || 'location'}-${img.id}.jpg`)} hidden={confirmDeleteId === img.id} />
+                        {confirmDeleteId === img.id ? (
+                          <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={() => { handleDeleteImage(img); setConfirmDeleteId(null); }} />
+                        ) : (
+                          <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
+                            const sorted = [...local.location_images].sort((a, b) => a.sort_order - b.sort_order);
+                            setLightbox({
+                              images: sorted.map(i => ({ url: i.image_url, label: i.alt_text ?? undefined })),
+                              index: sorted.findIndex(i => i.id === img.id),
+                            });
+                          }} />
+                        )}
+                        {confirmDeleteId === img.id ? (
+                          <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDeleteId(null)} />
+                        ) : (
+                          <ImageActionButton icon={Trash2} color="danger" title="Delete image" onClick={() => setConfirmDeleteId(img.id)} />
+                        )}
                       </div>
                     </div>
                   ))}
@@ -581,7 +590,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                     {scoutImages
                       .sort((a, b) => a.sort_order - b.sort_order)
                       .map(img => (
-                      <div key={img.id} className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover">
+                      <div key={img.id} className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover" onMouseLeave={() => setConfirmDeleteId(null)}>
                         <img src={img.image_url} alt={img.alt_text ?? ''} loading="lazy" className="w-full h-full object-cover" />
                         {img.is_featured && (
                           <div className="absolute top-1 left-1 p-1 rounded-admin-sm bg-admin-warning/20 text-admin-warning">
@@ -590,17 +599,25 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                         )}
                         <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100">
                           {!img.is_featured && (
-                            <ImageActionButton icon={Star} color="warning" title="Set as featured" onClick={() => handleSetFeatured(img)} />
+                            <ImageActionButton icon={Star} color="warning" title="Set as featured" onClick={() => handleSetFeatured(img)} hidden={confirmDeleteId === img.id} />
                           )}
-                          <ImageActionButton icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `${local.name || 'location'}-scout-${img.id}.jpg`)} />
-                          <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
-                            const sorted = [...scoutImages].sort((a, b) => a.sort_order - b.sort_order);
-                            setLightbox({
-                              images: sorted.map(i => ({ url: i.image_url, label: i.alt_text ?? undefined })),
-                              index: sorted.findIndex(i => i.id === img.id),
-                            });
-                          }} />
-                          <ImageActionButton icon={Trash2} color="danger" title="Delete image" onClick={() => handleDeleteImage(img)} />
+                          <ImageActionButton icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `${local.name || 'location'}-scout-${img.id}.jpg`)} hidden={confirmDeleteId === img.id} />
+                          {confirmDeleteId === img.id ? (
+                            <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={() => { handleDeleteImage(img); setConfirmDeleteId(null); }} />
+                          ) : (
+                            <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
+                              const sorted = [...scoutImages].sort((a, b) => a.sort_order - b.sort_order);
+                              setLightbox({
+                                images: sorted.map(i => ({ url: i.image_url, label: i.alt_text ?? undefined })),
+                                index: sorted.findIndex(i => i.id === img.id),
+                              });
+                            }} />
+                          )}
+                          {confirmDeleteId === img.id ? (
+                            <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDeleteId(null)} />
+                          ) : (
+                            <ImageActionButton icon={Trash2} color="danger" title="Delete image" onClick={() => setConfirmDeleteId(img.id)} />
+                          )}
                         </div>
                       </div>
                     ))}

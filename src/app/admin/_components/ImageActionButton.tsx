@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { Check } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 type ActionColor = 'warning' | 'info' | 'danger' | 'neutral';
@@ -27,39 +25,18 @@ interface Props {
   title: string;
   onClick: () => void;
   variant?: ActionVariant;
+  hidden?: boolean;
 }
 
-export function ImageActionButton({ icon: Icon, color, title, onClick, variant = 'overlay' }: Props) {
+export function ImageActionButton({ icon: Icon, color, title, onClick, variant = 'overlay', hidden }: Props) {
   const isOverlay = variant === 'overlay';
-  const [armed, setArmed] = useState(false);
-
-  // Danger: first click arms, mouse-out resets, second click fires
-  if (color === 'danger' && armed) {
-    const className = isOverlay
-      ? 'w-7 h-7 flex items-center justify-center rounded bg-red-500 text-white hover:bg-red-600 transition-colors'
-      : 'flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-red-400 bg-red-500/15 hover:bg-red-500/25 transition-all';
-
-    return (
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onClick(); setArmed(false); }}
-        onMouseLeave={() => setArmed(false)}
-        className={className}
-        title="Confirm delete"
-      >
-        <Check size={12} />
-      </button>
-    );
-  }
-
-  const handleClick = color === 'danger' ? () => setArmed(true) : onClick;
 
   const className = isOverlay
-    ? `w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 ${overlayHover[color]} transition-colors`
+    ? `w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 ${overlayHover[color]} transition-all ${hidden ? 'opacity-0 pointer-events-none' : ''}`
     : `flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted ${rowHover[color]} transition-all`;
 
   return (
-    <button type="button" onClick={handleClick} className={className} title={title}>
+    <button type="button" onClick={onClick} className={className} title={title}>
       <Icon size={12} />
     </button>
   );

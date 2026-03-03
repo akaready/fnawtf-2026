@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Check, X, Loader2, MapPin, Link2, Unlink, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Trash2, Check, X, Loader2, MapPin, Link2, Unlink, ExternalLink, Save } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
-import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { AdminCombobox } from '../../_components/AdminCombobox';
 import { ColorPicker } from './ColorPicker';
 import { createLocation, updateLocation, deleteLocation } from '@/app/admin/actions';
@@ -27,8 +26,8 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   // Local edits for dirty state tracking
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptLocationRow>>>({});
-  const [showDiscard, setShowDiscard] = useState(false);
-  const { saving, saved, wrap } = useSaveState();
+  const localEditsRef = useRef(localEdits);
+  useEffect(() => { localEditsRef.current = localEdits; });
 
   // Auto-select first location, or clear if deleted
   useEffect(() => {
@@ -57,21 +56,22 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
     ? globalLocations.find(g => g.id === selectedWithEdits.global_location_id)
     : null;
 
-  const dirty = Object.keys(localEdits).length > 0;
-
-  const handleClose = () => {
-    if (dirty) {
-      setShowDiscard(true);
-    } else {
-      onClose();
+  // ── Auto-save ───────────────────────────────────────────────────
+  const autoSave = useAutoSave(async () => {
+    const entries = Object.entries(localEditsRef.current);
+    if (entries.length === 0) return;
+    for (const [locId, edits] of entries) {
+      await updateLocation(locId, edits);
     }
-  };
-
-  const handleDiscard = () => {
+    const updated = locations.map(l => localEditsRef.current[l.id] ? { ...l, ...localEditsRef.current[l.id] } : l);
+    onLocationsChange(updated);
     setLocalEdits({});
-    setShowDiscard(false);
+  });
+
+  const handleClose = useCallback(() => {
+    autoSave.flush();
     onClose();
-  };
+  }, [autoSave, onClose]);
 
   const handleAdd = async () => {
     setAdding(true);
@@ -98,28 +98,14 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
     }
   };
 
-  // Local-only update — marks dirty, no server call
+  // Local-only update — marks dirty, triggers auto-save
   const handleLocalUpdate = (locId: string, field: string, value: string | null) => {
     setLocalEdits(prev => ({
       ...prev,
       [locId]: { ...prev[locId], [field]: value },
     }));
+    autoSave.trigger();
   };
-
-  // Save all dirty edits to server
-  const handleSave = useCallback(() => {
-    wrap(async () => {
-      const entries = Object.entries(localEdits);
-      for (const [locId, edits] of entries) {
-        await updateLocation(locId, edits);
-        onLocationsChange(
-          locations.map(l => l.id === locId ? { ...l, ...edits } : l)
-        );
-      }
-      setLocalEdits({});
-      onClose();
-    });
-  }, [localEdits, locations, onLocationsChange, wrap, onClose]);
 
   const handleDelete = async (locId: string) => {
     await deleteLocation(locId);
@@ -148,16 +134,9 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
       <div className="flex flex-col h-full relative">
-        {/* Discard changes guard */}
-        <DiscardChangesDialog
-          open={showDiscard}
-          onKeepEditing={() => setShowDiscard(false)}
-          onDiscard={handleDiscard}
-        />
-
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border">
-          <h2 className="text-lg font-bold text-admin-text-primary tracking-tight">Locations</h2>
+        <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-sidebar">
+          <h2 className="text-admin-lg font-semibold text-admin-text-primary inline-flex items-center gap-1">Locations <SaveDot status={autoSave.status} /></h2>
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <X size={16} />
           </button>
@@ -167,6 +146,17 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
         <div className="flex-1 flex min-h-0">
           {/* Left: Location list */}
           <div className="w-[220px] flex-shrink-0 border-r border-admin-border flex flex-col">
+            {/* Add button at top */}
+            <div className="flex-shrink-0 border-b border-admin-border px-3 py-3 flex items-center">
+              <button
+                onClick={handleAdd}
+                disabled={adding}
+                className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"
+              >
+                {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={12} />}
+                Add Location
+              </button>
+            </div>
             <div className="flex-1 overflow-y-auto admin-scrollbar-auto py-2">
               {locations.length === 0 && (
                 <p className="text-xs text-admin-text-faint text-center py-6 px-3">
@@ -178,23 +168,54 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
                 const isSelected = selectedId === loc.id;
                 const isLinked = !!loc.global_location_id;
                 return (
-                  <button
+                  <div
                     key={loc.id}
-                    onClick={() => setSelectedId(loc.id)}
-                    className={`w-full text-left px-4 py-2.5 flex items-center gap-2 transition-colors ${
+                    className={`group/row w-full flex items-center px-4 py-2.5 gap-2 transition-colors ${
                       isSelected
                         ? 'bg-admin-bg-active text-admin-text-primary'
                         : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary'
                     }`}
                   >
-                    <MapPin size={12} className={`flex-shrink-0 ${isLinked ? 'text-admin-info' : 'text-admin-text-ghost'}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate uppercase">{loc.name}</div>
-                      {count > 0 && (
-                        <div className="text-[10px] text-admin-text-faint">{count} scene{count !== 1 ? 's' : ''}</div>
-                      )}
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => setSelectedId(loc.id)}
+                      className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                    >
+                      <MapPin size={12} className={`flex-shrink-0 ${isLinked ? 'text-admin-info' : 'text-admin-text-ghost'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate uppercase">{loc.name}</div>
+                        {count > 0 && (
+                          <div className="text-[10px] text-admin-text-faint">{count} scene{count !== 1 ? 's' : ''}</div>
+                        )}
+                      </div>
+                    </button>
+                    {/* Two-step delete */}
+                    {confirmDeleteId === loc.id ? (
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <button
+                          onClick={() => handleDelete(loc.id)}
+                          className="p-1 text-admin-danger hover:text-red-300 transition-colors"
+                          title="Confirm delete"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="p-1 text-admin-text-faint hover:text-admin-text-primary transition-colors"
+                          title="Cancel"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(loc.id)}
+                        className="opacity-0 group-hover/row:opacity-100 p-1 text-admin-text-ghost hover:text-admin-danger transition-all flex-shrink-0"
+                        title="Delete location"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -294,51 +315,12 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
           </div>
         </div>
 
-        {/* Footer action bar — full width */}
-        <div className="px-6 py-4 border-t border-admin-border bg-admin-bg-wash flex items-center gap-2">
-          <SaveButton
-            saving={saving}
-            saved={saved}
-            onClick={handleSave}
-            className="px-5 py-2.5 text-sm"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={adding}
-            className="btn-secondary px-4 py-2.5 text-sm"
-          >
-            {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-            Add Location
+        {/* Footer action bar */}
+        <div className="flex items-center px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
+          <button onClick={handleClose} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Save size={14} />
+            Save
           </button>
-          <div className="flex-1" />
-          {selected && (
-            confirmDeleteId === selected.id ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleDelete(selected.id)}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                  title="Confirm delete"
-                >
-                  <Check size={16} />
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-                  title="Cancel"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDeleteId(selected.id)}
-                className="btn-ghost-danger w-10 h-10"
-                title="Delete location"
-              >
-                <Trash2 size={16} />
-              </button>
-            )
-          )}
         </div>
       </div>
     </PanelDrawer>
