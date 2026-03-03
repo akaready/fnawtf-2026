@@ -283,7 +283,7 @@ html[data-admin-light] .admin-shell .admin-logo {
 
   /* Admin text inputs, search, selects */
   .admin-input {
-    @apply border border-admin-border-subtle bg-admin-bg-base text-admin-text-primary placeholder:text-admin-text-faint focus:outline-none focus:ring-1 focus:ring-admin-border-focus focus:border-admin-border-focus;
+    @apply px-3 py-2 text-admin-base border border-admin-border-subtle bg-admin-bg-base text-admin-text-primary placeholder:text-admin-text-faint focus:outline-none focus:ring-1 focus:ring-admin-border-focus focus:border-admin-border-focus;
     border-radius: var(--admin-radius-md);
   }
 }

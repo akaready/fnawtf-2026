@@ -238,7 +238,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
     {
       value: 'fields',
       label: 'Fields',
-      badge: <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-admin-bg-hover">{mergeFields.length}</span>,
+      badge: <span className="text-admin-xs px-1.5 py-0.5 rounded-full bg-admin-bg-hover">{mergeFields.length}</span>,
     },
   ];
 
@@ -256,7 +256,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
               <input
                 value={name}
                 onChange={(e) => { setName(e.target.value); autoSave.trigger(); }}
-                className="bg-transparent text-lg font-semibold text-admin-text-primary outline-none min-w-0 flex-1"
+                className="bg-transparent text-admin-lg font-semibold text-admin-text-primary outline-none min-w-0 flex-1"
                 placeholder="Template name…"
               />
               <SaveDot status={autoSave.status} />
@@ -271,7 +271,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
           {/* Metadata row */}
           <div className="flex-shrink-0 flex items-center gap-4 px-6 py-3 border-b border-admin-border-subtle">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-admin-text-muted">Type</label>
+              <label className="text-admin-sm text-admin-text-muted">Type</label>
               <AdminSelect
                 options={TYPE_OPTIONS}
                 value={contractType}
@@ -280,10 +280,10 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-admin-text-muted">Active</label>
+              <label className="text-admin-sm text-admin-text-muted">Active</label>
               <button
                 onClick={() => { setIsActive(!isActive); autoSave.trigger(); }}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-admin-sm text-admin-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-admin-success-bg text-admin-success'
                     : 'bg-admin-bg-hover text-admin-text-faint'
@@ -297,7 +297,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                 value={description}
                 onChange={(e) => { setDescription(e.target.value); autoSave.trigger(); }}
                 placeholder="Description (optional)…"
-                className="admin-input text-sm py-1 px-2 w-full"
+                className="admin-input w-full"
               />
             </div>
           </div>
@@ -305,12 +305,12 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
           {/* Field pills — click to insert token */}
           {mergeFields.length > 0 && activeTab === 'editor' && (
             <div className="flex-shrink-0 flex items-center gap-1.5 px-6 py-2 border-b border-admin-border-subtle flex-wrap">
-              <span className="text-[10px] text-admin-text-ghost mr-1 uppercase tracking-wider">Insert:</span>
+              <span className="text-admin-xs text-admin-text-ghost mr-1 uppercase tracking-wider">Insert:</span>
               {mergeFields.map((f) => (
                 <button
                   key={f.key}
                   onMouseDown={(e) => { e.preventDefault(); handleInsertToken(f.key); }}
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium transition-opacity hover:opacity-80 ${SOURCE_COLORS[f.source]}`}
+                  className={`text-admin-xs px-1.5 py-0.5 rounded-full font-medium transition-opacity hover:opacity-80 ${SOURCE_COLORS[f.source]}`}
                   title={`Insert {{${f.key}}}`}
                 >
                   {f.label}
@@ -334,7 +334,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                   <EditorContent editor={editor} className="h-full" />
                 </div>
                 {tokenStatus.undefined.length > 0 && (
-                  <div className="px-8 py-2 text-xs text-admin-danger border-t border-admin-border-subtle">
+                  <div className="px-8 py-2 text-admin-sm text-admin-danger border-t border-admin-border-subtle">
                     {tokenStatus.undefined.length} undefined token{tokenStatus.undefined.length !== 1 ? 's' : ''}
                   </div>
                 )}
@@ -345,7 +345,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
               <div className="flex-1 overflow-y-auto admin-scrollbar p-6">
                 <div className="space-y-2 mb-6">
                   {mergeFields.length === 0 && !showNewField && (
-                    <div className="text-sm text-admin-text-muted text-center py-8">
+                    <div className="text-admin-base text-admin-text-muted text-center py-8">
                       No merge fields defined yet. Add fields to use{' '}
                       <code className="font-admin-mono text-admin-info">{'{{variable}}'}</code> tokens in your template.
                     </div>
@@ -355,11 +355,11 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                       key={field.key}
                       className="group/field flex items-center gap-3 px-4 py-3 rounded-lg bg-admin-bg-overlay border border-admin-border-subtle hover:border-admin-border transition-colors"
                     >
-                      <code className="font-admin-mono text-xs text-admin-info bg-admin-bg-base px-2 py-1 rounded">
+                      <code className="font-admin-mono text-admin-sm text-admin-info bg-admin-bg-base px-2 py-1 rounded">
                         {`{{${field.key}}}`}
                       </code>
-                      <span className="text-sm text-admin-text-primary font-medium">{field.label}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${SOURCE_COLORS[field.source]}`}>
+                      <span className="text-admin-base text-admin-text-primary font-medium">{field.label}</span>
+                      <span className={`text-admin-xs px-1.5 py-0.5 rounded-full font-medium ${SOURCE_COLORS[field.source]}`}>
                         {field.source === 'manual' ? 'manual input' : `${field.source} → ${field.db_path}`}
                       </span>
                       <div className="flex-1" />
@@ -384,17 +384,17 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                 {showNewField ? (
                   <div className="border border-admin-border rounded-lg p-4 bg-admin-bg-overlay space-y-3">
                     <div>
-                      <label className="text-xs text-admin-text-muted mb-1 block">Field Name</label>
+                      <label className="block text-admin-sm font-medium text-admin-text-muted">Field Name</label>
                       <input
                         value={newFieldName}
                         onChange={(e) => setNewFieldName(e.target.value)}
                         placeholder="e.g. Client Name, Total Amount, Effective Date…"
-                        className="admin-input text-sm py-2 px-3 w-full"
+                        className="admin-input w-full"
                         autoFocus
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-admin-text-muted mb-1 block">Maps to</label>
+                      <label className="block text-admin-sm font-medium text-admin-text-muted">Maps to</label>
                       <AdminSelect
                         options={MAPPING_OPTIONS.map((m) => ({ value: m.value, label: m.label }))}
                         value={newFieldMapping}
@@ -452,7 +452,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
             <div className="flex items-center gap-2">
               {confirmDelete ? (
                 <>
-                  <span className="text-xs text-admin-danger mr-1">Delete this template?</span>
+                  <span className="text-admin-sm text-admin-danger mr-1">Delete this template?</span>
                   <button
                     onClick={() => setConfirmDelete(false)}
                     className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"

@@ -17,8 +17,7 @@ import {
 
 /* ── Combobox (contact picker) ──────────────────────────────────────────── */
 
-const inputCls =
-  'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
+const inputCls = 'admin-input w-full';
 
 function ContactCombobox({
   value,
@@ -291,7 +290,7 @@ export function TestimonialPanel({
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-5 space-y-5">
         {/* Quote */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-admin-text-muted">Quote</label>
+          <label className="text-admin-sm font-medium text-admin-text-muted">Quote</label>
           <textarea
             value={quote}
             onChange={(e) => {
@@ -302,14 +301,14 @@ export function TestimonialPanel({
             }}
             ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
             placeholder="Enter the testimonial quote…"
-            className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-4 py-3 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis resize-none overflow-hidden"
+            className="admin-input w-full resize-none overflow-hidden"
             rows={3}
           />
         </div>
 
         {/* Contact */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
+          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <User size={12} /> Contact
           </label>
           <ContactCombobox
@@ -322,7 +321,7 @@ export function TestimonialPanel({
 
         {/* Display Override */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
+          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <PenLine size={12} /> Display Override
           </label>
           <input
@@ -336,7 +335,7 @@ export function TestimonialPanel({
 
         {/* Client */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
+          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <Building2 size={12} /> Client
           </label>
           <AdminSelect
@@ -352,7 +351,7 @@ export function TestimonialPanel({
 
         {/* Project */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
+          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <LayoutGrid size={12} /> Project
           </label>
           <AdminSelect

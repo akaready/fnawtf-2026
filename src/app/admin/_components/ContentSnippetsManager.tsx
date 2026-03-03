@@ -10,7 +10,7 @@ import TiptapLink from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
 import {
   Plus, Trash2, Check, X, Download, ChevronDown, Save,
-  Pencil, FolderOpen, Maximize2, Minimize2,
+  Pencil, FolderOpen, Maximize2, Minimize2, BookOpen,
 } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
 import { AdminPageHeader } from './AdminPageHeader';
@@ -230,6 +230,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Content Library"
+        icon={BookOpen}
         subtitle={`${filtered.length} snippet${filtered.length !== 1 ? 's' : ''} — Pre-written content blocks for proposals.`}
         search={search} onSearchChange={setSearch} searchPlaceholder="Search snippets…"
         actions={<>
@@ -251,7 +252,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
 
               <button onClick={() => setFilterCat('all')} className={`w-full flex items-center justify-between px-4 py-2 text-sm transition-colors ${filterCat === 'all' ? `${SEL} text-admin-text-primary` : `text-admin-text-muted ${HOV} hover:text-admin-text-primary`}`}>
                 <span className="flex items-center gap-2.5 min-w-0 truncate"><FolderOpen size={13} className="flex-shrink-0" />All</span>
-                <span className="text-xs text-admin-text-faint flex-shrink-0 ml-1">{snippets.length}</span>
+                <span className="text-admin-xs text-admin-text-faint flex-shrink-0 ml-1">{snippets.length}</span>
               </button>
 
               {categories.length > 0 && <div className="my-2 mx-4 border-t border-admin-border" />}
@@ -287,7 +288,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                         <button onClick={e => { e.stopPropagation(); setEditingCat(cat); setEditingCatVal(cat); }} className="p-0.5 rounded text-admin-text-faint hover:text-admin-text-secondary transition-colors"><Pencil size={11} /></button>
                         <button onClick={e => { e.stopPropagation(); setConfirmDeleteCat(cat); }} className="p-0.5 rounded text-admin-text-faint hover:text-admin-danger transition-colors"><Trash2 size={11} /></button>
                       </div>
-                      <span className="text-xs text-admin-text-faint flex-shrink-0">{count}</span>
+                      <span className="text-admin-xs text-admin-text-faint flex-shrink-0">{count}</span>
                     </>}
                   </div>
                 );
@@ -309,7 +310,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                   className="w-full text-xs bg-transparent border-b border-admin-border outline-none text-admin-text-primary placeholder:text-admin-text-ghost pb-0.5 focus:border-admin-border-focus transition-colors"
                 />
               ) : (
-                <button onClick={() => setAddingCat(true)} className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"><Plus size={12} />New Category</button>
+                <button onClick={() => setAddingCat(true)} className="w-full flex items-center justify-center gap-1.5 text-admin-sm text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"><Plus size={12} />New Category</button>
               )}
             </div>
           </aside>
@@ -323,7 +324,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
             <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar">
               {filtered.length === 0 ? (
                 <div className="flex items-center justify-center h-full px-6 text-center">
-                  <p className="text-xs text-admin-text-ghost">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
+                  <p className="text-admin-sm text-admin-text-ghost">{search ? 'No snippets match your search.' : 'No snippets yet.'}</p>
                 </div>
               ) : filtered.map(s => (
                 <button
@@ -357,7 +358,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
                     value={active.title}
                     onChange={e => mutate(active.id, 'title', e.target.value)}
                     placeholder="Snippet title…"
-                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-admin-text-primary placeholder:text-admin-text-ghost focus:ring-0"
+                    className="flex-1 text-admin-lg font-semibold bg-transparent border-none outline-none px-8 pt-8 pb-3 text-admin-text-primary placeholder:text-admin-text-ghost focus:ring-0"
                   />
                   <div className="flex items-center gap-2 mt-[2.1rem] mr-5 flex-shrink-0">
                     <button
@@ -383,7 +384,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
             <div className="flex-shrink-0 border-t border-admin-border px-8 py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <SaveDot status={dotStatus} />
-                <button onClick={() => handleSave(active)} className="btn-primary inline-flex items-center gap-2 px-5 py-2 text-sm">
+                <button onClick={() => handleSave(active)} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
                   <Save size={14} />
                   Save
                 </button>
@@ -424,7 +425,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
               <div className="flex items-center gap-2">
                 {confirmDeleteId === active.id ? (
                   <>
-                    <span className="text-xs text-admin-danger">Delete?</span>
+                    <span className="text-admin-sm text-admin-danger">Delete?</span>
                     <button
                       onClick={() => handleDelete(active.id)}
                       className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
@@ -462,7 +463,7 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
             </p>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setConfirmDeleteCat(null)} className="px-5 py-2.5 rounded-lg text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">Cancel</button>
-              <button onClick={() => handleDeleteCat(confirmDeleteCat)} className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700 transition-colors">Delete</button>
+              <button onClick={() => handleDeleteCat(confirmDeleteCat)} className="btn-danger inline-flex items-center gap-2 px-4 py-2">Delete</button>
             </div>
           </div>
         </div>

@@ -50,15 +50,13 @@ export type MetadataTabHandle = {
   isDirty: boolean;
 };
 
-const inputClass =
-  'w-full px-3 py-2.5 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors disabled:opacity-40';
+const inputClass = 'admin-input w-full';
 
-const textareaClass =
-  'w-full px-3 py-2.5 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors resize-none disabled:opacity-40';
+const textareaClass = 'admin-input w-full resize-none';
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-xs text-admin-text-muted mb-1.5 uppercase tracking-wider">
+    <label className="block text-admin-sm text-admin-text-muted mb-1.5 uppercase tracking-wider">
       {children}
     </label>
   );
@@ -165,7 +163,7 @@ function ClientCombobox({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(opt)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors truncate ${
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-admin-bg-hover transition-colors truncate ${
                 opt.id === clientId ? 'text-admin-text-primary bg-admin-bg-selected' : 'text-admin-text-muted'
               }`}
             >
@@ -178,7 +176,7 @@ function ClientCombobox({
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-white/[0.06] transition-colors border-t border-admin-border"
+              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-admin-bg-hover transition-colors border-t border-admin-border"
             >
               {creating ? 'Creating…' : `Create "${query.trim()}"`}
             </button>
@@ -323,7 +321,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
             <button
               type="button"
               onClick={() => set('slug', slugify(form.title))}
-              className="h-[42px] w-[42px] flex items-center justify-center text-admin-text-faint border border-border rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+              className="h-[42px] w-[42px] flex items-center justify-center text-admin-text-faint border border-admin-border-subtle rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
               title="Regenerate from title"
             >
               <RefreshCw size={14} />
@@ -389,7 +387,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
               </div>
               <a
                 href="/admin/testimonials"
-                className="h-[42px] flex items-center gap-1.5 px-3 text-xs text-admin-text-faint border border-border rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 whitespace-nowrap"
+                className="h-[42px] flex items-center gap-1.5 px-3 text-xs text-admin-text-faint border border-admin-border-subtle rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 whitespace-nowrap"
               >
                 <MessageSquare size={13} />
                 Testimonials
@@ -407,7 +405,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
             <a
               href="/admin/testimonials"
               title="Manage testimonials"
-              className="w-10 h-10 flex items-center justify-center text-admin-text-faint border border-border rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+              className="w-10 h-10 flex items-center justify-center text-admin-text-faint border border-admin-border-subtle rounded-lg hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
             >
               <MessageSquare size={14} />
             </a>

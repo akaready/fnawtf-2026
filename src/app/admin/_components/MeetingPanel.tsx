@@ -30,8 +30,7 @@ interface Props {
   contacts: { id: string; first_name: string; last_name: string }[];
 }
 
-const inputCls =
-  'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
+const inputCls = 'admin-input w-full';
 
 export function MeetingPanel({
   meeting,
@@ -90,7 +89,7 @@ export function MeetingPanel({
   return (
     <PanelDrawer open={open} onClose={onClose} width="w-[540px]">
       {/* Header */}
-      <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border">
+      <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-inset">
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold truncate">{meeting.title}</h2>
           <div className="flex items-center gap-2 mt-1.5 text-xs text-admin-text-faint">
@@ -142,7 +141,7 @@ export function MeetingPanel({
           <div className="px-6 py-5 space-y-5">
             {/* ── Relationships ── */}
             <div>
-              <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium">
+              <label className="text-admin-sm text-admin-text-placeholder uppercase tracking-wider font-medium">
                 Relationships
               </label>
               {meeting.meeting_relationships.length > 0 ? (
@@ -176,7 +175,7 @@ export function MeetingPanel({
                       <span
                         className={`ml-auto text-[10px] rounded-full px-1.5 py-0.5 flex-shrink-0 ${
                           rel.match_type === 'auto'
-                            ? 'bg-indigo-500/20 text-indigo-300'
+                            ? 'bg-admin-accent-bg text-admin-accent'
                             : 'bg-admin-bg-active text-admin-text-faint'
                         }`}
                       >
@@ -194,7 +193,7 @@ export function MeetingPanel({
                           })
                         }
                         disabled={linking}
-                        className="w-6 h-6 flex items-center justify-center rounded text-admin-text-muted/0 group-hover:text-admin-text-placeholder hover:!text-admin-danger hover:!bg-red-500/10 transition-colors flex-shrink-0 cursor-pointer"
+                        className="w-6 h-6 flex items-center justify-center rounded text-admin-text-muted/0 group-hover:text-admin-text-placeholder hover:!text-admin-danger hover:bg-admin-danger-bg transition-colors flex-shrink-0 cursor-pointer"
                       >
                         <Unlink size={14} />
                       </button>
@@ -270,7 +269,7 @@ export function MeetingPanel({
             {/* ── Meeting link ── */}
             {meeting.meeting_url && (
               <div>
-                <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium">
+                <label className="text-admin-sm text-admin-text-placeholder uppercase tracking-wider font-medium">
                   Meeting Link
                 </label>
                 <a
@@ -287,7 +286,7 @@ export function MeetingPanel({
 
             {/* ── Attendees ── */}
             <div>
-              <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium flex items-center gap-1.5">
+              <label className="text-admin-sm text-admin-text-placeholder uppercase tracking-wider font-medium flex items-center gap-1.5">
                 <Users size={12} />
                 Attendees ({meeting.meeting_attendees.length})
               </label>
@@ -330,7 +329,7 @@ export function MeetingPanel({
             {/* ── Description ── */}
             {meeting.description && (
               <div>
-                <label className="text-xs text-admin-text-placeholder uppercase tracking-wider font-medium">
+                <label className="text-admin-sm text-admin-text-placeholder uppercase tracking-wider font-medium">
                   Description
                 </label>
                 <p className="mt-1.5 text-sm text-admin-text-ghost whitespace-pre-wrap leading-relaxed break-words">

@@ -52,7 +52,7 @@ const STATUS_CONFIG: Record<CompanyStatus, { label: string; color: string; dot: 
   active:    { label: 'Active',   color: 'text-admin-success',            dot: 'bg-emerald-500' },
   prospect:  { label: 'Prospect', color: 'text-admin-warning',              dot: 'bg-amber-500' },
   'on hold': { label: 'On Hold',  color: 'text-slate-400',              dot: 'bg-slate-500' },
-  past:      { label: 'Past',     color: 'text-admin-text-ghost',    dot: 'bg-white/20' },
+  past:      { label: 'Past',     color: 'text-admin-text-ghost',    dot: 'bg-admin-bg-active' },
 };
 
 const TYPE_CONFIG: Record<CompanyType, {
@@ -311,7 +311,7 @@ export function CompanyPanel({
   const pipelineStage = (localCompany.pipeline_stage ?? 'new') as PipelineStage;
   const statusCfg = STATUS_CONFIG[status];
 
-  const inputCls = 'flex-1 rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2 text-sm text-admin-text-muted placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
+  const inputCls = 'admin-input w-full';
 
   const showSearchBar = activeTab === 'contacts' || activeTab === 'testimonials' || activeTab === 'projects';
 
@@ -399,7 +399,7 @@ export function CompanyPanel({
                 else setTestimonialSearch(e.target.value);
               }}
               placeholder={activeTab === 'contacts' ? 'Search contacts to link…' : activeTab === 'projects' ? 'Search projects to link…' : 'Search testimonials to link…'}
-              className="flex-1 rounded-lg bg-admin-bg-base border border-admin-border-subtle px-3 py-1.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis"
+              className="admin-input w-full"
             />
           </div>
         )}
@@ -446,7 +446,7 @@ export function CompanyPanel({
                               : 'border-admin-border-subtle bg-transparent text-admin-text-muted/25 hover:text-admin-text-faint hover:border-admin-border'
                           }`}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-white/20'}`} />
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-admin-bg-active'}`} />
                           {scfg.label}
                         </button>
                       );
@@ -483,7 +483,7 @@ export function CompanyPanel({
                 onChange={(e) => handleChange('description', e.target.value || null)}
                 placeholder="Company description…"
                 rows={2}
-                className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-muted placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis resize-none"
+                className="admin-input w-full resize-none"
                 style={{ fieldSizing: 'content' } as React.CSSProperties}
               />
 
@@ -536,7 +536,7 @@ export function CompanyPanel({
                 onChange={(e) => handleChange('notes', e.target.value || null)}
                 placeholder="Notes…"
                 rows={3}
-                className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-muted placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis resize-none"
+                className="admin-input w-full resize-none"
                 style={{ fieldSizing: 'content' } as React.CSSProperties}
               />
             </div>
@@ -878,7 +878,7 @@ function LogoDropzone({
           onClick={handleRemoveClick}
           className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
             confirming
-              ? 'bg-red-500 border border-red-400'
+              ? 'bg-admin-danger-bg border-admin-danger-border text-admin-danger hover:bg-admin-danger-bg-strong'
               : 'bg-admin-border border border-admin-border hover:bg-admin-danger-bg-strong hover:border-admin-danger-border'
           }`}
           title={confirming ? 'Click again to confirm' : 'Remove logo'}

@@ -20,8 +20,7 @@ export type BTSTabHandle = {
   isDirty: boolean;
 };
 
-const inputClass =
-  'w-full px-3 py-2 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors';
+const inputClass = 'admin-input w-full';
 
 export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectId, initialImages }, ref) {
   const [images, setImages] = useState<BTSImage[]>(initialImages);
@@ -212,7 +211,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
           setImages((prev) => [...prev, { image_url: '', caption: null, sort_order: prev.length }]);
           setIsDirty(true);
         }}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
       >
         <Plus size={14} /> Add via URL
       </button>

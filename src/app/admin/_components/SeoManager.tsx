@@ -77,7 +77,7 @@ export function SeoManager({ initialSettings }: Props) {
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         {activeRow && (
           <div className="space-y-4">
-            <p className="text-xs text-admin-text-faint">
+            <p className="text-admin-sm text-admin-text-faint">
               {PAGE_META[activeRow.page_slug]?.description ?? activeRow.page_slug}
             </p>
 
@@ -142,7 +142,7 @@ export function SeoManager({ initialSettings }: Props) {
               </label>
 
               <SaveDot status={dotStatus} />
-              <button onClick={() => handleSave(activeRow)} className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
+              <button onClick={() => handleSave(activeRow)} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
                 <Save size={14} />
                 Save
               </button>
@@ -178,10 +178,10 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-admin-text-muted">{label}</label>
+        <label className="text-admin-sm font-medium text-admin-text-muted">{label}</label>
         {maxLength && (
           <span
-            className={`text-[10px] ${
+            className={`text-admin-xs ${
               overLimit ? 'text-admin-danger' : nearLimit ? 'text-admin-warning' : 'text-admin-text-placeholder'
             }`}
           >

@@ -117,7 +117,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
     <PanelDrawer open={open} onClose={handleClose} width="w-[420px]">
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-inset">
-          <h2 className="text-lg font-bold text-admin-text-primary">Script Settings</h2>
+          <h2 className="text-admin-lg font-bold text-admin-text-primary">Script Settings</h2>
           <SaveDot status={dotStatus} />
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <X size={16} />
@@ -127,21 +127,21 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
         <div className="flex-1 overflow-y-auto admin-scrollbar p-6 space-y-5">
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-admin-text-muted mb-1.5">Title</label>
+            <label className="block text-admin-sm font-medium text-admin-text-muted">Title</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="admin-input w-full text-sm py-2 px-3"
+              className="admin-input w-full"
             />
           </div>
 
           {/* Status */}
           <div>
-            <label className="block text-xs font-medium text-admin-text-muted mb-1.5">Status</label>
+            <label className="block text-admin-sm font-medium text-admin-text-muted">Status</label>
             <select
               value={status}
               onChange={e => setStatus(e.target.value as ScriptStatus)}
-              className="admin-input w-full text-sm py-2 px-3"
+              className="admin-input w-full"
             >
               {STATUS_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -151,10 +151,10 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
           {/* Project assignment */}
           <div>
-            <label className="block text-xs font-medium text-admin-text-muted mb-1.5">Project</label>
+            <label className="block text-admin-sm font-medium text-admin-text-muted">Project</label>
             {script.project_id ? (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-admin-text-primary">
+                <span className="text-admin-base text-admin-text-primary">
                   {script.project?.title ?? 'Unknown project'}
                 </span>
                 <button
@@ -171,20 +171,20 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
                   value={projectSearch}
                   onChange={e => setProjectSearch(e.target.value)}
                   placeholder="Search projects…"
-                  className="admin-input w-full text-sm py-2 px-3 mb-2"
+                  className="admin-input w-full mb-2"
                 />
                 <div className="max-h-40 overflow-y-auto admin-scrollbar border border-admin-border-subtle rounded-lg">
                   {filteredProjects.slice(0, 10).map(p => (
                     <button
                       key={p.id}
                       onClick={() => handleProjectAssign(p.id)}
-                      className="w-full text-left px-3 py-2 text-sm text-admin-text-secondary hover:bg-admin-bg-hover transition-colors border-b border-admin-border-subtle last:border-0"
+                      className="w-full text-left px-3 py-2 text-admin-base text-admin-text-secondary hover:bg-admin-bg-hover transition-colors border-b border-admin-border-subtle last:border-0"
                     >
                       {p.title}
                     </button>
                   ))}
                   {filteredProjects.length === 0 && (
-                    <p className="px-3 py-2 text-sm text-admin-text-faint">No projects found</p>
+                    <p className="px-3 py-2 text-admin-base text-admin-text-faint">No projects found</p>
                   )}
                 </div>
               </div>
@@ -193,18 +193,18 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-medium text-admin-text-muted mb-1.5">Notes</label>
+            <label className="block text-admin-sm font-medium text-admin-text-muted">Notes</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Internal notes about this script…"
               rows={4}
-              className="admin-input w-full text-sm resize-none py-2 px-3"
+              className="admin-input w-full resize-none"
             />
           </div>
 
           {/* Version info */}
-          <div className="text-xs text-admin-text-faint">
+          <div className="text-admin-sm text-admin-text-faint">
             Version {script.version} · Created {new Date(script.created_at).toLocaleDateString()}
           </div>
         </div>
@@ -218,7 +218,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
           {confirmDelete ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-admin-danger mr-1">Delete?</span>
+              <span className="text-admin-sm text-admin-danger mr-1">Delete?</span>
               <button
                 onClick={handleDelete}
                 disabled={deleting}

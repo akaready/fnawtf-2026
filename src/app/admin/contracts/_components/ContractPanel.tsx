@@ -272,7 +272,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   const tabs = [
     { value: 'details', label: 'Details', icon: <FileText size={13} /> },
     { value: 'body', label: 'Body' },
-    { value: 'signers', label: 'Signers', icon: <Users size={13} />, badge: contract?.signers?.length ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-admin-bg-hover">{contract.signers.length}</span> : undefined },
+    { value: 'signers', label: 'Signers', icon: <Users size={13} />, badge: contract?.signers?.length ? <span className="text-admin-xs px-1.5 py-0.5 rounded-full bg-admin-bg-hover">{contract.signers.length}</span> : undefined },
     { value: 'activity', label: 'Activity', icon: <History size={13} /> },
   ];
 
@@ -309,20 +309,20 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
           {/* Header — title + status pill + close */}
           <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <span className="text-xs font-admin-mono text-admin-text-faint flex-shrink-0">#{contract.contract_number}</span>
+              <span className="text-admin-xs font-admin-mono text-admin-text-faint flex-shrink-0">#{contract.contract_number}</span>
               {isEditable ? (
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="bg-transparent text-lg font-semibold text-admin-text-primary outline-none min-w-0 flex-1"
+                  className="bg-transparent text-admin-lg font-semibold text-admin-text-primary outline-none min-w-0 flex-1"
                 />
               ) : (
-                <span className="text-lg font-semibold text-admin-text-primary truncate">{title}</span>
+                <span className="text-admin-lg font-semibold text-admin-text-primary truncate">{title}</span>
               )}
               <SaveDot status={dotStatus} />
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium ${STATUS_COLORS[contract.status]}`}>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-admin-xs font-medium ${STATUS_COLORS[contract.status]}`}>
                 {STATUS_LABELS[contract.status]}
               </span>
               <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center">
@@ -340,7 +340,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
             {activeTab === 'details' && (
               <div className="p-6 space-y-6">
                 <div>
-                  <label className="text-xs text-admin-text-muted mb-1 block">Title</label>
+                  <label className="block text-admin-sm font-medium text-admin-text-muted">Title</label>
                   {isEditable ? (
                     <input
                       value={title}
@@ -349,12 +349,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       placeholder="Contract title…"
                     />
                   ) : (
-                    <div className="text-sm text-admin-text-primary">{title}</div>
+                    <div className="text-admin-base text-admin-text-primary">{title}</div>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-admin-text-muted mb-1 block">Type</label>
+                    <label className="block text-admin-sm font-medium text-admin-text-muted">Type</label>
                     {isEditable ? (
                       <AdminSelect
                         options={TYPE_OPTIONS}
@@ -363,12 +363,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                         placeholder="Select type..."
                       />
                     ) : (
-                      <div className="text-sm text-admin-text-primary">{TYPE_OPTIONS.find((o) => o.value === contractType)?.label}</div>
+                      <div className="text-admin-base text-admin-text-primary">{TYPE_OPTIONS.find((o) => o.value === contractType)?.label}</div>
                     )}
                   </div>
                   <div>
-                    <label className="text-xs text-admin-text-muted mb-1 block">Template</label>
-                    <div className="text-sm text-admin-text-secondary">
+                    <label className="block text-admin-sm font-medium text-admin-text-muted">Template</label>
+                    <div className="text-admin-base text-admin-text-secondary">
                       {contract.template?.name || <span className="text-admin-text-faint">From scratch</span>}
                     </div>
                   </div>
@@ -376,10 +376,10 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
                 {/* Linked records */}
                 <div>
-                  <h3 className="text-xs font-semibold text-admin-text-muted uppercase tracking-wider mb-3">Linked Records</h3>
+                  <h3 className="text-admin-xs font-semibold text-admin-text-muted uppercase tracking-wider mb-3">Linked Records</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs text-admin-text-muted mb-1 block">Client</label>
+                      <label className="block text-admin-sm font-medium text-admin-text-muted">Client</label>
                       {isEditable ? (
                         <AdminSelect
                           options={[{ value: '', label: 'None' }, ...clientOptions]}
@@ -388,11 +388,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                           placeholder="Select client…"
                         />
                       ) : (
-                        <div className="text-sm text-admin-text-primary">{contract.client?.name || <span className="text-admin-text-faint">None</span>}</div>
+                        <div className="text-admin-base text-admin-text-primary">{contract.client?.name || <span className="text-admin-text-faint">None</span>}</div>
                       )}
                     </div>
                     <div>
-                      <label className="text-xs text-admin-text-muted mb-1 block">Contact</label>
+                      <label className="block text-admin-sm font-medium text-admin-text-muted">Contact</label>
                       {isEditable ? (
                         <AdminSelect
                           options={[{ value: '', label: 'None' }, ...contactOptions]}
@@ -401,13 +401,13 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                           placeholder="Select contact…"
                         />
                       ) : (
-                        <div className="text-sm text-admin-text-primary">
+                        <div className="text-admin-base text-admin-text-primary">
                           {contract.contact ? `${contract.contact.first_name} ${contract.contact.last_name}` : <span className="text-admin-text-faint">None</span>}
                         </div>
                       )}
                     </div>
                     <div>
-                      <label className="text-xs text-admin-text-muted mb-1 block">Proposal</label>
+                      <label className="block text-admin-sm font-medium text-admin-text-muted">Proposal</label>
                       {isEditable ? (
                         <AdminSelect
                           options={[{ value: '', label: 'None' }, ...proposalOptions]}
@@ -421,11 +421,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                           placeholder="Select proposal…"
                         />
                       ) : (
-                        <div className="text-sm text-admin-text-primary">{contract.proposal?.title || <span className="text-admin-text-faint">None</span>}</div>
+                        <div className="text-admin-base text-admin-text-primary">{contract.proposal?.title || <span className="text-admin-text-faint">None</span>}</div>
                       )}
                     </div>
                     <div>
-                      <label className="text-xs text-admin-text-muted mb-1 block">Quote</label>
+                      <label className="block text-admin-sm font-medium text-admin-text-muted">Quote</label>
                       {isEditable ? (
                         proposalId ? (
                           <AdminSelect
@@ -435,10 +435,10 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                             placeholder="Select quote…"
                           />
                         ) : (
-                          <div className="text-xs text-admin-text-faint py-2">Select a proposal first</div>
+                          <div className="text-admin-xs text-admin-text-faint py-2">Select a proposal first</div>
                         )
                       ) : (
-                        <div className="text-sm text-admin-text-primary">
+                        <div className="text-admin-base text-admin-text-primary">
                           {contract.quote ? contract.quote.label : <span className="text-admin-text-faint">None</span>}
                         </div>
                       )}
@@ -448,7 +448,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
                 {/* Notes */}
                 <div>
-                  <label className="text-xs text-admin-text-muted mb-1 block">Notes</label>
+                  <label className="block text-admin-sm font-medium text-admin-text-muted">Notes</label>
                   {isEditable ? (
                     <textarea
                       value={notes}
@@ -458,7 +458,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       placeholder="Internal notes..."
                     />
                   ) : (
-                    <div className="text-sm text-admin-text-secondary whitespace-pre-wrap">
+                    <div className="text-admin-base text-admin-text-secondary whitespace-pre-wrap">
                       {notes || <span className="text-admin-text-faint">No notes</span>}
                     </div>
                   )}
@@ -471,12 +471,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               <div className="flex flex-col h-full">
                 {contract.template_id && isEditable && (
                   <div className="flex-shrink-0 px-6 py-2 border-b border-admin-border-subtle flex items-center justify-between">
-                    <span className="text-xs text-admin-text-faint">
+                    <span className="text-admin-sm text-admin-text-faint">
                       Template: {contract.template?.name}
                     </span>
                     <button
                       onClick={handleReRender}
-                      className="btn-secondary px-3 py-1 text-xs inline-flex items-center gap-1.5"
+                      className="btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5"
                     >
                       <RefreshCw size={12} />
                       Re-render from template
@@ -488,12 +488,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                     <textarea
                       value={body}
                       onChange={(e) => { setBody(e.target.value); setIsDirty(true); }}
-                      className="w-full h-full min-h-[400px] resize-none bg-admin-bg-overlay border border-admin-border rounded-lg text-sm text-admin-text-primary font-admin-mono p-4 outline-none focus:border-admin-border admin-scrollbar"
+                      className="w-full h-full min-h-[400px] resize-none bg-admin-bg-overlay border border-admin-border rounded-lg text-admin-text-primary font-admin-mono outline-none focus:border-admin-border admin-scrollbar"
                       placeholder="Contract body text..."
                       spellCheck={false}
                     />
                   ) : (
-                    <div className="bg-admin-bg-overlay border border-admin-border rounded-lg p-4 text-sm text-admin-text-secondary whitespace-pre-wrap leading-relaxed min-h-[400px]">
+                    <div className="bg-admin-bg-overlay border border-admin-border rounded-lg p-4 text-admin-base text-admin-text-secondary whitespace-pre-wrap leading-relaxed min-h-[400px]">
                       {body || <span className="text-admin-text-faint">Empty contract body</span>}
                     </div>
                   )}
@@ -505,7 +505,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
             {activeTab === 'signers' && (
               <div className="p-6 space-y-4">
                 {(contract.signers || []).length === 0 && !showAddSigner && (
-                  <div className="text-sm text-admin-text-muted text-center py-8">
+                  <div className="text-admin-base text-admin-text-muted text-center py-8">
                     No signers added yet. Add signers to send this contract for signature.
                   </div>
                 )}
@@ -516,14 +516,14 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   >
                     {signerStatusIcon(signer.status)}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-admin-text-primary">{signer.name}</div>
-                      <div className="text-xs text-admin-text-muted">{signer.email}</div>
+                      <div className="text-admin-base font-medium text-admin-text-primary">{signer.name}</div>
+                      <div className="text-admin-sm text-admin-text-muted">{signer.email}</div>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-admin-bg-hover text-admin-text-dim uppercase tracking-wider">
+                    <span className="text-admin-xs px-1.5 py-0.5 rounded-full bg-admin-bg-hover text-admin-text-dim uppercase tracking-wider">
                       {signer.role}
                     </span>
                     {signer.signed_at && (
-                      <span className="text-xs text-admin-success">
+                      <span className="text-admin-sm text-admin-success">
                         Signed {new Date(signer.signed_at).toLocaleDateString()}
                       </span>
                     )}
@@ -547,14 +547,14 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                         <button
                           type="button"
                           onClick={() => { setSignerMode('pick'); setNewSignerName(''); setNewSignerEmail(''); setSignerContactPick(''); }}
-                          className={`px-3 py-1 text-xs rounded-md transition-colors ${signerMode === 'pick' ? 'bg-admin-bg-overlay text-admin-text-primary shadow-sm' : 'text-admin-text-muted hover:text-admin-text-primary'}`}
+                          className={`px-3 py-1.5 text-admin-sm rounded-md transition-colors ${signerMode === 'pick' ? 'bg-admin-bg-overlay text-admin-text-primary shadow-sm' : 'text-admin-text-muted hover:text-admin-text-primary'}`}
                         >
                           From Contacts
                         </button>
                         <button
                           type="button"
                           onClick={() => { setSignerMode('manual'); setSignerContactPick(''); }}
-                          className={`px-3 py-1 text-xs rounded-md transition-colors ${signerMode === 'manual' ? 'bg-admin-bg-overlay text-admin-text-primary shadow-sm' : 'text-admin-text-muted hover:text-admin-text-primary'}`}
+                          className={`px-3 py-1.5 text-admin-sm rounded-md transition-colors ${signerMode === 'manual' ? 'bg-admin-bg-overlay text-admin-text-primary shadow-sm' : 'text-admin-text-muted hover:text-admin-text-primary'}`}
                         >
                           Enter Manually
                         </button>
@@ -562,7 +562,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
                       {signerMode === 'pick' ? (
                         <div>
-                          <label className="text-xs text-admin-text-muted mb-1 block">Contact</label>
+                          <label className="block text-admin-sm font-medium text-admin-text-muted">Contact</label>
                           <AdminSelect
                             options={contactOptions}
                             value={signerContactPick}
@@ -570,7 +570,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                             placeholder="Search contacts…"
                           />
                           {signerContactPick && newSignerName && (
-                            <div className="mt-2 text-xs text-admin-text-muted">
+                            <div className="mt-2 text-admin-sm text-admin-text-muted">
                               {newSignerName} · {newSignerEmail || 'No email on file'}
                             </div>
                           )}
@@ -578,7 +578,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       ) : (
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="text-xs text-admin-text-muted mb-1 block">Name</label>
+                            <label className="block text-admin-sm font-medium text-admin-text-muted">Name</label>
                             <input
                               value={newSignerName}
                               onChange={(e) => setNewSignerName(e.target.value)}
@@ -588,7 +588,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                             />
                           </div>
                           <div>
-                            <label className="text-xs text-admin-text-muted mb-1 block">Email</label>
+                            <label className="block text-admin-sm font-medium text-admin-text-muted">Email</label>
                             <input
                               value={newSignerEmail}
                               onChange={(e) => setNewSignerEmail(e.target.value)}
@@ -601,7 +601,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       )}
 
                       <div>
-                        <label className="text-xs text-admin-text-muted mb-1 block">Role</label>
+                        <label className="block text-admin-sm font-medium text-admin-text-muted">Role</label>
                         <AdminSelect
                           options={[
                             { value: 'signer', label: 'Signer' },
@@ -618,11 +618,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                         <button
                           onClick={handleAddSigner}
                           disabled={!newSignerName || !newSignerEmail}
-                          className="btn-primary px-4 py-1.5 text-sm"
+                          className="btn-primary px-4 py-1.5 text-admin-base"
                         >
                           Add Signer
                         </button>
-                        <button onClick={resetSignerForm} className="btn-secondary px-4 py-1.5 text-sm">
+                        <button onClick={resetSignerForm} className="btn-secondary px-4 py-1.5 text-admin-base">
                           Cancel
                         </button>
                       </div>
@@ -630,7 +630,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   ) : (
                     <button
                       onClick={() => setShowAddSigner(true)}
-                      className="btn-secondary px-4 py-2 text-sm inline-flex items-center gap-2"
+                      className="btn-secondary px-4 py-2 text-admin-base inline-flex items-center gap-2"
                     >
                       <Plus size={14} />
                       Add Signer
@@ -644,7 +644,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
             {activeTab === 'activity' && (
               <div className="p-6">
                 {events.length === 0 ? (
-                  <div className="text-sm text-admin-text-muted text-center py-8">No activity yet</div>
+                  <div className="text-admin-base text-admin-text-muted text-center py-8">No activity yet</div>
                 ) : (
                   <div className="space-y-0">
                     {events.map((event, i) => (
@@ -658,7 +658,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                           )}
                         </div>
                         <div className="flex-1 min-w-0 pt-0.5">
-                          <div className="text-sm text-admin-text-primary">
+                          <div className="text-admin-base text-admin-text-primary">
                             <span className="font-medium capitalize">{event.event_type.replace(/_/g, ' ')}</span>
                             {event.actor_email && (
                               <span className="text-admin-text-muted"> by {event.actor_email}</span>
@@ -667,7 +667,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                               <span className="text-admin-text-muted"> -- {event.signer_email}</span>
                             )}
                           </div>
-                          <div className="text-xs text-admin-text-faint mt-0.5">
+                          <div className="text-admin-sm text-admin-text-faint mt-0.5">
                             {new Date(event.occurred_at).toLocaleString()}
                           </div>
                         </div>
@@ -693,7 +693,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                 <button
                   onClick={() => setConfirmSend(true)}
                   disabled={!canSend}
-                  className="flex items-center gap-2 px-4 py-[9px] rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors disabled:opacity-40"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors disabled:opacity-40"
                 >
                   <Send size={14} />
                   Send for Signature
@@ -701,7 +701,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               )}
               {confirmSend && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-admin-info mr-1">
+                  <span className="text-admin-sm text-admin-info mr-1">
                     Send to {contract.signers?.length || 0} signer{(contract.signers?.length || 0) !== 1 ? 's' : ''}?
                   </span>
                   <button
@@ -734,7 +734,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               )}
               {confirmVoid && (
                 <>
-                  <span className="text-xs text-admin-danger mr-1">Void this contract?</span>
+                  <span className="text-admin-sm text-admin-danger mr-1">Void this contract?</span>
                   <button
                     onClick={() => setConfirmVoid(false)}
                     className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
@@ -752,7 +752,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               {/* Delete — two-state confirmation */}
               {confirmDelete ? (
                 <>
-                  <span className="text-xs text-admin-danger mr-1">Delete this contract?</span>
+                  <span className="text-admin-sm text-admin-danger mr-1">Delete this contract?</span>
                   <button
                     onClick={() => setConfirmDelete(false)}
                     className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"

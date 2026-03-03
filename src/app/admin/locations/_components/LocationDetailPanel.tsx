@@ -189,9 +189,9 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={dotStatus} /></h2>
+            <h2 className="text-admin-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={dotStatus} /></h2>
             {local.address && (
-              <p className="text-xs text-admin-text-faint mt-0.5 truncate">
+              <p className="text-admin-xs text-admin-text-faint mt-0.5 truncate">
                 {[local.address, local.city, local.state].filter(Boolean).join(', ')}
               </p>
             )}
@@ -232,7 +232,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <input
                   value={local.name}
                   onChange={e => updateField('name', e.target.value)}
-                  className="admin-input w-full text-base font-semibold"
+                  className="admin-input w-full text-admin-lg font-semibold"
                   placeholder="Location name"
                 />
               </Field>
@@ -252,7 +252,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   <input
                     value={local.address ?? ''}
                     onChange={e => updateField('address', e.target.value)}
-                    className="admin-input flex-1 text-sm py-2 px-3"
+                    className="admin-input flex-1"
                     placeholder="123 Main St"
                   />
                   {googleMapsUrl && (
@@ -332,10 +332,10 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           {tab === 'images' && (
             <div className="space-y-5">
               <div className="flex items-start justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
+                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
                   {local.location_images.length} image{local.location_images.length !== 1 ? 's' : ''}
                 </p>
-                <label className={`btn-secondary px-3 py-1.5 text-xs inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                <label className={`btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
                   {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                   Upload
                   <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={handleUpload} />
@@ -416,7 +416,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               )}
               {ps.amenities && ps.amenities.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Amenities</p>
+                  <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Amenities</p>
                   <div className="flex flex-wrap gap-1.5">
                     {ps.amenities.map(a => (
                       <span key={a} className="px-2 py-0.5 rounded-admin-sm bg-admin-bg-hover text-xs text-admin-text-muted">{a}</span>
@@ -432,7 +432,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               {ps.host_rules && <InfoRow label="Host Rules">{ps.host_rules}</InfoRow>}
               {ps.hours && Object.keys(ps.hours).length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Hours</p>
+                  <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Hours</p>
                   <div className="space-y-0.5">
                     {Object.entries(ps.hours).map(([day, time]) => (
                       <div key={day} className="flex justify-between text-xs">
@@ -454,7 +454,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               )}
               {ps.reviews && ps.reviews.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
+                  <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
                     Reviews{ps.rating ? ` (${ps.rating.score} via ${ps.rating.count} review${ps.rating.count !== 1 ? 's' : ''})` : ` (${ps.reviews.length})`}
                   </p>
                   <div className="space-y-3">
@@ -476,7 +476,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 </div>
               )}
               {ps.scraped_at && (
-                <p className="text-[10px] text-admin-text-faint">
+                <p className="text-admin-xs text-admin-text-faint">
                   Scraped {new Date(ps.scraped_at).toLocaleDateString()}
                 </p>
               )}
@@ -486,10 +486,10 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           {tab === 'scout' && (
             <div className="space-y-5">
               <div className="flex items-start justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
+                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
                   {scoutImages.length} scout photo{scoutImages.length !== 1 ? 's' : ''}
                 </p>
-                <label className={`btn-secondary px-3 py-1.5 text-xs inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                <label className={`btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
                   {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
                   Upload Scout Photos
                   <input ref={scoutInputRef} type="file" accept="image/*" multiple className="sr-only" onChange={async (e) => {
@@ -559,7 +559,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           {tab === 'projects' && (
             <div className="space-y-5">
               <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Linked Projects</p>
+                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Linked Projects</p>
                 {loadingProjects ? (
                   <div className="flex items-center gap-2 py-4 text-admin-text-faint text-sm">
                     <Loader2 size={14} className="animate-spin" /> Loading…
@@ -586,7 +586,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Add Project</p>
+                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Add Project</p>
                 <select
                   className="admin-input w-full"
                   value=""
@@ -671,7 +671,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">{label}</p>
+      <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">{label}</p>
       {children}
     </div>
   );
@@ -680,7 +680,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">{label}</p>
+      <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">{label}</p>
       <div className="text-sm text-admin-text-primary">{children}</div>
     </div>
   );

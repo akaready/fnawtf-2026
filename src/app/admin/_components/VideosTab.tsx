@@ -28,8 +28,7 @@ interface Props {
   currentThumbnailUrl?: string;
 }
 
-const inputClass =
-  'w-full px-3 py-2 bg-admin-bg-base border border-border rounded-lg text-sm text-admin-text-primary placeholder:text-admin-text-ghost focus:outline-none focus:border-admin-border-focus transition-colors';
+const inputClass = 'admin-input w-full';
 
 const VIDEO_TYPES: VideoType[] = ['flagship', 'cutdown', 'bts'];
 
@@ -417,7 +416,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
                 disabled={isPending}
                 className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
                   video.password_protected
-                    ? 'text-admin-warning hover:text-amber-300 bg-admin-warning-bg'
+                    ? 'text-admin-warning hover:text-admin-warning bg-admin-warning-bg'
                     : 'text-admin-text-ghost hover:text-admin-text-muted opacity-0 group-hover/vid:opacity-100'
                 }`}
               >
@@ -430,7 +429,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
                   value={video.viewer_password ?? ''}
                   onChange={(e) => handlePasswordChange(video, e.target.value)}
                   placeholder="password"
-                  className="w-28 px-2 py-1.5 bg-admin-bg-base border border-admin-warning-border rounded-lg text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-amber-400/50 font-mono transition-colors"
+                  className="w-28 px-2 py-1.5 bg-admin-bg-base border border-admin-warning-border rounded-lg text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-warning-border font-mono transition-colors"
                 />
               )}
 
@@ -449,11 +448,11 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
 
       {/* Pending upload form */}
       {pendingVideo && (
-        <div className="p-4 border border-border rounded-lg bg-admin-bg-subtle space-y-3">
+        <div className="p-4 border border-admin-border-subtle rounded-lg bg-admin-bg-subtle space-y-3">
           <p className="text-xs text-admin-text-muted uppercase tracking-wider">Upload complete — set details</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-admin-text-muted mb-1">Title</label>
+              <label className="block text-admin-sm text-admin-text-muted mb-1">Title</label>
               <input
                 type="text"
                 value={pendingVideo.title}
@@ -462,7 +461,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
               />
             </div>
             <div>
-              <label className="block text-xs text-admin-text-muted mb-1">Type</label>
+              <label className="block text-admin-sm text-admin-text-muted mb-1">Type</label>
               <select
                 value={pendingVideo.video_type}
                 onChange={(e) => setPendingVideo((p) => p ? { ...p, video_type: e.target.value as VideoType } : null)}
@@ -484,7 +483,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             <button
               type="button"
               onClick={() => setPendingVideo(null)}
-              className="px-4 py-2 text-sm text-admin-text-muted border border-border rounded-lg hover:text-admin-text-primary transition-colors"
+              className="px-4 py-2 text-sm text-admin-text-muted border border-admin-border-subtle rounded-lg hover:text-admin-text-primary transition-colors"
             >
               Discard
             </button>
@@ -494,11 +493,11 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
 
       {/* Link existing Bunny video form */}
       {showLinkForm && (
-        <div className="p-4 border border-border rounded-lg bg-admin-bg-subtle space-y-3">
+        <div className="p-4 border border-admin-border-subtle rounded-lg bg-admin-bg-subtle space-y-3">
           <p className="text-xs text-admin-text-muted uppercase tracking-wider">Link existing Bunny video</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-admin-text-muted mb-1">Bunny Video ID</label>
+              <label className="block text-admin-sm text-admin-text-muted mb-1">Bunny Video ID</label>
               <input
                 type="text"
                 value={linkId}
@@ -508,7 +507,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
               />
             </div>
             <div>
-              <label className="block text-xs text-admin-text-muted mb-1">Type</label>
+              <label className="block text-admin-sm text-admin-text-muted mb-1">Type</label>
               <select
                 value={linkType}
                 onChange={(e) => setLinkType(e.target.value as VideoType)}
@@ -519,7 +518,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             </div>
           </div>
           <div>
-            <label className="block text-xs text-admin-text-muted mb-1">Title</label>
+            <label className="block text-admin-sm text-admin-text-muted mb-1">Title</label>
             <input
               type="text"
               value={linkTitle}
@@ -540,7 +539,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             <button
               type="button"
               onClick={() => setShowLinkForm(false)}
-              className="px-4 py-2 text-sm text-admin-text-muted border border-border rounded-lg hover:text-admin-text-primary transition-colors"
+              className="px-4 py-2 text-sm text-admin-text-muted border border-admin-border-subtle rounded-lg hover:text-admin-text-primary transition-colors"
             >
               Cancel
             </button>
@@ -557,7 +556,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
           </div>
           <div className="h-1 bg-admin-bg-hover rounded-full overflow-hidden">
             <div
-              className="h-full bg-white/60 rounded-full transition-all duration-200"
+              className="h-full bg-admin-text-primary/60 rounded-full transition-all duration-200"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -585,7 +584,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading || isPending}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors disabled:opacity-40"
           >
             <Upload size={14} /> Upload Video
           </button>
@@ -593,7 +592,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             type="button"
             onClick={() => setShowLinkForm(true)}
             disabled={uploading}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-white/[0.06] text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors disabled:opacity-40"
           >
             <LinkIcon size={14} /> Link by ID
           </button>
@@ -603,11 +602,11 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
       {/* Delete confirm modal */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" style={{ backdropFilter: 'blur(4px)' }}>
-          <div className="bg-admin-bg-raised border border-border rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+          <div className="bg-admin-bg-raised border border-admin-border-subtle rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
             <h3 className="font-display text-lg font-bold text-admin-text-primary mb-2">Delete video?</h3>
             <p className="text-sm text-admin-text-muted mb-5">This cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 px-4 py-2 text-sm rounded-lg border border-border text-admin-text-muted hover:text-admin-text-primary transition-colors">
+              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 px-4 py-2 text-sm rounded-lg border border-admin-border-subtle text-admin-text-muted hover:text-admin-text-primary transition-colors">
                 Cancel
               </button>
               <button
