@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, Rocket } from 'lucide-react';
 import { AdminPageHeader } from '../_components/AdminPageHeader';
 import { ProjectsTable } from '../_components/ProjectsTable';
 import { ProjectPanel } from '../_components/ProjectPanel';
@@ -60,6 +60,7 @@ export function ProjectsPageClient({ projects: initialProjects, tagSuggestions, 
     <div className="flex flex-col h-full relative overflow-hidden">
       <AdminPageHeader
         title="Projects"
+        icon={Rocket}
         subtitle={`${projects.length} total`}
         search={search}
         onSearchChange={setSearch}

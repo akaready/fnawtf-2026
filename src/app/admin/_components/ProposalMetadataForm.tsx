@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Save, Check, Loader2, RefreshCw, Copy, Hammer, Rocket, TrendingUp, Layers, Megaphone,
+  ArrowLeft, Save, Check, Loader2, RefreshCw, Copy, Hammer, Rocket, TrendingUp, Layers, Megaphone, FileText,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { type ProposalRow, createProposal, updateProposal } from '../actions';
@@ -107,6 +107,7 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title={isNew ? 'New Proposal' : `Edit: ${proposal.title}`}
+        icon={FileText}
         subtitle={!isNew ? `/p/${proposal.slug}` : undefined}
         leftContent={
           <button

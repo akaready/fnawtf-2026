@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Layers } from 'lucide-react';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { AdminDataTable } from '@/app/admin/_components/table/AdminDataTable';
 import type { ColDef, RowAction } from '@/app/admin/_components/table/types';
@@ -148,6 +148,7 @@ export function TemplateListClient({ templates: initial }: Props) {
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Contract Templates"
+        icon={Layers}
         subtitle={`${items.length} template${items.length !== 1 ? 's' : ''}`}
         search={search}
         onSearchChange={setSearch}

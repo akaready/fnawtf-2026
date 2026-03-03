@@ -210,7 +210,7 @@ function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColu
   const hasDiscount = crowdDiscount > 0 || friendlyDiscount > 0;
   const total = hasDiscount ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
-  const downPct = isFundraising ? 0.2 : 0.4;
+  const downPct = isFundraising ? 0.2 : (quote.crowdfunding_enabled && quote.defer_payment) ? 0.6 : 0.4;
   const rawDown = Math.round(total * downPct);
   const downAmount = hasDiscount ? Math.ceil(rawDown / 50) * 50 : rawDown;
 
@@ -916,7 +916,7 @@ export function CalculatorSummary({
   const rawTotal = subtotalWithFee - crowdfundingDiscount - friendlyDiscount;
   const total = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
-  const downPercent = fundraisingEnabled ? 0.2 : 0.4;
+  const downPercent = fundraisingEnabled ? 0.2 : (effectiveCrowdfundingEnabled && deferPayment) ? 0.6 : 0.4;
   const rawDown = Math.round(total * downPercent);
   const downAmount = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawDown / 50) * 50 : rawDown;
 
@@ -1174,7 +1174,7 @@ export function CalculatorSummary({
                   </div>
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-sm font-semibold text-green-400 block">{fnaColumnData.isFundraising ? '20%' : '40%'} due at signing</span>
+                      <span className="text-sm font-semibold text-green-400 block">{Math.round(fnaColumnData.downPercent * 100)}% due at signing</span>
                       <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
                     </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(fnaColumnData.downAmount)}</span>
@@ -1187,7 +1187,7 @@ export function CalculatorSummary({
                   </div>
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-sm font-semibold text-green-400 block">{liveColumnData.isFundraising ? '20%' : '40%'} due at signing</span>
+                      <span className="text-sm font-semibold text-green-400 block">{Math.round(liveColumnData.downPercent * 100)}% due at signing</span>
                       <p className="text-xs text-muted-foreground mt-0.5">Minimum to begin</p>
                     </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(liveColumnData.downAmount)}</span>
@@ -1315,7 +1315,7 @@ export function CalculatorSummary({
           </div>
           <div className="flex justify-between items-center">
             <div>
-              <span className="font-semibold text-green-400 block">{fundraisingEnabled ? '20%' : '40%'} due at signing</span>
+              <span className="font-semibold text-green-400 block">{Math.round(downPercent * 100)}% due at signing</span>
               <span className="text-sm text-muted-foreground block mt-1">Minimum payment to begin</span>
             </div>
             <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>

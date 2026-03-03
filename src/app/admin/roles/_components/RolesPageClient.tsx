@@ -161,6 +161,7 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
   const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [confirmBatchDel, setConfirmBatchDel] = useState(false);
   const [addingNew, setAddingNew] = useState(false);
   const [newValue, setNewValue] = useState('');
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -252,53 +253,30 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Roles"
+        icon={Clapperboard}
         subtitle={`${roles.length} production roles`}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search roles…"
         actions={
-          <>
-            {canMerge && (
-              <button
-                onClick={() => setMergeState({ sourceIds: [...selectedIds] })}
-                disabled={isPending}
-                className="btn-secondary px-4 py-2.5 text-sm"
-              >
-                <GitMerge size={13} />
-                Merge {selectedIds.size}
-              </button>
-            )}
-            <button
-              onClick={() => { if (viewMode === 'table') setViewMode('list'); setAddingNew(true); }}
-              disabled={isPending}
-              className="btn-primary px-5 py-2.5 text-sm"
-            >
-              <Plus size={16} />
-              Add Role
-            </button>
-          </>
+          <button
+            onClick={() => { if (viewMode === 'table') setViewMode('list'); setAddingNew(true); }}
+            disabled={isPending}
+            className="btn-primary px-5 py-2.5 text-sm"
+          >
+            <Plus size={16} />
+            Add Role
+          </button>
         }
         mobileActions={
-          <>
-            {canMerge && (
-              <button
-                onClick={() => setMergeState({ sourceIds: [...selectedIds] })}
-                disabled={isPending}
-                className="btn-secondary p-2.5 text-sm"
-                title={`Merge ${selectedIds.size}`}
-              >
-                <GitMerge size={13} />
-              </button>
-            )}
-            <button
-              onClick={() => { if (viewMode === 'table') setViewMode('list'); setAddingNew(true); }}
-              disabled={isPending}
-              className="btn-primary p-2.5 text-sm"
-              title="Add Role"
-            >
-              <Plus size={16} />
-            </button>
-          </>
+          <button
+            onClick={() => { if (viewMode === 'table') setViewMode('list'); setAddingNew(true); }}
+            disabled={isPending}
+            className="btn-primary p-2.5 text-sm"
+            title="Add Role"
+          >
+            <Plus size={16} />
+          </button>
         }
       />
 
@@ -317,10 +295,25 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
           selectable
           freezePanes
           exportCsv
-          onBatchDelete={async (ids) => {
-            await batchDeleteRoles(ids);
-            setRoles((prev) => prev.filter((r) => !ids.includes(r.id)));
-          }}
+          batchActions={[
+            {
+              label: 'Merge',
+              icon: <GitMerge size={13} />,
+              onClick: (ids: string[]) => {
+                if (ids.length < 2) return;
+                setMergeState({ sourceIds: ids });
+              },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              onClick: async (ids: string[]) => {
+                await batchDeleteRoles(ids);
+                setRoles((prev) => prev.filter((r) => !ids.includes(r.id)));
+              },
+            },
+          ]}
           emptyMessage={search ? 'No matching roles.' : 'No roles yet.'}
           rowActions={[
             {
@@ -345,6 +338,42 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
       <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
         <ViewSwitcher views={ROLES_VIEWS} activeView={viewMode} onChange={setViewMode} />
         <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+          {canMerge && (
+            <button
+              onClick={() => setMergeState({ sourceIds: [...selectedIds] })}
+              className="flex items-center gap-1.5 px-3 py-[5px] text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover"
+            >
+              <GitMerge size={13} />
+              Merge {selectedIds.size}
+            </button>
+          )}
+          {selectedIds.size > 0 && (
+            confirmBatchDel ? (
+              <div className="flex items-center gap-0.5">
+                <button
+                  onClick={() => {
+                    startTransition(async () => {
+                      await batchDeleteRoles([...selectedIds]);
+                      setRoles((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+                      setSelectedIds(new Set());
+                      setConfirmBatchDel(false);
+                    });
+                  }}
+                  className="btn-ghost-danger w-8 h-8"
+                  title="Confirm delete"
+                >
+                  <Check size={14} strokeWidth={2} />
+                </button>
+                <button onClick={() => setConfirmBatchDel(false)} className="btn-ghost w-8 h-8" title="Cancel">
+                  <X size={14} strokeWidth={2} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmBatchDel(true)} className="btn-ghost-danger w-8 h-8" title={`Delete ${selectedIds.size} selected`}>
+                <Trash2 size={14} />
+              </button>
+            )
+          )}
           <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
           <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
           <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />

@@ -214,6 +214,7 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Locations"
+        icon={MapPin}
         subtitle={`${locations.length} location${locations.length !== 1 ? 's' : ''}`}
         search={search}
         onSearchChange={setSearch}

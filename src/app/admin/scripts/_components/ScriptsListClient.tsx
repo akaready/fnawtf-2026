@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, ScrollText } from 'lucide-react';
 import { createScript, deleteScript, batchDeleteScripts } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
@@ -164,6 +164,7 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Scripts"
+        icon={ScrollText}
         subtitle={`${latestScripts.length} total`}
         search={search}
         onSearchChange={setSearch}

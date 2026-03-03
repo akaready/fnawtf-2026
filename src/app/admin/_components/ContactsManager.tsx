@@ -894,6 +894,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
     <div className="flex flex-col h-full relative overflow-hidden">
       <AdminPageHeader
         title="People"
+        icon={Users}
         subtitle={`${contacts.length} total`}
         search={search}
         onSearchChange={setSearch}

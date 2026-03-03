@@ -9,6 +9,7 @@ import {
   Users,
   Plug,
   Loader2,
+  Video,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { StatusBadge } from './StatusBadge';
@@ -242,7 +243,7 @@ export function MeetingsManager({
   if (!config) {
     return (
       <div className="flex-1 flex flex-col">
-        <AdminPageHeader title="Meetings" />
+        <AdminPageHeader title="Meetings" icon={Video} />
         <div className="flex-1 flex items-center justify-center">
           <div className="max-w-lg w-full text-center space-y-8 px-6">
             <div className="w-20 h-20 rounded-2xl bg-admin-bg-hover flex items-center justify-center mx-auto">
@@ -293,6 +294,7 @@ export function MeetingsManager({
     <div className="flex-1 flex flex-col min-h-0">
       <AdminPageHeader
         title="Meetings"
+        icon={Video}
         subtitle={
           config.last_synced_at
             ? `Last synced ${new Date(config.last_synced_at).toLocaleString('en-US', {

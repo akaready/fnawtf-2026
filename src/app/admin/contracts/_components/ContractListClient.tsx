@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Trash2, Table2, Columns, Clock, Eye, CheckCircle2, XCircle, AlertCircle, Send } from 'lucide-react';
+import { Plus, Trash2, Table2, Columns, Clock, Eye, CheckCircle2, XCircle, AlertCircle, Send, FileSignature } from 'lucide-react';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { AdminDataTable } from '@/app/admin/_components/table/AdminDataTable';
 import type { ColDef, RowAction } from '@/app/admin/_components/table/types';
@@ -274,6 +274,7 @@ export function ContractListClient({ contracts: initial }: Props) {
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Contracts"
+        icon={FileSignature}
         subtitle={`${items.length} contract${items.length !== 1 ? 's' : ''}`}
         search={search}
         onSearchChange={setSearch}

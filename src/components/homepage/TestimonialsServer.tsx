@@ -20,9 +20,10 @@ export async function TestimonialsServer() {
   const { data } = await supabase
     .from('testimonials')
     .select('id, quote, person_name, person_title, display_title, company, client:clients(logo_url), projects(clients(logo_url)), contact:contacts(first_name, last_name, role)')
-    .order('display_order', { ascending: true });
 
-  const testimonials = ((data ?? []) as TestimonialRow[]).map((t) => {
+
+  const shuffled = ((data ?? []) as TestimonialRow[]).sort(() => Math.random() - 0.5);
+  const testimonials = shuffled.map((t) => {
     // Prefer direct client relation logo, fall back to project->client logo
     const logoUrl = t.client?.logo_url ?? t.projects?.clients?.logo_url ?? '';
     return {

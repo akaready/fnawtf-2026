@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useTransition, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, X, Pencil, Trash2, Plus, GitMerge, ArrowUpRight, ChevronRight, LayoutGrid, Table2, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows } from 'lucide-react';
+import { Check, X, Pencil, Trash2, Plus, GitMerge, ArrowUpRight, ChevronRight, LayoutGrid, Table2, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Tag } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { ViewSwitcher, type ViewDef } from '../../_components/ViewSwitcher';
 import { useViewMode } from '../../_hooks/useViewMode';
@@ -518,6 +518,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Tags"
+        icon={Tag}
         subtitle={`${totalTags} total across ${CATEGORIES.length} categories`}
         search={search}
         onSearchChange={setSearch}
@@ -540,10 +541,26 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
           selectable
           freezePanes
           exportCsv
-          onBatchDelete={async (ids) => {
-            await batchDeleteTags(ids);
-            setTags((prev) => prev.filter((t) => !ids.includes(t.id)));
-          }}
+          batchActions={[
+            {
+              label: 'Merge',
+              icon: <GitMerge size={13} />,
+              onClick: (ids: string[], rows: typeof filteredTags) => {
+                const categories = new Set(rows.map((r) => r.category));
+                if (categories.size !== 1) return;
+                setMergeState({ sourceIds: ids, category: rows[0].category });
+              },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              onClick: async (ids: string[]) => {
+                await batchDeleteTags(ids);
+                setTags((prev) => prev.filter((t) => !ids.includes(t.id)));
+              },
+            },
+          ]}
           emptyMessage={search ? 'No matching tags.' : 'No tags yet.'}
           rowActions={[
             {

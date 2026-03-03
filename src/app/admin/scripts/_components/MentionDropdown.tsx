@@ -1,24 +1,30 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { ScriptCharacterRow, ScriptTagRow } from '@/types/scripts';
+import { MapPin } from 'lucide-react';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
 
 interface Props {
   type: 'character' | 'tag';
   query: string;
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
+  locations?: ScriptLocationRow[];
   position: { x: number; y: number };
-  onSelect: (item: ScriptCharacterRow | ScriptTagRow) => void;
+  onSelect: (item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow) => void;
   onDismiss: () => void;
 }
 
-export function MentionDropdown({ type, query, characters, tags, position, onSelect, onDismiss }: Props) {
+export function MentionDropdown({ type, query, characters, tags, locations = [], position, onSelect, onDismiss }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const items = type === 'character'
-    ? characters.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
+  // @ trigger shows both characters and locations
+  const items: (ScriptCharacterRow | ScriptTagRow | ScriptLocationRow)[] = type === 'character'
+    ? [
+        ...characters.filter(c => c.name.toLowerCase().includes(query.toLowerCase())),
+        ...locations.filter(l => l.name.toLowerCase().includes(query.toLowerCase())),
+      ]
     : tags.filter(t =>
         t.name.toLowerCase().includes(query.toLowerCase()) ||
         t.slug.toLowerCase().includes(query.toLowerCase())
@@ -57,9 +63,12 @@ export function MentionDropdown({ type, query, characters, tags, position, onSel
       style={{ left: position.x, top: position.y }}
     >
       {items.map((item, i) => {
-        const isChar = type === 'character';
+        const isLocation = type === 'character' && 'script_id' in item && !('character_type' in item);
+        const isChar = type === 'character' && !isLocation;
+        const isTag = type === 'tag';
         const char = isChar ? (item as ScriptCharacterRow) : null;
-        const tag = !isChar ? (item as ScriptTagRow) : null;
+        const loc = isLocation ? (item as ScriptLocationRow) : null;
+        const tag = isTag ? (item as ScriptTagRow) : null;
 
         return (
           <button
@@ -78,6 +87,13 @@ export function MentionDropdown({ type, query, characters, tags, position, onSel
                   style={{ backgroundColor: char.color }}
                 />
                 <span className="truncate">@{char.name}</span>
+              </>
+            )}
+            {loc && (
+              <>
+                <MapPin size={12} className="flex-shrink-0" style={{ color: loc.color }} />
+                <span className="truncate">@{loc.name}</span>
+                <span className="text-admin-text-faint text-xs ml-auto">location</span>
               </>
             )}
             {tag && (

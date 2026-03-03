@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { Search, Plus, Check, Loader2, X, PanelRightOpen, PanelRightClose, Home, Play, ClipboardList } from 'lucide-react';
+import { Search, Plus, Check, Loader2, X, PanelRightOpen, PanelRightClose, Home, Play, ClipboardList, AppWindow } from 'lucide-react';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
 import { addPlacement, removePlacement } from '@/app/admin/actions';
@@ -164,6 +164,7 @@ export function WebsitePageClient({
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Website"
+        icon={AppWindow}
         subtitle={`${totalCount} placements across ${3 + SERVICE_SECTIONS.length} pages`}
       />
 

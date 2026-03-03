@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RotateCcw, Save, Download } from 'lucide-react';
+import { RotateCcw, Save, Download, Palette } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { ColorsSection } from './sections/ColorsSection';
 import { TypographySection } from './sections/TypographySection';
@@ -152,6 +152,7 @@ export function StyleGuideClient() {
       {/* Header with search + actions */}
       <AdminPageHeader
         title="Style Guide"
+        icon={Palette}
         subtitle={subtitle}
         search={search}
         onSearchChange={setSearch}

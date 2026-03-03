@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect, useLayoutEffe
 import {
   ArrowUpDown, ChevronUp, ChevronDown, ChevronRight,
   ArrowUpAZ, ListFilter, Layers, Eye,
-  GripVertical, MoreHorizontal, Plus, Check, Minus, X,
+  GripVertical, MoreHorizontal, Plus, Check, X,
   Rows, Palette, Snowflake, Trash2,
 } from 'lucide-react';
 
@@ -23,6 +23,7 @@ import { EditableNumberCell } from './cells/EditableNumberCell';
 import { ToggleCell } from './cells/ToggleCell';
 import { SelectCell } from './cells/SelectCell';
 import { EditableTagsCell } from './cells/EditableTagsCell';
+import { AdminCheckbox } from '../AdminCheckbox';
 
 /* ── Default cell renderer (type-driven) ──────────────────────────────── */
 
@@ -455,14 +456,9 @@ export function AdminDataTable<T extends { id: string }>({
     >
       {selectable && (
         <td className="w-10 px-4 py-1.5 align-middle" style={stickyStyle(0)}>
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleOne(row.id); }}
-            className="flex items-center justify-center text-admin-text-muted hover:text-admin-text-primary transition-colors"
-          >
-            {selected.has(row.id)
-              ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={11} strokeWidth={3} className="text-black" /></div>
-              : <div className="w-4 h-4 rounded border border-admin-border hover:border-admin-border-emphasis transition-colors" />}
-          </button>
+          <span onClick={(e) => e.stopPropagation()} className="flex items-center justify-center">
+            <AdminCheckbox checked={selected.has(row.id)} onChange={() => toggleOne(row.id)} />
+          </span>
         </td>
       )}
       {orderedVisibleCols.map((col, idx) => {
@@ -504,8 +500,55 @@ export function AdminDataTable<T extends { id: string }>({
 
           {/* Right-aligned toolbar buttons — Batch Delete, Freeze, Fields, Filter, Group, Sort, Color, Row Height */}
           <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-            {/* Batch delete — appears when rows are selected and onBatchDelete is provided */}
-            {onBatchDelete && selected.size > 0 && (
+            {/* Batch actions — rendered in toolbar when rows are selected */}
+            {batchActions && selected.size > 0 && batchActions.map((action, i) => {
+              if (action.variant === 'danger') {
+                return confirmBatchDelete ? (
+                  <div key={i} className="flex items-center gap-0.5">
+                    <button
+                      onClick={async () => {
+                        await action.onClick(Array.from(selected), sorted.filter((r) => selected.has(r.id)));
+                        setSelected(new Set());
+                        setConfirmBatchDelete(false);
+                      }}
+                      className="btn-ghost-danger w-8 h-8"
+                      title="Confirm delete"
+                    >
+                      <Check size={14} strokeWidth={2} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmBatchDelete(false)}
+                      className="btn-ghost w-8 h-8"
+                      title="Cancel"
+                    >
+                      <X size={14} strokeWidth={2} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    key={i}
+                    onClick={() => setConfirmBatchDelete(true)}
+                    className="btn-ghost-danger w-8 h-8"
+                    title={`${action.label} ${selected.size} selected`}
+                  >
+                    {action.icon}
+                  </button>
+                );
+              }
+              return (
+                <button
+                  key={i}
+                  onClick={() => action.onClick(Array.from(selected), sorted.filter((r) => selected.has(r.id)))}
+                  className="flex items-center gap-1.5 px-3 py-[5px] text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover"
+                  title={`${action.label} (${selected.size})`}
+                >
+                  {action.icon}
+                  {action.label} {selected.size}
+                </button>
+              );
+            })}
+            {/* Standalone batch delete — only when batchActions is NOT provided */}
+            {!batchActions && onBatchDelete && selected.size > 0 && (
               confirmBatchDelete ? (
                 <div className="flex items-center gap-0.5">
                   <button
@@ -653,16 +696,7 @@ export function AdminDataTable<T extends { id: string }>({
                     className="w-10 px-4 py-1.5 align-middle bg-admin-bg-raised border-b border-r border-admin-border"
                     style={stickyStyle(0, true)}
                   >
-                    <button
-                      onClick={toggleAll}
-                      className="text-admin-text-muted hover:text-admin-text-primary transition-colors flex items-center"
-                    >
-                      {allSelected
-                        ? <div className="w-4 h-4 rounded bg-accent flex items-center justify-center"><Check size={11} strokeWidth={3} className="text-black" /></div>
-                        : someSelected
-                          ? <div className="w-4 h-4 rounded bg-accent/50 flex items-center justify-center"><Minus size={11} strokeWidth={3} className="text-black" /></div>
-                          : <div className="w-4 h-4 rounded border border-admin-border hover:border-admin-border-emphasis transition-colors" />}
-                    </button>
+                    <AdminCheckbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} />
                   </th>
                 )}
 
@@ -815,35 +849,6 @@ export function AdminDataTable<T extends { id: string }>({
         </div>
       </div>
 
-      {/* ── Batch action bar ─────────────────────────────────────── */}
-      {selectable && batchActions && selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 bg-admin-bg-base border border-admin-border rounded-xl shadow-[0_10px_40px_10px_rgba(0,0,0,0.5)]">
-          <span className="text-sm text-admin-text-muted mr-2">{selected.size} selected</span>
-          {batchActions.map((action, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && action.variant === 'danger' && (
-                <div className="w-px h-5 bg-admin-border mx-1" />
-              )}
-              <button
-                onClick={() => action.onClick(Array.from(selected), sorted.filter((r) => selected.has(r.id)))}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  action.variant === 'danger'
-                    ? 'bg-admin-danger-bg hover:bg-admin-danger-bg-strong text-admin-danger'
-                    : 'bg-admin-bg-hover hover:bg-admin-bg-active text-admin-text-primary'
-                }`}
-              >
-                {action.icon} <span className="hidden sm:inline">{action.label}</span>
-              </button>
-            </React.Fragment>
-          ))}
-          <button
-            onClick={() => setSelected(new Set())}
-            className="ml-1 px-2 py-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary transition-colors"
-          >
-            Clear
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, Upload } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, Upload, ScrollText } from 'lucide-react';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import Link from 'next/link';
@@ -12,7 +12,7 @@ import {
   createScriptVersion, publishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
-  getScriptCastMap,
+  getScriptCastMap, saveScratchContent,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
@@ -26,7 +26,10 @@ import { ScriptLocationsPanel } from './ScriptLocationsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
 import { ScriptStylePanel } from './ScriptStylePanel';
 import { ScriptFocusMode } from './ScriptFocusMode';
+import { ScriptScratchPad } from './ScriptScratchPad';
+import { ScriptExtractModal } from './ScriptExtractModal';
 import { formatScriptVersion } from '@/types/scripts';
+import type { ContentMode } from '@/types/scripts';
 import type {
   ScriptRow, ScriptSceneRow, ScriptBeatRow,
   ScriptCharacterRow, ScriptTagRow, ScriptLocationRow,
@@ -88,6 +91,9 @@ export function ScriptEditorClient({
   const [publishing, setPublishing] = useState(false);
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean }[]>([]);
+  const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'table');
+  const [scratchContent, setScratchContent] = useState(initialScript.scratch_content ?? '');
+  const [showExtractModal, setShowExtractModal] = useState(false);
   const router = useRouter();
 
   const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false };
@@ -343,6 +349,18 @@ export function ScriptEditorClient({
     await autoSave.flush();
   }, [autoSave]);
 
+  // Debounced scratch content save
+  const scratchTimer = useRef<NodeJS.Timeout | null>(null);
+  const handleScratchChange = useCallback((content: string) => {
+    setScratchContent(content);
+    autoSave.trigger();
+    if (scratchTimer.current) clearTimeout(scratchTimer.current);
+    scratchTimer.current = setTimeout(async () => {
+      await saveScratchContent(script.id, content);
+      scratchTimer.current = null;
+    }, 1500);
+  }, [script.id, autoSave]);
+
   // Warn before unload if there are unsaved changes
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -461,6 +479,7 @@ export function ScriptEditorClient({
       <div className={`relative z-20 flex-shrink-0 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${uiOut ? '-translate-y-full' : 'translate-y-0'}`}>
       <AdminPageHeader
         title=""
+        icon={ScrollText}
         topContent={
           <div className="flex items-center gap-1.5 mb-0.5">
             <Link
@@ -566,6 +585,14 @@ export function ScriptEditorClient({
             <button onClick={() => setShowSettings(true)} className="btn-secondary p-2" title="Settings">
               <Settings size={14} />
             </button>
+            {contentMode === 'scratchpad' && scratchContent.trim() && (
+              <button
+                onClick={() => setShowExtractModal(true)}
+                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                Extract to Scenes
+              </button>
+            )}
             <button
               onClick={handleSaveAll}
               className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
@@ -595,10 +622,21 @@ export function ScriptEditorClient({
           >
             <Expand size={16} />
           </button>
+          <button
+            onClick={() => setContentMode(contentMode === 'table' ? 'scratchpad' : 'table')}
+            className={`p-1.5 rounded transition-colors ${
+              contentMode === 'scratchpad' ? 'bg-admin-bg-active text-admin-toolbar-yellow' : 'text-admin-toolbar-yellow hover:bg-admin-bg-hover'
+            }`}
+            title={contentMode === 'scratchpad' ? 'Switch to table' : 'Scratchpad'}
+          >
+            <ScrollText size={16} />
+          </button>
         </div>
         {/* Center zone */}
-        <div className="flex-1 flex justify-center">
-          <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} />
+        <div className="flex-1 flex justify-center items-center gap-4">
+          {contentMode === 'table' && (
+            <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} />
+          )}
         </div>
         {/* Right zone — panel toggles */}
         <div className="flex items-center gap-1">
@@ -633,35 +671,46 @@ export function ScriptEditorClient({
           />
         </div>
 
-        {/* Main editor canvas — gentle upward shift + fades */}
+        {/* Main editor — gentle upward shift + fades */}
         <div className={`flex-1 min-w-0 min-h-0 h-full flex flex-col transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${uiOut ? '-translate-y-12 opacity-0' : 'translate-y-0 opacity-100'}`}>
-          <ScriptEditorCanvas
-            scenes={computedScenes}
-            columnConfig={columnConfig}
-            columnFractions={columnFractions}
-            onColumnFractionsChange={setColumnFractions}
-            characters={characters}
-            tags={tags}
-            locations={locations}
-            references={refsByBeat}
-            storyboardFrames={storyboardFrames}
-            scriptStyle={scriptStyle}
-            styleReferences={styleReferences}
-            scriptId={script.id}
-            onFrameGenerated={handleFrameChange}
-            activeSceneId={activeSceneId}
-            onUpdateScene={handleUpdateScene}
-            onAddScene={handleAddScene}
-            onAddBeat={handleAddBeat}
-            onUpdateBeat={handleUpdateBeat}
-            onDeleteBeat={handleDeleteBeat}
-            onReorderBeats={handleReorderBeats}
-            onDeleteScene={handleDeleteScene}
-            onSelectScene={setActiveSceneId}
-            onUploadReference={handleUploadReference}
-            onDeleteReference={handleDeleteReference}
-            castMap={castMap}
-          />
+          {contentMode === 'table' ? (
+            <ScriptEditorCanvas
+              scenes={computedScenes}
+              columnConfig={columnConfig}
+              columnFractions={columnFractions}
+              onColumnFractionsChange={setColumnFractions}
+              characters={characters}
+              tags={tags}
+              locations={locations}
+              references={refsByBeat}
+              storyboardFrames={storyboardFrames}
+              scriptStyle={scriptStyle}
+              styleReferences={styleReferences}
+              scriptId={script.id}
+              onFrameGenerated={handleFrameChange}
+              activeSceneId={activeSceneId}
+              onUpdateScene={handleUpdateScene}
+              onAddScene={handleAddScene}
+              onAddBeat={handleAddBeat}
+              onUpdateBeat={handleUpdateBeat}
+              onDeleteBeat={handleDeleteBeat}
+              onReorderBeats={handleReorderBeats}
+              onDeleteScene={handleDeleteScene}
+              onSelectScene={setActiveSceneId}
+              onUploadReference={handleUploadReference}
+              onDeleteReference={handleDeleteReference}
+              castMap={castMap}
+            />
+          ) : (
+            <ScriptScratchPad
+              scriptId={script.id}
+              initialContent={scratchContent}
+              characters={characters}
+              tags={tags}
+              locations={locations}
+              onContentChange={handleScratchChange}
+            />
+          )}
         </div>
       </div>
 
@@ -705,6 +754,20 @@ export function ScriptEditorClient({
         references={styleReferences}
         onStyleChange={setScriptStyle}
         onReferencesChange={setStyleReferences}
+      />
+      <ScriptExtractModal
+        open={showExtractModal}
+        onClose={() => setShowExtractModal(false)}
+        scriptId={script.id}
+        scratchContent={scratchContent}
+        existingCharacters={characters}
+        existingLocations={locations}
+        nextVersion={script.major_version + 1}
+        onVersionCreated={(newId) => {
+          setShowExtractModal(false);
+          setContentMode('table');
+          router.push(`/admin/scripts/${newId}`);
+        }}
       />
     </div>
   );

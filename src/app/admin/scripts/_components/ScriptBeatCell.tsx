@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/scripts/parseContent';
 import { MentionDropdown } from './MentionDropdown';
-import type { ScriptCharacterRow, ScriptTagRow } from '@/types/scripts';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
 
 interface Props {
   value: string;
@@ -14,10 +14,11 @@ interface Props {
   isLastColumn?: boolean;
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
+  locations?: ScriptLocationRow[];
   beatId?: string;
 }
 
-export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, isLastColumn, characters, tags, beatId }: Props) {
+export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, isLastColumn, characters, tags, locations = [], beatId }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
   const lastValue = useRef(value);
@@ -32,9 +33,10 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
   // Set content from markdown (sanitized by markdownToHtml via DOMPurify)
   const setContent = useCallback((md: string) => {
     if (!ref.current) return;
-    const sanitizedHtml = markdownToHtml(md, characters, tags);
+    // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML
+    const sanitizedHtml = markdownToHtml(md, characters, tags, locations);
     ref.current.innerHTML = sanitizedHtml;
-  }, [characters, tags]);
+  }, [characters, tags, locations]);
 
   // Set initial content on mount
   useEffect(() => {
@@ -101,7 +103,7 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
     }
   }, []);
 
-  const handleMentionSelect = useCallback((item: ScriptCharacterRow | ScriptTagRow) => {
+  const handleMentionSelect = useCallback((item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow) => {
     if (!ref.current) return;
 
     const sel = window.getSelection();
@@ -122,8 +124,9 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
 
     let replacement: string;
     if (mentionState?.type === 'character') {
-      const char = item as ScriptCharacterRow;
-      replacement = `@[${char.name}](${char.id})`;
+      // Both characters and locations come through the @ trigger
+      const entity = item as ScriptCharacterRow | ScriptLocationRow;
+      replacement = `@[${entity.name}](${entity.id})`;
     } else {
       const tag = item as ScriptTagRow;
       replacement = `#[${tag.slug}]`;
@@ -267,6 +270,7 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
           query={mentionState.query}
           characters={characters}
           tags={tags}
+          locations={locations}
           position={mentionState.position}
           onSelect={handleMentionSelect}
           onDismiss={() => setMentionState(null)}

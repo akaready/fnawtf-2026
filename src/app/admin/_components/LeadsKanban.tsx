@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
 import {
-  Plus, Building2, RotateCcw, Table2, Columns, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+  Plus, Building2, RotateCcw, Table2, Columns, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Target,
 } from 'lucide-react';
 import {
   DndContext,
@@ -335,6 +335,7 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Leads"
+        icon={Target}
         subtitle={`${leadsOnly.length} total`}
         search={search}
         onSearchChange={setSearch}

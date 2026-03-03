@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, LayoutGrid, User, Building2, ArrowUpDown, PenLine, Download,
   Table2, CreditCard, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
+  MessageSquare,
 } from 'lucide-react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
@@ -168,8 +169,8 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
     {
       key: 'quote', label: 'Quote', searchable: true, defaultWidth: 360,
       render: (row) => (
-        <span className="text-sm text-admin-text-primary/80 truncate block max-w-[360px]" title={row.quote}>
-          {row.quote.length > 80 ? row.quote.slice(0, 80) + '…' : row.quote}
+        <span className="text-sm text-admin-text-primary/80 truncate block" title={row.quote}>
+          {row.quote}
         </span>
       ),
     },
@@ -203,10 +204,6 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
           ? <span className="text-sm text-admin-text-faint">{proj.title}</span>
           : <span className="text-xs text-admin-text-placeholder">—</span>;
       },
-    },
-    {
-      key: 'display_order', label: 'Order', type: 'number' as const, sortable: true, align: 'right' as const,
-      render: (row) => <span className="text-xs text-admin-text-faint tabular-nums">{row.display_order}</span>,
     },
     {
       key: 'created_at', label: 'Created', sortable: true, defaultVisible: false, align: 'right' as const,
@@ -352,6 +349,7 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Testimonials"
+        icon={MessageSquare}
         subtitle={`${testimonials.length} total — Manage client quotes displayed on the site.`}
         search={search}
         onSearchChange={setSearch}
@@ -410,14 +408,6 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
           onRowClick={(row) => { setActiveId(row.id); setViewMode('cards'); }}
           emptyMessage={testimonials.length === 0 ? 'No testimonials yet.' : 'No matching testimonials.'}
           emptyAction={{ label: 'Add Testimonial', onClick: handleCreate }}
-          rowActions={[
-            {
-              label: 'Delete',
-              icon: <Trash2 size={13} />,
-              variant: 'danger' as const,
-              onClick: (row) => setConfirmDeleteId(row.id),
-            },
-          ]}
         />
       ) : (
       <>

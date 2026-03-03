@@ -1,24 +1,29 @@
 import DOMPurify from 'dompurify';
-import type { ScriptCharacterRow, ScriptTagRow } from '@/types/scripts';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
 
 /**
  * Convert simple markdown content to HTML for contentEditable display.
- * Supports: **bold**, @[Name](id) character mentions, #[slug] tag references.
+ * Supports: **bold**, @[Name](id) character/location mentions, #[slug] tag references.
  * Output is sanitized via DOMPurify.
  */
 export function markdownToHtml(
   md: string,
   characters: ScriptCharacterRow[],
-  tags: ScriptTagRow[]
+  tags: ScriptTagRow[],
+  locations: ScriptLocationRow[] = []
 ): string {
   let html = escapeHtml(md);
 
   // Bold: **text** → <strong>text</strong>
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
-  // Character mentions: @[Name](id) → colored span
+  // Mention references: @[Name](id) → colored span (characters or locations)
   html = html.replace(/@\[(.+?)\]\((.+?)\)/g, (_match, name, id) => {
     const char = characters.find(c => c.id === id);
+    const loc = locations.find(l => l.id === id);
+    if (loc) {
+      return `<span class="script-mention script-location" data-location-id="${id}" style="color:${loc.color};font-weight:600" contenteditable="false">@${name}</span>`;
+    }
     const color = char?.color ?? '#a14dfd';
     return `<span class="script-mention" data-character-id="${id}" style="color:${color};font-weight:600" contenteditable="false">@${name}</span>`;
   });
@@ -36,7 +41,7 @@ export function markdownToHtml(
 
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ['strong', 'b', 'br', 'span'],
-    ALLOWED_ATTR: ['class', 'data-character-id', 'data-tag-slug', 'style', 'contenteditable'],
+    ALLOWED_ATTR: ['class', 'data-character-id', 'data-location-id', 'data-tag-slug', 'style', 'contenteditable'],
   });
 }
 
@@ -54,6 +59,11 @@ export function htmlToMarkdown(html: string): string {
 
   // <strong>/<b> → **bold**
   md = md.replace(/<(?:strong|b)>(.*?)<\/(?:strong|b)>/gi, '**$1**');
+
+  // Location mention spans → @[Name](id)
+  md = md.replace(/<span[^>]*class="script-mention script-location"[^>]*data-location-id="([^"]*)"[^>]*>@([^<]*)<\/span>/gi,
+    (_match, id, name) => `@[${name}](${id})`
+  );
 
   // Character mention spans → @[Name](id)
   md = md.replace(/<span[^>]*class="script-mention"[^>]*data-character-id="([^"]*)"[^>]*>@([^<]*)<\/span>/gi,

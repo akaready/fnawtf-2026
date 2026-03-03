@@ -149,10 +149,6 @@ export function ProjectsTable({
       search={search}
       exportRef={exportRef}
       batchActions={batchActions}
-      onBatchDelete={async (ids) => {
-        await batchDeleteProjects(ids);
-        router.refresh();
-      }}
       onRowClick={onRowClick}
       emptyMessage="No projects yet."
     />

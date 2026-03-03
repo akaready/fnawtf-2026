@@ -55,6 +55,7 @@ export default function PromptLogPage() {
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Prompt Log"
+        icon={Terminal}
         subtitle="AI generation history"
       />
 

@@ -164,6 +164,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Intake Submissions"
+        icon={ClipboardList}
         subtitle={`${submissions.length} submission${submissions.length !== 1 ? 's' : ''}`}
         search={search}
         onSearchChange={setSearch}

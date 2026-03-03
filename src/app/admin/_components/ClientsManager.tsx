@@ -394,6 +394,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     <div className="flex flex-col h-full relative overflow-hidden">
       <AdminPageHeader
         title="Clients"
+        icon={Building2}
         subtitle={`${clientOnly.length} total`}
         search={search}
         onSearchChange={setSearch}

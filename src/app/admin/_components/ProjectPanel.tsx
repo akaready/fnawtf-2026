@@ -244,7 +244,7 @@ export function ProjectPanel({
               type="button"
               onClick={() => !disabled && setActiveTab(tab.id)}
               disabled={disabled}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-3 py-1.5 text-admin-base font-medium rounded-lg transition-colors ${
                 disabled
                   ? 'text-admin-text-muted/25 cursor-not-allowed'
                   : activeTab === tab.id

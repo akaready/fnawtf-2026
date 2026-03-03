@@ -167,6 +167,7 @@ export function ScriptBeatRow({
               isLastColumn={lastTextCol === 'audio_content' && !hasNonTextAfter}
               characters={characters}
               tags={tags}
+              locations={locations}
               beatId={beat.id}
             />
           )}
@@ -180,6 +181,7 @@ export function ScriptBeatRow({
               isLastColumn={lastTextCol === 'visual_content' && !hasNonTextAfter}
               characters={characters}
               tags={tags}
+              locations={locations}
               beatId={beat.id}
             />
           )}
@@ -193,6 +195,7 @@ export function ScriptBeatRow({
               isLastColumn={lastTextCol === 'notes_content' && !hasNonTextAfter}
               characters={characters}
               tags={tags}
+              locations={locations}
               beatId={beat.id}
             />
           )}

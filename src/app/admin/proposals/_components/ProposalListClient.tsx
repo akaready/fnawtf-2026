@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, ExternalLink, Trash2, Loader2 } from 'lucide-react';
+import { Plus, ExternalLink, Trash2, Loader2, FileText } from 'lucide-react';
 import { deleteProposal, createProposalDraft, batchDeleteProposals } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
@@ -239,6 +239,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Proposals"
+        icon={FileText}
         subtitle={`${proposals.length} total`}
         search={search}
         onSearchChange={setSearch}

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
-import { Plus, Building2 } from 'lucide-react';
+import { Plus, Building2, GitFork } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { AdminDataTable, type ColDef } from './table';
 import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients } from '../actions';
@@ -219,6 +219,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Partners"
+        icon={GitFork}
         subtitle={`${partnersOnly.length} total`}
         search={search}
         onSearchChange={setSearch}

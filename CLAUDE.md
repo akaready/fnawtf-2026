@@ -1,5 +1,8 @@
 # FNA Admin Dashboard — Development Guidelines
 
+## Consistency First
+NEVER invent new UI patterns when an existing convention covers the use case. Before adding any UI element, check how other admin pages handle the same interaction. Match exactly. When in doubt, copy an existing page's approach rather than designing something new.
+
 ## Admin Design Tokens
 
 All admin UI colors and typography MUST use the design token system defined in `globals.css` and `tailwind.config.ts`. Never use hardcoded hex colors in admin files.
@@ -99,6 +102,9 @@ Every admin page follows this structure:
 - Use `ToolbarButton` from `_components/table/TableToolbar.tsx` for toolbar actions
 - Each toolbar button gets a ROYGBIV color: `blue`, `green`, `orange`, `red`, `purple`, `neutral`
 - Popovers use `ToolbarPopover` for consistent dropdown panels
+
+### Selection-Dependent Actions
+ALL batch/selection actions (delete, merge, publish, etc.) render in the **toolbar row** — never in floating bars, page headers, or other locations. For table views, use `batchActions` prop on `AdminDataTable`. For list/card views, use `ToolbarButton` in the view's toolbar div. Never put selection-dependent buttons in `AdminPageHeader`.
 
 ### Content Area
 - `flex-1 overflow-y-auto` — only the content area scrolls, never the page

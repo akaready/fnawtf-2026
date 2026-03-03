@@ -26,8 +26,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, theme);
-    // Clean up the flash-prevention data attribute once React has hydrated
-    if (theme === 'dark') {
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-admin-light', '');
+    } else {
       document.documentElement.removeAttribute('data-admin-light');
     }
   }, [theme]);
