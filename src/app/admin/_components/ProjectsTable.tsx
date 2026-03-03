@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useTransition, useCallback } from 'react';
+import React, { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Trash2 } from 'lucide-react';
 import {
   batchSetPublished, batchDeleteProjects,
-  updateProject,
 } from '../actions';
 import { AdminDataTable, type ColDef, type BatchAction } from './table';
 
@@ -56,35 +55,25 @@ export function ProjectsTable({
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  const handleEdit = useCallback(
-    async (rowId: string, field: string, newValue: unknown) => {
-      await updateProject(rowId, { [field]: newValue });
-      router.refresh();
-    },
-    [router],
-  );
-
-  const edit = (field: string) => (id: string, v: unknown) => handleEdit(id, field, v);
-
   const columns: ColDef<ProjectRow>[] = [
     { key: 'thumbnail', label: 'Thumb', type: 'thumbnail', defaultWidth: 44 },
-    { key: 'title', label: 'Title', type: 'text', sortable: true, onEdit: edit('title') },
-    { key: 'subtitle', label: 'Subtitle', type: 'text', sortable: true, defaultVisible: false, maxWidth: 250, onEdit: edit('subtitle') },
-    { key: 'slug', label: 'Slug', type: 'text', sortable: true, defaultVisible: false, mono: true, onEdit: edit('slug') },
-    { key: 'client_name', label: 'Client', type: 'text', sortable: true, onEdit: edit('client_name') },
-    { key: 'description', label: 'Description', type: 'text', defaultVisible: false, maxWidth: 300, onEdit: edit('description') },
-    { key: 'client_quote', label: 'Quote', type: 'text', defaultVisible: false, maxWidth: 250, onEdit: edit('client_quote') },
-    { key: 'category', label: 'Type', type: 'text', sortable: true, onEdit: edit('category') },
-    { key: 'style_tags', label: 'Style', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.style_tags, onEdit: edit('style_tags') },
-    { key: 'premium_addons', label: 'Add-ons', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.premium_addons, onEdit: edit('premium_addons') },
-    { key: 'camera_techniques', label: 'Techniques', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.camera_techniques, onEdit: edit('camera_techniques') },
-    { key: 'assets_delivered', label: 'Assets', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.assets_delivered, onEdit: edit('assets_delivered') },
-    { key: 'production_days', label: 'Days', type: 'number', sortable: true, defaultVisible: false, onEdit: edit('production_days') },
-    { key: 'crew_count', label: 'Crew', type: 'number', sortable: true, defaultVisible: false, onEdit: edit('crew_count') },
-    { key: 'talent_count', label: 'Talent', type: 'number', sortable: true, defaultVisible: false, onEdit: edit('talent_count') },
-    { key: 'location_count', label: 'Locations', type: 'number', sortable: true, defaultVisible: false, onEdit: edit('location_count') },
-    { key: 'thumbnail_url', label: 'Thumb URL', type: 'text', defaultVisible: false, mono: true, onEdit: edit('thumbnail_url') },
-    { key: 'client_id', label: 'Client ID', type: 'text', defaultVisible: false, mono: true, onEdit: edit('client_id') },
+    { key: 'title', label: 'Title', type: 'text', sortable: true },
+    { key: 'subtitle', label: 'Subtitle', type: 'text', sortable: true, defaultVisible: false, maxWidth: 250 },
+    { key: 'slug', label: 'Slug', type: 'text', sortable: true, defaultVisible: false, mono: true },
+    { key: 'client_name', label: 'Client', type: 'text', sortable: true },
+    { key: 'description', label: 'Description', type: 'text', defaultVisible: false, maxWidth: 300 },
+    { key: 'client_quote', label: 'Quote', type: 'text', defaultVisible: false, maxWidth: 250 },
+    { key: 'category', label: 'Type', type: 'text', sortable: true },
+    { key: 'style_tags', label: 'Style', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.style_tags },
+    { key: 'premium_addons', label: 'Add-ons', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.premium_addons },
+    { key: 'camera_techniques', label: 'Techniques', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.camera_techniques },
+    { key: 'assets_delivered', label: 'Assets', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.assets_delivered },
+    { key: 'production_days', label: 'Days', type: 'number', sortable: true, defaultVisible: false },
+    { key: 'crew_count', label: 'Crew', type: 'number', sortable: true, defaultVisible: false },
+    { key: 'talent_count', label: 'Talent', type: 'number', sortable: true, defaultVisible: false },
+    { key: 'location_count', label: 'Locations', type: 'number', sortable: true, defaultVisible: false },
+    { key: 'thumbnail_url', label: 'Thumb URL', type: 'text', defaultVisible: false, mono: true },
+    { key: 'client_id', label: 'Client ID', type: 'text', defaultVisible: false, mono: true },
     { key: 'updated_by', label: 'Updated By', type: 'text', defaultVisible: false, mono: true },
     { key: 'created_at', label: 'Created', type: 'date', sortable: true, defaultVisible: false },
     { key: 'updated_at', label: 'Updated', type: 'date', sortable: true },
@@ -92,7 +81,6 @@ export function ProjectsTable({
       key: 'published', label: 'Published', type: 'toggle', sortable: true, group: 'Status',
       toggleLabels: ['Published', 'Draft'],
       toggleColors: ['bg-admin-success-bg text-admin-success', 'bg-admin-bg-hover text-admin-text-faint'],
-      onEdit: edit('published'),
     },
   ];
 

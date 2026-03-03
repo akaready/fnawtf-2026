@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, Upload, ScrollText } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, Upload, StickyNote, Table2, X } from 'lucide-react';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import Link from 'next/link';
@@ -12,7 +12,7 @@ import {
   createScriptVersion, publishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
-  getScriptCastMap, saveScratchContent,
+  getScriptCastMap, saveScratchContent, createModeVersion,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
@@ -90,10 +90,11 @@ export function ScriptEditorClient({
   const [versioning, setVersioning] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
-  const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean }[]>([]);
+  const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean; content_mode?: string }[]>([]);
   const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'table');
   const [scratchContent, setScratchContent] = useState(initialScript.scratch_content ?? '');
   const [showExtractModal, setShowExtractModal] = useState(false);
+  const [modeConfirm, setModeConfirm] = useState<{ message: string; targetMode: 'table' | 'scratchpad' } | null>(null);
   const router = useRouter();
 
   const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false };
@@ -160,6 +161,7 @@ export function ScriptEditorClient({
 
   // Debounced save refs
   const saveTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const toolbarSlotRef = useRef<HTMLDivElement>(null);
 
   // Ref to capture latest beats for the autoSave closure
   const beatsRef = useRef(beats);
@@ -361,6 +363,30 @@ export function ScriptEditorClient({
     }, 1500);
   }, [script.id, autoSave]);
 
+  // Compute next minor version from loaded versions
+  const nextMinor = versions
+    .filter(v => v.major_version === script.major_version)
+    .reduce((max, v) => Math.max(max, v.minor_version), 0) + 1;
+  const nextVersionLabel = `v${script.major_version}.${nextMinor}`;
+
+  // Mode switching: table → scratchpad (with confirm dialog)
+  const handleModeSwitch = useCallback(() => {
+    setModeConfirm({
+      message: `This will create a new scratchpad version (${nextVersionLabel}) with your current table content converted to text.`,
+      targetMode: 'scratchpad',
+    });
+  }, [nextVersionLabel]);
+
+  const executeModeSwitch = useCallback(async (targetMode: ContentMode) => {
+    setModeConfirm(null);
+    try {
+      const newId = await createModeVersion(script.id, targetMode);
+      router.push(`/admin/scripts/${newId}`);
+    } catch (err) {
+      console.error('Failed to create mode version:', err);
+    }
+  }, [script.id, router]);
+
   // Warn before unload if there are unsaved changes
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -479,7 +505,7 @@ export function ScriptEditorClient({
       <div className={`relative z-20 flex-shrink-0 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${uiOut ? '-translate-y-full' : 'translate-y-0'}`}>
       <AdminPageHeader
         title=""
-        icon={ScrollText}
+        icon={contentMode === 'scratchpad' ? StickyNote : Table2}
         topContent={
           <div className="flex items-center gap-1.5 mb-0.5">
             <Link
@@ -536,6 +562,7 @@ export function ScriptEditorClient({
                           >
                             {formatScriptVersion(v.major_version, v.minor_version, v.is_published)}
                           </span>
+                          {v.content_mode === 'scratchpad' ? <StickyNote size={11} className="text-admin-text-faint" /> : <Table2 size={11} className="text-admin-text-faint" />}
                           {v.is_published && (
                             <span className="text-[10px] font-medium text-admin-success">Published</span>
                           )}
@@ -606,34 +633,53 @@ export function ScriptEditorClient({
 
       {/* Toolbar row — 3-zone: left (sidebar+focus), center (column toggles), right (panels) */}
       <div className="flex-shrink-0 h-[3rem] flex items-center px-4 border-b border-admin-border bg-admin-bg-inset">
-        {/* Left zone */}
+        {/* Left zone — mode-conditional */}
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowSidebar(prev => !prev)}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-            title={showSidebar ? 'Hide scenes' : 'Show scenes'}
-          >
-            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-          </button>
-          <button
-            onClick={enterFocusMode}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-            title="Focus mode"
-          >
-            <Expand size={16} />
-          </button>
-          <button
-            onClick={() => setContentMode(contentMode === 'table' ? 'scratchpad' : 'table')}
-            className={`p-1.5 rounded transition-colors ${
-              contentMode === 'scratchpad' ? 'bg-admin-bg-active text-admin-toolbar-yellow' : 'text-admin-toolbar-yellow hover:bg-admin-bg-hover'
-            }`}
-            title={contentMode === 'scratchpad' ? 'Switch to table' : 'Scratchpad'}
-          >
-            <ScrollText size={16} />
-          </button>
+          {contentMode === 'table' ? (
+            <>
+              <button
+                onClick={() => setShowSidebar(prev => !prev)}
+                className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+                title={showSidebar ? 'Hide scenes' : 'Show scenes'}
+              >
+                {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+              </button>
+              <button
+                onClick={enterFocusMode}
+                className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+                title="Focus mode"
+              >
+                <Expand size={16} />
+              </button>
+              <button
+                onClick={handleModeSwitch}
+                className="text-admin-toolbar-yellow hover:bg-admin-bg-hover p-1.5 rounded transition-colors"
+                title="Convert to Scratchpad"
+              >
+                <StickyNote size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowExtractModal(true)}
+                disabled={!scratchContent.trim()}
+                className="text-admin-toolbar-yellow p-1.5 rounded transition-colors hover:bg-admin-bg-hover disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Convert to Table"
+              >
+                <Table2 size={16} />
+              </button>
+              <div className="flex items-center gap-3 ml-2 border-l border-admin-border pl-3">
+                <span className="text-admin-text-faint text-admin-xs"><strong className="text-admin-text-muted">**bold**</strong></span>
+                <span className="text-admin-text-faint text-admin-xs"><strong className="text-admin-text-muted">@</strong> characters</span>
+                <span className="text-admin-text-faint text-admin-xs"><strong className="text-admin-text-muted">#</strong> tags</span>
+              </div>
+            </>
+          )}
         </div>
         {/* Center zone */}
         <div className="flex-1 flex justify-center items-center gap-4">
+          <div ref={toolbarSlotRef} />
           {contentMode === 'table' && (
             <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} />
           )}
@@ -700,6 +746,7 @@ export function ScriptEditorClient({
               onUploadReference={handleUploadReference}
               onDeleteReference={handleDeleteReference}
               castMap={castMap}
+              toolbarPortalRef={toolbarSlotRef}
             />
           ) : (
             <ScriptScratchPad
@@ -762,13 +809,48 @@ export function ScriptEditorClient({
         scratchContent={scratchContent}
         existingCharacters={characters}
         existingLocations={locations}
-        nextVersion={script.major_version + 1}
+        nextVersionLabel={nextVersionLabel}
         onVersionCreated={(newId) => {
           setShowExtractModal(false);
           setContentMode('table');
           router.push(`/admin/scripts/${newId}`);
         }}
       />
+
+      {/* Mode switch confirmation dialog (table → scratchpad) */}
+      {modeConfirm && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setModeConfirm(null)} />
+          <div className="relative bg-admin-bg-sidebar border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-raised">
+              <h2 className="text-admin-lg font-admin-display font-semibold text-admin-text-primary">Convert to Scratchpad</h2>
+              <button
+                onClick={() => setModeConfirm(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Body */}
+            <div className="px-5 py-4 bg-admin-bg-overlay">
+              <p className="text-sm text-admin-text-secondary leading-relaxed">Your table content will be flattened to text in a new scratchpad version.</p>
+            </div>
+            {/* Footer */}
+            <div className="flex items-center gap-2 px-5 py-3 bg-admin-bg-raised border-t border-admin-border">
+              <button
+                onClick={() => executeModeSwitch(modeConfirm.targetMode)}
+                className="btn-primary px-4 py-2 text-sm"
+              >
+                Create {nextVersionLabel}
+              </button>
+              <button onClick={() => setModeConfirm(null)} className="btn-secondary px-4 py-2 text-sm">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

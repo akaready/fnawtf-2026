@@ -360,6 +360,16 @@ export async function deleteTestimonial(id: string) {
   revalidatePath('/');
 }
 
+export async function mergeTestimonials(sourceIds: string[], targetId: string) {
+  const { supabase } = await requireAuth();
+  for (const id of sourceIds) {
+    if (id === targetId) continue;
+    await supabase.from('testimonials').delete().eq('id', id);
+  }
+  revalidatePath('/admin/testimonials');
+  revalidatePath('/');
+}
+
 // ── Clients ──────────────────────────────────────────────────────────────
 
 export type ClientRow = {
@@ -3633,16 +3643,32 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
     .single();
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
+  const groupId = s.script_group_id as string;
+  const major = (s.major_version as number) ?? 0;
 
-  // 2. Create new script with bumped version
+  // 2. Find next minor version for this group+major
+  const { data: maxRow } = await supabase
+    .from('scripts')
+    .select('minor_version')
+    .eq('script_group_id', groupId)
+    .eq('major_version', major)
+    .order('minor_version', { ascending: false })
+    .limit(1)
+    .single();
+  const nextMinor = ((maxRow as Record<string, unknown> | null)?.minor_version as number ?? 0) + 1;
+
+  // 3. Create new script with bumped minor version
   const { data: newScript, error: newScriptErr } = await supabase
     .from('scripts')
     .insert({
       title: s.title,
       project_id: s.project_id,
-      script_group_id: s.script_group_id,
+      script_group_id: groupId,
       status: 'draft',
       version: ((s.version as number) ?? 1) + 1,
+      major_version: major,
+      minor_version: nextMinor,
+      is_published: false,
       notes: s.notes,
       scratch_content: s.scratch_content ?? null,
       content_mode: 'table',

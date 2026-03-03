@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Pencil, Trash2, Check, X, Plus, Sparkles, Loader2, MapPin } from 'lucide-react';
 import { createLocation } from '@/app/admin/actions';
-import type { ComputedScene, IntExt, ScriptLocationRow } from '@/types/scripts';
+import { AdminCombobox } from '../../_components/AdminCombobox';
+import type { ComputedScene, ScriptLocationRow } from '@/types/scripts';
 
 interface Props {
   scene: ComputedScene;
@@ -16,8 +17,19 @@ interface Props {
   generating?: boolean;
 }
 
-const INT_EXT_OPTIONS: IntExt[] = ['INT', 'EXT', 'INT/EXT'];
-const TIME_OPTIONS = ['DAY', 'NIGHT', 'DAWN', 'DUSK', 'CONTINUOUS', 'LATER'];
+const INT_EXT_OPTIONS: { id: string; label: string }[] = [
+  { id: 'INT', label: 'INT' },
+  { id: 'EXT', label: 'EXT' },
+  { id: 'INT/EXT', label: 'INT/EXT' },
+];
+const TIME_OPTIONS: { id: string; label: string }[] = [
+  { id: 'DAY', label: 'DAY' },
+  { id: 'NIGHT', label: 'NIGHT' },
+  { id: 'DAWN', label: 'DAWN' },
+  { id: 'DUSK', label: 'DUSK' },
+  { id: 'CONTINUOUS', label: 'CONTINUOUS' },
+  { id: 'LATER', label: 'LATER' },
+];
 
 export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -27,7 +39,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const fieldClass = 'bg-admin-bg-base text-admin-text-primary text-xs px-2 h-8 rounded border border-admin-border-subtle focus:outline-none focus:border-admin-border-focus appearance-none uppercase';
+  const fieldClass = 'bg-admin-bg-base text-admin-text-primary text-xs px-2 h-7 rounded border border-admin-border-subtle focus:outline-none focus:border-admin-border-focus uppercase';
 
   // Filter locations by query
   const normalizedQuery = locQuery.trim().toLowerCase();
@@ -87,7 +99,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
   if (editing) {
     return (
       <div
-        className="flex items-center gap-2 px-2 py-1.5"
+        className="flex items-center gap-2 py-3 pr-2"
         id={`scene-${scene.id}`}
         onClick={e => e.stopPropagation()}
         onBlur={e => {
@@ -102,18 +114,19 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
           }, 150);
         }}
       >
-        <select
-          value={scene.int_ext}
-          onChange={e => onUpdate(scene.id, { int_ext: e.target.value })}
-          className={`${fieldClass} w-[5.5rem]`}
-        >
-          {INT_EXT_OPTIONS.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
+        <div className="w-[5.5rem]">
+          <AdminCombobox
+            value={scene.int_ext}
+            options={INT_EXT_OPTIONS}
+            onChange={(v) => { if (v) onUpdate(scene.id, { int_ext: v }); }}
+            nullable={false}
+            placeholder="INT/EXT"
+            searchable={false}
+          />
+        </div>
 
         {/* Location autocomplete */}
-        <div className="relative flex-1">
+        <div className="relative w-44 flex-shrink-0">
           <input
             ref={inputRef}
             autoFocus
@@ -169,22 +182,31 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
 
         <span className="text-admin-text-faint text-xs">&mdash;</span>
 
-        <select
-          value={scene.time_of_day}
-          onChange={e => onUpdate(scene.id, { time_of_day: e.target.value })}
-          className={`${fieldClass} w-32`}
-        >
-          {TIME_OPTIONS.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
+        <div className="w-32">
+          <AdminCombobox
+            value={scene.time_of_day}
+            options={TIME_OPTIONS}
+            onChange={(v) => { if (v) onUpdate(scene.id, { time_of_day: v }); }}
+            nullable={false}
+            placeholder="TIME"
+            searchable={false}
+          />
+        </div>
 
+        <div className="flex-1" />
         <button
           onClick={() => onEditingChange?.(false)}
-          className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors"
+          className="text-admin-success hover:text-green-300 p-1.5 transition-colors"
           title="Done editing"
         >
-          <Check size={12} />
+          <Check size={14} />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEditingChange?.(false); }}
+          className="text-admin-text-faint hover:text-admin-text-primary p-1.5 transition-colors"
+          title="Cancel"
+        >
+          <X size={14} />
         </button>
       </div>
     );

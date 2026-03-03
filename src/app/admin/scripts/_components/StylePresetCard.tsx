@@ -31,7 +31,7 @@ export function StylePresetCard({ presetKey: _presetKey, label, image, prompt, i
 
         {/* Active checkmark */}
         {isActive && (
-          <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-white rounded-full flex items-center justify-center z-10">
+          <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-admin-text-primary rounded-full flex items-center justify-center z-10">
             <Check size={11} className="text-admin-bg-base" />
           </div>
         )}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject } from '../actions';
 import { ThumbnailScrubCard } from './ThumbnailScrubCard';
+import { AdminCombobox } from './AdminCombobox';
 
 type VideoType = 'flagship' | 'cutdown' | 'bts' | 'pitch';
 type AspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '21:9';
@@ -378,26 +379,22 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
                 <p className="text-xs text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
               </div>
 
-              <select
+              <AdminCombobox
                 value={video.video_type}
-                onChange={(e) => handleTypeChange(video, e.target.value as VideoType)}
-                className="px-2 py-1.5 bg-admin-bg-base border border-admin-border-subtle rounded-lg text-xs text-admin-text-muted focus:outline-none focus:border-admin-border-focus transition-colors"
-              >
-                {VIDEO_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+                options={VIDEO_TYPES.map((t) => ({ id: t, label: t }))}
+                onChange={(v) => { if (v) handleTypeChange(video, v as VideoType); }}
+                nullable={false}
+                searchable={false}
+              />
 
               {/* Aspect ratio */}
-              <select
+              <AdminCombobox
                 value={video.aspect_ratio}
-                onChange={(e) => handleAspectRatioChange(video, e.target.value as AspectRatio)}
-                className="px-2 py-1.5 bg-admin-bg-base border border-admin-border-subtle rounded-lg text-xs text-admin-text-muted focus:outline-none focus:border-admin-border-focus transition-colors"
-              >
-                {ASPECT_RATIOS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+                options={ASPECT_RATIOS.map((r) => ({ id: r, label: r }))}
+                onChange={(v) => { if (v) handleAspectRatioChange(video, v as AspectRatio); }}
+                nullable={false}
+                searchable={false}
+              />
               <button
                 type="button"
                 title="Auto-detect ratio from Bunny"
@@ -462,13 +459,13 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             </div>
             <div>
               <label className="block text-admin-sm text-admin-text-muted mb-1">Type</label>
-              <select
+              <AdminCombobox
                 value={pendingVideo.video_type}
-                onChange={(e) => setPendingVideo((p) => p ? { ...p, video_type: e.target.value as VideoType } : null)}
-                className={inputClass}
-              >
-                {VIDEO_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+                options={VIDEO_TYPES.map((t) => ({ id: t, label: t }))}
+                onChange={(v) => { if (v) setPendingVideo((p) => p ? { ...p, video_type: v as VideoType } : null); }}
+                nullable={false}
+                searchable={false}
+              />
             </div>
           </div>
           <div className="flex gap-2">
@@ -508,13 +505,13 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             </div>
             <div>
               <label className="block text-admin-sm text-admin-text-muted mb-1">Type</label>
-              <select
+              <AdminCombobox
                 value={linkType}
-                onChange={(e) => setLinkType(e.target.value as VideoType)}
-                className={inputClass}
-              >
-                {VIDEO_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+                options={VIDEO_TYPES.map((t) => ({ id: t, label: t }))}
+                onChange={(v) => { if (v) setLinkType(v as VideoType); }}
+                nullable={false}
+                searchable={false}
+              />
             </div>
           </div>
           <div>

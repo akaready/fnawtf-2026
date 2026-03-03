@@ -6,7 +6,7 @@ import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
-import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import type {
   ContractRow,
   ContractEventRow,
@@ -54,6 +54,7 @@ const TYPE_OPTIONS: { value: ContractType; label: string }[] = [
   { value: 'msa', label: 'MSA' },
   { value: 'nda', label: 'NDA' },
   { value: 'amendment', label: 'Amendment' },
+  { value: 'pitch_video', label: 'Pitch Video' },
   { value: 'custom', label: 'Custom' },
 ];
 
@@ -90,11 +91,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   const [quoteId, setQuoteId] = useState<string | null>(null);
 
   // Lookup lists for linked record pickers
-  const [clientOptions, setClientOptions] = useState<{ value: string; label: string }[]>([]);
-  const [contactOptions, setContactOptions] = useState<{ value: string; label: string }[]>([]);
+  const [clientOptions, setClientOptions] = useState<{ id: string; label: string }[]>([]);
+  const [contactOptions, setContactOptions] = useState<{ id: string; label: string }[]>([]);
   const [contactsData, setContactsData] = useState<{ id: string; first_name: string; last_name: string; email: string | null }[]>([]);
-  const [proposalOptions, setProposalOptions] = useState<{ value: string; label: string }[]>([]);
-  const [quoteOptions, setQuoteOptions] = useState<{ value: string; label: string }[]>([]);
+  const [proposalOptions, setProposalOptions] = useState<{ id: string; label: string }[]>([]);
+  const [quoteOptions, setQuoteOptions] = useState<{ id: string; label: string }[]>([]);
 
   // New signer form
   const [showAddSigner, setShowAddSigner] = useState(false);
@@ -134,14 +135,14 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
         setProposalId(c.proposal_id);
         setQuoteId(c.quote_id);
         setIsDirty(false);
-        setClientOptions(clients.map((cl) => ({ value: cl.id, label: cl.name })));
+        setClientOptions(clients.map((cl) => ({ id: cl.id, label: cl.name })));
         setContactsData(contacts.map((ct) => ({ id: ct.id, first_name: ct.first_name, last_name: ct.last_name, email: ct.email })));
-        setContactOptions(contacts.map((ct) => ({ value: ct.id, label: `${ct.first_name} ${ct.last_name}` })));
-        setProposalOptions(proposals.map((p) => ({ value: p.id, label: p.title })));
+        setContactOptions(contacts.map((ct) => ({ id: ct.id, label: `${ct.first_name} ${ct.last_name}` })));
+        setProposalOptions(proposals.map((p) => ({ id: p.id, label: p.title })));
         // Load quotes if proposal is already linked
         if (c.proposal_id) {
           getProposalQuotes(c.proposal_id).then((quotes) => {
-            setQuoteOptions(quotes.map((q) => ({ value: q.id, label: q.label || q.quote_type })));
+            setQuoteOptions(quotes.map((q) => ({ id: q.id, label: q.label || q.quote_type })));
           });
         }
       })
@@ -156,7 +157,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       return;
     }
     getProposalQuotes(proposalId).then((quotes) => {
-      setQuoteOptions(quotes.map((q) => ({ value: q.id, label: q.label || q.quote_type })));
+      setQuoteOptions(quotes.map((q) => ({ id: q.id, label: q.label || q.quote_type })));
     });
   }, [proposalId]);
 
@@ -356,11 +357,13 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   <div>
                     <label className="block text-admin-sm font-medium text-admin-text-muted">Type</label>
                     {isEditable ? (
-                      <AdminSelect
-                        options={TYPE_OPTIONS}
+                      <AdminCombobox
+                        options={TYPE_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
                         value={contractType}
-                        onChange={(v) => { setContractType(v as ContractType); setIsDirty(true); }}
-                        placeholder="Select type..."
+                        onChange={(v) => { if (v) { setContractType(v as ContractType); setIsDirty(true); } }}
+                        placeholder="Select type…"
+                        nullable={false}
+                        searchable={false}
                       />
                     ) : (
                       <div className="text-admin-base text-admin-text-primary">{TYPE_OPTIONS.find((o) => o.value === contractType)?.label}</div>
@@ -381,11 +384,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                     <div>
                       <label className="block text-admin-sm font-medium text-admin-text-muted">Client</label>
                       {isEditable ? (
-                        <AdminSelect
-                          options={[{ value: '', label: 'None' }, ...clientOptions]}
-                          value={clientId || ''}
-                          onChange={(v) => { setClientId((v as string) || null); setIsDirty(true); }}
-                          placeholder="Select client…"
+                        <AdminCombobox
+                          options={clientOptions}
+                          value={clientId}
+                          onChange={(v) => { setClientId(v); setIsDirty(true); }}
+                          placeholder="Search clients…"
                         />
                       ) : (
                         <div className="text-admin-base text-admin-text-primary">{contract.client?.name || <span className="text-admin-text-faint">None</span>}</div>
@@ -394,11 +397,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                     <div>
                       <label className="block text-admin-sm font-medium text-admin-text-muted">Contact</label>
                       {isEditable ? (
-                        <AdminSelect
-                          options={[{ value: '', label: 'None' }, ...contactOptions]}
-                          value={contactId || ''}
-                          onChange={(v) => { setContactId((v as string) || null); setIsDirty(true); }}
-                          placeholder="Select contact…"
+                        <AdminCombobox
+                          options={contactOptions}
+                          value={contactId}
+                          onChange={(v) => { setContactId(v); setIsDirty(true); }}
+                          placeholder="Search contacts…"
                         />
                       ) : (
                         <div className="text-admin-base text-admin-text-primary">
@@ -409,16 +412,15 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                     <div>
                       <label className="block text-admin-sm font-medium text-admin-text-muted">Proposal</label>
                       {isEditable ? (
-                        <AdminSelect
-                          options={[{ value: '', label: 'None' }, ...proposalOptions]}
-                          value={proposalId || ''}
+                        <AdminCombobox
+                          options={proposalOptions}
+                          value={proposalId}
                           onChange={(v) => {
-                            const newId = (v as string) || null;
-                            setProposalId(newId);
-                            if (!newId) setQuoteId(null);
+                            setProposalId(v);
+                            if (!v) setQuoteId(null);
                             setIsDirty(true);
                           }}
-                          placeholder="Select proposal…"
+                          placeholder="Search proposals…"
                         />
                       ) : (
                         <div className="text-admin-base text-admin-text-primary">{contract.proposal?.title || <span className="text-admin-text-faint">None</span>}</div>
@@ -428,11 +430,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       <label className="block text-admin-sm font-medium text-admin-text-muted">Quote</label>
                       {isEditable ? (
                         proposalId ? (
-                          <AdminSelect
-                            options={[{ value: '', label: 'None' }, ...quoteOptions]}
-                            value={quoteId || ''}
-                            onChange={(v) => { setQuoteId((v as string) || null); setIsDirty(true); }}
-                            placeholder="Select quote…"
+                          <AdminCombobox
+                            options={quoteOptions}
+                            value={quoteId}
+                            onChange={(v) => { setQuoteId(v); setIsDirty(true); }}
+                            placeholder="Search quotes…"
                           />
                         ) : (
                           <div className="text-admin-xs text-admin-text-faint py-2">Select a proposal first</div>
@@ -563,11 +565,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       {signerMode === 'pick' ? (
                         <div>
                           <label className="block text-admin-sm font-medium text-admin-text-muted">Contact</label>
-                          <AdminSelect
+                          <AdminCombobox
                             options={contactOptions}
-                            value={signerContactPick}
-                            onChange={(v) => handleSignerContactPick(v as string)}
+                            value={signerContactPick || null}
+                            onChange={(v) => { if (v) handleSignerContactPick(v); }}
                             placeholder="Search contacts…"
+                            nullable={false}
                           />
                           {signerContactPick && newSignerName && (
                             <div className="mt-2 text-admin-sm text-admin-text-muted">
@@ -602,15 +605,16 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
                       <div>
                         <label className="block text-admin-sm font-medium text-admin-text-muted">Role</label>
-                        <AdminSelect
+                        <AdminCombobox
                           options={[
-                            { value: 'signer', label: 'Signer' },
-                            { value: 'approver', label: 'Approver' },
-                            { value: 'cc', label: 'CC' },
+                            { id: 'signer', label: 'Signer' },
+                            { id: 'approver', label: 'Approver' },
+                            { id: 'cc', label: 'CC' },
                           ]}
                           value={newSignerRole}
-                          onChange={(v) => setNewSignerRole(v as SignerRole)}
-                          placeholder="Select role..."
+                          onChange={(v) => { if (v) setNewSignerRole(v as SignerRole); }}
+                          placeholder="Select role…"
+                          nullable={false}
                           searchable={false}
                         />
                       </div>

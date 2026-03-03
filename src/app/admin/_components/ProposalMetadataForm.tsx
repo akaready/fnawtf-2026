@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Check, Loader2, RefreshCw, Copy, Hammer, Rocket, TrendingUp, Layers, Megaphone, FileText,
 } from 'lucide-react';
+import { AdminCombobox } from './AdminCombobox';
 import { AdminPageHeader } from './AdminPageHeader';
 import { type ProposalRow, createProposal, updateProposal } from '../actions';
 import type { ProposalType, ContactRow } from '@/types/proposal';
@@ -167,18 +168,16 @@ export function ProposalMetadataForm({ proposal, contacts }: Props) {
           {contacts.length > 0 && (
             <div>
               <label className={labelCls}>Select Existing Contact (optional)</label>
-              <select
-                onChange={(e) => { if (e.target.value) handleContactSelect(e.target.value); }}
-                defaultValue=""
-                className={inputCls}
-              >
-                <option value="">Choose a contact…</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.first_name} {c.last_name}{c.company ? ` — ${c.company}` : ''}
-                  </option>
-                ))}
-              </select>
+              <AdminCombobox
+                value={null}
+                options={contacts.map((c) => ({
+                  id: c.id,
+                  label: `${c.first_name} ${c.last_name}${c.company ? ` — ${c.company}` : ''}`,
+                }))}
+                onChange={(v) => { if (v) handleContactSelect(v); }}
+                placeholder="Choose a contact…"
+                nullable={false}
+              />
             </div>
           )}
 

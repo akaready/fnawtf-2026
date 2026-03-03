@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useState, forwardRef, useImperativeHandle } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { saveProjectCredits, createRole, createContact } from '../actions';
+import { AdminCombobox } from './AdminCombobox';
 
 interface Credit {
   role: string;
@@ -33,127 +34,6 @@ export type CreditsTabHandle = {
   save: () => Promise<void>;
   isDirty: boolean;
 };
-
-const inputClass = 'admin-input w-full';
-
-/* ── Combobox ───────────────────────────────────────────────────────────── */
-
-function Combobox({
-  value,
-  options,
-  onChange,
-  placeholder,
-  createLabel,
-  onCreate,
-  className,
-}: {
-  value: string;
-  options: Array<{ id: string; name: string }>;
-  onChange: (name: string, id: string | null) => void;
-  placeholder: string;
-  createLabel: string;
-  onCreate?: (name: string) => Promise<string>;
-  className?: string;
-}) {
-  const [query, setQuery] = useState(value);
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { setQuery(value); }, [value]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = query.trim()
-    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
-    : options;
-
-  const exactMatch = options.find((o) => o.name.toLowerCase() === query.trim().toLowerCase());
-
-  const handleSelect = (option: { id: string; name: string }) => {
-    setQuery(option.name);
-    onChange(option.name, option.id);
-    setOpen(false);
-  };
-
-  const handleCreate = async () => {
-    if (!onCreate || !query.trim()) return;
-    setCreating(true);
-    try {
-      const id = await onCreate(query.trim());
-      onChange(query.trim(), id);
-      setOpen(false);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleBlur = () => {
-    // Allow time for click events on dropdown items
-    setTimeout(() => {
-      if (!ref.current?.contains(document.activeElement)) {
-        setOpen(false);
-        if (query.trim() && !exactMatch) {
-          // Text was typed but no match selected — keep as freeform
-          onChange(query.trim(), null);
-        }
-      }
-    }, 150);
-  };
-
-  return (
-    <div ref={ref} className={`relative ${className || ''}`}>
-      <input
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          if (!open) setOpen(true);
-          // If empty, clear
-          if (!e.target.value.trim()) onChange('', null);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        className={inputClass}
-      />
-      {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border rounded-lg shadow-xl">
-          {filtered.slice(0, 20).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleSelect(opt)}
-              className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors truncate"
-            >
-              {opt.name}
-            </button>
-          ))}
-          {query.trim() && !exactMatch && onCreate && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleCreate}
-              disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-admin-bg-hover transition-colors border-t border-admin-border"
-            >
-              {creating ? 'Creating...' : `${createLabel} "${query.trim()}"`}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── Credits Tab ────────────────────────────────────────────────────────── */
 
@@ -244,24 +124,38 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
                   <ArrowDown size={12} />
                 </button>
               </div>
-              <Combobox
-                value={credit.role}
-                options={roles}
-                onChange={(name, id) => updateCredit(i, { role: name, role_id: id })}
-                placeholder="Role"
-                createLabel="Add role"
-                onCreate={handleCreateRole}
-                className="max-w-44"
-              />
-              <Combobox
-                value={credit.name}
-                options={people}
-                onChange={(name, id) => updateCredit(i, { name, contact_id: id })}
-                placeholder="Full Name"
-                createLabel="Add person"
-                onCreate={handleCreatePerson}
-                className="flex-1"
-              />
+              <div className="max-w-44">
+                <AdminCombobox
+                  value={credit.role_id ?? null}
+                  options={roles.map((r) => ({ id: r.id, label: r.name }))}
+                  onChange={(id) => {
+                    const r = id ? roles.find((ro) => ro.id === id) : null;
+                    updateCredit(i, { role: r?.name ?? '', role_id: id });
+                  }}
+                  placeholder="Role"
+                  createLabel="Add role"
+                  onCreate={async (name) => {
+                    const id = await handleCreateRole(name);
+                    updateCredit(i, { role: name, role_id: id });
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <AdminCombobox
+                  value={credit.contact_id ?? null}
+                  options={people.map((p) => ({ id: p.id, label: p.name }))}
+                  onChange={(id) => {
+                    const p = id ? people.find((pe) => pe.id === id) : null;
+                    updateCredit(i, { name: p?.name ?? '', contact_id: id });
+                  }}
+                  placeholder="Full Name"
+                  createLabel="Add person"
+                  onCreate={async (name) => {
+                    const id = await handleCreatePerson(name);
+                    updateCredit(i, { name, contact_id: id });
+                  }}
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => remove(i)}

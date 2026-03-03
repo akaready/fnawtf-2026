@@ -7,6 +7,7 @@ import { SaveButton } from '@/app/admin/_components/SaveButton';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { createScriptTag, updateScriptTag, deleteScriptTag } from '@/app/admin/actions';
+import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import type { ScriptTagRow } from '@/types/scripts';
 import { DEFAULT_SCRIPT_TAGS } from '@/types/scripts';
 
@@ -17,20 +18,6 @@ interface Props {
   tags: ScriptTagRow[];
   onTagsChange: (tags: ScriptTagRow[]) => void;
 }
-
-// Rainbow order — smooth hue rotation
-const PRESET_COLORS = [
-  '#f87171', // red
-  '#fb923c', // orange
-  '#fbbf24', // yellow
-  '#4ade80', // green
-  '#34d399', // teal
-  '#38bdf8', // sky
-  '#818cf8', // indigo
-  '#a78bfa', // violet
-  '#c084fc', // purple
-  '#e879f9', // fuchsia
-];
 
 const DEFAULT_SLUGS = new Set(DEFAULT_SCRIPT_TAGS.map(t => t.slug));
 
@@ -158,7 +145,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
   };
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[580px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
       <div className="flex flex-col h-full relative">
         {/* Discard changes guard */}
         <DiscardChangesDialog
@@ -226,21 +213,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
                     />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Color</label>
-                  <div className="flex items-center gap-1.5">
-                    {PRESET_COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => setNewColor(color)}
-                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                          newColor === color ? 'border-admin-text-primary scale-110' : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <ColorPicker value={newColor} onChange={setNewColor} />
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleAdd}
@@ -273,21 +246,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
                 </div>
 
                 {/* Color */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Color</label>
-                  <div className="flex items-center gap-1.5">
-                    {PRESET_COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => handleLocalUpdate(selectedWithEdits.id, 'color', color)}
-                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                          selectedWithEdits.color === color ? 'border-admin-text-primary scale-110' : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <ColorPicker value={selectedWithEdits.color} onChange={c => handleLocalUpdate(selectedWithEdits.id, 'color', c)} />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-sm text-admin-text-faint">

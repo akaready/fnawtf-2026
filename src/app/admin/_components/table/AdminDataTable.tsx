@@ -539,7 +539,7 @@ export function AdminDataTable<T extends { id: string }>({
                 <button
                   key={i}
                   onClick={() => action.onClick(Array.from(selected), sorted.filter((r) => selected.has(r.id)))}
-                  className="flex items-center gap-1.5 px-3 py-[5px] text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover"
+                  className="flex items-center gap-1.5 px-3 py-[7px] text-xs font-medium rounded-lg transition-colors whitespace-nowrap text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover"
                   title={`${action.label} (${selected.size})`}
                 >
                   {action.icon}

@@ -19,6 +19,7 @@ import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { ProjectPanel } from './ProjectPanel';
 import { AdminDataTable, FilterDropdown, type ColDef } from './table';
+import { AdminCombobox } from './AdminCombobox';
 import { contactFullName } from '@/lib/contacts';
 import {
   createContact,
@@ -462,21 +463,16 @@ function PersonPanel({
               <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
                 <Building2 size={12} /> Company
               </label>
-              <select
-                value={draft.client_id ?? ''}
-                onChange={(e) => {
-                  const selectedId = e.target.value || null;
-                  const selectedCompany = companies.find((co) => co.id === selectedId);
-                  handleChange('client_id', selectedId);
+              <AdminCombobox
+                value={draft.client_id ?? null}
+                options={companies.map((co) => ({ id: co.id, label: co.name }))}
+                onChange={(v) => {
+                  const selectedCompany = companies.find((co) => co.id === v);
+                  handleChange('client_id', v);
                   handleChange('company', selectedCompany?.name ?? null);
                 }}
-                className={inputClass}
-              >
-                <option value="">None</option>
-                {companies.map((co) => (
-                  <option key={co.id} value={co.id}>{co.name}</option>
-                ))}
-              </select>
+                placeholder="None"
+              />
             </div>
 
             {/* Email + Phone */}

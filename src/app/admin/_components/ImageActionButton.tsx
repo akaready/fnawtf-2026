@@ -1,29 +1,17 @@
 'use client';
 
+import { useState } from 'react';
+import { Check } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-
-/**
- * Standardized hover-action button for image overlays and image rows.
- *
- * Variants:
- *   overlay  — used inside dark overlay on image grids (bg-black/60, white icon)
- *   row      — used in list rows alongside other controls (transparent, muted icon)
- *
- * Colors map to admin semantic tokens:
- *   warning  — star / favorite (amber)
- *   info     — download / regenerate / upload (blue)
- *   danger   — delete / trash (red)
- *   neutral  — expand / fullscreen (white glow)
- */
 
 type ActionColor = 'warning' | 'info' | 'danger' | 'neutral';
 type ActionVariant = 'overlay' | 'row';
 
 const overlayHover: Record<ActionColor, string> = {
-  warning: 'hover:bg-admin-warning/80',
-  info:    'hover:bg-admin-info/80',
-  danger:  'hover:bg-admin-danger/80',
-  neutral: 'hover:bg-white/20',
+  warning: 'hover:bg-amber-500 hover:text-white',
+  info:    'hover:bg-sky-500 hover:text-white',
+  danger:  'hover:bg-red-500 hover:text-white',
+  neutral: 'hover:bg-zinc-500 hover:text-white',
 };
 
 const rowHover: Record<ActionColor, string> = {
@@ -43,13 +31,35 @@ interface Props {
 
 export function ImageActionButton({ icon: Icon, color, title, onClick, variant = 'overlay' }: Props) {
   const isOverlay = variant === 'overlay';
+  const [armed, setArmed] = useState(false);
+
+  // Danger: first click arms, mouse-out resets, second click fires
+  if (color === 'danger' && armed) {
+    const className = isOverlay
+      ? 'w-7 h-7 flex items-center justify-center rounded bg-red-500 text-white hover:bg-red-600 transition-colors'
+      : 'flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-red-400 bg-red-500/15 hover:bg-red-500/25 transition-all';
+
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onClick(); setArmed(false); }}
+        onMouseLeave={() => setArmed(false)}
+        className={className}
+        title="Confirm delete"
+      >
+        <Check size={12} />
+      </button>
+    );
+  }
+
+  const handleClick = color === 'danger' ? () => setArmed(true) : onClick;
 
   const className = isOverlay
-    ? `w-7 h-7 flex items-center justify-center rounded bg-black/60 text-white ${overlayHover[color]} transition-colors`
+    ? `w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 ${overlayHover[color]} transition-colors`
     : `flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted ${rowHover[color]} transition-all`;
 
   return (
-    <button type="button" onClick={onClick} className={className} title={title}>
+    <button type="button" onClick={handleClick} className={className} title={title}>
       <Icon size={12} />
     </button>
   );

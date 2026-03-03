@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback, useId } from 'react';
-import { ChevronRight, ChevronDown, Sparkles, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronRight, ChevronDown, Sparkles, X, Trash2 } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -48,6 +49,7 @@ interface Props {
   onUploadReference: (beatId: string, files: FileList) => void;
   onDeleteReference: (refId: string) => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
+  toolbarPortalRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function ScriptEditorCanvas({
@@ -76,6 +78,7 @@ export function ScriptEditorCanvas({
   onUploadReference,
   onDeleteReference,
   castMap,
+  toolbarPortalRef,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -97,13 +100,17 @@ export function ScriptEditorCanvas({
     });
   };
 
-  // Scroll to active scene when it changes
+  // Scroll to active scene when it changes — container-relative so last scene can reach top
   useEffect(() => {
     if (!activeSceneId || !scrollRef.current) return;
     const el = document.getElementById(`scene-${activeSceneId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (!el) return;
+    const container = scrollRef.current;
+    const headerH = colHeaderRef.current?.offsetHeight ?? 0;
+    const elTop = el.getBoundingClientRect().top;
+    const containerTop = container.getBoundingClientRect().top;
+    const scrollTarget = container.scrollTop + (elTop - containerTop) - headerH;
+    container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
   }, [activeSceneId]);
 
   // Keyboard handler for batch delete, Cmd+Delete instant delete, and deselect
@@ -335,7 +342,57 @@ export function ScriptEditorCanvas({
     generateForScenes([scene], sceneId);
   }, [scenes, generateForScenes]);
 
+  // Batch delete handler for toolbar portal button
+  const handleBatchDelete = useCallback(() => {
+    if (selectedBeatIds.size === 0) return;
+    for (const id of selectedBeatIds) {
+      onDeleteBeat(id);
+    }
+    setSelectedBeatIds(new Set());
+  }, [selectedBeatIds, onDeleteBeat]);
+
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
+
+  // Reset confirm state when selection clears
+  useEffect(() => {
+    if (selectedBeatIds.size === 0) setConfirmBatchDelete(false);
+  }, [selectedBeatIds.size]);
+
   return (
+    <>
+    {/* Portal: toolbar delete button when beats are selected */}
+    {toolbarPortalRef?.current && selectedBeatIds.size > 0 && createPortal(
+      <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+        <span className="text-[10px] text-admin-text-faint">{selectedBeatIds.size} selected</span>
+        {confirmBatchDelete ? (
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={e => { e.stopPropagation(); handleBatchDelete(); setConfirmBatchDelete(false); }}
+              className="text-admin-danger hover:text-red-300 p-1 transition-colors"
+              title="Confirm delete"
+            >
+              <Trash2 size={14} />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setConfirmBatchDelete(false); }}
+              className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors"
+              title="Cancel"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={e => { e.stopPropagation(); setConfirmBatchDelete(true); }}
+            className="text-admin-text-ghost hover:text-admin-danger p-1 transition-colors"
+            title="Delete selected beats"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>,
+      toolbarPortalRef.current,
+    )}
     <div ref={scrollRef} className="relative flex-1 overflow-y-auto admin-scrollbar" onClick={handleCanvasClick}>
       {/* Persistent right border — above scene headers */}
       <div className="absolute top-0 bottom-0 right-0 w-px bg-admin-border z-[18] pointer-events-none" style={{ right: 0, left: 'auto' }} />
@@ -484,5 +541,6 @@ export function ScriptEditorCanvas({
       {/* Bottom padding */}
       <div className="h-32" />
     </div>
+    </>
   );
 }

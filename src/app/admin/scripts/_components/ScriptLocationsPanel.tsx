@@ -6,6 +6,8 @@ import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { SaveButton } from '@/app/admin/_components/SaveButton';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { AdminCombobox } from '../../_components/AdminCombobox';
+import { ColorPicker } from './ColorPicker';
 import { createLocation, updateLocation, deleteLocation } from '@/app/admin/actions';
 import type { ScriptLocationRow, ScriptSceneRow } from '@/types/scripts';
 
@@ -144,7 +146,7 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
   };
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[580px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
       <div className="flex flex-col h-full relative">
         {/* Discard changes guard */}
         <DiscardChangesDialog
@@ -225,6 +227,9 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
                   />
                 </div>
 
+                {/* Color */}
+                <ColorPicker value={selectedWithEdits.color} onChange={c => handleLocalUpdate(selectedWithEdits.id, 'color', c)} />
+
                 {/* Global location link */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Locations Library</label>
@@ -262,16 +267,13 @@ export function ScriptLocationsPanel({ open, onClose, scriptId, locations, scene
                       </div>
                     </div>
                   ) : (
-                    <select
-                      className="admin-input w-full text-sm py-2 px-3"
-                      value=""
-                      onChange={e => { if (e.target.value) handleLinkGlobal(e.target.value); }}
-                    >
-                      <option value="">Link to a location from library…</option>
-                      {globalLocations.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
+                    <AdminCombobox
+                      value={null}
+                      options={globalLocations.map(g => ({ id: g.id, label: g.name }))}
+                      onChange={(v) => { if (v) handleLinkGlobal(v); }}
+                      placeholder="Link to a location from library..."
+                      nullable={false}
+                    />
                   )}
                 </div>
 

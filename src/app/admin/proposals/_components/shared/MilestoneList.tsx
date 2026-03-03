@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { Trash2, Plus } from 'lucide-react';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
   addProposalMilestone,
   updateProposalMilestone,
@@ -22,10 +23,9 @@ const PRESET_LABELS = [
 ];
 
 const PHASE_OPTIONS = [
-  { value: 'none', label: 'No phase' },
-  { value: 'pre-production', label: 'Pre-Production' },
-  { value: 'production', label: 'Production' },
-  { value: 'post-production', label: 'Post-Production' },
+  { id: 'pre-production', label: 'Pre-Production' },
+  { id: 'production', label: 'Production' },
+  { id: 'post-production', label: 'Post-Production' },
 ];
 
 // ── Style constants ──────────────────────────────────────────────────────────
@@ -37,10 +37,6 @@ const dateInputCls =
   'text-xs bg-black/40 border border-admin-border rounded px-2 py-1 text-[#999] ' +
   'focus:outline-none focus:border-admin-border-emphasis focus:text-[#ccc] transition-colors ' +
   '[color-scheme:dark]';
-
-const selectCls =
-  'text-xs bg-black/40 border border-admin-border rounded px-2 py-1 text-admin-text-secondary ' +
-  'focus:outline-none focus:border-admin-border-emphasis cursor-pointer [color-scheme:dark]';
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -186,8 +182,8 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
     debouncedPersistDates(id, { end_date: value });
   }
 
-  function handlePhaseChange(id: string, value: string) {
-    const phase = value === 'none' ? null : value;
+  function handlePhaseChange(id: string, value: string | null) {
+    const phase = value;
     const next = milestones.map((m) =>
       m.id === id ? { ...m, phase } : m,
     );
@@ -297,7 +293,6 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
           <div>
             {sorted.map((m, index) => {
               const color = getRainbowColor(index, total);
-              const phaseValue = m.phase ?? 'none';
               return (
                 <div
                   key={m.id}
@@ -334,17 +329,15 @@ export function MilestoneList({ proposalId, milestones, onChange }: MilestoneLis
                   />
 
                   {/* Phase selector */}
-                  <select
-                    value={phaseValue}
-                    onChange={(e) => handlePhaseChange(m.id, e.target.value)}
-                    className={selectCls}
-                  >
-                    {PHASE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-36 flex-shrink-0">
+                    <AdminCombobox
+                      value={m.phase}
+                      options={PHASE_OPTIONS}
+                      onChange={(v) => handlePhaseChange(m.id, v)}
+                      placeholder="No phase"
+                      searchable={false}
+                    />
+                  </div>
 
                   {/* Delete */}
                   <button

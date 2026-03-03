@@ -20,6 +20,7 @@ const TYPE_LABELS: Record<ContractType, string> = {
   msa: 'MSA',
   nda: 'NDA',
   amendment: 'Amendment',
+  pitch_video: 'Pitch Video',
   custom: 'Custom',
 };
 
@@ -29,6 +30,7 @@ const TYPE_TABS = [
   { value: 'msa', label: 'MSA' },
   { value: 'nda', label: 'NDA' },
   { value: 'amendment', label: 'Amendment' },
+  { value: 'pitch_video', label: 'Pitch Video' },
   { value: 'custom', label: 'Custom' },
 ];
 

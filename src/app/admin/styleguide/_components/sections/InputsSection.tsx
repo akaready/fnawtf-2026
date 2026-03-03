@@ -2,14 +2,23 @@
 
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import { AdminSelect } from '../AdminSelect';
 
-const DEMO_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'archived', label: 'Archived' },
-  { value: 'draft', label: 'Draft' },
+const COMBOBOX_ENUM_OPTIONS = [
+  { id: 'active', label: 'Active' },
+  { id: 'inactive', label: 'Inactive' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'archived', label: 'Archived' },
+  { id: 'draft', label: 'Draft' },
+];
+
+const COMBOBOX_RECORD_OPTIONS = [
+  { id: '1', label: 'Acme Corp' },
+  { id: '2', label: 'Globex Industries' },
+  { id: '3', label: 'Initech' },
+  { id: '4', label: 'Umbrella Corp' },
+  { id: '5', label: 'Stark Industries' },
 ];
 
 const MULTI_OPTIONS = [
@@ -22,7 +31,9 @@ const MULTI_OPTIONS = [
 ];
 
 export function InputsSection() {
-  const [singleVal, setSingleVal] = useState('');
+  const [enumVal, setEnumVal] = useState<string | null>(null);
+  const [recordVal, setRecordVal] = useState<string | null>(null);
+  const [requiredVal, setRequiredVal] = useState<string | null>('active');
   const [multiVal, setMultiVal] = useState<string[]>([]);
 
   return (
@@ -43,15 +54,47 @@ export function InputsSection() {
         </div>
       </div>
 
-      {/* Single Select */}
+      {/* AdminCombobox — Single Select */}
       <div>
-        <h3 className="text-admin-lg font-semibold text-admin-text-secondary mb-3">Select — Single (AdminSelect)</h3>
+        <h3 className="text-admin-lg font-semibold text-admin-text-secondary mb-3">AdminCombobox — Enum (nullable)</h3>
+        <p className="text-admin-sm text-admin-text-muted mb-3">Click to see all options. Select &ldquo;None&rdquo; to clear. Use <code className="text-admin-xs bg-admin-bg-hover px-1 py-0.5 rounded">searchable=false</code> for status, type, phase fields.</p>
         <div className="space-y-3 p-6 border border-admin-border rounded-xl bg-admin-bg-inset max-w-md">
-          <AdminSelect
-            options={DEMO_OPTIONS}
-            value={singleVal}
-            onChange={(v) => setSingleVal(v as string)}
-            placeholder="Choose status..."
+          <AdminCombobox
+            options={COMBOBOX_ENUM_OPTIONS}
+            value={enumVal}
+            onChange={setEnumVal}
+            placeholder="Choose status…"
+            searchable={false}
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-admin-lg font-semibold text-admin-text-secondary mb-3">AdminCombobox — Enum (required)</h3>
+        <p className="text-admin-sm text-admin-text-muted mb-3">No &ldquo;None&rdquo; option. Use <code className="text-admin-xs bg-admin-bg-hover px-1 py-0.5 rounded">nullable=false</code> for required fields.</p>
+        <div className="space-y-3 p-6 border border-admin-border rounded-xl bg-admin-bg-inset max-w-md">
+          <AdminCombobox
+            options={COMBOBOX_ENUM_OPTIONS}
+            value={requiredVal}
+            onChange={(v) => { if (v) setRequiredVal(v); }}
+            placeholder="Choose status…"
+            nullable={false}
+            searchable={false}
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-admin-lg font-semibold text-admin-text-secondary mb-3">AdminCombobox — Record with onCreate</h3>
+        <p className="text-admin-sm text-admin-text-muted mb-3">Type a name not in the list to see the &ldquo;Add Client&rdquo; option. For client, contact, project fields.</p>
+        <div className="space-y-3 p-6 border border-admin-border rounded-xl bg-admin-bg-inset max-w-md">
+          <AdminCombobox
+            options={COMBOBOX_RECORD_OPTIONS}
+            value={recordVal}
+            onChange={setRecordVal}
+            placeholder="Search clients…"
+            createLabel="Add Client"
+            onCreate={() => {}}
           />
         </div>
       </div>

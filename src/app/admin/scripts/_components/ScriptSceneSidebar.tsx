@@ -52,17 +52,10 @@ export function ScriptSceneSidebar({
 
   return (
     <div className="bg-admin-bg-sidebar flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-admin-border">
+      <div className="flex items-center px-3 py-2 border-b border-admin-border">
         <span className="text-[10px] uppercase tracking-widest text-admin-text-faint font-semibold">
           Scenes
         </span>
-        <button
-          onClick={onAddScene}
-          className="bg-white text-black p-1 rounded hover:bg-admin-bg-base hover:text-white hover:ring-1 hover:ring-white transition-all"
-          title="Add scene"
-        >
-          <Plus size={14} />
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto admin-scrollbar">
@@ -79,6 +72,17 @@ export function ScriptSceneSidebar({
             ))}
           </SortableContext>
         </DndContext>
+      </div>
+
+      {/* New Scene — secondary button matching snippets sidebar pattern */}
+      <div className="flex-shrink-0 border-t border-admin-border px-3 py-3.5 flex items-center">
+        <button
+          onClick={onAddScene}
+          className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors"
+        >
+          <Plus size={12} />
+          New Scene
+        </button>
       </div>
     </div>
   );
@@ -117,7 +121,7 @@ function SortableSceneItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-1 px-2 py-2 border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group flex items-center gap-1 px-2 py-3 border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-admin-bg-active text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'

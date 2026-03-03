@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import {
-  ClipboardList, X, ExternalLink, ChevronDown, Trash2,
+  ClipboardList, X, ExternalLink, Trash2,
   Building2, User, FileText, Link2, UserPlus, Check,
   Hammer, Rocket, TrendingUp, Coins, BadgeDollarSign,
   FileDown, Send, Play,
 } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
+import { AdminCombobox } from '../../_components/AdminCombobox';
 import { PanelDrawer } from '../../_components/PanelDrawer';
 import { StatusBadge } from '../../_components/StatusBadge';
 import { INTAKE_STATUSES } from '../../_components/statusConfigs';
@@ -363,19 +364,12 @@ function IntakeDetailPanel({
             <Link2 className="w-3 h-3 inline mr-1" />
             Link to Company
           </SectionLabel>
-          <div className="relative">
-            <select
-              value={s.client_id || ''}
-              onChange={(e) => onLinkClient(e.target.value || null)}
-              className="admin-input w-full py-2 px-3 text-sm appearance-none pr-8"
-            >
-              <option value="">Not linked</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-admin-text-faint pointer-events-none" />
-          </div>
+          <AdminCombobox
+            value={s.client_id || null}
+            options={clients.map((c) => ({ id: c.id, label: c.name }))}
+            onChange={(v) => onLinkClient(v)}
+            placeholder="Not linked"
+          />
         </div>
 
         <hr className="border-admin-border-subtle" />
@@ -589,18 +583,13 @@ function IntakeDetailPanel({
       <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash flex-shrink-0">
         <div className="flex items-center gap-2">
           {/* Status */}
-          <div className="relative">
-            <select
-              value={s.status}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="admin-input py-2.5 pl-3 pr-8 text-sm appearance-none"
-            >
-              {Object.entries(INTAKE_STATUSES).map(([val, { label }]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-admin-text-faint pointer-events-none" />
-          </div>
+          <AdminCombobox
+            value={s.status}
+            options={Object.entries(INTAKE_STATUSES).map(([val, { label }]) => ({ id: val, label }))}
+            onChange={(v) => { if (v) onStatusChange(v); }}
+            nullable={false}
+            searchable={false}
+          />
 
           {/* Stub actions — match secondary button pattern */}
           <button

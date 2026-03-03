@@ -22,7 +22,7 @@ function stripBoldMarkdown(md: string): string {
   return md.replace(/\*\*(.+?)\*\*/g, '$1');
 }
 
-export function ScriptScratchPad({ initialContent, characters, tags, locations: _locations, onContentChange }: Props) {
+export function ScriptScratchPad({ initialContent, characters, tags, locations, onContentChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastValue = useRef(initialContent);
   // Mention state — @ queries both characters and locations
@@ -37,9 +37,8 @@ export function ScriptScratchPad({ initialContent, characters, tags, locations: 
   const renderContent = useCallback((md: string) => {
     if (!editorRef.current) return;
     const cleaned = stripBoldMarkdown(md);
-    const sanitizedHtml = markdownToHtml(cleaned, characters, tags);
-    editorRef.current.innerHTML = sanitizedHtml;
-  }, [characters, tags]);
+    editorRef.current.innerHTML = markdownToHtml(cleaned, characters, tags, locations);
+  }, [characters, tags, locations]);
 
   // Render on mount and whenever characters/tags/locations change (re-colors existing mentions)
   useEffect(() => {

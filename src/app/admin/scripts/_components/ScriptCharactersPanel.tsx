@@ -18,6 +18,8 @@ import {
 } from '@dnd-kit/sortable';
 // @dnd-kit/utilities CSS removed — using raw translate3d to avoid scale distortion
 import { createClient } from '@/lib/supabase/client';
+import { AdminCombobox } from '../../_components/AdminCombobox';
+import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { SaveButton } from '@/app/admin/_components/SaveButton';
@@ -41,15 +43,11 @@ interface Props {
   onCastMapChange: (map: Record<string, CharacterCastWithContact[]>) => void;
 }
 
-// Rainbow order — smooth hue rotation
-const PRESET_COLORS = [
-  '#f87171', '#fb923c', '#fbbf24', '#4ade80', '#34d399',
-  '#38bdf8', '#818cf8', '#a78bfa', '#c084fc', '#e879f9',
-];
+// PRESET_COLORS imported from ColorPicker
 
-const CHARACTER_TYPES: { value: ScriptCharacterType; label: string }[] = [
-  { value: 'actor', label: 'OS' },
-  { value: 'vo', label: 'VO' },
+const CHARACTER_TYPES: { id: string; label: string }[] = [
+  { id: 'actor', label: 'OS' },
+  { id: 'vo', label: 'VO' },
 ];
 
 /** Count how many beats mention a character via @[Name](id) */
@@ -103,14 +101,10 @@ function SortableCastRow({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, borderColor: isFeatured ? 'var(--admin-warning)' : 'var(--admin-border-subtle)' }}
       {...attributes}
       {...listeners}
-      className={`group/cast rounded-admin-md transition-colors cursor-grab active:cursor-grabbing ${
-        isFeatured
-          ? 'bg-admin-warning/10 border border-admin-warning/20'
-          : 'hover:bg-admin-bg-hover'
-      }`}
+      className="group/cast rounded-admin-md transition-colors cursor-grab active:cursor-grabbing border bg-admin-bg-overlay hover:bg-admin-bg-hover"
     >
       <div className="px-3 py-2.5 space-y-1">
         {/* Top row: headshot + name + ALL hover actions */}
@@ -315,7 +309,7 @@ export function ScriptCharactersPanel({
   const [draftType, setDraftType] = useState<ScriptCharacterType>('actor');
   const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const dndId = useId();
@@ -343,7 +337,7 @@ export function ScriptCharactersPanel({
       setDraftDescription(selected.description ?? '');
       setDraftColor(selected.color);
       setDraftType(selected.character_type === 'animated' ? 'actor' : selected.character_type);
-      setConfirmDelete(false);
+      setConfirmDeleteId(null);
       setEditingAppearanceId(null);
       setShowPicker(false);
     }
@@ -438,17 +432,16 @@ export function ScriptCharactersPanel({
     }
   };
 
-  const handleDelete = useCallback(async () => {
-    if (!selected) return;
+  const handleDelete = useCallback(async (charId: string) => {
     setDeleting(true);
     try {
-      await deleteCharacter(selected.id);
-      onCharactersChange(characters.filter(c => c.id !== selected.id));
-      setConfirmDelete(false);
+      await deleteCharacter(charId);
+      onCharactersChange(characters.filter(c => c.id !== charId));
+      setConfirmDeleteId(null);
     } finally {
       setDeleting(false);
     }
-  }, [selected, characters, onCharactersChange]);
+  }, [characters, onCharactersChange]);
 
   // ── Cast handlers ───────────────────────────────────────────────────
 
@@ -574,11 +567,11 @@ export function ScriptCharactersPanel({
   );
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[620px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[720px]">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border">
-          <h2 className="text-lg font-bold text-admin-text-primary tracking-tight">Characters</h2>
+        <div className="flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
+          <h2 className="text-admin-lg font-semibold text-admin-text-primary">Characters</h2>
           <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
             <X size={16} />
           </button>
@@ -654,15 +647,16 @@ export function ScriptCharactersPanel({
                       className="admin-input flex-1 min-w-0 text-base font-semibold py-2 px-3"
                       placeholder="Character name"
                     />
-                    <select
-                      value={draftType}
-                      onChange={e => setDraftType(e.target.value as ScriptCharacterType)}
-                      className="admin-input px-3 py-2 text-base font-medium w-[72px] text-center"
-                    >
-                      {CHARACTER_TYPES.map(t => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
+                    <div className="w-[72px]">
+                      <AdminCombobox
+                        value={draftType}
+                        options={CHARACTER_TYPES}
+                        onChange={(v) => { if (v) setDraftType(v as ScriptCharacterType); }}
+                        nullable={false}
+                        placeholder="Type"
+                        searchable={false}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -679,21 +673,7 @@ export function ScriptCharactersPanel({
                 </div>
 
                 {/* Color presets */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Color</label>
-                  <div className="flex items-center gap-2">
-                    {PRESET_COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => setDraftColor(color)}
-                        className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${
-                          draftColor === color ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-admin-bg-base' : ''
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <ColorPicker value={draftColor} onChange={setDraftColor} />
 
                 {/* ── Casting Options — Row List ────────────────────────── */}
                 <div className="space-y-2">

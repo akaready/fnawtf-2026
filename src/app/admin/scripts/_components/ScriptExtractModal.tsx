@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, AlertCircle } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, AlertCircle, Trash2 } from 'lucide-react';
 import { StylePresetCard } from './StylePresetCard';
 import { PRESET_COLORS_LIGHT, PRESET_COLORS_DARK } from './ColorPicker';
 import { STYLE_PRESETS } from './ScriptStylePanel';
@@ -66,7 +66,7 @@ interface Props {
   scratchContent: string;
   existingCharacters: ScriptCharacterRow[];
   existingLocations: ScriptLocationRow[];
-  nextVersion: number;
+  nextVersionLabel: string;
   onVersionCreated: (newScriptId: string) => void;
 }
 
@@ -109,15 +109,10 @@ const REWRITE_OPTIONS: { value: RewriteLevel; label: string; description: string
 
 const ASPECT_RATIOS = ['16:9', '2:3', '1:1', '4:3'] as const;
 const PRESET_KEYS = Object.keys(STYLE_PRESETS) as StoryboardStylePreset[];
-const CHARACTER_TYPES: { value: ScriptCharacterType; label: string }[] = [
-  { value: 'vo', label: 'VO' },
-  { value: 'actor', label: 'Actor' },
-  { value: 'animated', label: 'Animated' },
-];
 
 const STEPS: Step[] = ['rewrite-level', 'characters', 'locations', 'style', 'preview'];
 
-export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, existingCharacters, existingLocations, nextVersion, onVersionCreated }: Props) {
+export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, existingCharacters, existingLocations, nextVersionLabel, onVersionCreated }: Props) {
   const [step, setStep] = useState<Step>('rewrite-level');
   const [rewriteLevel, setRewriteLevel] = useState<RewriteLevel>('light');
   const [characters, setCharacters] = useState<EditableCharacter[]>([]);
@@ -126,6 +121,8 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
   const [styleChoice, setStyleChoice] = useState<StyleChoice>({ style_preset: null, aspect_ratio: '16:9', prompt: '' });
   const [errorMessage, setErrorMessage] = useState('');
   const [hasExtracted, setHasExtracted] = useState(false);
+  const [confirmDeleteChar, setConfirmDeleteChar] = useState<number | null>(null);
+  const [confirmDeleteLoc, setConfirmDeleteLoc] = useState<number | null>(null);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -138,6 +135,8 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
       setStyleChoice({ style_preset: null, aspect_ratio: '16:9', prompt: '' });
       setErrorMessage('');
       setHasExtracted(false);
+      setConfirmDeleteChar(null);
+      setConfirmDeleteLoc(null);
     }
   }, [open]);
 
@@ -250,12 +249,12 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60" onClick={step !== 'loading' && step !== 'confirming' ? onClose : undefined} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={step !== 'loading' && step !== 'confirming' ? onClose : undefined} />
 
       {/* Modal card — constant size */}
       <div className="relative bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-admin-border">
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-raised">
           <h2 className="text-admin-lg font-admin-display font-semibold text-admin-text-primary">
             {step === 'rewrite-level' && 'Convert to Table'}
             {step === 'loading' && 'Analyzing Script...'}
@@ -323,7 +322,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <p className="text-sm text-admin-text-faint italic">No characters detected. You can add them later.</p>
               )}
               {characters.map((ch, i) => (
-                <div key={i} className="rounded-admin-md overflow-hidden" style={{ border: `1px solid ${ch.color}40`, borderLeftWidth: 3, borderLeftColor: ch.color }}>
+                <div key={i} className="rounded-admin-md overflow-hidden" style={{ borderTop: `1px solid ${ch.color}40`, borderRight: `1px solid ${ch.color}40`, borderBottom: `1px solid ${ch.color}40`, borderLeft: `3px solid ${ch.color}` }}>
                   <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset" style={{ borderBottom: `1px solid ${ch.color}20` }}>
                     <div className="flex items-center gap-2.5">
                       <ColorSwatch value={ch.color} onChange={color => updateCharacter(i, { color })} />
@@ -339,18 +338,44 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <select
-                        value={ch.character_type}
-                        onChange={e => updateCharacter(i, { character_type: e.target.value as ScriptCharacterType })}
-                        className="admin-input px-2.5 py-1.5 text-xs appearance-none bg-admin-bg-base"
-                      >
-                        {CHARACTER_TYPES.map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                      </select>
-                      <button onClick={() => removeCharacter(i)} className="btn-ghost-danger w-7 h-7 flex items-center justify-center">
-                        <X size={14} />
-                      </button>
+                      {/* OS / VO toggle */}
+                      <div className="flex rounded-admin-sm border border-admin-border overflow-hidden">
+                        <button
+                          onClick={() => updateCharacter(i, { character_type: 'actor' })}
+                          className={`px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                            ch.character_type === 'actor'
+                              ? 'bg-admin-bg-active text-admin-text-primary'
+                              : 'text-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          OS
+                        </button>
+                        <button
+                          onClick={() => updateCharacter(i, { character_type: 'vo' })}
+                          className={`px-2.5 py-1 text-[11px] font-semibold border-l border-admin-border transition-colors ${
+                            ch.character_type === 'vo'
+                              ? 'bg-admin-bg-active text-admin-text-primary'
+                              : 'text-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          VO
+                        </button>
+                      </div>
+                      {/* Two-state delete */}
+                      {confirmDeleteChar === i ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => { removeCharacter(i); setConfirmDeleteChar(null); }} className="btn-ghost-danger w-7 h-7 flex items-center justify-center">
+                            <Check size={14} />
+                          </button>
+                          <button onClick={() => setConfirmDeleteChar(null)} className="btn-ghost w-7 h-7 flex items-center justify-center">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteChar(i)} className="btn-ghost-danger w-7 h-7 flex items-center justify-center">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="px-4 py-3">
@@ -378,7 +403,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <p className="text-sm text-admin-text-faint italic">No locations detected. You can add them later.</p>
               )}
               {locations.map((loc, i) => (
-                <div key={i} className="rounded-admin-md overflow-hidden" style={{ border: `1px solid ${loc.color}40`, borderLeftWidth: 3, borderLeftColor: loc.color }}>
+                <div key={i} className="rounded-admin-md overflow-hidden" style={{ borderTop: `1px solid ${loc.color}40`, borderRight: `1px solid ${loc.color}40`, borderBottom: `1px solid ${loc.color}40`, borderLeft: `3px solid ${loc.color}` }}>
                   <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset" style={{ borderBottom: `1px solid ${loc.color}20` }}>
                     <div className="flex items-center gap-2.5">
                       <ColorSwatch value={loc.color} onChange={color => updateLocation(i, { color })} />
@@ -393,9 +418,21 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                         </span>
                       )}
                     </div>
-                    <button onClick={() => removeLocation(i)} className="btn-ghost-danger w-7 h-7 flex items-center justify-center">
-                      <X size={14} />
-                    </button>
+                    {/* Two-state delete */}
+                    {confirmDeleteLoc === i ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { removeLocation(i); setConfirmDeleteLoc(null); }} className="btn-ghost-danger w-7 h-7 flex items-center justify-center">
+                          <Check size={14} />
+                        </button>
+                        <button onClick={() => setConfirmDeleteLoc(null)} className="btn-ghost w-7 h-7 flex items-center justify-center">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteLoc(i)} className="btn-ghost-danger w-7 h-7 flex items-center justify-center">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                   <div className="px-4 py-3">
                     <textarea
@@ -446,7 +483,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                     <span className="text-admin-text-faint text-xs">No preset</span>
                   </div>
                   {styleChoice.style_preset === null && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-white rounded-full flex items-center justify-center z-10">
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-admin-text-primary rounded-full flex items-center justify-center z-10">
                       <Check size={11} className="text-admin-bg-base" />
                     </div>
                   )}
@@ -545,7 +582,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
           {step === 'confirming' && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <Loader2 size={32} className="animate-spin text-admin-text-muted" />
-              <p className="text-sm text-admin-text-muted">Creating v{String(nextVersion).padStart(2, '0')} with structured content...</p>
+              <p className="text-sm text-admin-text-muted">Creating {nextVersionLabel} with structured content...</p>
             </div>
           )}
 
@@ -560,7 +597,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
 
         {/* Footer — navigation buttons */}
         {step !== 'loading' && step !== 'confirming' && (
-          <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-t border-admin-border bg-admin-bg-inset">
+          <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-t border-admin-border bg-admin-bg-raised">
             <div>
               {step === 'rewrite-level' && (
                 <button onClick={onClose} className="btn-secondary px-4 py-2 text-sm">Cancel</button>
@@ -634,7 +671,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
               )}
               {step === 'preview' && (
                 <button onClick={handleConfirm} className="btn-primary px-5 py-2 text-sm">
-                  Create v{String(nextVersion).padStart(2, '0')}
+                  Create {nextVersionLabel}
                 </button>
               )}
               {step === 'error' && (

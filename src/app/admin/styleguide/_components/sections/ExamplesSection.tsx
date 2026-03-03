@@ -553,7 +553,7 @@ function CheckboxDemo() {
 function ConsistencyNotes() {
   const notes = [
     { status: 'warn', text: 'CompanyPanel uses modal delete confirmation instead of inline two-state pattern' },
-    { status: 'warn', text: 'MeetingPanel uses native <select> — should use AdminSelect per CLAUDE.md' },
+    { status: 'info', text: 'All single-select fields now use AdminCombobox — inline search, keyboard nav, onCreate support' },
     { status: 'warn', text: 'Some group hover patterns lack scoped names (e.g. group/row) — risk of style leakage' },
     { status: 'info', text: 'Panel title weight: standardize to font-semibold (ProjectPanel pattern)' },
     { status: 'info', text: 'Panel body padding: standardize to py-5 (CompanyPanel currently py-4)' },
@@ -650,7 +650,7 @@ export function ExamplesSection() {
         <EmptyStateDemo />
       </DemoCard>
 
-      <DemoCard title="AdminSelect" description="Custom dropdown. Never use browser-native <select> in admin UI." annotation="Always includes search. Keyboard navigable (arrows, enter, escape).">
+      <DemoCard title="AdminSelect (Multi)" description="Multi-select dropdown. For single-select, use AdminCombobox instead." annotation="Always includes search. Keyboard navigable (arrows, enter, escape).">
         <AdminSelectDemo />
       </DemoCard>
 

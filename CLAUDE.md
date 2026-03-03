@@ -155,12 +155,19 @@ border-l-[var(--admin-warning)]  — Notes/auxiliary (amber)
 border-l-[var(--admin-success)]  — Reference/supporting (green)
 ```
 
-### Custom Dropdowns (AdminSelect)
-Never use browser-native `<select>` in admin UI. Use `AdminSelect` from `styleguide/_components/AdminSelect.tsx`:
-- Always includes search field at top
-- Works for single and multi-select
-- Keyboard navigable (arrows, enter, escape)
-- Styled with admin tokens
+### Single-Select Fields (AdminCombobox)
+ALL single-select dropdowns use `AdminCombobox` from `_components/AdminCombobox.tsx`. Never use native `<select>`, local combobox components, or `AdminSelect` for single-select fields.
+
+Two modes:
+- **Record fields** (client, contact, project): `searchable={true}` (default) — type to search, provide `onCreate` for "Add new"
+- **Enum fields** (status, type, phase): `searchable={false}` — click to see all options, chevron indicator, no typing
+
+Other props:
+- `nullable` (default true) — optional fields show "None" to clear; `nullable={false}` for required enums
+- Keyboard navigable (arrow keys, enter, escape)
+- Options format: `{ id: string; label: string }[]`
+
+For multi-select, continue using `AdminSelect` from `styleguide/_components/AdminSelect.tsx`.
 
 ### Logo Inversion (Poolside/Light Mode)
 Add `admin-logo` class to all client logo `<img>` tags. This opts them out of the CSS counter-inversion so white PNGs appear black in light mode.

@@ -10,6 +10,7 @@ import {
   Unlink,
   Bot,
 } from 'lucide-react';
+import { AdminCombobox } from './AdminCombobox';
 import { PanelDrawer } from './PanelDrawer';
 import { AdminTabBar } from './AdminTabBar';
 import { StatusBadge } from './StatusBadge';
@@ -29,8 +30,6 @@ interface Props {
   clients: { id: string; name: string }[];
   contacts: { id: string; first_name: string; last_name: string }[];
 }
-
-const inputCls = 'admin-input w-full';
 
 export function MeetingPanel({
   meeting,
@@ -211,56 +210,34 @@ export function MeetingPanel({
                 unlinkableContacts.length > 0) && (
                 <div className="mt-3 flex gap-2">
                   {unlinkableClients.length > 0 && (
-                    <select
-                      className={inputCls}
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (!e.target.value) return;
+                    <AdminCombobox
+                      value={null}
+                      options={unlinkableClients.map((c) => ({ id: c.id, label: c.name }))}
+                      onChange={(v) => {
+                        if (!v) return;
                         startLink(async () => {
-                          await linkMeetingToCompany(
-                            meeting.id,
-                            e.target.value,
-                          );
+                          await linkMeetingToCompany(meeting.id, v);
                         });
-                        e.target.value = '';
                       }}
+                      placeholder="+ Link company…"
+                      nullable={false}
                       disabled={linking}
-                    >
-                      <option value="" disabled>
-                        + Link company…
-                      </option>
-                      {unlinkableClients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   )}
                   {unlinkableContacts.length > 0 && (
-                    <select
-                      className={inputCls}
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (!e.target.value) return;
+                    <AdminCombobox
+                      value={null}
+                      options={unlinkableContacts.map((c) => ({ id: c.id, label: `${c.first_name} ${c.last_name}` }))}
+                      onChange={(v) => {
+                        if (!v) return;
                         startLink(async () => {
-                          await linkMeetingToContact(
-                            meeting.id,
-                            e.target.value,
-                          );
+                          await linkMeetingToContact(meeting.id, v);
                         });
-                        e.target.value = '';
                       }}
+                      placeholder="+ Link contact…"
+                      nullable={false}
                       disabled={linking}
-                    >
-                      <option value="" disabled>
-                        + Link contact…
-                      </option>
-                      {unlinkableContacts.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.first_name} {c.last_name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   )}
                 </div>
               )}

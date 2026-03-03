@@ -1,141 +1,21 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
-  Plus, Trash2, LayoutGrid, User, Building2, ArrowUpDown, PenLine, Download,
-  Table2, CreditCard, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows,
-  MessageSquare,
+  Plus, Trash2, Download,
+  Table2, CreditCard,
+  MessageSquare, GitMerge, X,
 } from 'lucide-react';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
-import { SaveButton } from './SaveButton';
 import { AdminPageHeader } from './AdminPageHeader';
 import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
 import { useViewMode } from '../_hooks/useViewMode';
 import { AdminDataTable, type ColDef } from './table';
-import { ToolbarButton } from './table/TableToolbar';
+import { TestimonialPanel } from './TestimonialPanel';
 import {
   type TestimonialRow,
-  createTestimonial,
-  updateTestimonial,
-  deleteTestimonial,
-  createContact,
   batchDeleteTestimonials,
+  mergeTestimonials,
 } from '../actions';
-
-/* ── Combobox ───────────────────────────────────────────────────────────── */
-
-const inputClass =
-  'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
-
-function Combobox({
-  value,
-  options,
-  onChange,
-  placeholder,
-  createLabel,
-  onCreate,
-}: {
-  value: string;
-  options: Array<{ id: string; name: string }>;
-  onChange: (name: string, id: string | null) => void;
-  placeholder: string;
-  createLabel: string;
-  onCreate?: (name: string) => Promise<string>;
-}) {
-  const [query, setQuery] = useState(value);
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setQuery(value); }, [value]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = query.trim()
-    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
-    : options;
-
-  const exactMatch = options.find((o) => o.name.toLowerCase() === query.trim().toLowerCase());
-
-  const handleSelect = (option: { id: string; name: string }) => {
-    setQuery(option.name);
-    onChange(option.name, option.id);
-    setOpen(false);
-  };
-
-  const handleCreate = async () => {
-    if (!onCreate || !query.trim()) return;
-    setCreating(true);
-    try {
-      const id = await onCreate(query.trim());
-      onChange(query.trim(), id);
-      setOpen(false);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleBlur = () => {
-    setTimeout(() => {
-      if (!ref.current?.contains(document.activeElement)) {
-        setOpen(false);
-        if (query.trim() && !exactMatch) {
-          onChange(query.trim(), null);
-        }
-      }
-    }, 150);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          if (!open) setOpen(true);
-          if (!e.target.value.trim()) onChange('', null);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        className={inputClass}
-      />
-      {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl">
-          {filtered.slice(0, 20).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleSelect(opt)}
-              className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors truncate"
-            >
-              {opt.name}
-            </button>
-          ))}
-          {query.trim() && !exactMatch && onCreate && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleCreate}
-              disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-admin-bg-hover transition-colors border-t border-admin-border"
-            >
-              {creating ? 'Creating…' : `${createLabel} "${query.trim()}"`}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── View Types ────────────────────────────────────────────────────────── */
 
@@ -145,6 +25,85 @@ const TESTIMONIALS_VIEWS: ViewDef<TestimonialsView>[] = [
   { key: 'table', icon: Table2, label: 'Table view' },
   { key: 'cards', icon: CreditCard, label: 'Card view' },
 ];
+
+/* ── Merge Dialog ──────────────────────────────────────────────────────── */
+
+function MergeTestimonialsDialog({
+  testimonials,
+  onClose,
+  onMerge,
+  isPending,
+}: {
+  testimonials: TestimonialRow[];
+  onClose: () => void;
+  onMerge: (sourceIds: string[], targetId: string) => void;
+  isPending: boolean;
+}) {
+  const [targetId, setTargetId] = useState<string>(testimonials[0]?.id ?? '');
+
+  const getName = (t: TestimonialRow) =>
+    t.contact ? `${t.contact.first_name} ${t.contact.last_name}`.trim() : t.person_name ?? 'Anonymous';
+
+  return (
+    <div className="relative z-10 bg-[#0f0f0f] border border-admin-border rounded-xl w-full max-w-md mx-4 shadow-2xl">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border-subtle">
+        <h2 className="text-lg font-semibold text-admin-text-primary">Merge Testimonials</h2>
+        <button onClick={onClose} className="text-admin-text-muted hover:text-admin-text-primary transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="px-6 py-5 space-y-5">
+        <div>
+          <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Merging</p>
+          <div className="flex flex-wrap gap-1.5">
+            {testimonials.map((t) => (
+              <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-admin-bg-hover border border-admin-border text-sm text-admin-text-primary">
+                {getName(t)}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Keep as</p>
+          <div className="space-y-1.5">
+            {testimonials.map((t) => (
+              <label key={t.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-admin-bg-hover transition-colors">
+                <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${targetId === t.id ? 'border-admin-text-primary bg-admin-text-primary' : 'border-admin-border'}`}>
+                  {targetId === t.id && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                </div>
+                <input type="radio" className="sr-only" value={t.id} checked={targetId === t.id} onChange={() => setTargetId(t.id)} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-admin-text-primary block">{getName(t)}</span>
+                  <span className="text-xs text-admin-text-muted block truncate">{t.quote.length > 60 ? t.quote.slice(0, 60) + '...' : t.quote}</span>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-admin-text-muted px-3 py-2 rounded-lg bg-admin-bg-subtle border border-admin-border">
+          The kept testimonial will be preserved. All others will be deleted.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-admin-border-subtle">
+        <button onClick={onClose} disabled={isPending} className="btn-secondary px-4 py-2 text-sm font-medium">
+          Cancel
+        </button>
+        <button
+          disabled={isPending || !targetId}
+          onClick={() => onMerge(testimonials.map((t) => t.id).filter((id) => id !== targetId), targetId)}
+          className="btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed"
+        >
+          <GitMerge size={13} />
+          {isPending ? 'Merging...' : 'Merge'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /* ── TestimonialsManager ────────────────────────────────────────────────── */
 
@@ -158,11 +117,10 @@ interface Props {
 export function TestimonialsManager({ initialTestimonials, clients, projects, contacts: initialContacts }: Props) {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
   const [contacts, setContacts] = useState(initialContacts);
-  const { saving, saved, wrap: wrapSave } = useSaveState(2000);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
+  const [merging, setMerging] = useState(false);
   const [viewMode, setViewMode] = useViewMode<TestimonialsView>('fna-testimonials-viewMode', 'table');
 
   const tableColumns: ColDef<TestimonialRow>[] = useMemo(() => [
@@ -212,99 +170,8 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
     },
   ], [clients, projects]);
 
-  const handleChange = (id: string, field: string, value: unknown) => {
-    setTestimonials((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const updated = { ...t, [field]: value };
-        // When client changes, clear project if it doesn't belong to the new client
-        if (field === 'client_id' && updated.project_id) {
-          const proj = projects.find((p) => p.id === updated.project_id);
-          if (proj && value && proj.client_id !== value) {
-            updated.project_id = null;
-          }
-        }
-        return updated;
-      })
-    );
-  };
-
-  const handleContactSelect = (testimonialId: string, contactName: string, contactId: string | null) => {
-    const contact = contactId ? contacts.find((c) => c.id === contactId) : null;
-    setTestimonials((prev) =>
-      prev.map((t) => {
-        if (t.id !== testimonialId) return t;
-        return {
-          ...t,
-          contact_id: contactId,
-          person_name: contactName || null,
-          person_title: contact?.role ?? t.person_title,
-          contact: contact ? { id: contact.id, first_name: contact.first_name, last_name: contact.last_name, role: contact.role, headshot_url: null } : null,
-        };
-      })
-    );
-  };
-
-  const handleCreateContact = async (name: string): Promise<string> => {
-    const parts = name.split(' ');
-    const first_name = parts[0] || '';
-    const last_name = parts.slice(1).join(' ') || '';
-    const id = await createContact({ first_name, last_name, type: 'contact' });
-    setContacts((prev) => [...prev, { id, first_name, last_name, role: null }]);
-    return id;
-  };
-
-  const handleSave = (row: TestimonialRow) => {
-    wrapSave(async () => {
-      await updateTestimonial(row.id, {
-        quote: row.quote,
-        contact_id: row.contact_id,
-        person_name: row.person_name,
-        person_title: row.person_title,
-        display_title: row.display_title,
-        company: row.company,
-        profile_picture_url: row.profile_picture_url,
-        project_id: row.project_id,
-        client_id: row.client_id,
-        display_order: row.display_order,
-      });
-    });
-  };
-
   const handleCreate = () => {
-    void (async () => {
-      setCreating(true);
-      const id = await createTestimonial({
-        quote: 'New testimonial…',
-        display_order: testimonials.length,
-      });
-      setTestimonials((prev) => [
-        ...prev,
-        {
-          id,
-          quote: 'New testimonial…',
-          person_name: null,
-          person_title: null,
-          display_title: null,
-          company: null,
-          profile_picture_url: null,
-          project_id: null,
-          client_id: null,
-          contact_id: null,
-          display_order: testimonials.length,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      setCreating(false);
-    })();
-  };
-
-  const handleDelete = (id: string) => {
-    void (async () => {
-      await deleteTestimonial(id);
-      setTestimonials((prev) => prev.filter((t) => t.id !== id));
-      setConfirmDeleteId(null);
-    })();
+    setActiveId('__new__');
   };
 
   const filteredTestimonials = useMemo(() => {
@@ -366,7 +233,6 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
             </button>
             <button
               onClick={handleCreate}
-              disabled={creating}
               className="btn-primary px-5 py-2.5 text-sm"
             >
               <Plus size={16} />
@@ -379,215 +245,95 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
             <button onClick={handleExportCsv} className="btn-secondary p-2.5 text-sm" title="Export CSV">
               <Download size={14} />
             </button>
-            <button onClick={handleCreate} disabled={creating} className="btn-primary p-2.5 text-sm" title="Add Testimonial">
+            <button onClick={handleCreate} className="btn-primary p-2.5 text-sm" title="Add Testimonial">
               <Plus size={16} />
             </button>
           </>
         }
       />
 
-      {viewMode === 'table' ? (
-        <AdminDataTable
-          columns={tableColumns}
-          data={filteredTestimonials}
-          storageKey="fna-table-testimonials"
-          toolbar
-          toolbarSlot={<ViewSwitcher views={TESTIMONIALS_VIEWS} activeView={viewMode} onChange={setViewMode} />}
-          sortable
-          filterable
-          columnVisibility
-          columnReorder
-          columnResize
-          selectable
-          freezePanes
-          exportCsv
-          onBatchDelete={async (ids) => {
-            await batchDeleteTestimonials(ids);
-            setTestimonials((prev) => prev.filter((t) => !ids.includes(t.id)));
-          }}
-          onRowClick={(row) => { setActiveId(row.id); setViewMode('cards'); }}
-          emptyMessage={testimonials.length === 0 ? 'No testimonials yet.' : 'No matching testimonials.'}
-          emptyAction={{ label: 'Add Testimonial', onClick: handleCreate }}
-        />
-      ) : (
-      <>
-      {/* Disabled toolbar — matches table toolbar height */}
-      <div className="@container relative z-20 flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
-        <ViewSwitcher views={TESTIMONIALS_VIEWS} activeView={viewMode} onChange={setViewMode} />
-        <div className="flex items-center gap-1 ml-auto flex-shrink-0">
-          <ToolbarButton icon={Snowflake} label="" color="purple" disabled onClick={() => {}} />
-          <ToolbarButton icon={Eye} label="" color="blue" disabled onClick={() => {}} />
-          <ToolbarButton icon={ListFilter} label="" color="green" disabled onClick={() => {}} />
-          <ToolbarButton icon={Layers} label="" color="red" disabled onClick={() => {}} />
-          <ToolbarButton icon={ArrowUpAZ} label="" color="orange" disabled onClick={() => {}} />
-          <ToolbarButton icon={Palette} label="" color="yellow" disabled onClick={() => {}} />
-          <ToolbarButton icon={Rows} label="" color="neutral" disabled onClick={() => {}} />
-        </div>
-      </div>
-      {/* Scrollable content */}
-      <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
-      <div className="space-y-4">
-      {filteredTestimonials.map((t) => {
-        const isUnattached = !t.client_id && !t.project_id;
-        const borderColor = isUnattached ? 'border-admin-danger-border' : 'border-admin-border-subtle';
+      <AdminDataTable
+        columns={tableColumns}
+        data={filteredTestimonials}
+        storageKey="fna-table-testimonials"
+        toolbar
+        toolbarSlot={<ViewSwitcher views={TESTIMONIALS_VIEWS} activeView={viewMode} onChange={setViewMode} />}
+        sortable
+        filterable
+        columnVisibility
+        columnReorder
+        columnResize
+        selectable
+        freezePanes
+        exportCsv
+        batchActions={[
+          {
+            label: 'Merge',
+            icon: <GitMerge size={13} />,
+            onClick: (ids: string[]) => {
+              if (ids.length < 2) return;
+              setMergeState({ sourceIds: ids });
+            },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={13} />,
+            variant: 'danger' as const,
+            onClick: async (ids: string[]) => {
+              await batchDeleteTestimonials(ids);
+              setTestimonials((prev) => prev.filter((t) => !ids.includes(t.id)));
+            },
+          },
+        ]}
+        onRowClick={(row) => setActiveId(row.id)}
+        emptyMessage={testimonials.length === 0 ? 'No testimonials yet.' : 'No matching testimonials.'}
+        emptyAction={{ label: 'Add Testimonial', onClick: handleCreate }}
+      />
 
-        // Filter projects by selected client — only show projects that match
-        const filteredProjects = t.client_id
-          ? projects.filter((p) => p.client_id === t.client_id)
-          : projects;
-
-        const isActive = activeId === t.id;
-
+      {mergeState && (() => {
+        const sourceTestimonials = testimonials.filter((t) => mergeState.sourceIds.includes(t.id));
         return (
-          <div
-            key={t.id}
-            onClick={() => setActiveId(t.id)}
-            className={`rounded-xl p-6 space-y-5 transition-colors cursor-pointer ${
-              isActive
-                ? `border border-admin-border-emphasis bg-admin-bg-raised ${isUnattached ? 'border-admin-danger-border' : ''}`
-                : `border ${borderColor} bg-admin-bg-raised`
-            }`}
-          >
-            {isUnattached && (
-              <div className="text-[11px] text-admin-danger/70 bg-admin-danger-bg rounded-lg px-3 py-1.5 -mt-1">
-                Not linked to a client or project
-              </div>
-            )}
-
-            {/* Quote textarea — no label, just the textarea */}
-            <textarea
-              value={t.quote}
-              onChange={(e) => {
-                handleChange(t.id, 'quote', e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = e.target.scrollHeight + 'px';
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMergeState(null)} />
+            <MergeTestimonialsDialog
+              testimonials={sourceTestimonials}
+              onClose={() => setMergeState(null)}
+              onMerge={async (sourceIds, targetId) => {
+                setMerging(true);
+                try {
+                  await mergeTestimonials(sourceIds, targetId);
+                  setTestimonials((prev) => prev.filter((t) => !sourceIds.includes(t.id)));
+                  setMergeState(null);
+                } finally {
+                  setMerging(false);
+                }
               }}
-              ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
-              placeholder="Quote text…"
-              className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-4 py-3 text-base text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis resize-none overflow-hidden"
+              isPending={merging}
             />
-
-            {/* Attribution row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
-                  <User size={12} /> Contact
-                </label>
-                <Combobox
-                  value={t.contact ? `${t.contact.first_name} ${t.contact.last_name}`.trim() : t.person_name ?? ''}
-                  options={contacts.map((c) => ({ id: c.id, name: `${c.first_name} ${c.last_name}`.trim() }))}
-                  onChange={(name, id) => handleContactSelect(t.id, name, id)}
-                  placeholder="Search contacts…"
-                  createLabel="Add contact"
-                  onCreate={handleCreateContact}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
-                  <PenLine size={12} /> Display Override
-                </label>
-                <input
-                  type="text"
-                  value={t.display_title ?? ''}
-                  onChange={(e) => handleChange(t.id, 'display_title', e.target.value || null)}
-                  placeholder="Optional override"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            {/* Relations row — all with icons */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
-                  <Building2 size={12} /> Client
-                </label>
-                <select
-                  value={t.client_id ?? ''}
-                  onChange={(e) => handleChange(t.id, 'client_id', e.target.value || null)}
-                  className={`w-full rounded-lg border ${!t.client_id ? 'border-admin-danger-border' : 'border-admin-border-subtle'} bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis`}
-                >
-                  <option value="">No client</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
-                  <LayoutGrid size={12} /> Project
-                </label>
-                <select
-                  value={t.project_id ?? ''}
-                  onChange={(e) => handleChange(t.id, 'project_id', e.target.value || null)}
-                  className={`w-full rounded-lg border ${!t.project_id ? 'border-admin-danger-border' : 'border-admin-border-subtle'} bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis`}
-                >
-                  <option value="">No project</option>
-                  {filteredProjects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-admin-text-muted">
-                  <ArrowUpDown size={12} /> Order
-                </label>
-                <input
-                  type="number"
-                  value={t.display_order}
-                  onChange={(e) => handleChange(t.id, 'display_order', parseInt(e.target.value) || 0)}
-                  className="w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis"
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-admin-border-subtle">
-              <button
-                onClick={() => setConfirmDeleteId(t.id)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
-              <SaveButton saving={saving} saved={saved} onClick={() => handleSave(t)} className="px-5 py-2.5 text-sm" />
-            </div>
           </div>
         );
-      })}
+      })()}
 
-      {testimonials.length === 0 && (
-        <div className="text-center py-12 text-admin-text-ghost text-sm">
-          No testimonials yet. Click &quot;Add Testimonial&quot; to create one.
-        </div>
-      )}
-      </div>
-      </div>
-      </>
-      )}
-
-      {confirmDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-admin-bg-raised border border-admin-border-subtle rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
-            <h3 className="font-medium">Delete testimonial?</h3>
-            <p className="text-sm text-admin-text-muted">This action cannot be undone.</p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-5 py-2.5 rounded-lg text-sm text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDeleteId)}
-                className="px-5 py-2.5 rounded-lg text-sm bg-red-600 text-admin-text-primary hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TestimonialPanel
+        testimonial={activeId && activeId !== '__new__' ? testimonials.find((t) => t.id === activeId) ?? null : null}
+        open={activeId !== null}
+        onClose={() => setActiveId(null)}
+        onCreated={(row) => {
+          setTestimonials((prev) => [...prev, row]);
+          setActiveId(row.id);
+        }}
+        onUpdated={(row) => {
+          setTestimonials((prev) => prev.map((t) => (t.id === row.id ? row : t)));
+        }}
+        onDeleted={(id) => {
+          setTestimonials((prev) => prev.filter((t) => t.id !== id));
+          setActiveId(null);
+        }}
+        clients={clients}
+        projects={projects}
+        contacts={contacts}
+        onContactCreated={(c) => setContacts((prev) => [...prev, c])}
+      />
     </div>
   );
 }

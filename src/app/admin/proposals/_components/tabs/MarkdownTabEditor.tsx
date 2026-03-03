@@ -6,7 +6,8 @@ import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
-import { Bold, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink, Trash2, Search, Filter } from 'lucide-react';
+import { Bold, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink, Trash2, Search } from 'lucide-react';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import { addProposalSection, updateProposalSection } from '@/app/admin/actions';
 import type { ProposalSectionRow, ContentSnippetRow, ProposalType } from '@/types/proposal';
 
@@ -421,25 +422,13 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
               />
             </div>
             {snippetCategories.length > 0 && (
-              <div
-                className={`relative flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
-                  snippetCategory
-                    ? 'border-admin-border-emphasis text-admin-text-secondary bg-admin-bg-active'
-                    : 'border-admin-border text-admin-text-faint hover:text-admin-text-muted hover:border-admin-border-emphasis'
-                }`}
-                title={snippetCategory ? `Filter: ${snippetCategory}` : 'Filter by category'}
-              >
-                <Filter size={13} className="pointer-events-none" />
-                <select
-                  value={snippetCategory}
-                  onChange={(e) => setSnippetCategory(e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                >
-                  <option value="">All categories</option>
-                  {snippetCategories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              <div className="flex-shrink-0 w-32">
+                <AdminCombobox
+                  value={snippetCategory || null}
+                  options={snippetCategories.map((c) => ({ id: c, label: c }))}
+                  onChange={(v) => setSnippetCategory(v ?? '')}
+                  placeholder="All categories"
+                />
               </div>
             )}
           </div>

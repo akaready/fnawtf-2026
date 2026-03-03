@@ -9,6 +9,7 @@ import { SaveDot } from '@/app/admin/_components/SaveDot';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { updateScript, deleteScript } from '@/app/admin/actions';
 import { createClient } from '@/lib/supabase/client';
+import { AdminCombobox } from '../../_components/AdminCombobox';
 import type { ScriptRow, ScriptStatus } from '@/types/scripts';
 
 interface Props {
@@ -18,10 +19,10 @@ interface Props {
   onScriptChange: (script: ScriptRow & { project?: { id: string; title: string } | null }) => void;
 }
 
-const STATUS_OPTIONS: { value: ScriptStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'review', label: 'In Review' },
-  { value: 'locked', label: 'Locked' },
+const STATUS_OPTIONS: { id: string; label: string }[] = [
+  { id: 'draft', label: 'Draft' },
+  { id: 'review', label: 'In Review' },
+  { id: 'locked', label: 'Locked' },
 ];
 
 export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: Props) {
@@ -138,15 +139,14 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
           {/* Status */}
           <div>
             <label className="block text-admin-sm font-medium text-admin-text-muted">Status</label>
-            <select
+            <AdminCombobox
               value={status}
-              onChange={e => setStatus(e.target.value as ScriptStatus)}
-              className="admin-input w-full"
-            >
-              {STATUS_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              options={STATUS_OPTIONS}
+              onChange={(v) => { if (v) setStatus(v as ScriptStatus); }}
+              nullable={false}
+              placeholder="Select status"
+              searchable={false}
+            />
           </div>
 
           {/* Project assignment */}

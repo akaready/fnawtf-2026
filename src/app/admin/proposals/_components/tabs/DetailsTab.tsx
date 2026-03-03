@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition, forwardRef, useImperativeHandle, useEffect, useCallback } from 'react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { RefreshCw, Plus, X, UserPlus, Mail, Building2, Copy, Check } from 'lucide-react';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
   updateProposal, createContact, addProposalContact, removeProposalContact,
   createClientRecord, type ClientRow,
@@ -459,15 +460,14 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             </div>
             <div>
               <label className={labelCls}>Type</label>
-              <select
+              <AdminCombobox
                 value={proposalType}
-                onChange={(e) => setProposalType(e.target.value as ProposalType)}
-                className={inputCls + ' appearance-none cursor-pointer'}
-              >
-                {PROPOSAL_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+                options={PROPOSAL_TYPES.map((t) => ({ id: t.value, label: t.label }))}
+                onChange={(v) => { if (v) setProposalType(v as ProposalType); }}
+                nullable={false}
+                searchable={false}
+                placeholder="Select type"
+              />
             </div>
           </div>
 
@@ -691,15 +691,14 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               </div>
               <div>
                 <label className={labelCls}>Type</label>
-                <select
+                <AdminCombobox
                   value={newType}
-                  onChange={(e) => setNewType(e.target.value as ContactType)}
-                  className={inputCls + ' appearance-none cursor-pointer'}
-                >
-                  {CONTACT_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
+                  options={CONTACT_TYPES.map((t) => ({ id: t.value, label: t.label }))}
+                  onChange={(v) => { if (v) setNewType(v as ContactType); }}
+                  nullable={false}
+                  searchable={false}
+                  placeholder="Select type"
+                />
               </div>
             </div>
 

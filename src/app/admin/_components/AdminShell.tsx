@@ -188,7 +188,10 @@ function AdminShellInner({ children, userEmail }: Props) {
         {/* Nav */}
         <nav className="flex-1 pt-2 pb-3 space-y-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
           {navItems.map(({ href, label, icon: Icon, children }, i) => {
-            const active = pathname.startsWith(href);
+            // Active if this is the most-specific nav item that matches the current path
+            const active = pathname.startsWith(href) && !navItems.some(
+              other => other.href !== href && other.href.startsWith(href) && pathname.startsWith(other.href)
+            );
             const hasChildren = children && children.length > 0;
             const submenuOpen = navSubmenuOpen === href;
             return (

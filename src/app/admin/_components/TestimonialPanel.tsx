@@ -6,7 +6,7 @@ import { PanelDrawer } from './PanelDrawer';
 import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
-import { AdminSelect } from '../styleguide/_components/AdminSelect';
+import { AdminCombobox } from './AdminCombobox';
 import {
   type TestimonialRow,
   createTestimonial,
@@ -15,101 +15,7 @@ import {
   createContact,
 } from '../actions';
 
-/* ── Combobox (contact picker) ──────────────────────────────────────────── */
-
-const inputCls = 'admin-input w-full';
-
-function ContactCombobox({
-  value,
-  options,
-  onChange,
-  onCreate,
-}: {
-  value: string;
-  options: Array<{ id: string; name: string }>;
-  onChange: (name: string, id: string | null) => void;
-  onCreate: (name: string) => Promise<string>;
-}) {
-  const [query, setQuery] = useState(value);
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { setQuery(value); }, [value]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const filtered = query.trim()
-    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
-    : options;
-
-  const exactMatch = options.find((o) => o.name.toLowerCase() === query.trim().toLowerCase());
-
-  return (
-    <div ref={ref} className="relative">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          if (!open) setOpen(true);
-          if (!e.target.value.trim()) onChange('', null);
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => {
-          setTimeout(() => {
-            if (!ref.current?.contains(document.activeElement)) {
-              setOpen(false);
-              if (query.trim() && !exactMatch) onChange(query.trim(), null);
-            }
-          }, 150);
-        }}
-        placeholder="Search contacts…"
-        className={inputCls}
-      />
-      {open && (filtered.length > 0 || (query.trim() && !exactMatch)) && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl">
-          {filtered.slice(0, 20).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { setQuery(opt.name); onChange(opt.name, opt.id); setOpen(false); }}
-              className="w-full text-left px-3 py-2 text-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors truncate"
-            >
-              {opt.name}
-            </button>
-          ))}
-          {query.trim() && !exactMatch && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={async () => {
-                if (!query.trim()) return;
-                setCreating(true);
-                try {
-                  const id = await onCreate(query.trim());
-                  onChange(query.trim(), id);
-                  setOpen(false);
-                } finally { setCreating(false); }
-              }}
-              disabled={creating}
-              className="w-full text-left px-3 py-2 text-sm text-admin-info hover:bg-admin-bg-hover transition-colors border-t border-admin-border"
-            >
-              {creating ? 'Creating…' : `Add contact "${query.trim()}"`}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+/* ── Helpers ───────────────────────────────────────────────────────────── */
 
 /* ── TestimonialPanel ───────────────────────────────────────────────────── */
 
@@ -224,13 +130,15 @@ export function TestimonialPanel({
     }
   };
 
-  const handleCreateContact = async (name: string): Promise<string> => {
+  const handleCreateContact = async (name: string) => {
     const parts = name.split(' ');
     const first_name = parts[0] || '';
     const last_name = parts.slice(1).join(' ') || '';
     const id = await createContact({ first_name, last_name, type: 'contact' });
     onContactCreated?.({ id, first_name, last_name, role: null });
-    return id;
+    setContactId(id);
+    setContactName(name);
+    if (!isNew) autoSave.trigger();
   };
 
   const handleSave = async () => {
@@ -256,7 +164,7 @@ export function TestimonialPanel({
 
   const contactOptions = contacts.map((c) => ({
     id: c.id,
-    name: `${c.first_name} ${c.last_name}`.trim(),
+    label: `${c.first_name} ${c.last_name}`.trim(),
   }));
 
   return (
@@ -269,15 +177,10 @@ export function TestimonialPanel({
 
       {/* Header */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-semibold text-admin-text-primary truncate">
-            {isNew ? 'New Testimonial' : (quote.length > 50 ? quote.slice(0, 50) + '…' : quote || 'Untitled')}
-          </h2>
+        <h2 className="flex-1 min-w-0 text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">
+          {isNew ? 'New Testimonial' : (quote.length > 50 ? quote.slice(0, 50) + '…' : quote || 'Untitled')}
           <SaveDot status={autoSave.status} />
-          {!isNew && contactName && (
-            <p className="text-xs text-admin-text-faint truncate">{contactName}</p>
-          )}
-        </div>
+        </h2>
         <button
           onClick={handleClose}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
@@ -311,25 +214,32 @@ export function TestimonialPanel({
           <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <User size={12} /> Contact
           </label>
-          <ContactCombobox
-            value={contactName}
+          <AdminCombobox
+            value={contactId}
             options={contactOptions}
-            onChange={(name, id) => { setContactName(name); setContactId(id); if (!isNew) autoSave.trigger(); }}
+            onChange={(id) => {
+              setContactId(id);
+              const c = id ? contacts.find((ct) => ct.id === id) : null;
+              setContactName(c ? `${c.first_name} ${c.last_name}`.trim() : '');
+              if (!isNew) autoSave.trigger();
+            }}
             onCreate={handleCreateContact}
+            createLabel="Add Contact"
+            placeholder="Search contacts…"
           />
         </div>
 
-        {/* Display Override */}
+        {/* Contact Title Override */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
-            <PenLine size={12} /> Display Override
+            <PenLine size={12} /> Contact Title Override
           </label>
           <input
             type="text"
             value={displayTitle}
             onChange={(e) => { setDisplayTitle(e.target.value); if (!isNew) autoSave.trigger(); }}
-            placeholder="Optional title override"
-            className={inputCls}
+            placeholder="Overrides contact's role as displayed title"
+            className="admin-input w-full"
           />
         </div>
 
@@ -338,14 +248,11 @@ export function TestimonialPanel({
           <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <Building2 size={12} /> Client
           </label>
-          <AdminSelect
-            options={[
-              { value: '', label: 'No client' },
-              ...clients.map((c) => ({ value: c.id, label: c.name })),
-            ]}
-            value={clientId ?? ''}
-            onChange={(v) => { handleClientChange((v as string) || null); if (!isNew) autoSave.trigger(); }}
-            placeholder="Select client…"
+          <AdminCombobox
+            options={clients.map((c) => ({ id: c.id, label: c.name }))}
+            value={clientId}
+            onChange={(v) => { handleClientChange(v); if (!isNew) autoSave.trigger(); }}
+            placeholder="Search clients…"
           />
         </div>
 
@@ -354,14 +261,11 @@ export function TestimonialPanel({
           <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
             <LayoutGrid size={12} /> Project
           </label>
-          <AdminSelect
-            options={[
-              { value: '', label: 'No project' },
-              ...filteredProjects.map((p) => ({ value: p.id, label: p.title })),
-            ]}
-            value={projectId ?? ''}
-            onChange={(v) => { setProjectId((v as string) || null); if (!isNew) autoSave.trigger(); }}
-            placeholder="Select project…"
+          <AdminCombobox
+            options={filteredProjects.map((p) => ({ id: p.id, label: p.title }))}
+            value={projectId}
+            onChange={(v) => { setProjectId(v); if (!isNew) autoSave.trigger(); }}
+            placeholder="Search projects…"
           />
         </div>
 

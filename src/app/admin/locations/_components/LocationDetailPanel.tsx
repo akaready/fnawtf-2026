@@ -12,6 +12,7 @@ import { downloadSingleImage, downloadStoryboardZip } from '@/lib/scripts/downlo
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import {
   updateLocationRecord,
@@ -83,7 +84,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   const handleSave = () => wrapSave(async () => {
     if (!local || !location) return;
     const changes: Record<string, unknown> = {};
-    for (const key of ['name', 'description', 'address', 'city', 'state', 'zip', 'status', 'notes'] as const) {
+    for (const key of ['name', 'description', 'address', 'city', 'state', 'zip', 'notes'] as const) {
       if (local[key] !== location[key]) changes[key] = local[key];
     }
     if (Object.keys(changes).length > 0) {
@@ -314,17 +315,6 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   />
                 </Field>
               </div>
-
-              <Field label="Status">
-                <select
-                  value={local.status}
-                  onChange={e => updateField('status', e.target.value)}
-                  className="admin-input w-full"
-                >
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </Field>
 
               <Field label="Notes">
                 <textarea
@@ -651,19 +641,16 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 
               <div className="space-y-1.5">
                 <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Add Project</p>
-                <select
-                  className="admin-input w-full"
-                  value=""
-                  onChange={e => { if (e.target.value) handleLinkProject(e.target.value); }}
-                >
-                  <option value="">Select a project…</option>
-                  {projects
+                <AdminCombobox
+                  value={null}
+                  options={projects
                     .filter(p => !linkedProjects.some(lp => lp.id === p.id))
-                    .map(p => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))
+                    .map(p => ({ id: p.id, label: p.title }))
                   }
-                </select>
+                  onChange={(v) => { if (v) handleLinkProject(v); }}
+                  placeholder="Select a project…"
+                  nullable={false}
+                />
               </div>
             </div>
           )}

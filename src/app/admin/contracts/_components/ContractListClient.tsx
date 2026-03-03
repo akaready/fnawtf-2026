@@ -42,6 +42,7 @@ const TYPE_LABELS: Record<ContractType, string> = {
   msa: 'MSA',
   nda: 'NDA',
   amendment: 'Amendment',
+  pitch_video: 'Pitch Video',
   custom: 'Custom',
 };
 

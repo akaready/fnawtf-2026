@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 
@@ -12,8 +13,11 @@ interface AdminLightboxProps {
 
 export function AdminLightbox({ images, startIndex, onClose }: AdminLightboxProps) {
   const [index, setIndex] = useState(startIndex);
+  const [mounted, setMounted] = useState(false);
   const current = images[index];
   const hasMultiple = images.length > 1;
+
+  useEffect(() => setMounted(true), []);
 
   const prev = useCallback(() => setIndex(i => (i > 0 ? i - 1 : images.length - 1)), [images.length]);
   const next = useCallback(() => setIndex(i => (i < images.length - 1 ? i + 1 : 0)), [images.length]);
@@ -41,36 +45,53 @@ export function AdminLightbox({ images, startIndex, onClose }: AdminLightboxProp
     downloadSingleImage(current.url, filename);
   };
 
-  if (!current) return null;
+  if (!current || !mounted) return null;
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-12 bg-black/80 backdrop-blur-md"
       onClick={handleBackdropClick}
     >
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4">
-        <span className="text-white text-sm font-mono">
-          {current.label || `Image ${index + 1}`}
-          {hasMultiple && (
-            <span className="text-white/50 ml-2">{index + 1} / {images.length}</span>
-          )}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleDownload}
-            className="p-2 rounded text-white hover:bg-white/10 transition-colors"
-            title="Download image"
-          >
-            <Download size={18} />
-          </button>
-          <button
-            onClick={onClose}
-            className="p-2 rounded text-white hover:bg-white/10 transition-colors"
-            title="Close"
-          >
-            <X size={18} />
-          </button>
+      {/* Center column: image + caption card */}
+      <div className="relative flex flex-col items-center max-w-[85vw] max-h-[90vh]">
+        {/* Image */}
+        <img
+          src={current.url}
+          alt={current.label || ''}
+          className="max-w-full max-h-[75vh] object-contain rounded-xl"
+        />
+
+        {/* Caption card */}
+        <div className="mt-4 px-5 py-3 rounded-lg bg-white/10 backdrop-blur-sm w-full max-w-2xl">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              {current.label && (
+                <p className="text-base text-white line-clamp-3">{current.label}</p>
+              )}
+              {hasMultiple && (
+                <p className="text-sm text-white/50 mt-0.5">{index + 1} of {images.length}</p>
+              )}
+              {!current.label && !hasMultiple && (
+                <p className="text-sm text-white/50">Image</p>
+              )}
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={handleDownload}
+                className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                title="Download"
+              >
+                <Download size={18} />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -79,25 +100,20 @@ export function AdminLightbox({ images, startIndex, onClose }: AdminLightboxProp
         <>
           <button
             onClick={prev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="absolute left-6 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-black/50 text-white/60 hover:text-white hover:bg-black/70 transition-colors"
           >
-            <ChevronLeft size={28} />
+            <ChevronLeft size={24} />
           </button>
           <button
             onClick={next}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="absolute right-6 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center rounded-full bg-black/50 text-white/60 hover:text-white hover:bg-black/70 transition-colors"
           >
-            <ChevronRight size={28} />
+            <ChevronRight size={24} />
           </button>
         </>
       )}
-
-      {/* Image */}
-      <img
-        src={current.url}
-        alt={current.label || ''}
-        className="max-w-[90vw] max-h-[85vh] object-contain"
-      />
     </div>
   );
+
+  return createPortal(content, document.body);
 }

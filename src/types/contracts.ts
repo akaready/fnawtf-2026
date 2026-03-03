@@ -1,4 +1,4 @@
-export type ContractType = 'sow' | 'msa' | 'nda' | 'amendment' | 'custom';
+export type ContractType = 'sow' | 'msa' | 'nda' | 'amendment' | 'pitch_video' | 'custom';
 
 export type ContractStatus =
   | 'draft'
