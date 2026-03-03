@@ -11,6 +11,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, BarChart3, Megaphone, Globe,
   PenTool, Search as SearchIcon, Home, Camera, Code, Share2,
   Flame, Trophy, Send, CalendarCheck, HelpCircle, Hammer, TrendingUp, Coins, BadgeDollarSign, Building2, HeartHandshake,
+  Palette, Type,
 } from 'lucide-react';
 import Cal, { getCalApi } from '@calcom/embed-react';
 import confetti from 'canvas-confetti';
@@ -24,18 +25,26 @@ import type { ProposalType } from '@/types/proposal';
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const DELIVERABLE_OPTIONS = [
-  { value: 'flagship', label: 'Flagship Video', icon: Star },
-  { value: 'social_cuts', label: 'Social Cutdowns', icon: Play },
-  { value: 'photography_lifestyle', label: 'Lifestyle Photography', icon: Eye },
-  { value: 'photography_product', label: 'Product Photography', icon: Package },
-  { value: 'testimonials', label: 'Testimonials', icon: Heart },
-  { value: 'motion_graphics', label: 'Motion Graphics', icon: Sparkles },
-  { value: 'gifs', label: 'GIFs & Loops', icon: Rocket },
-  { value: 'pitch_video', label: 'Pitch Video', icon: Briefcase },
-  { value: 'ads', label: 'Ad Creatives', icon: Megaphone },
-  { value: 'brand_story', label: 'Brand Story', icon: FileText },
-  { value: 'scripting', label: 'Scripting & Strategy', icon: PenTool },
+  // Row 1: Strategy & branding
+  { value: 'consulting', label: 'Consulting', icon: FileText },
+  { value: 'brand_strategy', label: 'Brand Strategy', icon: Target },
+  { value: 'copywriting', label: 'Copywriting', icon: Type },
+  { value: 'logo_design', label: 'Logo Design', icon: Palette },
+  // Row 2: Web & digital
+  { value: 'web_design', label: 'Web Design', icon: Code },
   { value: 'landing_page', label: 'Launch Page', icon: Globe },
+  { value: 'email_campaign', label: 'Email Campaigns', icon: MailOpen },
+  { value: 'ads', label: 'Ad Creative', icon: Megaphone },
+  // Row 3: Video
+  { value: 'flagship', label: 'Flagship Video', icon: Star },
+  { value: 'motion_graphics', label: 'Motion Graphics', icon: Sparkles },
+  { value: 'social_cuts', label: 'Social Cutdowns', icon: Play },
+  { value: 'gifs', label: 'GIFs & Web Loops', icon: Rocket },
+  // Row 4: Photography & interviews
+  { value: 'photography_product', label: 'Product Photography', icon: Package },
+  { value: 'photography_lifestyle', label: 'Lifestyle Photography', icon: Eye },
+  { value: 'testimonials', label: 'Testimonials', icon: Heart },
+  { value: 'pitch_video', label: 'Pitch Video', icon: Briefcase },
 ] as const;
 
 const DELIVERABLE_META_OPTIONS = [
@@ -1120,6 +1129,9 @@ export function IntakeFormClient() {
   const introEmailFillRef = useRef<HTMLDivElement>(null);
   const [introHovered, setIntroHovered] = useState(false);
   const [introEmailHovered, setIntroEmailHovered] = useState(false);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const submitFillRef = useRef<HTMLDivElement>(null);
+  const [submitHovered, setSubmitHovered] = useState(false);
 
   // Directional fill for email button
   useDirectionalFill(introEmailRef as React.RefObject<HTMLAnchorElement>, introEmailFillRef as React.RefObject<HTMLDivElement>, {
@@ -1295,6 +1307,34 @@ export function IntakeFormClient() {
     button.addEventListener('mouseleave', onLeave);
     return () => { button.removeEventListener('mouseenter', onEnter); button.removeEventListener('mouseleave', onLeave); };
   }, [started]);
+
+  // Directional fill for submit button (matching intro button)
+  useEffect(() => {
+    if (!submitButtonRef.current || !submitFillRef.current) return;
+    const button = submitButtonRef.current;
+    const fill = submitFillRef.current;
+    const textSpan = button.querySelector('span');
+
+    const onEnter = (e: MouseEvent) => {
+      if (button.disabled) return;
+      setSubmitHovered(true);
+      const rect = button.getBoundingClientRect();
+      const x = (e.clientX || e.pageX) - rect.left;
+      const dir = x < rect.width / 2 ? 'left' : 'right';
+      gsap.killTweensOf([fill, textSpan]);
+      gsap.fromTo(fill, { scaleX: 0, transformOrigin: dir === 'left' ? '0 50%' : '100% 50%' }, { scaleX: 1, duration: 0.3, ease: 'power2.out' });
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    };
+    const onLeave = () => {
+      setSubmitHovered(false);
+      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    };
+
+    button.addEventListener('mouseenter', onEnter);
+    button.addEventListener('mouseleave', onLeave);
+    return () => { button.removeEventListener('mouseenter', onEnter); button.removeEventListener('mouseleave', onLeave); };
+  }, [booked, submitting]);
 
   // ── Navigation ───────────────────────────────────────
   const showGoals = phases.includes('crowdfunding');
@@ -2037,7 +2077,7 @@ export function IntakeFormClient() {
                         useSlotsViewOnSmallScreen: 'true',
                         name: name.trim(),
                         email: email.trim(),
-                        notes: `Project: ${projectName.trim()}\nPitch: ${pitch.trim()}`,
+                        notes: `Company: ${companyName.trim()}\nProject: ${projectName.trim()}\nPitch: ${pitch.trim()}`,
                       }}
                     />
                   </div>
@@ -2055,19 +2095,21 @@ export function IntakeFormClient() {
 
                 <div data-submit-btn className="text-center mt-8">
                   {errors._form && <p className="text-sm text-red-400 mb-4">{errors._form}</p>}
-                  <motion.button onClick={handleSubmit} disabled={!booked || submitting || uploading}
+                  <motion.button ref={submitButtonRef} onClick={handleSubmit} disabled={!booked || submitting || uploading}
                     whileHover={booked ? { scale: 1.02 } : {}} transition={{ duration: 0.2, ease: 'easeOut' }}
                     className={`relative px-12 py-3 font-medium rounded-lg overflow-hidden border transition-all ${
                       !booked || submitting || uploading
                         ? 'bg-white/5 border-white/10 text-white/20 cursor-not-allowed'
                         : 'bg-white border-white text-black cursor-pointer'}`}
                   >
-                    <span className="relative flex items-center justify-center gap-2">
+                    <div ref={submitFillRef} className="absolute inset-0 bg-black pointer-events-none"
+                      style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }} />
+                    <span className="relative flex items-center justify-center gap-2" style={{ zIndex: 10 }}>
                       {submitting
                         ? (<><span className="w-5 h-5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />Submitting...</>)
                         : !booked
                           ? (<>Book a call to submit</>)
-                          : (<>Submit<ArrowRight className="w-5 h-5" /></>)}
+                          : (<>Submit<motion.span variants={iconVariants} initial="hidden" animate={submitHovered ? 'visible' : 'hidden'} className="flex items-center"><ArrowRight className="w-5 h-5" /></motion.span></>)}
                     </span>
                   </motion.button>
                   <p data-submit-disclaimer className="text-xs mt-4 mx-auto" style={{ color: '#444444' }}>
