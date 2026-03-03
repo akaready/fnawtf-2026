@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Check, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 interface SaveButtonProps {
   saving: boolean;
@@ -13,7 +13,6 @@ interface SaveButtonProps {
 
 export function SaveButton({
   saving,
-  saved,
   onClick,
   disabled,
   label = 'Save',
@@ -25,14 +24,8 @@ export function SaveButton({
       disabled={disabled ?? saving}
       className={`btn-primary ${className}`}
     >
-      {saving ? (
-        <Loader2 size={14} className="animate-spin" />
-      ) : saved ? (
-        <Check size={14} className="text-green-600" />
-      ) : (
-        <Save size={14} />
-      )}
-      {saving ? 'Saving…' : saved ? 'Saved!' : label}
+      <Save size={14} />
+      {label}
     </button>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Pencil, Camera, Scissors, Sparkles, Loader2, X, Plus } from 'lucide-react';
 import { MiniCalendar, type DragState } from '@/components/proposal/MiniCalendar';
@@ -133,7 +133,7 @@ const resetBtnCls =
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function TimelineTab({ proposalId, proposal, initialMilestones }: TimelineTabProps) {
+export const TimelineTab = memo(function TimelineTab({ proposalId, proposal, initialMilestones }: TimelineTabProps) {
   const [milestones, setMilestones] = useState<ProposalMilestoneRow[]>(initialMilestones);
   const [scheduleStart, setScheduleStart] = useState(proposal.schedule_start_date ?? '');
   const [scheduleEnd, setScheduleEnd] = useState(proposal.schedule_end_date ?? '');
@@ -277,6 +277,12 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
     return null;
   }
 
+  // ── Sorted milestones ─────────────────────────────────────────────────────
+
+  const sorted = sortMilestones(milestones);
+  const sortedRef = useRef(sorted);
+  sortedRef.current = sorted;
+
   // ── Drag-and-drop pointer handlers ────────────────────────────────────────
 
   useEffect(() => {
@@ -323,46 +329,54 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
       } else if (moved) {
         const { dragType, milestoneIdx, currentDate } = dragState;
         // milestoneIdx refers to the sorted array — resolve to the milestone ID
-        const draggedId = sorted[milestoneIdx]?.id;
+        const draggedId = sortedRef.current[milestoneIdx]?.id;
+        const draggedM = sortedRef.current[milestoneIdx];
 
-        setMilestones(prev => prev.map((m) => {
-          if (m.id !== draggedId) return m;
+        // Compute new dates outside the state updater
+        let newStart = draggedM?.start_date ?? '';
+        let newEnd = draggedM?.end_date ?? null;
+        let changed = true;
 
-          let newStart = m.start_date;
-          let newEnd = m.end_date;
-
+        if (draggedM) {
           if (dragType === 'move') {
-            const origStart  = parseLocal(m.start_date);
-            const origEnd    = m.end_date ? parseLocal(m.end_date) : origStart;
+            const origStart  = parseLocal(draggedM.start_date);
+            const origEnd    = draggedM.end_date ? parseLocal(draggedM.end_date) : origStart;
             const durationMs = origEnd.getTime() - origStart.getTime();
             const ns         = parseLocal(currentDate!);
             const ne         = new Date(ns.getTime() + durationMs);
             newStart = currentDate!;
-            newEnd   = m.end_date ? ymd(ne) : m.end_date;
+            newEnd   = draggedM.end_date ? ymd(ne) : draggedM.end_date;
           } else if (dragType === 'resize-start') {
-            const end = m.end_date || m.start_date;
-            if (currentDate! > end) return m;
-            newStart = currentDate!;
+            const end = draggedM.end_date || draggedM.start_date;
+            if (currentDate! > end) { changed = false; } else { newStart = currentDate!; }
           } else if (dragType === 'resize-end') {
-            if (currentDate! < m.start_date) return m;
-            newEnd = currentDate!;
+            if (currentDate! < draggedM.start_date) { changed = false; } else { newEnd = currentDate!; }
           }
+        } else {
+          changed = false;
+        }
 
-          // Persist to DB
-          void updateProposalMilestone(m.id, { start_date: newStart, end_date: newEnd });
+        if (changed) {
+          // Pure state update — no side effects
+          setMilestones(prev => prev.map((m) =>
+            m.id === draggedId
+              ? { ...m, start_date: newStart, end_date: newEnd ?? m.end_date }
+              : m
+          ));
+
+          // Persist to DB (after state updater)
+          void updateProposalMilestone(draggedId!, { start_date: newStart, end_date: newEnd });
 
           // Sync schedule window dates when Kickoff or Go Live are dragged
-          if (m.label === 'Kickoff') {
+          if (draggedM!.label === 'Kickoff') {
             setScheduleStart(newStart);
             void updateProposal(proposalId, { schedule_start_date: newStart });
-          } else if (m.label === 'Go Live') {
-            const finalEnd = newEnd ?? m.end_date;
+          } else if (draggedM!.label === 'Go Live') {
+            const finalEnd = newEnd ?? draggedM!.end_date;
             setScheduleEnd(finalEnd);
             void updateProposal(proposalId, { schedule_end_date: finalEnd });
           }
-
-          return { ...m, start_date: newStart, end_date: newEnd ?? m.end_date };
-        }));
+        }
       }
 
       setDragState(null);
@@ -376,10 +390,6 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
       window.removeEventListener('pointerup', handleUp);
     };
   }, [dragState]);
-
-  // ── Sorted milestones ─────────────────────────────────────────────────────
-
-  const sorted = sortMilestones(milestones);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -427,7 +437,7 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
           className={resetBtnCls}
         >
           {resetting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-          {resetting ? 'Generating…' : 'Generate Timeline'}
+          {resetting ? 'Generating…' : 'Generate'}
         </button>
       </div>
 
@@ -586,4 +596,4 @@ export function TimelineTab({ proposalId, proposal, initialMilestones }: Timelin
       )}
     </div>
   );
-}
+});

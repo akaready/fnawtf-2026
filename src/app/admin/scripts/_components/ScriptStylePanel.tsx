@@ -377,7 +377,7 @@ export function ScriptStylePanel({
             disabled={status === 'saving'}
             className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
           >
-            {status === 'saving' ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            <Save size={14} />
             Save
           </button>
         </div>

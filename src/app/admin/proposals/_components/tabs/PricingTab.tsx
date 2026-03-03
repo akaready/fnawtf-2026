@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { Star, TrendingUp, TrendingDown, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Megaphone, Coins, Layers, type LucideIcon } from 'lucide-react';
+import { Star, TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, type LucideIcon } from 'lucide-react';
 import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
@@ -11,20 +11,42 @@ export interface PricingTabHandle {
   save: () => Promise<void>;
 }
 
-const TYPE_BUTTONS: { type: PricingType; label: string; Icon: LucideIcon }[] = [
-  { type: 'build',        label: 'Build',       Icon: Hammer },
-  { type: 'build-launch', label: 'Build+Launch', Icon: Layers },
-  { type: 'launch',       label: 'Launch',       Icon: Rocket },
-  { type: 'scale',        label: 'Scale',        Icon: TrendingUp },
-  { type: 'fundraising',  label: 'Fundraising',  Icon: Megaphone },
+const PHASES: { value: string; label: string; Icon: LucideIcon }[] = [
+  { value: 'build',        label: 'Build',        Icon: Hammer },
+  { value: 'launch',       label: 'Launch',       Icon: Rocket },
+  { value: 'scale',        label: 'Scale',        Icon: TrendingUp },
+  { value: 'crowdfunding', label: 'Crowdfunding',  Icon: Coins },
+  { value: 'fundraising',  label: 'Fundraising',  Icon: BadgeDollarSign },
 ];
 
-function initType(proposalType: ProposalType): PricingType {
-  if (proposalType === 'build-launch') return 'build-launch';
-  if (proposalType === 'scale') return 'scale';
-  if (proposalType === 'fundraising') return 'fundraising';
-  if (proposalType === 'launch') return 'launch';
-  return 'build';
+// Valid phase combinations: build/launch can pair with each other and with crowdfunding. scale and fundraising are standalone.
+const PHASE_RULES: Record<string, string[]> = {
+  build:        ['launch', 'crowdfunding'],
+  launch:       ['build', 'crowdfunding'],
+  crowdfunding: ['build', 'launch'],
+  scale:        [],
+  fundraising:  [],
+};
+
+function initPhases(proposalType: ProposalType, quotes: ProposalQuoteRow[]): string[] {
+  const phases: string[] = [];
+  if (proposalType === 'build' || proposalType === 'build-launch') phases.push('build');
+  if (proposalType === 'launch' || proposalType === 'build-launch') phases.push('launch');
+  if (proposalType === 'scale') phases.push('scale');
+  if (proposalType === 'fundraising') phases.push('fundraising');
+  if (quotes.some((q) => q.crowdfunding_enabled)) phases.push('crowdfunding');
+  return phases;
+}
+
+function derivePricingType(phases: string[]): PricingType | null {
+  const hasBuild = phases.includes('build');
+  const hasLaunch = phases.includes('launch');
+  if (hasBuild && hasLaunch) return 'build-launch';
+  if (hasBuild) return 'build';
+  if (hasLaunch) return 'launch';
+  if (phases.includes('scale')) return 'scale';
+  if (phases.includes('fundraising')) return 'fundraising';
+  return null;
 }
 
 interface PricingTabProps {
@@ -34,22 +56,21 @@ interface PricingTabProps {
   onProposalTypeChange?: (type: ProposalType) => void;
 }
 
-// Fixed config — 5 slots: Recommended, Premium, Affordable, Option B, Option C
+// Fixed config — 5 slots: Recommended, Option A–D
 const QUOTE_CONFIG = [
   { defaultLabel: 'Recommended', canHide: false },
-  { defaultLabel: 'Premium',     canHide: true  },
-  { defaultLabel: 'Affordable',  canHide: true  },
+  { defaultLabel: 'Option A',    canHide: true  },
   { defaultLabel: 'Option B',    canHide: true  },
   { defaultLabel: 'Option C',    canHide: true  },
+  { defaultLabel: 'Option D',    canHide: true  },
 ] as const;
 
 function QuoteIcon({ index, className }: { index: number; className?: string }) {
   if (index === 0) return <Star size={12} className={className} />;
-  if (index === 1) return <TrendingUp size={12} className={className} />;
-  if (index === 2) return <TrendingDown size={12} className={className} />;
+  const letter = String.fromCharCode(64 + index); // 1→A, 2→B, 3→C, 4→D
   return (
     <span className={`text-[10px] font-bold leading-none select-none ${className ?? ''}`}>
-      {index === 3 ? 'B' : 'C'}
+      {letter}
     </span>
   );
 }
@@ -65,13 +86,25 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
     [...initialQuotes.filter((q) => !q.deleted_at && q.is_fna_quote)].sort((a, b) => a.sort_order - b.sort_order),
   );
-  const [selectedType, setSelectedType] = useState<PricingType>(() => initType(proposalType));
-  const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(false);
+  const [selectedPhases, setSelectedPhases] = useState<string[]>(() =>
+    initPhases(proposalType, initialQuotes),
+  );
+  const crowdfundingEnabled = selectedPhases.includes('crowdfunding');
+  const selectedType = derivePricingType(selectedPhases);
+
+  // Sync parent whenever derived type changes
+  const prevDerivedRef = useRef(selectedType);
+  useEffect(() => {
+    if (selectedType && selectedType !== prevDerivedRef.current) {
+      onProposalTypeChange?.(selectedType as ProposalType);
+    }
+    prevDerivedRef.current = selectedType;
+  }, [selectedType, onProposalTypeChange]);
 
   // Sync type bar when parent changes proposal_type (e.g. saved from DetailsTab)
   useEffect(() => {
-    setSelectedType(initType(proposalType));
-  }, [proposalType]);
+    setSelectedPhases(initPhases(proposalType, initialQuotes));
+  }, [proposalType]); // eslint-disable-line react-hooks/exhaustive-deps
   const [activeQuoteIndex, setActiveQuoteIndex] = useState(0);
 
   const isDirtyRef = useRef(false);
@@ -89,15 +122,24 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     save: async () => {
       await Promise.all([
         embedSaveRef.current?.saveNow(),
-        updateProposal(proposalId, { proposal_type: selectedType }),
+        selectedType ? updateProposal(proposalId, { proposal_type: selectedType }) : Promise.resolve(),
       ]);
     },
   }));
 
-  const handleTypeChange = (type: PricingType) => {
-    setSelectedType(type);
-    onProposalTypeChange?.(type as ProposalType);
-    if (type === 'fundraising' || type === 'scale') setCrowdfundingEnabled(false);
+  const handlePhaseToggle = (phase: string) => {
+    setSelectedPhases((prev) => {
+      const active = prev.includes(phase);
+      if (active) return prev.filter((p) => p !== phase);
+      if (phase === 'crowdfunding' && prev.length === 0) return ['build', 'crowdfunding'];
+      return [...prev, phase];
+    });
+  };
+
+  const isPhaseDisabled = (phase: string): boolean => {
+    if (selectedPhases.includes(phase)) return false;
+    if (selectedPhases.length === 0) return false;
+    return !selectedPhases.every((p) => PHASE_RULES[p]?.includes(phase) ?? false);
   };
 
   const handleQuoteSwitch = (i: number) => {
@@ -247,35 +289,33 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
   return (
     <div className="flex flex-col h-full">
-      {/* Proposal-level type + crowdfunding bar — universal, applies to all quotes */}
+      {/* Phase selector — multi-select with compatibility rules */}
       <div className="flex items-center gap-1.5 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 sticky top-0 z-10 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        {TYPE_BUTTONS.map(({ type, label, Icon }) => (
-          <button
-            key={type}
-            onClick={() => handleTypeChange(type)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
-              selectedType === type ? 'bg-admin-bg-active text-admin-text-primary' : 'text-admin-text-dim hover:text-admin-text-secondary'
-            }`}
-          >
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
-        {(selectedType === 'build' || selectedType === 'build-launch' || selectedType === 'launch') && (
-          <button
-            onClick={() => setCrowdfundingEnabled((p) => !p)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ml-1 ${
-              crowdfundingEnabled ? 'bg-admin-bg-active text-admin-text-primary' : 'text-admin-text-dim hover:text-admin-text-secondary'
-            }`}
-          >
-            <Coins size={14} />
-            Crowdfunding?
-          </button>
-        )}
+        {PHASES.map(({ value, label, Icon }) => {
+          const active = selectedPhases.includes(value);
+          const disabled = isPhaseDisabled(value);
+          return (
+            <button
+              key={value}
+              onClick={() => handlePhaseToggle(value)}
+              disabled={disabled}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
+                active
+                  ? 'bg-admin-bg-active text-admin-text-primary'
+                  : disabled
+                    ? 'text-admin-text-ghost cursor-not-allowed'
+                    : 'text-admin-text-dim hover:text-admin-text-secondary'
+              }`}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Quote tabs nav */}
-      <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+      {/* Quote tabs nav — hidden for Scale (custom quotes) */}
+      {selectedType === 'scale' ? null : <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
         {quotes.map((q, i) => {
           const canHide = i > 0;
           const isHidden = q.visible === false;
@@ -331,21 +371,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
           );
         })}
 
-        {/* Right: Add + Delete */}
+        {/* Right: Delete + Add */}
         <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={handleAddQuote}
-            disabled={quotes.length >= 5}
-            title={quotes.length >= 5 ? 'Maximum 5 quotes' : 'Add a quote option'}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-              quotes.length >= 5
-                ? 'border border-admin-border-emphasis text-admin-text-faint'
-                : 'bg-white text-black hover:bg-white/90'
-            }`}
-          >
-            <Plus size={13} /> Add Quote
-          </button>
-
           {activeQuoteIndex > 0 && activeQuote && (
             <>
               {confirmDeleteId === activeQuote.id ? (
@@ -376,12 +403,33 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               )}
             </>
           )}
+
+          <button
+            onClick={handleAddQuote}
+            disabled={quotes.length >= 5}
+            title={quotes.length >= 5 ? 'Maximum 5 quotes' : 'Add a quote option'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+              quotes.length >= 5
+                ? 'border border-admin-border-emphasis text-admin-text-faint'
+                : 'bg-white text-black hover:bg-white/90'
+            }`}
+          >
+            <Plus size={13} /> Add Quote
+          </button>
         </div>
-      </div>
+      </div>}
 
       {/* Quote content */}
       <div className="flex-1 overflow-y-auto admin-scrollbar">
-        {activeQuote ? (
+        {!selectedType ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-admin-text-ghost">Select a project phase above to configure pricing.</p>
+          </div>
+        ) : selectedType === 'scale' ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm text-admin-text-ghost">Scale proposals use custom quotes — configure pricing directly with the client.</p>
+          </div>
+        ) : activeQuote ? (
           <div className="p-8 space-y-6">
 
             {/* Label */}

@@ -127,7 +127,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-admin-border">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight truncate">{proposal.title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight truncate flex items-center">{proposal.title}<SaveDot status={saveStatus} /></h1>
             <p className="text-sm mt-1 text-admin-text-muted font-mono truncate">
               /p/{proposal.slug} · #{proposal.proposal_number}
             </p>
@@ -267,7 +267,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             <Save size={14} />
             Save
           </button>
-          <SaveDot status={saveStatus} />
           <a
             href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
             target="_blank"
