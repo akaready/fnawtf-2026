@@ -5,7 +5,8 @@ import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, Alert
 import { StylePresetCard } from './StylePresetCard';
 import { ColorPicker } from './ColorPicker';
 import { STYLE_PRESETS } from './ScriptStylePanel';
-import { createScriptFromExtract } from '@/app/admin/actions';
+import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
+import { createScriptFromExtract, getContactsWithHeadshots } from '@/app/admin/actions';
 import type { ExtractedScriptData } from '@/app/admin/actions';
 import type { ScriptCharacterRow, ScriptLocationRow, ScriptCharacterType, StoryboardStylePreset, IntExt } from '@/types/scripts';
 import type { RewriteLevel } from '@/app/api/admin/script-extract/route';
@@ -17,6 +18,7 @@ interface Props {
   scratchContent: string;
   existingCharacters: ScriptCharacterRow[];
   existingLocations: ScriptLocationRow[];
+  globalLocations: { id: string; name: string }[];
   nextVersionLabel: string;
   onVersionCreated: (newScriptId: string) => void;
 }
@@ -29,6 +31,7 @@ interface EditableCharacter {
   color: string;
   character_type: ScriptCharacterType;
   isExisting: boolean;
+  cast_contact_id: string | null;
 }
 
 interface EditableLocation {
@@ -36,6 +39,7 @@ interface EditableLocation {
   description: string;
   color: string;
   isExisting: boolean;
+  global_location_id: string | null;
 }
 
 interface ExtractedScene {
@@ -63,7 +67,7 @@ const PRESET_KEYS = Object.keys(STYLE_PRESETS) as StoryboardStylePreset[];
 
 const STEPS: Step[] = ['rewrite-level', 'characters', 'locations', 'style', 'preview'];
 
-export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, existingCharacters, existingLocations, nextVersionLabel, onVersionCreated }: Props) {
+export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, existingCharacters, existingLocations, globalLocations, nextVersionLabel, onVersionCreated }: Props) {
   const [step, setStep] = useState<Step>('rewrite-level');
   const [rewriteLevel, setRewriteLevel] = useState<RewriteLevel>('light');
   const [characters, setCharacters] = useState<EditableCharacter[]>([]);
@@ -74,6 +78,19 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
   const [hasExtracted, setHasExtracted] = useState(false);
   const [confirmDeleteChar, setConfirmDeleteChar] = useState<number | null>(null);
   const [confirmDeleteLoc, setConfirmDeleteLoc] = useState<number | null>(null);
+  const [castContacts, setCastContacts] = useState<{ id: string; label: string }[]>([]);
+
+  // Lazy-load cast contacts when characters step first opens
+  useEffect(() => {
+    if (step === 'characters' && castContacts.length === 0) {
+      getContactsWithHeadshots().then(contacts => {
+        const cast = contacts
+          .filter(c => c.type === 'cast')
+          .map(c => ({ id: c.id, label: `${c.first_name} ${c.last_name}`.trim() }));
+        setCastContacts(cast);
+      }).catch(() => {});
+    }
+  }, [step, castContacts.length]);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -124,6 +141,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
           color: existing?.color ?? ch.color ?? '#a14dfd',
           character_type: existing?.character_type ?? ch.character_type ?? 'vo',
           isExisting: !!existing,
+          cast_contact_id: null,
         };
       });
 
@@ -135,6 +153,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
           description: loc.description ?? '',
           color: existing?.color ?? loc.color ?? '#38bdf8',
           isExisting: !!existing,
+          global_location_id: null,
         };
       });
 
@@ -158,11 +177,13 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
           description: c.description,
           color: c.color,
           character_type: c.character_type,
+          cast_contact_id: c.cast_contact_id,
         })),
         locations: locations.map(l => ({
           name: l.name,
           description: l.description,
           color: l.color,
+          global_location_id: l.global_location_id,
         })),
         scenes,
         style: styleChoice.style_preset ? styleChoice : null,
@@ -203,7 +224,9 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={step !== 'loading' && step !== 'confirming' ? onClose : undefined} />
 
       {/* Modal card — constant size */}
-      <div className="relative bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className={`relative bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden ${
+        step === 'rewrite-level' || step === 'loading' || step === 'confirming' || step === 'error' ? 'max-h-[85vh]' : 'h-[85vh]'
+      }`}>
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-raised">
           <h2 className="text-admin-lg font-admin-display font-semibold text-admin-text-primary">
@@ -273,8 +296,8 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <p className="text-sm text-admin-text-faint italic">No characters detected. You can add them later.</p>
               )}
               {characters.map((ch, i) => (
-                <div key={i} className="rounded-admin-md overflow-hidden" style={{ borderTop: `1px solid ${ch.color}40`, borderRight: `1px solid ${ch.color}40`, borderBottom: `1px solid ${ch.color}40`, borderLeft: `3px solid ${ch.color}` }}>
-                  <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset" style={{ borderBottom: `1px solid ${ch.color}20` }}>
+                <div key={i} className="rounded-admin-md border border-admin-border overflow-hidden bg-admin-bg-raised">
+                  <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset border-b border-admin-border">
                     <div className="flex items-center gap-2.5">
                       <ColorPicker value={ch.color} onChange={color => updateCharacter(i, { color })} />
                       <input
@@ -329,13 +352,19 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                       )}
                     </div>
                   </div>
-                  <div className="px-4 py-3">
+                  <div className="px-4 py-3 space-y-2">
                     <textarea
                       value={ch.description}
                       onChange={e => updateCharacter(i, { description: e.target.value })}
                       placeholder="Character description..."
                       rows={2}
                       className="admin-input w-full px-3 py-2.5 text-sm resize-none"
+                    />
+                    <AdminCombobox
+                      value={ch.cast_contact_id}
+                      options={castContacts}
+                      onChange={v => updateCharacter(i, { cast_contact_id: v })}
+                      placeholder="Assign cast member..."
                     />
                   </div>
                 </div>
@@ -354,8 +383,8 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <p className="text-sm text-admin-text-faint italic">No locations detected. You can add them later.</p>
               )}
               {locations.map((loc, i) => (
-                <div key={i} className="rounded-admin-md overflow-hidden" style={{ borderTop: `1px solid ${loc.color}40`, borderRight: `1px solid ${loc.color}40`, borderBottom: `1px solid ${loc.color}40`, borderLeft: `3px solid ${loc.color}` }}>
-                  <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset" style={{ borderBottom: `1px solid ${loc.color}20` }}>
+                <div key={i} className="rounded-admin-md border border-admin-border overflow-hidden bg-admin-bg-raised">
+                  <div className="flex items-center justify-between px-4 py-3 bg-admin-bg-inset border-b border-admin-border">
                     <div className="flex items-center gap-2.5">
                       <ColorPicker value={loc.color} onChange={color => updateLocation(i, { color })} />
                       <input
@@ -385,13 +414,19 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                       </button>
                     )}
                   </div>
-                  <div className="px-4 py-3">
+                  <div className="px-4 py-3 space-y-2">
                     <textarea
                       value={loc.description}
                       onChange={e => updateLocation(i, { description: e.target.value })}
                       placeholder="Location description..."
                       rows={2}
                       className="admin-input w-full px-3 py-2.5 text-sm resize-none"
+                    />
+                    <AdminCombobox
+                      value={loc.global_location_id}
+                      options={globalLocations.map(g => ({ id: g.id, label: g.name }))}
+                      onChange={v => updateLocation(i, { global_location_id: v })}
+                      placeholder="Link to location library..."
                     />
                   </div>
                 </div>
@@ -486,46 +521,50 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <span>{scenes.length} scene{scenes.length !== 1 ? 's' : ''}, {totalBeats} beat{totalBeats !== 1 ? 's' : ''}</span>
               </div>
 
-              {/* Column headers */}
-              <div className="grid grid-cols-[40px_1fr_1fr] gap-0 text-[10px] uppercase tracking-widest font-semibold text-admin-text-faint">
-                <div />
-                <div className="px-3 py-1.5 border-b-2 border-admin-border">Audio</div>
-                <div className="px-3 py-1.5 border-b-2" style={{ borderColor: 'var(--admin-info)' }}>Visual</div>
-              </div>
+              {/* Connected table */}
+              <div className="border border-admin-border rounded-admin-md overflow-hidden">
+                {/* Column headers */}
+                <div className="grid grid-cols-[40px_1fr_1fr] gap-0 text-[10px] uppercase tracking-widest font-semibold text-admin-text-faint bg-admin-bg-inset">
+                  <div />
+                  <div className="px-3 py-1.5 border-b border-l" style={{ borderLeftColor: 'var(--admin-accent)', borderBottomColor: 'var(--admin-accent)' }}>Audio</div>
+                  <div className="px-3 py-1.5 border-b border-l" style={{ borderLeftColor: 'var(--admin-info)', borderBottomColor: 'var(--admin-info)' }}>Visual</div>
+                </div>
 
-              {scenes.map((scene, i) => {
-                const locMatch = locations.find(l => l.name.toLowerCase() === scene.location_name.toLowerCase());
-                const locColor = locMatch?.color ?? 'var(--admin-info)';
-                return (
-                  <div key={i} className="border border-admin-border rounded-admin-md overflow-hidden">
-                    {/* Scene header */}
-                    <div className="flex items-center gap-2 px-3 py-2 bg-admin-bg-inset border-b border-admin-border">
-                      <span className="text-xs font-admin-mono text-admin-text-faint">{i + 1}</span>
-                      <MapPin size={12} style={{ color: locColor }} />
-                      <span className="text-xs font-semibold text-admin-text-primary">
-                        {scene.int_ext}. {scene.location_name} &mdash; {scene.time_of_day}
-                      </span>
-                    </div>
-                    {/* Beats in column layout */}
-                    {scene.beats.map((beat, j) => (
-                      <div key={j} className="grid grid-cols-[40px_1fr_1fr] gap-0 border-b border-admin-border-subtle last:border-b-0">
-                        {/* Beat letter gutter */}
-                        <div className="flex items-start justify-center pt-2 text-[10px] font-admin-mono text-admin-text-faint">
-                          {String.fromCharCode(65 + j)}
-                        </div>
-                        {/* Audio column */}
-                        <div className="px-3 py-2 text-xs text-admin-text-secondary border-l-2 border-admin-border">
-                          {beat.audio_content || <span className="text-admin-text-faint italic">&mdash;</span>}
-                        </div>
-                        {/* Visual column */}
-                        <div className="px-3 py-2 text-xs text-admin-text-secondary border-l-2" style={{ borderColor: 'var(--admin-info)' }}>
-                          {beat.visual_content || <span className="text-admin-text-faint italic">&mdash;</span>}
-                        </div>
+                {scenes.map((scene, i) => {
+                  const locMatch = locations.find(l => l.name.toLowerCase() === scene.location_name.toLowerCase());
+                  const locColor = locMatch?.color ?? 'var(--admin-info)';
+                  const sceneNum = `${(i + 1) * 100 + 1}`;
+                  return (
+                    <div key={i}>
+                      {/* Scene header */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-admin-bg-inset border-t border-admin-border">
+                        <span className="text-xs font-admin-mono text-admin-text-muted">{sceneNum}</span>
+                        <MapPin size={12} style={{ color: locColor }} />
+                        <span className="text-xs font-semibold text-admin-text-secondary">
+                          {scene.int_ext}. {scene.location_name} &mdash; {scene.time_of_day}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                );
-              })}
+                      {/* Beats in column layout */}
+                      {scene.beats.map((beat, j) => (
+                        <div key={j} className="grid grid-cols-[40px_1fr_1fr] gap-0 border-t border-admin-border-subtle">
+                          {/* Beat letter gutter */}
+                          <div className="flex items-start justify-center pt-2 text-[10px] font-admin-mono text-admin-text-faint">
+                            {String.fromCharCode(65 + j)}
+                          </div>
+                          {/* Audio column */}
+                          <div className="px-3 py-2 text-xs text-admin-text-secondary border-l" style={{ borderColor: 'var(--admin-accent)' }}>
+                            {beat.audio_content || <span className="text-admin-text-faint">&mdash;</span>}
+                          </div>
+                          {/* Visual column */}
+                          <div className="px-3 py-2 text-xs text-admin-text-secondary border-l" style={{ borderColor: 'var(--admin-info)' }}>
+                            {beat.visual_content || <span className="text-admin-text-faint">&mdash;</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

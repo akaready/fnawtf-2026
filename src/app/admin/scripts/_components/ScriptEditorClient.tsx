@@ -158,6 +158,13 @@ export function ScriptEditorClient({
     }
   }, [versionPickerOpen, script.script_group_id]);
 
+  // Also load versions when extract modal opens (for accurate version label)
+  useEffect(() => {
+    if (showExtractModal && script.script_group_id) {
+      getScriptVersions(script.script_group_id).then(setVersions).catch(() => {});
+    }
+  }, [showExtractModal, script.script_group_id]);
+
   // Group references by beat ID
   const refsByBeat: Record<string, ScriptBeatReferenceRow[]> = {};
   for (const ref of references) {
@@ -796,6 +803,7 @@ export function ScriptEditorClient({
         scratchContent={scratchContent}
         existingCharacters={characters}
         existingLocations={locations}
+        globalLocations={globalLocations}
         nextVersionLabel={nextVersionLabel}
         onVersionCreated={(newId) => {
           setShowExtractModal(false);

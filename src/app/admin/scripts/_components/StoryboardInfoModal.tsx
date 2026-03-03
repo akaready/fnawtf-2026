@@ -46,7 +46,7 @@ export function StoryboardInfoModal({ beatId, onClose, onRegenerate }: Props) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-admin-border flex-shrink-0">
-          <h2 className="text-sm font-semibold text-admin-text-primary">Generation Details</h2>
+          <h2 className="text-base font-semibold text-admin-text-primary">Generation Details</h2>
           <button onClick={onClose} className="btn-ghost w-8 h-8 flex items-center justify-center">
             <X size={14} />
           </button>
@@ -66,31 +66,31 @@ export function StoryboardInfoModal({ beatId, onClose, onRegenerate }: Props) {
             {/* Stats bar */}
             <div className="flex flex-wrap gap-2">
               <div className="bg-admin-bg-base rounded-admin-sm px-3 py-2 border border-admin-border-subtle">
-                <div className="text-[10px] text-admin-text-faint uppercase tracking-wider">Model</div>
-                <div className="text-xs font-admin-mono text-admin-text-primary mt-0.5">{log.model}</div>
+                <div className="text-xs text-admin-text-faint uppercase tracking-wider">Model</div>
+                <div className="text-sm font-admin-mono text-admin-text-primary mt-0.5">{log.model}</div>
               </div>
               <div className="bg-admin-bg-base rounded-admin-sm px-3 py-2 border border-admin-border-subtle">
-                <div className="text-[10px] text-admin-text-faint uppercase tracking-wider">Input</div>
-                <div className="text-xs text-admin-text-primary mt-0.5">{log.input_tokens ?? '-'}</div>
+                <div className="text-xs text-admin-text-faint uppercase tracking-wider">Input</div>
+                <div className="text-sm text-admin-text-primary mt-0.5">{log.input_tokens ?? '-'}</div>
               </div>
               <div className="bg-admin-bg-base rounded-admin-sm px-3 py-2 border border-admin-border-subtle">
-                <div className="text-[10px] text-admin-text-faint uppercase tracking-wider">Output</div>
-                <div className="text-xs text-admin-text-primary mt-0.5">{log.output_tokens ?? '-'}</div>
+                <div className="text-xs text-admin-text-faint uppercase tracking-wider">Output</div>
+                <div className="text-sm text-admin-text-primary mt-0.5">{log.output_tokens ?? '-'}</div>
               </div>
               {log.cost_estimate != null && (
                 <div className="bg-admin-bg-base rounded-admin-sm px-3 py-2 border border-admin-border-subtle">
-                  <div className="text-[10px] text-admin-text-faint uppercase tracking-wider">Cost</div>
-                  <div className="text-xs text-admin-text-primary mt-0.5">${Number(log.cost_estimate).toFixed(4)}</div>
+                  <div className="text-xs text-admin-text-faint uppercase tracking-wider">Cost</div>
+                  <div className="text-sm text-admin-text-primary mt-0.5">${Number(log.cost_estimate).toFixed(4)}</div>
                 </div>
               )}
               <div className="bg-admin-bg-base rounded-admin-sm px-3 py-2 border border-admin-border-subtle">
-                <div className="text-[10px] text-admin-text-faint uppercase tracking-wider">Duration</div>
-                <div className="text-xs text-admin-text-primary mt-0.5">
+                <div className="text-xs text-admin-text-faint uppercase tracking-wider">Duration</div>
+                <div className="text-sm text-admin-text-primary mt-0.5">
                   {log.duration_ms != null ? `${(log.duration_ms / 1000).toFixed(1)}s` : '-'}
                 </div>
               </div>
               <div className="bg-admin-bg-base rounded-admin-sm px-3 py-2 border border-admin-border-subtle">
-                <div className="text-[10px] text-admin-text-faint uppercase tracking-wider">Status</div>
+                <div className="text-xs text-admin-text-faint uppercase tracking-wider">Status</div>
                 <div className={`text-xs mt-0.5 font-medium ${log.status === 'success' ? 'text-admin-success' : 'text-admin-danger'}`}>
                   {log.status}
                 </div>
@@ -100,8 +100,8 @@ export function StoryboardInfoModal({ beatId, onClose, onRegenerate }: Props) {
             {/* Response summary */}
             {log.response_summary && (
               <div>
-                <h4 className="text-xs font-semibold text-admin-text-muted mb-1.5">Response</h4>
-                <p className="text-xs text-admin-text-primary bg-admin-bg-base border border-admin-border rounded-admin-md p-3">
+                <h4 className="text-sm font-semibold text-admin-text-muted mb-1.5">Response</h4>
+                <p className="text-sm text-admin-text-primary bg-admin-bg-base border border-admin-border rounded-admin-md p-3">
                   {log.response_summary}
                 </p>
               </div>
@@ -110,7 +110,7 @@ export function StoryboardInfoModal({ beatId, onClose, onRegenerate }: Props) {
             {/* Generated image */}
             {log.image_url && (
               <div>
-                <h4 className="text-xs font-semibold text-admin-text-muted mb-1.5">Generated Image</h4>
+                <h4 className="text-sm font-semibold text-admin-text-muted mb-1.5">Generated Image</h4>
                 <img
                   src={log.image_url}
                   alt=""
@@ -121,11 +121,11 @@ export function StoryboardInfoModal({ beatId, onClose, onRegenerate }: Props) {
 
             {/* Editable prompt */}
             <div>
-              <h4 className="text-xs font-semibold text-admin-text-muted mb-1.5">Prompt</h4>
+              <h4 className="text-sm font-semibold text-admin-text-muted mb-1.5">Prompt</h4>
               <textarea
                 value={editedPrompt}
                 onChange={(e) => setEditedPrompt(e.target.value)}
-                className="admin-input w-full text-xs font-admin-mono min-h-[200px] resize-y"
+                className="admin-input w-full text-sm font-admin-mono min-h-[200px] resize-y"
               />
             </div>
           </div>

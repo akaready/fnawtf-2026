@@ -3636,8 +3636,8 @@ export async function saveScratchContent(scriptId: string, content: string) {
 import type { ScriptCharacterType, IntExt, StoryboardStylePreset, ContentMode } from '@/types/scripts';
 
 export interface ExtractedScriptData {
-  characters: Array<{ name: string; description: string; color: string; character_type: ScriptCharacterType }>;
-  locations: Array<{ name: string; description: string; color: string }>;
+  characters: Array<{ name: string; description: string; color: string; character_type: ScriptCharacterType; cast_contact_id?: string | null }>;
+  locations: Array<{ name: string; description: string; color: string; global_location_id?: string | null }>;
   scenes: Array<{
     location_name: string;
     int_ext: IntExt;
@@ -3694,17 +3694,26 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
   if (newScriptErr || !newScript) throw new Error(newScriptErr?.message ?? 'Failed to create version');
   const newScriptId = (newScript as { id: string }).id;
 
-  // 3. Insert characters
+  // 3. Insert characters (and optionally link cast members)
   for (let i = 0; i < extractedData.characters.length; i++) {
     const ch = extractedData.characters[i];
-    await supabase.from('script_characters').insert({
+    const { data: newChar } = await supabase.from('script_characters').insert({
       script_id: newScriptId,
       name: ch.name,
       description: ch.description,
       color: ch.color,
       character_type: ch.character_type,
       sort_order: i,
-    } as never);
+    } as never).select('id').single();
+    if (newChar && ch.cast_contact_id) {
+      const charId = (newChar as { id: string }).id;
+      await supabase.from('script_character_cast').insert({
+        character_id: charId,
+        contact_id: ch.cast_contact_id,
+        slot_order: 0,
+        is_featured: true,
+      } as never);
+    }
   }
 
   // 4. Insert locations and build name→id map
@@ -3717,6 +3726,7 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
       description: loc.description,
       color: loc.color,
       sort_order: i,
+      ...(loc.global_location_id ? { global_location_id: loc.global_location_id } : {}),
     } as never).select('id').single();
     if (newLoc) locationIdMap.set(loc.name.toLowerCase(), (newLoc as { id: string }).id);
   }
