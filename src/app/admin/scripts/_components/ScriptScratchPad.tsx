@@ -68,67 +68,23 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
     position: { x: number; y: number };
   } | null>(null);
 
-  /**
-   * Find the DOM node that starts the Nth ALL CAPS line.
-   * The editor HTML is flat: text nodes + <br> + <span> mention elements.
-   * We walk child nodes, splitting on <br> to reconstruct lines,
-   * then match ALL CAPS lines and return the first node of the target line.
-   */
-  const findSceneNode = useCallback((sceneIndex: number): Node | null => {
-    const el = editorRef.current;
-    if (!el) return null;
-
-    let currentLineText = '';
-    let currentLineFirstNode: Node | null = null;
-    let sceneCount = 0;
-
-    for (const child of Array.from(el.childNodes)) {
-      // <br> = line break — evaluate the accumulated line
-      if (child instanceof HTMLBRElement) {
-        const trimmed = currentLineText.trim();
-        if (trimmed && /[A-Z]{2,}/.test(trimmed) && !/[a-z]/.test(trimmed)) {
-          if (sceneCount === sceneIndex && currentLineFirstNode) return currentLineFirstNode;
-          sceneCount++;
-        }
-        currentLineText = '';
-        currentLineFirstNode = null;
-        continue;
-      }
-
-      // Accumulate text for this line
-      const text = child.textContent ?? '';
-      if (!currentLineFirstNode && text.trim()) currentLineFirstNode = child;
-      // Strip mention @ prefix for detection
-      currentLineText += text.replace(/^@/, '');
-    }
-
-    // Check the last line (no trailing <br>)
-    const trimmed = currentLineText.trim();
-    if (trimmed && /[A-Z]{2,}/.test(trimmed) && !/[a-z]/.test(trimmed)) {
-      if (sceneCount === sceneIndex && currentLineFirstNode) return currentLineFirstNode;
-    }
-
-    return null;
-  }, []);
-
-  // Expose scrollToScene — walks DOM at call time to find the target
+  // Expose scrollToScene — scene headings are now .scratch-scene-heading divs
   useImperativeHandle(ref, () => ({
     scrollToScene(_sceneLabel: string, sceneIndex: number) {
+      const el = editorRef.current;
       const container = scrollContainerRef.current;
-      if (!container) return;
-      const node = findSceneNode(sceneIndex);
-      if (!node) return;
-      // Get a rect from the node (could be text node or element)
-      const range = document.createRange();
-      range.selectNodeContents(node);
-      const rect = range.getBoundingClientRect();
+      if (!el || !container) return;
+      const headings = el.querySelectorAll('.scratch-scene-heading');
+      const target = headings[sceneIndex];
+      if (!target) return;
       const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
       container.scrollTo({
-        top: container.scrollTop + rect.top - containerRect.top - 24,
+        top: container.scrollTop + targetRect.top - containerRect.top - 24,
         behavior: 'smooth',
       });
     },
-  }), [findSceneNode]);
+  }), []);
 
   // Render content: use markdownToHtml for mentions but strip bold.
   // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML.
@@ -149,8 +105,33 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
     onScenesDetected?.(detectScenes(lastValue.current));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Classify browser-created block elements during live typing.
+   * When the user presses Enter, contentEditable creates bare <div> elements
+   * without our CSS classes. This walks the editor's children and applies
+   * scratch-scene-heading or scratch-paragraph based on content.
+   */
+  const classifyBlocks = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    for (const child of Array.from(el.children)) {
+      if (!(child instanceof HTMLElement) || child.tagName !== 'DIV') continue;
+      // Strip HTML tags and mention @ prefixes for plain text check
+      const plain = child.textContent?.replace(/@/g, '').trim() ?? '';
+      const isHeading = plain.length > 0 && /[A-Z]{2,}/.test(plain) && !/[a-z]/.test(plain);
+      if (isHeading) {
+        child.classList.add('scratch-scene-heading');
+        child.classList.remove('scratch-paragraph');
+      } else {
+        child.classList.add('scratch-paragraph');
+        child.classList.remove('scratch-scene-heading');
+      }
+    }
+  }, []);
+
   const emitChange = useCallback(() => {
     if (!editorRef.current) return;
+    classifyBlocks();
     let md = htmlToMarkdown(editorRef.current.innerHTML);
     md = stripBoldMarkdown(md);
     setIsEmpty(!md.trim());
@@ -159,7 +140,7 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
       onContentChange(md);
       onScenesDetected?.(detectScenes(md));
     }
-  }, [onContentChange, onScenesDetected]);
+  }, [classifyBlocks, onContentChange, onScenesDetected]);
 
   const checkMentionTrigger = useCallback(() => {
     const sel = window.getSelection();
@@ -212,22 +193,74 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
     }
 
     node.textContent = before + replacement + ' ' + after;
-    const newOffset = before.length + replacement.length + 1;
-    range.setStart(node, Math.min(newOffset, node.textContent.length));
-    range.setEnd(node, Math.min(newOffset, node.textContent.length));
-    sel.removeAllRanges();
-    sel.addRange(range);
 
     setMentionState(null);
 
-    // Re-render with proper mention styling (DOMPurify-sanitized via markdownToHtml)
+    // Before re-render, count how many existing mention spans for this entity
+    // appear BEFORE our text node in document order. After re-render, the new
+    // mention span will be at this index (0-based).
+    let precedingMentions = 0;
+    const walker = document.createTreeWalker(editorRef.current, NodeFilter.SHOW_ALL);
+    let walkNode: Node | null;
+    while ((walkNode = walker.nextNode()) !== null) {
+      if (walkNode === node) break;
+      if (walkNode instanceof HTMLElement) {
+        if (mentionState?.type === 'character') {
+          const entity = item as ScriptCharacterRow | ScriptLocationRow;
+          if (walkNode.dataset.characterId === entity.id || walkNode.dataset.locationId === entity.id) {
+            precedingMentions++;
+          }
+        } else {
+          const tag = item as ScriptTagRow;
+          if (walkNode.dataset.tagSlug === tag.slug) {
+            precedingMentions++;
+          }
+        }
+      }
+    }
+    const mentionIndex = precedingMentions; // 0-based
+
     let md = htmlToMarkdown(editorRef.current.innerHTML);
     md = stripBoldMarkdown(md);
+
+    // Save scroll position before re-render (renderContent replaces innerHTML
+    // and cursor placement can cause the browser to auto-scroll)
+    const container = scrollContainerRef.current;
+    const savedScroll = container?.scrollTop ?? 0;
+
     renderContent(md);
     lastValue.current = md;
     onContentChange(md);
     onScenesDetected?.(detectScenes(md));
-    editorRef.current.focus();
+
+    // Restore cursor: find the Nth matching span and place cursor after it
+    const el = editorRef.current;
+    const placeCursor = (span: Element) => {
+      const r = document.createRange();
+      r.setStartAfter(span);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      // Restore scroll position — prevent viewport jump
+      if (container) container.scrollTop = savedScroll;
+    };
+
+    if (mentionState?.type === 'character') {
+      const entity = item as ScriptCharacterRow | ScriptLocationRow;
+      const locSpans = el.querySelectorAll(`[data-location-id="${entity.id}"]`);
+      const charSpans = el.querySelectorAll(`[data-character-id="${entity.id}"]`);
+      const allSpans = [...Array.from(locSpans), ...Array.from(charSpans)];
+      const targetSpan = allSpans.length > 0 ? allSpans[Math.min(mentionIndex, allSpans.length - 1)] : null;
+      if (targetSpan) { placeCursor(targetSpan); return; }
+    } else {
+      const tag = item as ScriptTagRow;
+      const spans = el.querySelectorAll(`[data-tag-slug="${tag.slug}"]`);
+      const targetSpan = spans.length > 0 ? spans[Math.min(mentionIndex, spans.length - 1)] : null;
+      if (targetSpan) { placeCursor(targetSpan); return; }
+    }
+    // Fallback: focus at end, restore scroll
+    el.focus();
+    if (container) container.scrollTop = savedScroll;
   }, [mentionState, onContentChange, onScenesDetected, renderContent]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -265,8 +298,7 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
           {/* Placeholder overlay — visible only when editor is empty */}
           {isEmpty && (
             <div className="absolute inset-0 pointer-events-none select-none font-admin-mono text-admin-text-ghost text-sm leading-relaxed whitespace-pre-line">
-{`---  new location
-ALL CAPS  scene heading
+{`ALL CAPS  scene heading
 @  character or location
 #  special footage type
 @Name:  spoken words or VO

@@ -2677,7 +2677,16 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
   const groupId = s.script_group_id as string;
-  const major = (s.major_version as number) ?? 0;
+
+  // Find the highest major version across the entire group
+  const { data: maxMajorRow } = await supabase
+    .from('scripts')
+    .select('major_version')
+    .eq('script_group_id', groupId)
+    .order('major_version', { ascending: false })
+    .limit(1)
+    .single();
+  const major = ((maxMajorRow as Record<string, unknown> | null)?.major_version as number) ?? 0;
 
   // Find max minor_version for this group+major
   const { data: maxRow } = await supabase
@@ -3660,9 +3669,18 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
   const groupId = s.script_group_id as string;
-  const major = (s.major_version as number) ?? 0;
 
-  // 2. Find next minor version for this group+major
+  // 2. Find the highest major version across the entire group
+  const { data: maxMajorRow } = await supabase
+    .from('scripts')
+    .select('major_version')
+    .eq('script_group_id', groupId)
+    .order('major_version', { ascending: false })
+    .limit(1)
+    .single();
+  const major = ((maxMajorRow as Record<string, unknown> | null)?.major_version as number) ?? 0;
+
+  // Find next minor version for this group+major
   const { data: maxRow } = await supabase
     .from('scripts')
     .select('minor_version')
@@ -3805,7 +3823,16 @@ export async function createModeVersion(scriptId: string, targetMode: ContentMod
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
   const groupId = s.script_group_id as string;
-  const major = (s.major_version as number) ?? 0;
+
+  // Find the highest major version across the entire group
+  const { data: maxMajorRow3 } = await supabase
+    .from('scripts')
+    .select('major_version')
+    .eq('script_group_id', groupId)
+    .order('major_version', { ascending: false })
+    .limit(1)
+    .single();
+  const major = ((maxMajorRow3 as Record<string, unknown> | null)?.major_version as number) ?? 0;
 
   // 2. If switching to scratchpad, flatten existing beats into scratch_content
   let scratchContent = (s.scratch_content as string) ?? '';

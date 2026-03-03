@@ -62,6 +62,16 @@ const REWRITE_OPTIONS: { value: RewriteLevel; label: string; description: string
   { value: 'production', label: 'Production Rewrite', description: 'Expand and add detail while preserving your intent' },
 ];
 
+export type DefaultTimeOfDay = 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'AUTO';
+
+const TIME_OF_DAY_OPTIONS: { value: DefaultTimeOfDay; label: string }[] = [
+  { value: 'DAY', label: 'Day' },
+  { value: 'NIGHT', label: 'Night' },
+  { value: 'MORNING', label: 'Morning' },
+  { value: 'EVENING', label: 'Evening' },
+  { value: 'AUTO', label: 'Auto' },
+];
+
 const ASPECT_RATIOS = ['16:9', '2:3', '1:1', '4:3'] as const;
 const PRESET_KEYS = Object.keys(STYLE_PRESETS) as StoryboardStylePreset[];
 
@@ -70,6 +80,7 @@ const STEPS: Step[] = ['rewrite-level', 'characters', 'locations', 'style', 'pre
 export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, existingCharacters, existingLocations, globalLocations, nextVersionLabel, onVersionCreated }: Props) {
   const [step, setStep] = useState<Step>('rewrite-level');
   const [rewriteLevel, setRewriteLevel] = useState<RewriteLevel>('light');
+  const [defaultTimeOfDay, setDefaultTimeOfDay] = useState<DefaultTimeOfDay>('DAY');
   const [characters, setCharacters] = useState<EditableCharacter[]>([]);
   const [locations, setLocations] = useState<EditableLocation[]>([]);
   const [scenes, setScenes] = useState<ExtractedScene[]>([]);
@@ -97,6 +108,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
     if (open) {
       setStep('rewrite-level');
       setRewriteLevel('light');
+      setDefaultTimeOfDay('DAY');
       setCharacters([]);
       setLocations([]);
       setScenes([]);
@@ -118,6 +130,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
           scriptId,
           scratchContent,
           rewriteLevel,
+          defaultTimeOfDay,
           existingCharacters: existingCharacters.map(c => ({ name: c.name, color: c.color, character_type: c.character_type })),
           existingLocations: existingLocations.map(l => ({ name: l.name, color: l.color })),
         }),
@@ -166,7 +179,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
       setErrorMessage(String(err));
       setStep('error');
     }
-  }, [scriptId, scratchContent, rewriteLevel, existingCharacters, existingLocations]);
+  }, [scriptId, scratchContent, rewriteLevel, defaultTimeOfDay, existingCharacters, existingLocations]);
 
   const handleConfirm = useCallback(async () => {
     setStep('confirming');
@@ -273,6 +286,31 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                     <div className="text-xs text-admin-text-muted mt-0.5">{opt.description}</div>
                   </button>
                 ))}
+              </div>
+
+              {/* Default time of day */}
+              <div className="pt-2 border-t border-admin-border">
+                <p className="text-sm text-admin-text-secondary mb-2">
+                  Default time of day for scenes that don&apos;t specify one:
+                </p>
+                <div className="flex items-center gap-1.5">
+                  {TIME_OF_DAY_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setDefaultTimeOfDay(opt.value)}
+                      className={`px-3 py-1.5 rounded-admin-md text-xs font-medium border transition-colors ${
+                        defaultTimeOfDay === opt.value
+                          ? 'border-admin-text-primary bg-admin-bg-active text-admin-text-primary'
+                          : 'border-admin-border text-admin-text-muted hover:bg-admin-bg-hover'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {defaultTimeOfDay === 'AUTO' && (
+                  <p className="text-xs text-admin-text-faint mt-1.5">AI will decide based on script context and flow</p>
+                )}
               </div>
             </div>
           )}

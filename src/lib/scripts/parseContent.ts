@@ -36,11 +36,37 @@ export function markdownToHtml(
     return `<span class="script-tag" data-tag-slug="${slug}" style="color:${color};font-weight:600" contenteditable="false">#${name}</span>`;
   });
 
-  // Newlines → <br>
-  html = html.replace(/\n/g, '<br>');
+  // Wrap lines in block elements: ALL CAPS lines get scene-heading styling,
+  // consecutive non-heading lines get paragraph styling.
+  const lines = html.split('\n');
+  const blocks: string[] = [];
+  let paraLines: string[] = [];
+
+  const flushParagraph = () => {
+    if (paraLines.length > 0) {
+      blocks.push(`<div class="scratch-paragraph">${paraLines.join('<br>')}</div>`);
+      paraLines = [];
+    }
+  };
+
+  for (const line of lines) {
+    // Strip HTML tags to get plain text for ALL CAPS detection
+    const plain = line.replace(/<[^>]+>/g, '').replace(/^@/, '').trim();
+    const isSceneHeading = plain.length > 0 && /[A-Z]{2,}/.test(plain) && !/[a-z]/.test(plain);
+
+    if (isSceneHeading) {
+      flushParagraph();
+      blocks.push(`<div class="scratch-scene-heading">${line}</div>`);
+    } else {
+      paraLines.push(line);
+    }
+  }
+  flushParagraph();
+
+  html = blocks.join('');
 
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'b', 'br', 'span'],
+    ALLOWED_TAGS: ['strong', 'b', 'br', 'span', 'div'],
     ALLOWED_ATTR: ['class', 'data-character-id', 'data-location-id', 'data-tag-slug', 'style', 'contenteditable'],
   });
 }
@@ -50,6 +76,10 @@ export function markdownToHtml(
  */
 export function htmlToMarkdown(html: string): string {
   let md = html;
+
+  // Scene heading and paragraph divs → newlines
+  md = md.replace(/<div class="scratch-scene-heading">([\s\S]*?)<\/div>/gi, '$1\n');
+  md = md.replace(/<div class="scratch-paragraph">([\s\S]*?)<\/div>/gi, '$1\n');
 
   // <br> and block boundaries → newlines
   md = md.replace(/<br\s*\/?>/gi, '\n');

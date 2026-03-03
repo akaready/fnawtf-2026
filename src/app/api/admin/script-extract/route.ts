@@ -6,10 +6,13 @@ const anthropic = new Anthropic();
 
 export type RewriteLevel = 'preserve' | 'grammar' | 'light' | 'production';
 
+type DefaultTimeOfDay = 'DAY' | 'NIGHT' | 'MORNING' | 'EVENING' | 'AUTO';
+
 interface ExtractRequest {
   scriptId: string;
   scratchContent: string;
   rewriteLevel: RewriteLevel;
+  defaultTimeOfDay?: DefaultTimeOfDay;
   existingCharacters: Array<{ name: string; color: string; character_type: string }>;
   existingLocations: Array<{ name: string; color: string }>;
 }
@@ -35,7 +38,7 @@ Return ONLY valid JSON matching this exact schema — no prose, no markdown fenc
   "scenes": [{
     "location_name": string (must match a location name exactly),
     "int_ext": "INT"|"EXT"|"INT/EXT",
-    "time_of_day": "DAY"|"NIGHT"|"DUSK"|"DAWN",
+    "time_of_day": "DAY"|"NIGHT"|"MORNING"|"EVENING"|"DUSK"|"DAWN",
     "beats": [{ "audio_content": string, "visual_content": string, "notes_content": string }]
   }]
 }
@@ -47,8 +50,9 @@ Rules:
 - visual_content = what the camera sees, action descriptions, visual staging (what is SEEN)
 - notes_content = production notes, b-roll flags, special instructions, or empty string if none
 - Each scene should have 1-6 beats. Do not over-segment.
-- ALL CAPS text in the scratchpad typically signals location or scene breaks.
-- Infer INT/EXT and time_of_day from context; default to INT and DAY if ambiguous.
+- ALL CAPS text in the scratchpad typically signals location or scene breaks. Many headings will just be a location name (e.g. "ROOFTOP", "CAFÉ FLOOR") without INT/EXT or time-of-day — this is normal.
+- Infer INT/EXT from context; default to INT if ambiguous.
+- For time_of_day: use the user's preferred default (provided below) when the heading does not specify one. If the preference is AUTO, infer the most appropriate time from the content and flow of the script.
 - Location names should be UPPERCASE (e.g. "OFFICE", "ROOFTOP").
 - Character names should be Title Case.
 - @[Name](id) mentions in the text indicate known characters — preserve those names exactly.
@@ -60,15 +64,21 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json() as ExtractRequest;
-  const { scriptId, scratchContent, rewriteLevel, existingCharacters, existingLocations } = body;
+  const { scriptId, scratchContent, rewriteLevel, defaultTimeOfDay, existingCharacters, existingLocations } = body;
 
   if (!scratchContent?.trim()) {
     return NextResponse.json({ error: 'No content to analyze' }, { status: 400 });
   }
 
   const rewriteInstruction = REWRITE_INSTRUCTIONS[rewriteLevel] ?? REWRITE_INSTRUCTIONS.preserve;
+  const todPref = defaultTimeOfDay ?? 'DAY';
+  const todInstruction = todPref === 'AUTO'
+    ? 'DEFAULT TIME OF DAY: AUTO — infer the most appropriate time of day for each scene based on the content and flow of the script.'
+    : `DEFAULT TIME OF DAY: ${todPref} — when a scene heading does not specify a time of day, use "${todPref}".`;
 
   const userMessage = `REWRITE LEVEL INSTRUCTION: ${rewriteInstruction}
+
+${todInstruction}
 
 Existing characters (match these when applicable): ${JSON.stringify(existingCharacters)}
 Existing locations (match these when applicable): ${JSON.stringify(existingLocations)}

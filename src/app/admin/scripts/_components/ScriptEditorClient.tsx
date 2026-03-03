@@ -380,11 +380,12 @@ export function ScriptEditorClient({
     }, 1500);
   }, [script.id, autoSave]);
 
-  // Compute next minor version from loaded versions
+  // Compute next minor version from loaded versions (use highest major across group)
+  const maxMajor = versions.reduce((max, v) => Math.max(max, v.major_version), 0);
   const nextMinor = versions
-    .filter(v => v.major_version === script.major_version)
+    .filter(v => v.major_version === maxMajor)
     .reduce((max, v) => Math.max(max, v.minor_version), 0) + 1;
-  const nextVersionLabel = `v${script.major_version}.${nextMinor}`;
+  const nextVersionLabel = `v${maxMajor}.${nextMinor}`;
 
   // Mode switching: table → scratchpad (with confirm dialog)
   const handleModeSwitch = useCallback(() => {
