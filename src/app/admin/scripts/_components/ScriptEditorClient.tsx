@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Paintbrush, StickyNote, Table2, X, Check } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -16,6 +16,7 @@ import {
   getScriptCastMap, saveScratchContent, createModeVersion,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
+import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { DEFAULT_FRACTIONS } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
@@ -26,8 +27,7 @@ import { ScriptTagsPanel } from './ScriptTagsPanel';
 import { ScriptLocationsPanel } from './ScriptLocationsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
 import { ScriptStylePanel } from './ScriptStylePanel';
-import { ScriptFocusMode } from './ScriptFocusMode';
-import { ScriptScratchPad } from './ScriptScratchPad';
+import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from './ScriptScratchPad';
 import { ScriptExtractModal } from './ScriptExtractModal';
 import { formatScriptVersion } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
@@ -86,8 +86,10 @@ export function ScriptEditorClient({
   const [storyboardFrames, setStoryboardFrames] = useState<ScriptStoryboardFrameRow[]>([]);
   const [castMap, setCastMap] = useState<Record<string, CharacterCastWithContact[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
-  const [showFocusMode, setShowFocusMode] = useState(false);
-  const [focusTransition, setFocusTransition] = useState<'idle' | 'pushing-out' | 'bringing-in' | 'active' | 'pushing-focus-out' | 'bringing-back'>('idle');
+  const [isFocused, setIsFocused] = useState(false);
+  const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
+  const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
+  const [containerIdx, setContainerIdx] = useState(0);
   const [versioning, setVersioning] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -96,6 +98,8 @@ export function ScriptEditorClient({
   const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'table');
   const [scratchContent, setScratchContent] = useState(initialScript.scratch_content ?? '');
   const [showExtractModal, setShowExtractModal] = useState(false);
+  const [scratchScenes, setScratchScenes] = useState<ScratchScene[]>([]);
+  const scratchPadRef = useRef<ScriptScratchPadHandle>(null);
   const [modeConfirm, setModeConfirm] = useState<{ message: string; targetMode: 'table' | 'scratchpad' } | null>(null);
   const router = useRouter();
 
@@ -440,115 +444,65 @@ export function ScriptEditorClient({
     }
   }, [script.id]);
 
-  // ── Focus mode transition ──
-  // ENTER: Everything exits simultaneously, then mount focus mode
-  // EXIT:  Focus UI out → everything returns simultaneously
-  const enterFocusMode = useCallback(() => {
-    document.querySelector('.admin-shell')?.classList.add('focus-push');
-    setFocusTransition('pushing-out');
-    setTimeout(() => {
-      setShowFocusMode(true);
-      setFocusTransition('bringing-in');
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setFocusTransition('active');
-        });
-      });
-    }, 700);
+  // ── Focus mode toggle ──
+  const toggleFocus = useCallback(() => {
+    setIsFocused(prev => {
+      const next = !prev;
+      const shell = document.querySelector('.admin-shell');
+      if (next) shell?.classList.add('focus-push');
+      else shell?.classList.remove('focus-push');
+      return next;
+    });
   }, []);
 
-  const exitFocusMode = useCallback(() => {
-    setFocusTransition('pushing-focus-out');
-    setTimeout(() => {
-      setShowFocusMode(false);
+  // Remove focus-push class on unmount (e.g. navigating away)
+  useEffect(() => {
+    return () => {
       document.querySelector('.admin-shell')?.classList.remove('focus-push');
-      setFocusTransition('bringing-back');
-      setTimeout(() => {
-        setFocusTransition('idle');
-      }, 700);
-    }, 500);
+    };
   }, []);
 
-  // Derived animation states — everything moves together
-  const uiOut = focusTransition === 'pushing-out' || focusTransition === 'bringing-in' || focusTransition === 'active' || focusTransition === 'pushing-focus-out';
+  // Escape exits focus mode
+  useEffect(() => {
+    if (!isFocused) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') toggleFocus();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isFocused, toggleFocus]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      {/* Focus mode overlay */}
-      {showFocusMode && (
-        <ScriptFocusMode
-          scenes={computedScenes}
-          columnConfig={columnConfig}
-          onColumnConfigChange={handleColumnConfigChange}
-          columnFractions={columnFractions}
-          onColumnFractionsChange={setColumnFractions}
-          characters={characters}
-          tags={tags}
-          locations={locations}
-          references={refsByBeat}
-          storyboardFrames={storyboardFrames}
-          scriptStyle={scriptStyle}
-          styleReferences={styleReferences}
-          scriptId={script.id}
-          onFrameGenerated={handleFrameChange}
-          onUpdateBeat={handleUpdateBeat}
-          onDeleteBeat={handleDeleteBeat}
-          onAddBeat={handleAddBeat}
-          onAddScene={handleAddScene}
-          onReorderBeats={handleReorderBeats}
-          onUploadReference={handleUploadReference}
-          onDeleteReference={handleDeleteReference}
-          onUpdateScene={handleUpdateScene}
-          onDeleteScene={handleDeleteScene}
-          onShowCharacters={() => setShowCharacters(true)}
-          onShowTags={() => setShowTags(true)}
-          onShowLocations={() => setShowLocations(true)}
-          onShowStyle={() => setShowStyle(true)}
-          onShowSettings={() => setShowSettings(true)}
-          onPublish={handlePublish}
-          onNewVersion={handleNewVersion}
-          onSave={handleSaveAll}
-          publishing={publishing}
-          versioning={versioning}
-          scriptMajorVersion={script.major_version}
-          scriptMinorVersion={script.minor_version}
-          scriptIsPublished={script.is_published}
-          exiting={focusTransition === 'pushing-focus-out'}
-          onExit={exitFocusMode}
-          castMap={castMap}
-        />
-      )}
-
-      {/* Header + Toolbar — slides up when entering focus, down when returning */}
-      <div className={`relative z-20 flex-shrink-0 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${uiOut ? '-translate-y-full' : 'translate-y-0'}`}>
+      {/* Header — collapses when focused */}
+      <div className={`relative flex-shrink-0 border-b border-admin-border transition-[max-height,border-bottom-width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isFocused ? 'max-h-0 border-b-0 overflow-hidden' : 'max-h-[7rem]'} ${versionPickerOpen ? 'z-[999]' : 'z-20'}`}>
       <AdminPageHeader
         title=""
-        icon={contentMode === 'scratchpad' ? StickyNote : Table2}
-        topContent={
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <Link
-              href="/admin/scripts"
-              className="text-xs text-admin-text-faint hover:text-admin-text-primary transition-colors"
-            >
-              Scripts
-            </Link>
-            <ChevronRight size={10} className="text-admin-text-ghost" />
-            <span className="text-xs text-admin-text-muted">{script.title}</span>
-            {script.project && (
-              <>
-                <span className="text-admin-text-ghost mx-0.5">·</span>
-                <span className="text-xs text-admin-text-faint">{script.project.title}</span>
-              </>
-            )}
-          </div>
-        }
+        icon={ScrollText}
         leftContent={
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-admin-text-primary">
-                {script.title}
-              </h1>
+            <div className="flex flex-col justify-center">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Link
+                  href="/admin/scripts"
+                  className="text-xs text-admin-text-faint hover:text-admin-text-primary transition-colors"
+                >
+                  Scripts
+                </Link>
+                <ChevronRight size={10} className="text-admin-text-ghost" />
+                <span className="text-xs text-admin-text-muted">{script.title}</span>
+                {script.project && (
+                  <>
+                    <span className="text-admin-text-ghost mx-0.5">·</span>
+                    <span className="text-xs text-admin-text-faint">{script.project.title}</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight text-admin-text-primary">
+                  {script.title}
+                </h1>
               {/* Version picker */}
-              <div className="relative">
+              <div className={`relative ${versionPickerOpen ? 'z-50' : ''}`}>
                 <button
                   onClick={() => setVersionPickerOpen(prev => !prev)}
                   className="flex items-center gap-1.5 px-3 py-1 text-xs font-admin-mono font-bold rounded-full border transition-colors"
@@ -560,7 +514,9 @@ export function ScriptEditorClient({
                 {versionPickerOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setVersionPickerOpen(false)} />
-                    <div className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 animate-dropdown-in">
+                    <div
+                      className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 animate-dropdown-in"
+                    >
                       {versions
                         .slice()
                         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -597,6 +553,7 @@ export function ScriptEditorClient({
                   </>
                 )}
               </div>
+              </div>
             </div>
         }
         rightContent={<SaveDot status={autoSave.status} />}
@@ -613,14 +570,6 @@ export function ScriptEditorClient({
             <button onClick={() => setShowSettings(true)} className="btn-secondary px-2.5" title="Settings">
               <Settings size={14} />
             </button>
-            {contentMode === 'scratchpad' && scratchContent.trim() && (
-              <button
-                onClick={() => setShowExtractModal(true)}
-                className="btn-secondary px-4 text-sm"
-              >
-                Extract to Scenes
-              </button>
-            )}
             {/* Status dropdown */}
             <div className="relative">
               <button
@@ -674,52 +623,47 @@ export function ScriptEditorClient({
           </>
         }
       />
+      </div>
 
       {/* Toolbar row — 3-zone: left (sidebar+focus), center (column toggles), right (panels) */}
       <div className="flex-shrink-0 h-[3rem] flex items-center px-4 border-b border-admin-border bg-admin-bg-inset">
         {/* Left zone — mode-conditional */}
         <div className="flex items-center gap-1">
-          {contentMode === 'table' ? (
-            <>
-              <button
-                onClick={() => setShowSidebar(prev => !prev)}
-                className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-                title={showSidebar ? 'Hide scenes' : 'Show scenes'}
-              >
-                {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-              </button>
-              <button
-                onClick={enterFocusMode}
-                className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-                title="Focus mode"
-              >
-                <Expand size={16} />
-              </button>
-              <button
-                onClick={handleModeSwitch}
-                className="text-admin-toolbar-yellow hover:bg-admin-bg-hover p-1.5 rounded transition-colors"
-                title="Convert to Scratchpad"
-              >
-                <StickyNote size={16} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setShowExtractModal(true)}
-                disabled={!scratchContent.trim()}
-                className="text-admin-toolbar-yellow p-1.5 rounded transition-colors hover:bg-admin-bg-hover disabled:opacity-40 disabled:cursor-not-allowed"
-                title="Convert to Table"
-              >
-                <Table2 size={16} />
-              </button>
-              <div className="flex items-center gap-3 ml-2 border-l border-admin-border pl-3">
-                <span className="text-admin-text-faint text-admin-xs"><strong className="text-admin-text-muted">**bold**</strong></span>
-                <span className="text-admin-text-faint text-admin-xs"><strong className="text-admin-text-muted">@</strong> characters</span>
-                <span className="text-admin-text-faint text-admin-xs"><strong className="text-admin-text-muted">#</strong> tags</span>
-              </div>
-            </>
-          )}
+          {/* Mode toggle — table / scratchpad */}
+          <ViewSwitcher
+            views={[
+              { key: 'table' as ContentMode, icon: Table2, label: 'Table' },
+              { key: 'scratchpad' as ContentMode, icon: ScrollText, label: 'Scratchpad' },
+            ]}
+            activeView={contentMode}
+            onChange={(mode) => {
+              if (mode === 'scratchpad' && contentMode === 'table') handleModeSwitch();
+              if (mode === 'table' && contentMode === 'scratchpad') setShowExtractModal(true);
+            }}
+          />
+          <div className="w-2" />
+          {/* Shared toolbar buttons */}
+          <button
+            onClick={toggleFocus}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            title={isFocused ? 'Exit focus mode' : 'Focus mode'}
+          >
+            {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
+          </button>
+          <button
+            onClick={() => setShowSidebar(prev => !prev)}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            title={showSidebar ? 'Hide scenes' : 'Show scenes'}
+          >
+            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+          </button>
+          <button
+            onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            title={`Width: ${CONTAINER_LABELS[containerIdx]} → ${CONTAINER_LABELS[(containerIdx + 1) % CONTAINER_WIDTHS.length]}`}
+          >
+            <SeparatorVertical size={16} />
+          </button>
         </div>
         {/* Center zone */}
         <div className="flex-1 flex justify-center items-center gap-4">
@@ -736,12 +680,11 @@ export function ScriptEditorClient({
           <ToolbarButton icon={Paintbrush} label="" onClick={() => setShowStyle(true)} />
         </div>
       </div>
-      </div>
 
       <div className="flex-1 flex min-h-0">
-        {/* Scene sidebar — border attached, slides left together */}
+        {/* Scene sidebar — always flush left */}
         <div
-          className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar transition-[width,transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${uiOut ? '-translate-x-full opacity-0' : 'translate-x-0 opacity-100'} ${showSidebar ? 'w-48' : 'w-0'}`}
+          className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-48' : 'w-0'}`}
         >
           <ScriptSceneSidebar
             scenes={computedScenes}
@@ -750,51 +693,58 @@ export function ScriptEditorClient({
             onAddScene={handleAddScene}
             onReorderScenes={handleReorderScenes}
             onDeleteScene={handleDeleteScene}
+            scratchpadMode={contentMode === 'scratchpad'}
+            scratchScenes={scratchScenes}
+            onScrollToScene={(label, sceneIndex) => scratchPadRef.current?.scrollToScene(label, sceneIndex)}
           />
         </div>
 
-        {/* Main editor — gentle upward shift + fades */}
-        <div className={`flex-1 min-w-0 min-h-0 h-full flex flex-col transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${uiOut ? '-translate-y-12 opacity-0' : 'translate-y-0 opacity-100'}`}>
-          {contentMode === 'table' ? (
-            <ScriptEditorCanvas
-              scenes={computedScenes}
-              columnConfig={columnConfig}
-              columnFractions={columnFractions}
-              onColumnFractionsChange={setColumnFractions}
-              characters={characters}
-              tags={tags}
-              locations={locations}
-              references={refsByBeat}
-              storyboardFrames={storyboardFrames}
-              scriptStyle={scriptStyle}
-              styleReferences={styleReferences}
-              scriptId={script.id}
-              onFrameGenerated={handleFrameChange}
-              activeSceneId={activeSceneId}
-              onUpdateScene={handleUpdateScene}
-              onAddScene={handleAddScene}
-              onAddBeat={handleAddBeat}
-              onUpdateBeat={handleUpdateBeat}
-              onDeleteBeat={handleDeleteBeat}
-              onReorderBeats={handleReorderBeats}
-              onDeleteScene={handleDeleteScene}
-              onSelectScene={setActiveSceneId}
-              onUploadReference={handleUploadReference}
-              onDeleteReference={handleDeleteReference}
-              castMap={castMap}
-              toolbarPortalRef={toolbarSlotRef}
-              onReorderScenes={handleReorderScenes}
-            />
-          ) : (
-            <ScriptScratchPad
-              scriptId={script.id}
-              initialContent={scratchContent}
-              characters={characters}
-              tags={tags}
-              locations={locations}
-              onContentChange={handleScratchChange}
-            />
-          )}
+        {/* Main editor — constrained by container width toggle */}
+        <div className="flex-1 min-w-0 min-h-0 h-full">
+          <div className={`h-full flex flex-col transition-[max-width,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] border-l border-r ${containerIdx > 0 ? `${CONTAINER_WIDTHS[containerIdx]} mx-auto border-admin-border` : 'border-transparent'}`}>
+            {contentMode === 'table' ? (
+              <ScriptEditorCanvas
+                scenes={computedScenes}
+                columnConfig={columnConfig}
+                columnFractions={columnFractions}
+                onColumnFractionsChange={setColumnFractions}
+                characters={characters}
+                tags={tags}
+                locations={locations}
+                references={refsByBeat}
+                storyboardFrames={storyboardFrames}
+                scriptStyle={scriptStyle}
+                styleReferences={styleReferences}
+                scriptId={script.id}
+                onFrameGenerated={handleFrameChange}
+                activeSceneId={activeSceneId}
+                onUpdateScene={handleUpdateScene}
+                onAddScene={handleAddScene}
+                onAddBeat={handleAddBeat}
+                onUpdateBeat={handleUpdateBeat}
+                onDeleteBeat={handleDeleteBeat}
+                onReorderBeats={handleReorderBeats}
+                onDeleteScene={handleDeleteScene}
+                onSelectScene={setActiveSceneId}
+                onUploadReference={handleUploadReference}
+                onDeleteReference={handleDeleteReference}
+                castMap={castMap}
+                toolbarPortalRef={toolbarSlotRef}
+                onReorderScenes={handleReorderScenes}
+              />
+            ) : (
+              <ScriptScratchPad
+                ref={scratchPadRef}
+                scriptId={script.id}
+                initialContent={scratchContent}
+                characters={characters}
+                tags={tags}
+                locations={locations}
+                onContentChange={handleScratchChange}
+                onScenesDetected={setScratchScenes}
+              />
+            )}
+          </div>
         </div>
       </div>
 

@@ -1,9 +1,19 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import { MentionDropdown } from './MentionDropdown';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/scripts/parseContent';
 import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+
+export interface ScratchScene {
+  label: string;
+  /** Index among all detected scenes (0-based), used as a stable key for scroll targeting */
+  sceneIndex: number;
+}
+
+export interface ScriptScratchPadHandle {
+  scrollToScene: (sceneLabel: string, sceneIndex: number) => void;
+}
 
 interface Props {
   scriptId: string;
@@ -12,6 +22,7 @@ interface Props {
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
   onContentChange: (content: string) => void;
+  onScenesDetected?: (scenes: ScratchScene[]) => void;
 }
 
 /**
@@ -22,9 +33,34 @@ function stripBoldMarkdown(md: string): string {
   return md.replace(/\*\*(.+?)\*\*/g, '$1');
 }
 
-export function ScriptScratchPad({ initialContent, characters, tags, locations, onContentChange }: Props) {
+/**
+ * Detect ALL CAPS lines as scene headings.
+ * A line qualifies if it has at least 2 consecutive uppercase letters
+ * and no lowercase letters (ignoring whitespace, digits, punctuation).
+ */
+function detectScenes(md: string): ScratchScene[] {
+  const lines = md.split('\n');
+  const scenes: ScratchScene[] = [];
+  let sceneIdx = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    // Strip mention markup for detection: @[Name](id) → Name
+    const plain = line.replace(/@\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/#\[[^\]]+\]/g, '');
+    // Must have at least 2 uppercase letters, no lowercase
+    if (/[A-Z]{2,}/.test(plain) && !/[a-z]/.test(plain)) {
+      scenes.push({ label: plain, sceneIndex: sceneIdx++ });
+    }
+  }
+  return scenes;
+}
+
+export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
+  function ScriptScratchPad({ initialContent, characters, tags, locations, onContentChange, onScenesDetected }, ref) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastValue = useRef(initialContent);
+  const [isEmpty, setIsEmpty] = useState(!initialContent.trim());
   // Mention state — @ queries both characters and locations
   const [mentionState, setMentionState] = useState<{
     type: 'character' | 'tag';
@@ -32,28 +68,79 @@ export function ScriptScratchPad({ initialContent, characters, tags, locations, 
     position: { x: number; y: number };
   } | null>(null);
 
+  /**
+   * Post-process the editor DOM: stamp data-scene-index on ALL CAPS block elements.
+   * Called after every render so scrollToScene can find them via querySelector.
+   */
+  const stampSceneAnchors = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    // Clear old markers
+    el.querySelectorAll('[data-scene-index]').forEach(n => n.removeAttribute('data-scene-index'));
+    // Walk direct children (divs / text lines in contentEditable)
+    let sceneIdx = 0;
+    for (const child of Array.from(el.childNodes)) {
+      const text = (child.textContent ?? '').trim();
+      if (!text) continue;
+      if (/[A-Z]{2,}/.test(text) && !/[a-z]/.test(text)) {
+        const target = child instanceof HTMLElement ? child : child.parentElement;
+        if (target && target !== el) {
+          target.setAttribute('data-scene-index', String(sceneIdx++));
+        }
+      }
+    }
+  }, []);
+
+  // Expose scrollToScene — uses data-scene-index attributes stamped on DOM
+  useImperativeHandle(ref, () => ({
+    scrollToScene(_sceneLabel: string, sceneIndex: number) {
+      const el = editorRef.current;
+      const container = scrollContainerRef.current;
+      if (!el || !container) return;
+      const target = el.querySelector(`[data-scene-index="${sceneIndex}"]`);
+      if (target) {
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        container.scrollTo({
+          top: container.scrollTop + targetRect.top - containerRect.top,
+          behavior: 'smooth',
+        });
+      }
+    },
+  }), []);
+
   // Render content: use markdownToHtml for mentions but strip bold.
   // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML.
   const renderContent = useCallback((md: string) => {
     if (!editorRef.current) return;
     const cleaned = stripBoldMarkdown(md);
+    // markdownToHtml sanitizes via DOMPurify — safe for innerHTML
     editorRef.current.innerHTML = markdownToHtml(cleaned, characters, tags, locations);
-  }, [characters, tags, locations]);
+    stampSceneAnchors();
+  }, [characters, tags, locations, stampSceneAnchors]);
 
   // Render on mount and whenever characters/tags/locations change (re-colors existing mentions)
   useEffect(() => {
     renderContent(lastValue.current);
   }, [renderContent]);
 
+  // Detect scenes on mount
+  useEffect(() => {
+    onScenesDetected?.(detectScenes(lastValue.current));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const emitChange = useCallback(() => {
     if (!editorRef.current) return;
     let md = htmlToMarkdown(editorRef.current.innerHTML);
     md = stripBoldMarkdown(md);
+    setIsEmpty(!md.trim());
     if (md !== lastValue.current) {
       lastValue.current = md;
       onContentChange(md);
+      onScenesDetected?.(detectScenes(md));
+      stampSceneAnchors();
     }
-  }, [onContentChange]);
+  }, [onContentChange, onScenesDetected, stampSceneAnchors]);
 
   const checkMentionTrigger = useCallback(() => {
     const sel = window.getSelection();
@@ -120,8 +207,9 @@ export function ScriptScratchPad({ initialContent, characters, tags, locations, 
     renderContent(md);
     lastValue.current = md;
     onContentChange(md);
+    onScenesDetected?.(detectScenes(md));
     editorRef.current.focus();
-  }, [mentionState, onContentChange, renderContent]);
+  }, [mentionState, onContentChange, onScenesDetected, renderContent]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // Escape = dismiss mention dropdown
@@ -153,18 +241,30 @@ export function ScriptScratchPad({ initialContent, characters, tags, locations, 
   return (
     <div className="flex flex-col h-full">
       {/* Main editor */}
-      <div className="flex-1 overflow-y-auto admin-scrollbar px-12 py-8">
-        <div
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          className="min-h-full text-admin-text-primary text-base leading-relaxed outline-none font-admin-body max-w-3xl mx-auto"
-          data-placeholder="Start writing your script here..."
-          style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-        />
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto admin-scrollbar px-12 py-8">
+        <div className="relative min-h-full">
+          {/* Placeholder overlay — visible only when editor is empty */}
+          {isEmpty && (
+            <div className="absolute inset-0 pointer-events-none select-none font-admin-mono text-admin-text-ghost text-sm leading-relaxed whitespace-pre-line">
+{`---  new location
+ALL CAPS  scene heading
+@  character or location
+#  special footage type
+@Name:  spoken words or VO
+Shot:  shot details and focus`}
+            </div>
+          )}
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            className="min-h-full text-admin-text-primary text-base leading-relaxed outline-none font-admin-body"
+            style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          />
+        </div>
         {mentionState && (
           <MentionDropdown
             type={mentionState.type}
@@ -179,4 +279,4 @@ export function ScriptScratchPad({ initialContent, characters, tags, locations, 
       </div>
     </div>
   );
-}
+});

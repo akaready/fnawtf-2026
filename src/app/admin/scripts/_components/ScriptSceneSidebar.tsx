@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { ComputedScene } from '@/types/scripts';
+import type { ScratchScene } from './ScriptScratchPad';
 
 interface Props {
   scenes: ComputedScene[];
@@ -26,6 +27,9 @@ interface Props {
   onAddScene: () => void;
   onReorderScenes: (orderedIds: string[]) => void;
   onDeleteScene: (id: string) => void;
+  scratchpadMode?: boolean;
+  scratchScenes?: ScratchScene[];
+  onScrollToScene?: (label: string, sceneIndex: number) => void;
 }
 
 export function ScriptSceneSidebar({
@@ -35,6 +39,9 @@ export function ScriptSceneSidebar({
   onAddScene,
   onReorderScenes,
   onDeleteScene,
+  scratchpadMode,
+  scratchScenes,
+  onScrollToScene,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
@@ -49,6 +56,30 @@ export function ScriptSceneSidebar({
     const reordered = arrayMove(scenes.map(s => s.id), oldIndex, newIndex);
     onReorderScenes(reordered);
   };
+
+  // Scratchpad mode — read-only auto-detected scene list
+  if (scratchpadMode && scratchScenes) {
+    return (
+      <div className="bg-admin-bg-sidebar flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto admin-scrollbar">
+          {scratchScenes.map((scene, i) => (
+            <button
+              key={`${scene.sceneIndex}-${i}`}
+              onClick={() => onScrollToScene?.(scene.label, scene.sceneIndex)}
+              className="w-full text-left group flex items-center gap-1 px-3 py-2.5 border-b border-admin-border-subtle text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary transition-colors"
+            >
+              <div className="flex-shrink-0 font-mono text-sm font-bold text-admin-text-ghost w-5">
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0 text-xs truncate uppercase tracking-wide">
+                {scene.label}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-admin-bg-sidebar flex flex-col h-full">
@@ -128,13 +159,13 @@ function SortableSceneItem({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-1.5">
-          <span className="font-mono text-xs font-bold">{scene.sceneNumber}</span>
+          <span className="font-mono text-sm font-bold">{scene.sceneNumber}</span>
         </div>
-        <div className="text-[10px] truncate uppercase tracking-wide mt-0.5 opacity-70">
+        <div className="text-xs truncate uppercase tracking-wide mt-0.5 opacity-70">
           {scene.int_ext}. {scene.location_name || '—'}
         </div>
         {scene.time_of_day && (
-          <div className="text-[10px] text-admin-text-ghost">{scene.time_of_day}</div>
+          <div className="text-xs text-admin-text-ghost">{scene.time_of_day}</div>
         )}
       </div>
 
