@@ -69,45 +69,66 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
   } | null>(null);
 
   /**
-   * Post-process the editor DOM: stamp data-scene-index on ALL CAPS block elements.
-   * Called after every render so scrollToScene can find them via querySelector.
+   * Find the DOM node that starts the Nth ALL CAPS line.
+   * The editor HTML is flat: text nodes + <br> + <span> mention elements.
+   * We walk child nodes, splitting on <br> to reconstruct lines,
+   * then match ALL CAPS lines and return the first node of the target line.
    */
-  const stampSceneAnchors = useCallback(() => {
+  const findSceneNode = useCallback((sceneIndex: number): Node | null => {
     const el = editorRef.current;
-    if (!el) return;
-    // Clear old markers
-    el.querySelectorAll('[data-scene-index]').forEach(n => n.removeAttribute('data-scene-index'));
-    // Walk direct children (divs / text lines in contentEditable)
-    let sceneIdx = 0;
+    if (!el) return null;
+
+    let currentLineText = '';
+    let currentLineFirstNode: Node | null = null;
+    let sceneCount = 0;
+
     for (const child of Array.from(el.childNodes)) {
-      const text = (child.textContent ?? '').trim();
-      if (!text) continue;
-      if (/[A-Z]{2,}/.test(text) && !/[a-z]/.test(text)) {
-        const target = child instanceof HTMLElement ? child : child.parentElement;
-        if (target && target !== el) {
-          target.setAttribute('data-scene-index', String(sceneIdx++));
+      // <br> = line break — evaluate the accumulated line
+      if (child instanceof HTMLBRElement) {
+        const trimmed = currentLineText.trim();
+        if (trimmed && /[A-Z]{2,}/.test(trimmed) && !/[a-z]/.test(trimmed)) {
+          if (sceneCount === sceneIndex && currentLineFirstNode) return currentLineFirstNode;
+          sceneCount++;
         }
+        currentLineText = '';
+        currentLineFirstNode = null;
+        continue;
       }
+
+      // Accumulate text for this line
+      const text = child.textContent ?? '';
+      if (!currentLineFirstNode && text.trim()) currentLineFirstNode = child;
+      // Strip mention @ prefix for detection
+      currentLineText += text.replace(/^@/, '');
     }
+
+    // Check the last line (no trailing <br>)
+    const trimmed = currentLineText.trim();
+    if (trimmed && /[A-Z]{2,}/.test(trimmed) && !/[a-z]/.test(trimmed)) {
+      if (sceneCount === sceneIndex && currentLineFirstNode) return currentLineFirstNode;
+    }
+
+    return null;
   }, []);
 
-  // Expose scrollToScene — uses data-scene-index attributes stamped on DOM
+  // Expose scrollToScene — walks DOM at call time to find the target
   useImperativeHandle(ref, () => ({
     scrollToScene(_sceneLabel: string, sceneIndex: number) {
-      const el = editorRef.current;
       const container = scrollContainerRef.current;
-      if (!el || !container) return;
-      const target = el.querySelector(`[data-scene-index="${sceneIndex}"]`);
-      if (target) {
-        const containerRect = container.getBoundingClientRect();
-        const targetRect = target.getBoundingClientRect();
-        container.scrollTo({
-          top: container.scrollTop + targetRect.top - containerRect.top,
-          behavior: 'smooth',
-        });
-      }
+      if (!container) return;
+      const node = findSceneNode(sceneIndex);
+      if (!node) return;
+      // Get a rect from the node (could be text node or element)
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rect = range.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      container.scrollTo({
+        top: container.scrollTop + rect.top - containerRect.top - 24,
+        behavior: 'smooth',
+      });
     },
-  }), []);
+  }), [findSceneNode]);
 
   // Render content: use markdownToHtml for mentions but strip bold.
   // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML.
@@ -116,8 +137,7 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
     const cleaned = stripBoldMarkdown(md);
     // markdownToHtml sanitizes via DOMPurify — safe for innerHTML
     editorRef.current.innerHTML = markdownToHtml(cleaned, characters, tags, locations);
-    stampSceneAnchors();
-  }, [characters, tags, locations, stampSceneAnchors]);
+  }, [characters, tags, locations]);
 
   // Render on mount and whenever characters/tags/locations change (re-colors existing mentions)
   useEffect(() => {
@@ -138,9 +158,8 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
       lastValue.current = md;
       onContentChange(md);
       onScenesDetected?.(detectScenes(md));
-      stampSceneAnchors();
     }
-  }, [onContentChange, onScenesDetected, stampSceneAnchors]);
+  }, [onContentChange, onScenesDetected]);
 
   const checkMentionTrigger = useCallback(() => {
     const sel = window.getSelection();
@@ -241,7 +260,7 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
   return (
     <div className="flex flex-col h-full">
       {/* Main editor */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto admin-scrollbar px-12 py-8">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto admin-scrollbar px-12 pt-8">
         <div className="relative min-h-full">
           {/* Placeholder overlay — visible only when editor is empty */}
           {isEmpty && (
@@ -276,6 +295,28 @@ Shot:  shot details and focus`}
             onDismiss={() => setMentionState(null)}
           />
         )}
+        {/* Bottom spacer — lets the last scene scroll to the top; click focuses editor at end */}
+        <div
+          className="h-[80vh] cursor-text"
+          onClick={() => {
+            const el = editorRef.current;
+            const container = scrollContainerRef.current;
+            if (!el || !container) return;
+            // Save scroll position before focus
+            const scrollTop = container.scrollTop;
+            // Place cursor at end without selecting all
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            const sel = window.getSelection();
+            if (sel) {
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+            // Restore scroll position (focus may have jumped)
+            container.scrollTop = scrollTop;
+          }}
+        />
       </div>
     </div>
   );

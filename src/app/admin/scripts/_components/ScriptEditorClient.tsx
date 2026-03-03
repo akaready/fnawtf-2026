@@ -684,7 +684,7 @@ export function ScriptEditorClient({
       <div className="flex-1 flex min-h-0">
         {/* Scene sidebar — always flush left */}
         <div
-          className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-48' : 'w-0'}`}
+          className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-56' : 'w-0'}`}
         >
           <ScriptSceneSidebar
             scenes={computedScenes}

@@ -71,7 +71,7 @@ export function ScriptSceneSidebar({
               <div className="flex-shrink-0 font-mono text-sm font-bold text-admin-text-ghost w-5">
                 {i + 1}
               </div>
-              <div className="flex-1 min-w-0 text-xs truncate uppercase tracking-wide">
+              <div className="flex-1 min-w-0 text-xs uppercase tracking-wide break-words">
                 {scene.label}
               </div>
             </button>
