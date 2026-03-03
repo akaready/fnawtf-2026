@@ -12,10 +12,11 @@ interface Props {
   section: ProposalSectionRow | null;
   snippets: ContentSnippetRow[];
   onSectionUpdated: (s: ProposalSectionRow) => void;
+  onDirty?: () => void;
 }
 
 export const ApproachTab = forwardRef<MarkdownTabEditorHandle, Props>(
-  function ApproachTab({ proposalId, proposalType, section, snippets, onSectionUpdated }, ref) {
+  function ApproachTab({ proposalId, proposalType, section, snippets, onSectionUpdated, onDirty }, ref) {
     return (
       <MarkdownTabEditor
         ref={ref}
@@ -25,6 +26,7 @@ export const ApproachTab = forwardRef<MarkdownTabEditorHandle, Props>(
         snippets={snippets}
         section={section}
         onSectionUpdated={onSectionUpdated}
+        onDirty={onDirty}
         label="Approach"
         defaultSnippetCategory="Approach"
         titlePlaceholder="Our Approach"

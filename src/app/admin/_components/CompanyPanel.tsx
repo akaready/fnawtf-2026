@@ -362,13 +362,15 @@ export function CompanyPanel({
             <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
             {statusCfg.label}
           </span>
-          <SaveDot status={autoSave.status} />
-          <button
-            onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center flex-shrink-0">
+            <SaveDot status={autoSave.status} />
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Tab strip */}

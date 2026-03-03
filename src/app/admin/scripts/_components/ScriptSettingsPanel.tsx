@@ -119,10 +119,12 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">
           <h2 className="text-admin-lg font-bold text-admin-text-primary">Script Settings</h2>
-          <SaveDot status={dotStatus} />
-          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
-            <X size={16} />
-          </button>
+          <div className="flex items-center">
+            <SaveDot status={dotStatus} />
+            <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors" title="Close">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto admin-scrollbar p-6 space-y-5">

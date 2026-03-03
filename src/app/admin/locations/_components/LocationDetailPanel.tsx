@@ -222,13 +222,15 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-semibold text-admin-text-primary truncate">{local.name}</h2>
           </div>
-          <SaveDot status={autoSave.status} />
-          <button
-            onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center flex-shrink-0">
+            <SaveDot status={autoSave.status} />
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Tab strip */}

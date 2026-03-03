@@ -12,7 +12,7 @@ import type { ProposalRow, ContactRow, ProposalType, ContactType } from '@/types
 import { contactFullName } from '@/lib/contacts';
 
 export interface DetailsTabHandle {
-  save: () => void;
+  save: () => Promise<void>;
   isDirty: boolean;
 }
 
@@ -24,6 +24,7 @@ interface DetailsTabProps {
   onUpdated: () => void;
   onSaveStateChange?: (isPending: boolean, saved: boolean) => void;
   onProposalTypeChange?: (type: ProposalType) => void;
+  onDirty?: () => void;
 }
 
 function slugify(text: string): string {
@@ -62,7 +63,7 @@ const inputCls =
 const sectionHeadingCls = 'text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4';
 
 export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
-  { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onSaveStateChange, onProposalTypeChange },
+  { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onSaveStateChange, onProposalTypeChange, onDirty },
   ref,
 ) {
   const contactName = proposal.contact_name;
@@ -94,6 +95,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
     onProposalTypeChange?.(s.proposalType);
     onUpdated();
   });
+  const markDirty = useCallback(() => { autoSave.trigger(); onDirty?.(); }, [autoSave, onDirty]);
 
   // Company search state
   const [clients, setClients] = useState(initialClients);
@@ -120,8 +122,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
   const handleSelectCompany = useCallback((client: ClientRow) => {
     setContactCompany(client.name);
-    autoSave.trigger();
-  }, [autoSave]);
+    markDirty();
+  }, [markDirty]);
 
   const handleAddNewCompany = useCallback(async () => {
     if (!newCompanyName.trim()) return;
@@ -162,11 +164,11 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       setNewCompanyLocation('');
       setNewCompanyNotes('');
       setShowAddCompany(false);
-      autoSave.trigger();
+      markDirty();
     } finally {
       setAddingCompany(false);
     }
-  }, [newCompanyName, newCompanyEmail, newCompanyWebsite, newCompanyIndustry, newCompanyLocation, newCompanyNotes, autoSave]);
+  }, [newCompanyName, newCompanyEmail, newCompanyWebsite, newCompanyIndustry, newCompanyLocation, newCompanyNotes, markDirty]);
 
   // Proposal contacts state
   const [propContacts, setPropContacts] = useState(initialProposalContacts);
@@ -288,7 +290,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                 value={contactCompany}
                 onChange={(e) => {
                   setContactCompany(e.target.value);
-                  autoSave.trigger();
+                  markDirty();
                 }}
                 placeholder="Search companies…"
                 className={inputCls + (contactCompany ? ' pr-8' : '')}
@@ -427,7 +429,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <input
                 type="text"
                 value={title}
-                onChange={(e) => { setTitle(e.target.value); autoSave.trigger(); }}
+                onChange={(e) => { setTitle(e.target.value); markDirty(); }}
                 placeholder="Acme Corp Proposal"
                 className={inputCls}
               />
@@ -437,7 +439,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <AdminCombobox
                 value={proposalType}
                 options={PROPOSAL_TYPES.map((t) => ({ id: t.value, label: t.label }))}
-                onChange={(v) => { if (v) { setProposalType(v as ProposalType); autoSave.trigger(); } }}
+                onChange={(v) => { if (v) { setProposalType(v as ProposalType); markDirty(); } }}
                 nullable={false}
                 searchable={false}
                 placeholder="Select type"
@@ -451,7 +453,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             <input
               type="text"
               value={subtitle}
-              onChange={(e) => { setSubtitle(e.target.value); autoSave.trigger(); }}
+              onChange={(e) => { setSubtitle(e.target.value); markDirty(); }}
               placeholder="Elevating your brand through story-driven video"
               className={inputCls}
             />
@@ -485,12 +487,12 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <input
                 type="text"
                 value={slug}
-                onChange={(e) => { setSlug(e.target.value); autoSave.trigger(); }}
+                onChange={(e) => { setSlug(e.target.value); markDirty(); }}
                 placeholder="acme-corp"
                 className={inputCls + ' font-mono'}
               />
               <button
-                onClick={() => { setSlug(slugify(contactCompany)); autoSave.trigger(); }}
+                onClick={() => { setSlug(slugify(contactCompany)); markDirty(); }}
                 title="Regenerate slug from company name"
                 className="flex-shrink-0 p-2 rounded-lg border border-admin-border-muted bg-admin-bg-selected text-admin-text-dim hover:text-admin-text-secondary hover:border-admin-border-emphasis transition-colors"
               >
@@ -504,11 +506,11 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <input
                 type="text"
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); autoSave.trigger(); }}
+                onChange={(e) => { setPassword(e.target.value); markDirty(); }}
                 className={inputCls + ' font-mono'}
               />
               <button
-                onClick={() => { setPassword(generatePassword()); autoSave.trigger(); }}
+                onClick={() => { setPassword(generatePassword()); markDirty(); }}
                 title="Generate new password"
                 className="flex-shrink-0 p-2 rounded-lg border border-admin-border-muted bg-admin-bg-selected text-admin-text-dim hover:text-admin-text-secondary hover:border-admin-border-emphasis transition-colors"
               >

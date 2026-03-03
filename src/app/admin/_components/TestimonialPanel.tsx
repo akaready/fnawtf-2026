@@ -180,13 +180,15 @@ export function TestimonialPanel({
         <h2 className="flex-1 min-w-0 text-lg font-semibold text-admin-text-primary truncate">
           {isNew ? 'New Testimonial' : (quote.length > 50 ? quote.slice(0, 50) + '…' : quote || 'Untitled')}
         </h2>
-        <SaveDot status={autoSave.status} />
-        <button
-          onClick={handleClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center flex-shrink-0">
+          <SaveDot status={autoSave.status} />
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable content */}

@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  Plus, Trash2, Save, Loader2, Download, X,
+  Plus, Trash2, Save, Loader2, Download, X, Check,
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
   Wrench, Sparkles, Contact, Star, HeartHandshake, Users, LayoutGrid, Tag,
   Globe, ExternalLink, Linkedin, Instagram, Film, RefreshCw,
   User, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Snowflake, Eye, Table2,
 } from 'lucide-react';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
-import { SaveButton } from './SaveButton';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { SaveDot } from './SaveDot';
 import { AdminPageHeader } from './AdminPageHeader';
 import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
 import { useViewMode } from '../_hooks/useViewMode';
@@ -162,9 +162,7 @@ function PersonPanel({
   onSave: (row: ContactRow) => Promise<void>;
   onDelete: (id: string) => void;
 }) {
-  const { saving, saved, wrap: wrapSave } = useSaveState(2000);
   const [draft, setDraft] = useState<ContactRow | null>(person);
-  const [dirty, setDirty] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [roles, setRoles] = useState<Array<{ id: string; name: string }>>([]);
@@ -176,40 +174,54 @@ function PersonPanel({
   const [hsSearching, setHsSearching] = useState(false);
   const [hsSelected, setHsSelected] = useState<Set<number>>(new Set());
   const [hsUploading, setHsUploading] = useState(false);
+  const [confirmDeleteHsId, setConfirmDeleteHsId] = useState<string | null>(null);
   const [urlSearching, setUrlSearching] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'headshots' | 'roles' | 'projects'>('details');
 
+  const autoSave = useAutoSave(async () => {
+    if (!draft) return;
+    await onSave(draft);
+    await setContactRoles(draft.id, [...personRoleIds]);
+  });
+  const handleDirty = useCallback(() => autoSave.trigger(), [autoSave]);
+
+  // Sync draft when parent row updates (e.g. after autoSave round-trips)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (!person) { setDraft(person); return; }
     // Auto-link company if name matches but client_id is missing
-    if (person && !person.client_id && person.company) {
+    if (!person.client_id && person.company) {
       const match = companies.find((co) => co.name.toLowerCase() === person.company!.toLowerCase());
       if (match) {
         setDraft({ ...person, client_id: match.id });
-        setDirty(true);
-      } else {
-        setDraft(person);
-        setDirty(false);
+        handleDirty();
+        return;
       }
-    } else {
-      setDraft(person);
-      setDirty(false);
     }
+    setDraft(person);
+  }, [person]);
+
+  // Reset UI + fetch related data only when switching to a different person
+  const personId = person?.id;
+  useEffect(() => {
+    autoSave.reset();
     setConfirmClose(false);
     setConfirmDelete(false);
+    setConfirmDeleteHsId(null);
     setOpenProject(null);
     setActiveTab('details');
     setHsSearchResults(null);
     setHsSelected(new Set());
     setHsUploading(false);
     setUrlSearching(false);
-    if (person) {
+    if (personId) {
       setLoadingMeta(true);
       Promise.all([
         getAllRoles(),
-        getContactRoles(person.id),
-        getContactProjects(person.id),
-        getHeadshots(person.id),
+        getContactRoles(personId),
+        getContactProjects(personId),
+        getHeadshots(personId),
       ]).then(([allRoles, contactRoles, contactProjects, contactHeadshots]) => {
         setRoles(allRoles);
         setPersonRoleIds(new Set(contactRoles.map((r) => r.id)));
@@ -222,26 +234,18 @@ function PersonPanel({
       setProjects([]);
       setHeadshots([]);
     }
-  }, [person]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personId]);
 
   if (!draft) return <PanelDrawer open={open} onClose={onClose} width="w-[520px]"><div /></PanelDrawer>;
 
   const handleChange = (field: string, value: unknown) => {
     setDraft((prev) => prev ? { ...prev, [field]: value } : prev);
-    setDirty(true);
-  };
-
-  const handleSave = () => {
-    if (!draft) return;
-    setDirty(false);
-    wrapSave(async () => {
-      await onSave(draft);
-      await setContactRoles(draft.id, [...personRoleIds]);
-    });
+    handleDirty();
   };
 
   const handleClose = () => {
-    if (dirty) {
+    if (autoSave.hasPending) {
       setConfirmClose(true);
     } else {
       onClose();
@@ -252,7 +256,7 @@ function PersonPanel({
     const next = new Set(personRoleIds);
     if (next.has(roleId)) next.delete(roleId); else next.add(roleId);
     setPersonRoleIds(next);
-    setDirty(true);
+    handleDirty();
   };
 
   const searchHeadshots = async () => {
@@ -361,44 +365,29 @@ function PersonPanel({
       <DiscardChangesDialog
         open={confirmClose}
         onKeepEditing={() => setConfirmClose(false)}
-        onDiscard={() => { setConfirmClose(false); setDirty(false); onClose(); }}
+        onDiscard={() => { setConfirmClose(false); autoSave.reset(); onClose(); }}
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-wash flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          {draft.headshot_url ? (
-            <img src={draft.headshot_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-admin-bg-hover flex items-center justify-center flex-shrink-0 text-admin-text-ghost">
-              <ImageIcon size={16} />
-            </div>
-          )}
-          <div className="min-w-0">
-            <div className="flex gap-2 w-full">
-              <input
-                type="text"
-                value={draft.first_name}
-                onChange={(e) => handleChange('first_name', e.target.value)}
-                className="bg-transparent text-lg font-semibold text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none flex-1 min-w-0"
-                placeholder="First"
-              />
-              <input
-                type="text"
-                value={draft.last_name}
-                onChange={(e) => handleChange('last_name', e.target.value)}
-                className="bg-transparent text-lg font-semibold text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none flex-1 min-w-0"
-                placeholder="Last"
-              />
-            </div>
-            <span className={`inline-flex px-2 py-0.5 text-xs rounded border capitalize ${TYPE_COLORS[draft.type]}`}>
-              {draft.type}
-            </span>
+      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-sidebar flex-shrink-0">
+        {draft.headshot_url ? (
+          <img src={draft.headshot_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-admin-bg-hover flex items-center justify-center flex-shrink-0 text-admin-text-ghost">
+            <ImageIcon size={16} />
           </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold text-admin-text-primary truncate">
+            {person ? `${draft.first_name} ${draft.last_name}`.trim() || 'Untitled' : 'New Contact'}
+          </h2>
         </div>
-        <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0">
-          <X size={16} />
-        </button>
+        <div className="flex items-center flex-shrink-0">
+          <SaveDot status={autoSave.status} />
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Tab strip */}
@@ -432,6 +421,18 @@ function PersonPanel({
         {/* ── Details Tab ── */}
         {activeTab === 'details' && (
           <>
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="admin-label">First Name</label>
+                <input type="text" value={draft.first_name ?? ''} onChange={(e) => handleChange('first_name', e.target.value)} placeholder="First name" className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="admin-label">Last Name</label>
+                <input type="text" value={draft.last_name ?? ''} onChange={(e) => handleChange('last_name', e.target.value)} placeholder="Last name" className={inputClass} />
+              </div>
+            </div>
+
             {/* Type */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-admin-text-muted">Type</label>
@@ -557,34 +558,56 @@ function PersonPanel({
                     <div className="flex items-center justify-between px-1.5 py-1">
                       <span className="text-xs text-admin-text-faint">{hs.width}×{hs.height}</span>
                       <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => {
-                            setFeaturedHeadshot(hs.id, draft.id).then(() => {
-                              setHeadshots(prev => prev.map(h => ({ ...h, featured: h.id === hs.id })));
-                              handleChange('headshot_url', hs.url);
-                            });
-                          }}
-                          className={`p-1 rounded transition-colors ${
-                            hs.featured
-                              ? 'text-admin-warning'
-                              : 'text-admin-text-placeholder hover:text-admin-warning hover:bg-admin-warning-bg'
-                          }`}
-                          title={hs.featured ? 'Featured' : 'Set as featured'}
-                        >
-                          <Star size={12} fill={hs.featured ? 'currentColor' : 'none'} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (!confirm('Delete this headshot?')) return;
-                            deleteHeadshot(hs.id).then(() => {
-                              setHeadshots(prev => prev.filter(h => h.id !== hs.id));
-                            });
-                          }}
-                          className="p-1 rounded text-admin-text-placeholder hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                          title="Delete headshot"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        {confirmDeleteHsId === hs.id ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                deleteHeadshot(hs.id).then(() => {
+                                  setHeadshots(prev => prev.filter(h => h.id !== hs.id));
+                                  if (hs.featured) handleChange('headshot_url', null);
+                                  setConfirmDeleteHsId(null);
+                                });
+                              }}
+                              className="p-1 rounded text-admin-danger hover:bg-admin-danger-bg transition-colors"
+                              title="Confirm delete"
+                            >
+                              <Check size={12} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteHsId(null)}
+                              className="p-1 rounded text-admin-text-placeholder hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+                              title="Cancel"
+                            >
+                              <X size={12} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                setFeaturedHeadshot(hs.id, draft.id).then(() => {
+                                  setHeadshots(prev => prev.map(h => ({ ...h, featured: h.id === hs.id })));
+                                  handleChange('headshot_url', hs.url);
+                                });
+                              }}
+                              className={`p-1 rounded transition-colors ${
+                                hs.featured
+                                  ? 'text-admin-warning'
+                                  : 'text-admin-text-placeholder hover:text-admin-warning hover:bg-admin-warning-bg'
+                              }`}
+                              title={hs.featured ? 'Featured' : 'Set as featured'}
+                            >
+                              <Star size={12} fill={hs.featured ? 'currentColor' : 'none'} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteHsId(hs.id)}
+                              className="p-1 rounded text-admin-text-placeholder hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
+                              title="Delete headshot"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -707,7 +730,10 @@ function PersonPanel({
       {/* Footer */}
       <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash flex-shrink-0">
         <div className="flex items-center gap-2">
-          <SaveButton saving={saving} saved={saved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
+          <button onClick={() => void autoSave.flush()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Save size={14} />
+            Save
+          </button>
           <button
             onClick={fetchAllData}
             disabled={fetching}

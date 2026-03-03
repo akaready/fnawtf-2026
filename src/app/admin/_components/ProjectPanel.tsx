@@ -218,13 +218,15 @@ export function ProjectPanel({
             <p className="text-sm text-admin-text-muted truncate">{String(project.client_name)}</p>
           ) : null}
         </div>
-        <SaveDot status={autoSave.status} />
-        <button
-          onClick={handleClose}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center flex-shrink-0">
+          <SaveDot status={autoSave.status} />
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Tab strip */}

@@ -4,7 +4,7 @@ import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, use
 import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save } from 'lucide-react';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
-import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import type { LucideIcon } from 'lucide-react';
 import { deleteProposal, type ClientRow } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
@@ -76,22 +76,32 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
+  const autoSave = useAutoSave(async () => {
+    const saves: Promise<void>[] = [];
+    if (detailsRef.current?.isDirty) saves.push(detailsRef.current.save());
+    if (welcomeRef.current?.isDirty) saves.push(welcomeRef.current.save());
+    if (approachRef.current?.isDirty) saves.push(approachRef.current.save());
+    if (pricingRef.current?.isDirty) saves.push(pricingRef.current.save());
+    await Promise.all(saves);
+  });
+  const handleDirty = useCallback(() => autoSave.trigger(), [autoSave]);
 
   const isLive = status !== 'draft';
 
   const handleClose = useCallback(() => {
-    if (
-      detailsRef.current?.isDirty ||
-      welcomeRef.current?.isDirty ||
-      approachRef.current?.isDirty ||
-      pricingRef.current?.isDirty
-    ) {
+    const dirty = autoSave.hasPending || [
+      detailsRef.current?.isDirty,
+      welcomeRef.current?.isDirty,
+      approachRef.current?.isDirty,
+      pricingRef.current?.isDirty,
+    ].some(Boolean);
+
+    if (dirty) {
       setConfirmClose(true);
     } else {
       onClose?.();
     }
-  }, [onClose]);
+  }, [onClose, autoSave.hasPending]);
 
   const handleTabChange = useCallback((tab: TabId) => {
     setActiveTab(tab);
@@ -120,14 +130,14 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       <DiscardChangesDialog
         open={confirmClose}
         onKeepEditing={() => setConfirmClose(false)}
-        onDiscard={() => { setConfirmClose(false); onClose?.(); }}
+        onDiscard={() => { setConfirmClose(false); autoSave.reset(); onClose?.(); }}
       />
 
       {/* Header: title + meta (left) | status + X (right) */}
       <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-admin-border">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight truncate flex items-center">{proposal.title}<SaveDot status={saveStatus} /></h1>
+            <h1 className="text-2xl font-bold tracking-tight truncate">{proposal.title}</h1>
             <p className="text-sm mt-1 text-admin-text-muted font-mono truncate">
               /p/{proposal.slug} · #{proposal.proposal_number}
             </p>
@@ -140,6 +150,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             <span className={`px-4 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
               {status}
             </span>
+            <SaveDot status={autoSave.status} />
             <button
               onClick={handleClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-dim hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
@@ -190,6 +201,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             clients={clients}
             onUpdated={handleUpdated}
             onProposalTypeChange={(type) => setProposalType(type)}
+            onDirty={handleDirty}
           />
         </div>
         <div className={activeTab === 'welcome' ? 'h-full overflow-hidden' : 'hidden'}>
@@ -199,6 +211,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             proposalType={proposal.proposal_type}
             section={welcomeSection}
             snippets={snippets}
+            onDirty={handleDirty}
             onSectionUpdated={(s) => setSections(prev => {
               const existing = prev.findIndex(x => x.id === s.id);
               if (existing >= 0) return prev.map(x => x.id === s.id ? s : x);
@@ -213,6 +226,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             proposalType={proposal.proposal_type}
             section={approachSection}
             snippets={snippets}
+            onDirty={handleDirty}
             onSectionUpdated={(s) => setSections(prev => {
               const existing = prev.findIndex(x => x.id === s.id);
               if (existing >= 0) return prev.map(x => x.id === s.id ? s : x);
@@ -241,6 +255,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             proposalType={proposalType}
             initialQuotes={activeQuotes}
             onProposalTypeChange={(type) => setProposalType(type)}
+            onDirty={handleDirty}
           />
         </div>
       </div>
@@ -249,19 +264,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-admin-border bg-admin-bg-wash">
         <div className="flex items-center gap-3">
           <button
-            onClick={async () => {
-              try {
-                setSaveStatus('saving');
-                if (activeTab === 'pricing') await pricingRef.current?.save();
-                else if (activeTab === 'welcome') await welcomeRef.current?.save();
-                else if (activeTab === 'approach') await approachRef.current?.save();
-                else await detailsRef.current?.save();
-                setSaveStatus('saved');
-                setTimeout(() => setSaveStatus('idle'), 2000);
-              } catch {
-                setSaveStatus('error');
-              }
-            }}
+            onClick={() => void autoSave.flush()}
             className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
           >
             <Save size={14} />

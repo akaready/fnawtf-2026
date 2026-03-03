@@ -28,6 +28,7 @@ interface MarkdownTabEditorProps {
   label: string;
   defaultSnippetCategory?: string;
   titlePlaceholder?: string;
+  onDirty?: () => void;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
     label: _label,
     defaultSnippetCategory,
     titlePlaceholder,
+    onDirty,
   }, ref) {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl]           = useState('');
@@ -141,6 +143,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
       currentMarkdownRef.current = md;
       if (initializedRef.current) {
         isDirtyRef.current = true;
+        onDirty?.();
         if (bodyTimerRef.current) clearTimeout(bodyTimerRef.current);
         bodyTimerRef.current = setTimeout(() => { void saveRef.current(); }, 600);
       }
@@ -180,7 +183,8 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
     const md = (editor.storage as any).markdown.getMarkdown();
     currentMarkdownRef.current = md;
     isDirtyRef.current = true;
-  }, [editor]);
+    onDirty?.();
+  }, [editor, onDirty]);
 
   // ── Filtered snippets ────────────────────────────────────────────────────
 

@@ -180,14 +180,16 @@ export function ScriptStylePanel({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">
           <h2 className="text-lg font-bold text-admin-text-primary tracking-tight">Style</h2>
-          <SaveDot status={status} />
-          <button
-            onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-            title="Close"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center">
+            <SaveDot status={status} />
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+              title="Close"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Tab strip */}

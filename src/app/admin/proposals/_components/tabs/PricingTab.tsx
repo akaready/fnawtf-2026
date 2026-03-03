@@ -54,6 +54,7 @@ interface PricingTabProps {
   proposalType: ProposalType;
   initialQuotes: ProposalQuoteRow[];
   onProposalTypeChange?: (type: ProposalType) => void;
+  onDirty?: () => void;
 }
 
 // Fixed config — 5 slots: Recommended, Option A–D
@@ -80,7 +81,7 @@ const inputCls =
   'w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis placeholder:text-admin-text-ghost';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes, onProposalTypeChange }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, onProposalTypeChange, onDirty }: PricingTabProps,
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
@@ -471,7 +472,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               typeOverride={selectedType}
               crowdfundingOverride={crowdfundingEnabled}
               saveRef={embedSaveRef}
-              onAnyChange={() => { if (readyForDirtyRef.current) isDirtyRef.current = true; }}
+              onAnyChange={() => { if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); } }}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
                 const id = await saveProposalQuote(

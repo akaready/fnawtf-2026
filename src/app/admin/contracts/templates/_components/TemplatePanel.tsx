@@ -262,10 +262,12 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
             <h2 className="text-admin-lg font-semibold text-admin-text-primary truncate min-w-0 flex-1">
               {name || 'Untitled'}
             </h2>
-            <SaveDot status={autoSave.status} />
-            <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center flex-shrink-0">
-              <X size={16} />
-            </button>
+            <div className="flex items-center">
+              <SaveDot status={autoSave.status} />
+              <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center flex-shrink-0">
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}

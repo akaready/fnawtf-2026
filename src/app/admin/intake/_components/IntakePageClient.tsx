@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import {
   ClipboardList, X, ExternalLink, Trash2,
   Building2, User, FileText, Link2, UserPlus, Check,
@@ -10,6 +10,8 @@ import {
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { AdminCombobox } from '../../_components/AdminCombobox';
 import { PanelDrawer } from '../../_components/PanelDrawer';
+import { SaveDot } from '../../_components/SaveDot';
+import type { AutoSaveStatus } from '../../_hooks/useAutoSave';
 import { StatusBadge } from '../../_components/StatusBadge';
 import { INTAKE_STATUSES } from '../../_components/statusConfigs';
 import { updateIntakeSubmission, deleteIntakeSubmission } from '../../actions';
@@ -131,6 +133,19 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<IntakeSubmission | null>(null);
   const [, startTransition] = useTransition();
+  const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const trackSave = (promise: Promise<unknown>) => {
+    setSaveStatus('saving');
+    clearTimeout(savedTimerRef.current);
+    promise
+      .then(() => {
+        setSaveStatus('saved');
+        savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 1500);
+      })
+      .catch(() => setSaveStatus('error'));
+  };
 
   const filtered = submissions.filter((s) => {
     if (!search) return true;
@@ -146,13 +161,13 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
   const handleStatusChange = (id: string, status: string) => {
     setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
     if (selected?.id === id) setSelected((prev) => prev ? { ...prev, status } : prev);
-    startTransition(() => updateIntakeSubmission(id, { status } as Partial<IntakeSubmission>));
+    trackSave(updateIntakeSubmission(id, { status } as Partial<IntakeSubmission>));
   };
 
   const handleLink = (id: string, field: 'client_id' | 'contact_id', value: string | null) => {
     setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
     if (selected?.id === id) setSelected((prev) => prev ? { ...prev, [field]: value } : prev);
-    startTransition(() => updateIntakeSubmission(id, { [field]: value } as Partial<IntakeSubmission>));
+    trackSave(updateIntakeSubmission(id, { [field]: value } as Partial<IntakeSubmission>));
   };
 
   const handleDelete = (id: string) => {
@@ -259,6 +274,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
           <IntakeDetailPanel
             submission={selected}
             clients={clients}
+            saveStatus={saveStatus}
             onStatusChange={(status) => handleStatusChange(selected.id, status)}
             onLinkClient={(id) => handleLink(selected.id, 'client_id', id)}
             onDelete={() => handleDelete(selected.id)}
@@ -313,6 +329,7 @@ function ContactCard({ name, email, title }: {
 function IntakeDetailPanel({
   submission: s,
   clients,
+  saveStatus,
   onStatusChange,
   onLinkClient,
   onDelete,
@@ -320,6 +337,7 @@ function IntakeDetailPanel({
 }: {
   submission: IntakeSubmission;
   clients: ClientRow[];
+  saveStatus: AutoSaveStatus;
   onStatusChange: (status: string) => void;
   onLinkClient: (id: string | null) => void;
   onDelete: () => void;
@@ -331,17 +349,22 @@ function IntakeDetailPanel({
   return (
     <>
       {/* Header */}
-      <div className="flex items-start gap-3 px-6 py-5 border-b border-admin-border flex-shrink-0">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold text-admin-text-primary truncate">{s.project_name}</h2>
-          {s.company_name && (
-            <p className="text-sm text-admin-text-muted mt-0.5">{s.company_name}</p>
-          )}
-          <p className="text-xs text-admin-text-dim mt-0.5">{formatDate(s.created_at)}</p>
+      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-sidebar">
+        <div className="w-10 h-10 rounded-admin-sm bg-admin-bg-hover flex items-center justify-center flex-shrink-0">
+          <Link2 size={16} className="text-admin-text-faint" />
         </div>
-        <button onClick={onClose} className="btn-ghost w-8 h-8 flex-shrink-0">
-          <X size={16} />
-        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold text-admin-text-primary truncate">{s.project_name}</h2>
+          {s.company_name && (
+            <p className="text-sm text-admin-text-muted truncate">{s.company_name}</p>
+          )}
+        </div>
+        <div className="flex items-center flex-shrink-0">
+          <SaveDot status={saveStatus} />
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Body */}
@@ -360,10 +383,7 @@ function IntakeDetailPanel({
 
         {/* ── Linking ── */}
         <div>
-          <SectionLabel>
-            <Link2 className="w-3 h-3 inline mr-1" />
-            Link to Company
-          </SectionLabel>
+          <SectionLabel>Link to Company</SectionLabel>
           <AdminCombobox
             value={s.client_id || null}
             options={clients.map((c) => ({ id: c.id, label: c.name }))}
