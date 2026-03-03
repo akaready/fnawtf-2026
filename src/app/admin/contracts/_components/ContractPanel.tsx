@@ -25,8 +25,28 @@ import {
   sendContractForSigning,
 } from '@/lib/contracts/actions';
 import { getClients, getContacts, getProposals, getProposalQuotes } from '@/app/admin/actions';
-import { StatusBadge } from '@/app/admin/_components/StatusBadge';
-import { CONTRACT_STATUSES } from '@/app/admin/_components/statusConfigs';
+
+const STATUS_LABELS: Record<ContractStatus, string> = {
+  draft: 'Draft',
+  pending_review: 'Review',
+  sent: 'Sent',
+  viewed: 'Viewed',
+  signed: 'Signed',
+  declined: 'Declined',
+  expired: 'Expired',
+  voided: 'Voided',
+};
+
+const STATUS_COLORS: Record<ContractStatus, string> = {
+  draft: 'bg-admin-bg-active text-admin-text-dim',
+  pending_review: 'bg-admin-warning-bg text-admin-warning',
+  sent: 'bg-admin-info-bg text-admin-info',
+  viewed: 'bg-admin-info-bg text-admin-info',
+  signed: 'bg-admin-success-bg text-admin-success',
+  declined: 'bg-admin-danger-bg text-admin-danger',
+  expired: 'bg-admin-danger-bg text-admin-danger',
+  voided: 'bg-admin-bg-hover text-admin-text-ghost',
+};
 
 const TYPE_OPTIONS: { value: ContractType; label: string }[] = [
   { value: 'sow', label: 'SOW' },
@@ -55,6 +75,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   const [confirmVoid, setConfirmVoid] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
+  const [_isDirty, setIsDirty] = useState(false);
 
   // Edit state
   const [title, setTitle] = useState('');
@@ -88,6 +109,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       setEvents([]);
       setActiveTab('details');
       setSaved(false);
+      setIsDirty(false);
       return;
     }
     setLoading(true);
@@ -109,6 +131,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
         setContactId(c.contact_id);
         setProposalId(c.proposal_id);
         setQuoteId(c.quote_id);
+        setIsDirty(false);
         setClientOptions(clients.map((cl) => ({ value: cl.id, label: cl.name })));
         setContactsData(contacts.map((ct) => ({ id: ct.id, first_name: ct.first_name, last_name: ct.last_name, email: ct.email })));
         setContactOptions(contacts.map((ct) => ({ value: ct.id, label: `${ct.first_name} ${ct.last_name}` })));
@@ -151,6 +174,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       setContract(updated);
       onUpdated(updated);
       setSaved(true);
+      setIsDirty(false);
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
@@ -161,6 +185,10 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
     if (!contract) return;
     await deleteContract(contract.id);
     onDeleted(contract.id);
+    onClose();
+  };
+
+  const handleClose = () => {
     onClose();
   };
 
@@ -269,7 +297,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   };
 
   return (
-    <PanelDrawer open={open} onClose={onClose} width="w-[min(92vw,900px)]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[min(92vw,900px)]">
       {loading ? (
         <div className="flex items-center justify-center h-full text-admin-text-muted">Loading...</div>
       ) : !contract ? (
@@ -291,7 +319,9 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <StatusBadge status={contract.status} config={CONTRACT_STATUSES} />
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium ${STATUS_COLORS[contract.status]}`}>
+                {STATUS_LABELS[contract.status]}
+              </span>
               <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center">
                 <X size={16} />
               </button>
@@ -306,6 +336,19 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
             {/* -- Details Tab -- */}
             {activeTab === 'details' && (
               <div className="p-6 space-y-6">
+                <div>
+                  <label className="text-xs text-admin-text-muted mb-1 block">Title</label>
+                  {isEditable ? (
+                    <input
+                      value={title}
+                      onChange={(e) => { setTitle(e.target.value); setIsDirty(true); }}
+                      className="admin-input w-full"
+                      placeholder="Contract title…"
+                    />
+                  ) : (
+                    <div className="text-sm text-admin-text-primary">{title}</div>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-admin-text-muted mb-1 block">Type</label>
@@ -313,7 +356,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       <AdminSelect
                         options={TYPE_OPTIONS}
                         value={contractType}
-                        onChange={(v) => setContractType(v as ContractType)}
+                        onChange={(v) => { setContractType(v as ContractType); setIsDirty(true); }}
                         placeholder="Select type..."
                       />
                     ) : (
@@ -338,7 +381,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                         <AdminSelect
                           options={[{ value: '', label: 'None' }, ...clientOptions]}
                           value={clientId || ''}
-                          onChange={(v) => setClientId((v as string) || null)}
+                          onChange={(v) => { setClientId((v as string) || null); setIsDirty(true); }}
                           placeholder="Select client…"
                         />
                       ) : (
@@ -351,7 +394,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                         <AdminSelect
                           options={[{ value: '', label: 'None' }, ...contactOptions]}
                           value={contactId || ''}
-                          onChange={(v) => setContactId((v as string) || null)}
+                          onChange={(v) => { setContactId((v as string) || null); setIsDirty(true); }}
                           placeholder="Select contact…"
                         />
                       ) : (
@@ -370,6 +413,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                             const newId = (v as string) || null;
                             setProposalId(newId);
                             if (!newId) setQuoteId(null);
+                            setIsDirty(true);
                           }}
                           placeholder="Select proposal…"
                         />
@@ -384,7 +428,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                           <AdminSelect
                             options={[{ value: '', label: 'None' }, ...quoteOptions]}
                             value={quoteId || ''}
-                            onChange={(v) => setQuoteId((v as string) || null)}
+                            onChange={(v) => { setQuoteId((v as string) || null); setIsDirty(true); }}
                             placeholder="Select quote…"
                           />
                         ) : (
@@ -405,9 +449,9 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   {isEditable ? (
                     <textarea
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
+                      onChange={(e) => { setNotes(e.target.value); setIsDirty(true); }}
                       rows={3}
-                      className="admin-input text-sm py-2 px-3 w-full resize-none"
+                      className="admin-input w-full resize-none"
                       placeholder="Internal notes..."
                     />
                   ) : (
@@ -440,7 +484,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   {isEditable ? (
                     <textarea
                       value={body}
-                      onChange={(e) => setBody(e.target.value)}
+                      onChange={(e) => { setBody(e.target.value); setIsDirty(true); }}
                       className="w-full h-full min-h-[400px] resize-none bg-admin-bg-overlay border border-admin-border rounded-lg text-sm text-admin-text-primary font-admin-mono p-4 outline-none focus:border-admin-border admin-scrollbar"
                       placeholder="Contract body text..."
                       spellCheck={false}
@@ -536,7 +580,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                               value={newSignerName}
                               onChange={(e) => setNewSignerName(e.target.value)}
                               placeholder="Full name"
-                              className="admin-input text-sm py-1.5 px-3 w-full"
+                              className="admin-input w-full"
                               autoFocus
                             />
                           </div>
@@ -546,7 +590,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                               value={newSignerEmail}
                               onChange={(e) => setNewSignerEmail(e.target.value)}
                               placeholder="email@example.com"
-                              className="admin-input text-sm py-1.5 px-3 w-full"
+                              className="admin-input w-full"
                               type="email"
                             />
                           </div>

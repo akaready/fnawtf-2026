@@ -189,7 +189,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={2}
-          className="w-full rounded-lg admin-input px-3 py-2 text-sm resize-none"
+          className="admin-input w-full resize-none"
         />
       ) : (
         <input
@@ -197,7 +197,7 @@ function Field({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg admin-input px-3 py-2 text-sm"
+          className="admin-input w-full"
         />
       )}
     </div>

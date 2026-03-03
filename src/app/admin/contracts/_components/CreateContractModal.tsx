@@ -152,7 +152,7 @@ export function CreateContractModal({ onClose, onCreated }: Props) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Acme Corp SOW — Brand Video"
-                className="admin-input text-sm py-2.5 px-3 w-full"
+                className="admin-input w-full"
                 autoFocus
               />
             </div>

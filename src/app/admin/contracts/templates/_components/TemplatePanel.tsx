@@ -1,18 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Trash2, Plus, ArrowUpFromLine } from 'lucide-react';
+import { useCallback, useEffect, useRef } from 'react';
+import { X, Trash2, Plus, ArrowUpFromLine, Save, FileText } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TiptapLink from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Extension } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
+import { RichTextToolbar } from '@/app/admin/_components/RichTextToolbar';
 import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { useState } from 'react';
 import type { ContractTemplateRow, ContractType, MergeFieldDef, MergeFieldSource } from '@/types/contracts';
 import {
   getContractTemplate,
   updateContractTemplate,
   deleteContractTemplate,
 } from '@/lib/contracts/actions';
-import { renderTemplate, validateTokens } from '@/lib/contracts/mergeEngine';
+import { validateTokens } from '@/lib/contracts/mergeEngine';
 
 const TYPE_OPTIONS: { value: ContractType; label: string }[] = [
   { value: 'sow', label: 'SOW' },
@@ -22,24 +32,18 @@ const TYPE_OPTIONS: { value: ContractType; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
-/** All mappable database fields, presented as "Source → Field" in a single flat list */
 const MAPPING_OPTIONS: { value: string; label: string; source: MergeFieldSource; db_path: string | null }[] = [
-  // Manual is always first
   { value: '__manual__', label: 'Manual Input (filled per contract)', source: 'manual', db_path: null },
-  // Client fields
   { value: 'client::name', label: 'Client → Company Name', source: 'client', db_path: 'name' },
   { value: 'client::company', label: 'Client → Company', source: 'client', db_path: 'company' },
   { value: 'client::email', label: 'Client → Email', source: 'client', db_path: 'email' },
   { value: 'client::location', label: 'Client → Location', source: 'client', db_path: 'location' },
-  // Contact fields
   { value: 'contact::first_name', label: 'Contact → First Name', source: 'contact', db_path: 'first_name' },
   { value: 'contact::last_name', label: 'Contact → Last Name', source: 'contact', db_path: 'last_name' },
   { value: 'contact::email', label: 'Contact → Email', source: 'contact', db_path: 'email' },
   { value: 'contact::role', label: 'Contact → Role / Title', source: 'contact', db_path: 'role' },
-  // Proposal fields
   { value: 'proposal::title', label: 'Proposal → Title', source: 'proposal', db_path: 'title' },
   { value: 'proposal::proposal_type', label: 'Proposal → Type', source: 'proposal', db_path: 'proposal_type' },
-  // Quote fields
   { value: 'quote::label', label: 'Quote → Label', source: 'quote', db_path: 'label' },
   { value: 'quote::total_amount', label: 'Quote → Total Amount', source: 'quote', db_path: 'total_amount' },
   { value: 'quote::down_amount', label: 'Quote → Down Payment', source: 'quote', db_path: 'down_amount' },
@@ -54,6 +58,36 @@ const SOURCE_COLORS: Record<MergeFieldSource, string> = {
   manual: 'bg-admin-bg-hover text-admin-text-dim',
 };
 
+/** Highlight {{token}} patterns inline in the editor */
+const MergeTokenHighlight = Extension.create({
+  name: 'mergeTokenHighlight',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('mergeTokenHighlight'),
+        props: {
+          decorations(state) {
+            const decorations: Decoration[] = [];
+            const regex = /\{\{[^}]+\}\}/g;
+            state.doc.descendants((node, pos) => {
+              if (!node.isText || !node.text) return;
+              let match;
+              while ((match = regex.exec(node.text)) !== null) {
+                decorations.push(
+                  Decoration.inline(pos + match.index, pos + match.index + match[0].length, {
+                    class: 'merge-token',
+                  })
+                );
+              }
+            });
+            return DecorationSet.create(state.doc, decorations);
+          },
+        },
+      }),
+    ];
+  },
+});
+
 interface Props {
   templateId: string | null;
   open: boolean;
@@ -65,30 +99,76 @@ interface Props {
 export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted }: Props) {
   const [template, setTemplate] = useState<ContractTemplateRow | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Local edit state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [contractType, setContractType] = useState<ContractType>('sow');
-  const [body, setBody] = useState('');
   const [mergeFields, setMergeFields] = useState<MergeFieldDef[]>([]);
   const [isActive, setIsActive] = useState(true);
 
-  // New field form
   const [showNewField, setShowNewField] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldMapping, setNewFieldMapping] = useState('');
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Refs for capturing latest state in autoSave closure
+  const templateRef = useRef(template);
+  const nameRef = useRef(name);
+  const descriptionRef = useRef(description);
+  const contractTypeRef = useRef(contractType);
+  const mergeFieldsRef = useRef(mergeFields);
+  const isActiveRef = useRef(isActive);
+
+  useEffect(() => { templateRef.current = template; }, [template]);
+  useEffect(() => { nameRef.current = name; }, [name]);
+  useEffect(() => { descriptionRef.current = description; }, [description]);
+  useEffect(() => { contractTypeRef.current = contractType; }, [contractType]);
+  useEffect(() => { mergeFieldsRef.current = mergeFields; }, [mergeFields]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TiptapLink.configure({ openOnClick: false }),
+      Placeholder.configure({
+        placeholder: 'Start writing…\nClick a field pill above to insert a token.',
+      }),
+      MergeTokenHighlight,
+    ],
+    editorProps: {
+      attributes: {
+        class: 'prose-snippet prose-contract font-admin-mono outline-none min-h-full p-8',
+      },
+    },
+    immediatelyRender: false,
+    onUpdate: () => autoSave.trigger(),
+  });
+
+  const autoSave = useAutoSave(async () => {
+    const t = templateRef.current;
+    if (!t) return;
+    const body = editor?.getHTML() ?? '';
+    const updates = {
+      name: nameRef.current,
+      description: descriptionRef.current || null,
+      contract_type: contractTypeRef.current,
+      body,
+      merge_fields: mergeFieldsRef.current,
+      is_active: isActiveRef.current,
+    };
+    await updateContractTemplate(t.id, updates);
+    const updated = { ...t, ...updates, updated_at: new Date().toISOString() };
+    setTemplate(updated as ContractTemplateRow);
+    onUpdated(updated as ContractTemplateRow);
+  });
 
   // Load template data
   useEffect(() => {
     if (!open || !templateId) {
       setTemplate(null);
+      editor?.commands.clearContent();
+      autoSave.reset();
       return;
     }
     setLoading(true);
@@ -98,35 +178,19 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
         setName(t.name);
         setDescription(t.description || '');
         setContractType(t.contract_type);
-        setBody(t.body);
         setMergeFields(t.merge_fields || []);
         setIsActive(t.is_active);
+        editor?.commands.setContent(t.body || '');
+        autoSave.reset();
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, templateId]);
 
   const handleSave = useCallback(async () => {
-    if (!template) return;
-    setSaving(true);
-    try {
-      const updates = {
-        name,
-        description: description || null,
-        contract_type: contractType,
-        body,
-        merge_fields: mergeFields,
-        is_active: isActive,
-      };
-      await updateContractTemplate(template.id, updates);
-      const updated = { ...template, ...updates, updated_at: new Date().toISOString() };
-      setTemplate(updated as ContractTemplateRow);
-      onUpdated(updated as ContractTemplateRow);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  }, [template, name, description, contractType, body, mergeFields, isActive, onUpdated]);
+    await autoSave.flush();
+    onClose();
+  }, [autoSave, onClose]);
 
   const handleDelete = async () => {
     if (!template) return;
@@ -141,54 +205,41 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
     if (!key || mergeFields.some((f) => f.key === key)) return;
     const mapping = MAPPING_OPTIONS.find((m) => m.value === newFieldMapping);
     if (!mapping) return;
-    setMergeFields((prev) => [...prev, {
+    const updated = [...mergeFields, {
       key,
       label: newFieldName,
       source: mapping.source,
       db_path: mapping.db_path,
-    }]);
+    }];
+    setMergeFields(updated);
     setNewFieldName('');
     setNewFieldMapping('');
     setShowNewField(false);
+    autoSave.trigger();
   };
 
   const handleRemoveField = (key: string) => {
     setMergeFields((prev) => prev.filter((f) => f.key !== key));
+    autoSave.trigger();
   };
 
   const handleInsertToken = (key: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const token = `{{${key}}}`;
-    const newBody = body.substring(0, start) + token + body.substring(end);
-    setBody(newBody);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + token.length, start + token.length);
-    });
+    if (!editor) return;
+    editor.chain().focus().insertContent(`{{${key}}}`).run();
     setActiveTab('editor');
+    autoSave.trigger();
   };
 
-  // Token validation
-  const tokenStatus = validateTokens(body, mergeFields);
-
-  // Live preview with sample values
-  const previewBody = renderTemplate(body, {
-    client: { name: 'Acme Corp', email: 'hello@acme.com', location: 'Austin, TX', company: 'Acme Corp' },
-    contact: { first_name: 'Jane', last_name: 'Doe', email: 'jane@acme.com', role: 'CEO' },
-    proposal: { title: 'Brand Video Package', proposal_type: 'build' },
-    quote: { total_amount: 2500000, down_amount: 750000, label: 'Primary Quote', quote_type: 'build' },
-    manualFields: Object.fromEntries(
-      mergeFields.filter((f) => f.source === 'manual').map((f) => [f.key, `[${f.label}]`])
-    ),
-    mergeFieldDefs: mergeFields,
-  });
+  const bodyText = editor?.getHTML() ?? '';
+  const tokenStatus = validateTokens(bodyText, mergeFields);
 
   const tabs = [
     { value: 'editor', label: 'Editor' },
-    { value: 'fields', label: 'Fields', badge: <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-admin-bg-hover">{mergeFields.length}</span> },
+    {
+      value: 'fields',
+      label: 'Fields',
+      badge: <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-admin-bg-hover">{mergeFields.length}</span>,
+    },
   ];
 
   return (
@@ -200,14 +251,15 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
       ) : (
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border">
+          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
             <div className="flex items-center gap-3 min-w-0">
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); autoSave.trigger(); }}
                 className="bg-transparent text-lg font-semibold text-admin-text-primary outline-none min-w-0 flex-1"
                 placeholder="Template name…"
               />
+              <SaveDot status={autoSave.status} />
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={onClose} className="btn-ghost w-9 h-9 flex items-center justify-center">
@@ -223,14 +275,14 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
               <AdminSelect
                 options={TYPE_OPTIONS}
                 value={contractType}
-                onChange={(v) => setContractType(v as ContractType)}
+                onChange={(v) => { setContractType(v as ContractType); autoSave.trigger(); }}
                 placeholder="Select type…"
               />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs text-admin-text-muted">Active</label>
               <button
-                onClick={() => setIsActive(!isActive)}
+                onClick={() => { setIsActive(!isActive); autoSave.trigger(); }}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                   isActive
                     ? 'bg-admin-success-bg text-admin-success'
@@ -243,12 +295,29 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
             <div className="flex-1">
               <input
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); autoSave.trigger(); }}
                 placeholder="Description (optional)…"
                 className="admin-input text-sm py-1 px-2 w-full"
               />
             </div>
           </div>
+
+          {/* Field pills — click to insert token */}
+          {mergeFields.length > 0 && activeTab === 'editor' && (
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-6 py-2 border-b border-admin-border-subtle flex-wrap">
+              <span className="text-[10px] text-admin-text-ghost mr-1 uppercase tracking-wider">Insert:</span>
+              {mergeFields.map((f) => (
+                <button
+                  key={f.key}
+                  onMouseDown={(e) => { e.preventDefault(); handleInsertToken(f.key); }}
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium transition-opacity hover:opacity-80 ${SOURCE_COLORS[f.source]}`}
+                  title={`Insert {{${f.key}}}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Tabs */}
           <AdminTabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -256,51 +325,29 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
           {/* Content */}
           <div className="flex-1 overflow-hidden">
             {activeTab === 'editor' && (
-              <div className="flex h-full">
-                {/* Left: editor */}
-                <div className="flex-1 flex flex-col border-r border-admin-border">
-                  <div className="px-4 py-2 text-xs text-admin-text-faint border-b border-admin-border-subtle flex items-center justify-between">
-                    <span>Template Body</span>
-                    <span>
-                      {tokenStatus.undefined.length > 0 && (
-                        <span className="text-admin-danger">
-                          {tokenStatus.undefined.length} undefined token{tokenStatus.undefined.length !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={textareaRef}
-                      value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      className="absolute inset-0 w-full h-full resize-none bg-transparent text-sm text-admin-text-primary font-admin-mono p-4 outline-none admin-scrollbar"
-                      placeholder="Type your contract template here… Use {{variable_name}} for merge fields."
-                      spellCheck={false}
-                    />
-                  </div>
+              <div
+                className="flex flex-col h-full bg-admin-bg-base cursor-text"
+                onClick={() => editor?.commands.focus()}
+              >
+                <RichTextToolbar editor={editor} />
+                <div className="flex-1 overflow-y-auto admin-scrollbar">
+                  <EditorContent editor={editor} className="h-full" />
                 </div>
-                {/* Right: preview */}
-                <div className="flex-1 flex flex-col">
-                  <div className="px-4 py-2 text-xs text-admin-text-faint border-b border-admin-border-subtle">
-                    Live Preview (sample data)
+                {tokenStatus.undefined.length > 0 && (
+                  <div className="px-8 py-2 text-xs text-admin-danger border-t border-admin-border-subtle">
+                    {tokenStatus.undefined.length} undefined token{tokenStatus.undefined.length !== 1 ? 's' : ''}
                   </div>
-                  <div className="flex-1 overflow-y-auto admin-scrollbar p-4">
-                    <div className="text-sm text-admin-text-secondary whitespace-pre-wrap leading-relaxed">
-                      {previewBody || <span className="text-admin-text-faint">Preview will appear here…</span>}
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
             {activeTab === 'fields' && (
               <div className="flex-1 overflow-y-auto admin-scrollbar p-6">
-                {/* Existing fields */}
                 <div className="space-y-2 mb-6">
                   {mergeFields.length === 0 && !showNewField && (
                     <div className="text-sm text-admin-text-muted text-center py-8">
-                      No merge fields defined yet. Add fields to use <code className="font-admin-mono text-admin-info">{'{{variable}}'}</code> tokens in your template.
+                      No merge fields defined yet. Add fields to use{' '}
+                      <code className="font-admin-mono text-admin-info">{'{{variable}}'}</code> tokens in your template.
                     </div>
                   )}
                   {mergeFields.map((field) => (
@@ -317,7 +364,7 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                       </span>
                       <div className="flex-1" />
                       <button
-                        onClick={() => handleInsertToken(field.key)}
+                        onClick={() => { handleInsertToken(field.key); setActiveTab('editor'); }}
                         className="opacity-0 group-hover/field:opacity-100 transition-opacity btn-ghost w-8 h-8 flex items-center justify-center"
                         title="Insert into template"
                       >
@@ -334,7 +381,6 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
                   ))}
                 </div>
 
-                {/* Add field form */}
                 {showNewField ? (
                   <div className="border border-admin-border rounded-lg p-4 bg-admin-bg-overlay space-y-3">
                     <div>
@@ -388,10 +434,20 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
             <div className="flex items-center gap-3">
-              <SaveButton saving={saving} saved={saved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
-              <span className="text-xs text-admin-text-faint">
-                {mergeFields.length} field{mergeFields.length !== 1 ? 's' : ''} · {tokenStatus.defined.length} used in body
-              </span>
+              <button
+                onClick={handleSave}
+                className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+              >
+                <Save size={14} />
+                Save
+              </button>
+              <button
+                onClick={() => window.open(`/admin/contracts/templates/${template.id}/preview`, '_blank')}
+                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <FileText size={14} />
+                View PDF
+              </button>
             </div>
             <div className="flex items-center gap-2">
               {confirmDelete ? (

@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { SaveButton } from './SaveButton';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
-import type { LucideIcon } from 'lucide-react';
 import {
   Plus, Trash2, Check, X, Download, ChevronDown,
-  Pencil, Bold, Heading1, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink,
-  FolderOpen, Maximize2, Minimize2,
+  Pencil, FolderOpen, Maximize2, Minimize2,
 } from 'lucide-react';
+import { RichTextToolbar } from './RichTextToolbar';
 import { AdminPageHeader } from './AdminPageHeader';
 import {
   type ContentSnippetRow,
@@ -45,10 +44,6 @@ function SnippetEditor({
   body: string;
   onChange: (md: string) => void;
 }) {
-  const [showLinkInput, setShowLinkInput] = useState(false);
-  const [linkUrl, setLinkUrl]             = useState('');
-  const linkInputRef                      = useRef<HTMLInputElement>(null);
-
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -61,129 +56,17 @@ function SnippetEditor({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onChange((editor.storage as any).markdown.getMarkdown());
     },
-    onSelectionUpdate({ editor }) {
-      // Skip if the URL input already has focus — user is typing
-      if (document.activeElement === linkInputRef.current) return;
-      if (editor.isActive('link')) {
-        setLinkUrl(editor.getAttributes('link').href ?? '');
-        setShowLinkInput(true);
-      } else {
-        setShowLinkInput(false);
-        setLinkUrl('');
-      }
-    },
     editorProps: {
       attributes: { class: 'outline-none min-h-[200px] prose-snippet' },
     },
   });
 
-  // Open URL bar for creating a new link (cursor not already on a link)
-  const openLink = useCallback(() => {
-    if (!editor) return;
-    if (!editor.isActive('link')) {
-      setLinkUrl('');
-      setShowLinkInput(true);
-    }
-    setTimeout(() => linkInputRef.current?.focus(), 50);
-  }, [editor]);
-
-  // Apply the typed URL then let onSelectionUpdate manage visibility
-  const applyLink = useCallback(() => {
-    if (!editor) return;
-    const url = linkUrl.trim();
-    if (url) editor.chain().focus().setLink({ href: url }).run();
-    else     editor.chain().focus().unsetLink().run();
-  }, [editor, linkUrl]);
-
   if (!editor) return null;
-
-  const isLink = editor.isActive('link');
-
-  const formatTools: { key: string; I: LucideIcon; lbl: string; fn: () => void; isActive: boolean }[] = [
-    { key: 'bold', I: Bold,        lbl: 'Bold (⌘B)',     fn: () => editor.chain().focus().toggleBold().run(),               isActive: editor.isActive('bold') },
-    { key: 'h1',   I: Heading1,    lbl: 'Heading 1',     fn: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive('heading', { level: 1 }) },
-    { key: 'h2',   I: Heading2,    lbl: 'Heading 2',     fn: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive('heading', { level: 2 }) },
-    { key: 'h3',   I: Heading3,    lbl: 'Heading 3',     fn: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), isActive: editor.isActive('heading', { level: 3 }) },
-    { key: 'ul',   I: List,        lbl: 'Bullet list',   fn: () => editor.chain().focus().toggleBulletList().run(),          isActive: editor.isActive('bulletList') },
-    { key: 'ol',   I: ListOrdered, lbl: 'Numbered list', fn: () => editor.chain().focus().toggleOrderedList().run(),         isActive: editor.isActive('orderedList') },
-  ];
 
   return (
     <>
-      {/* Toolbar — URL input lives inline here, no layout shift */}
-      <div className="flex items-center gap-0.5 px-8 pt-3 pb-2 min-h-[36px]">
-        {formatTools.map(({ key, I, lbl, fn, isActive }) => (
-          <button
-            key={key}
-            onMouseDown={e => { e.preventDefault(); fn(); }}
-            title={lbl}
-            className={`p-1.5 rounded transition-colors flex-shrink-0 ${isActive ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover'}`}
-          >
-            <I size={14} />
-          </button>
-        ))}
-
-        <span className="w-px h-3.5 bg-admin-bg-active mx-1 flex-shrink-0" />
-
-        {/* Link icon — toggles URL input inline */}
-        <button
-          onMouseDown={e => { e.preventDefault(); openLink(); }}
-          title="Link (⌘⇧U)"
-          className={`p-1.5 rounded transition-colors flex-shrink-0 ${isLink || showLinkInput ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover'}`}
-        >
-          <Link2 size={14} />
-        </button>
-
-        {/* Inline URL input — shown when on a link or creating one */}
-        {showLinkInput && (
-          <>
-            <input
-              ref={linkInputRef}
-              value={linkUrl}
-              onChange={e => setLinkUrl(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter')  { e.preventDefault(); applyLink(); }
-                if (e.key === 'Escape') { editor.chain().focus().run(); }
-              }}
-              placeholder="https://"
-              className="flex-1 min-w-0 ml-1 bg-transparent text-sm text-admin-text-secondary placeholder:text-admin-text-ghost outline-none"
-            />
-            {linkUrl && (
-              <a
-                href={linkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                tabIndex={-1}
-                onMouseDown={e => e.preventDefault()}
-                title="Open link"
-                className="text-admin-text-ghost hover:text-admin-text-secondary transition-colors p-1 flex-shrink-0"
-              >
-                <ExternalLink size={12} />
-              </a>
-            )}
-            {isLink && (
-              <button
-                onMouseDown={e => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
-                title="Remove link"
-                className="text-admin-text-ghost hover:text-admin-danger transition-colors p-1 flex-shrink-0"
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Editor — only ⌘⇧U is intercepted; all native OS shortcuts pass through */}
-      <div
-        className="px-8 py-3 min-h-[200px]"
-        onKeyDown={e => {
-          if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'u') {
-            e.preventDefault();
-            openLink();
-          }
-        }}
-      >
+      <RichTextToolbar editor={editor} />
+      <div className="px-8 py-3 min-h-[200px]">
         <EditorContent editor={editor} />
       </div>
     </>

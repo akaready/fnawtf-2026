@@ -230,7 +230,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <input
                   value={local.name}
                   onChange={e => updateField('name', e.target.value)}
-                  className="admin-input w-full text-base font-semibold py-2 px-3"
+                  className="admin-input w-full text-base font-semibold"
                   placeholder="Location name"
                 />
               </Field>
@@ -241,7 +241,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   onChange={e => updateField('description', e.target.value)}
                   placeholder="Description of the space…"
                   rows={4}
-                  className="admin-input w-full text-sm resize-none py-2.5 px-3 leading-relaxed"
+                  className="admin-input w-full resize-none leading-relaxed"
                 />
               </Field>
 
@@ -272,7 +272,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   <input
                     value={local.city ?? ''}
                     onChange={e => updateField('city', e.target.value)}
-                    className="admin-input w-full text-sm py-2 px-3"
+                    className="admin-input w-full"
                     placeholder="City"
                   />
                 </Field>
@@ -280,7 +280,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   <input
                     value={local.state ?? ''}
                     onChange={e => updateField('state', e.target.value)}
-                    className="admin-input w-full text-sm py-2 px-3"
+                    className="admin-input w-full"
                     placeholder="State"
                   />
                 </Field>
@@ -288,7 +288,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   <input
                     value={local.zip ?? ''}
                     onChange={e => updateField('zip', e.target.value)}
-                    className="admin-input w-full text-sm py-2 px-3"
+                    className="admin-input w-full"
                     placeholder="ZIP"
                   />
                 </Field>
@@ -298,7 +298,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <select
                   value={local.status}
                   onChange={e => updateField('status', e.target.value)}
-                  className="admin-input w-full text-sm py-2 px-3"
+                  className="admin-input w-full"
                 >
                   <option value="active">Active</option>
                   <option value="archived">Archived</option>
@@ -311,7 +311,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   onChange={e => updateField('notes', e.target.value)}
                   placeholder="Internal notes…"
                   rows={3}
-                  className="admin-input w-full text-sm resize-none py-2.5 px-3 leading-relaxed"
+                  className="admin-input w-full resize-none leading-relaxed"
                 />
               </Field>
 
@@ -319,7 +319,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <input
                   value={local.peerspace_url ?? ''}
                   onChange={e => updateField('peerspace_url', e.target.value || null)}
-                  className="admin-input w-full text-sm py-2 px-3"
+                  className="admin-input w-full"
                   placeholder="https://www.peerspace.com/pages/listings/…"
                 />
               </Field>
@@ -586,7 +586,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               <div className="space-y-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Add Project</p>
                 <select
-                  className="admin-input w-full text-sm py-2 px-3"
+                  className="admin-input w-full"
                   value=""
                   onChange={e => { if (e.target.value) handleLinkProject(e.target.value); }}
                 >
@@ -671,7 +671,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">{label}</label>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">{label}</p>
       {children}
     </div>
   );
