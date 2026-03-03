@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  X, Trash2, Upload, Star, MapPin, ExternalLink, Camera,
+  X, Trash2, Upload, Star, MapPin, ExternalLink, Camera, Save,
   Image as ImageIcon, Loader2, Link2, Unlink,
 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import {
@@ -47,6 +48,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   const [local, setLocal] = useState<LocationWithImages | null>(null);
   const [dirty, setDirty] = useState(false);
   const { saving, saved, wrap: wrapSave } = useSaveState(2000);
+  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
 
   // Sync local state when location prop changes
   useEffect(() => {
@@ -178,7 +180,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
     <PanelDrawer open={open} onClose={handleClose} width="w-[600px]">
       <div className="flex flex-col h-full relative">
         {/* Header */}
-        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border">
+        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-inset">
           {local.featured_image ? (
             <img src={local.featured_image} alt="" className="w-10 h-10 rounded-admin-sm object-cover flex-shrink-0" />
           ) : (
@@ -187,7 +189,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-admin-text-primary truncate">{local.name}</h2>
+            <h2 className="text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={dotStatus} /></h2>
             {local.address && (
               <p className="text-xs text-admin-text-faint mt-0.5 truncate">
                 {[local.address, local.city, local.state].filter(Boolean).join(', ')}
@@ -606,12 +608,10 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
           <div className="flex items-center gap-2">
-            <SaveButton
-              saving={saving}
-              saved={saved}
-              onClick={handleSave}
-              className="px-5 py-2.5 text-sm"
-            />
+            <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+              <Save size={14} />
+              Save
+            </button>
             {local.peerspace_url && (
               <a
                 href={local.peerspace_url}

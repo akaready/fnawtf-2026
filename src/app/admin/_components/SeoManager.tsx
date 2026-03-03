@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Globe, Home, Play, ClipboardList, DollarSign, Info, EyeOff } from 'lucide-react';
-import { SaveButton } from './SaveButton';
+import { Globe, Home, Play, ClipboardList, DollarSign, Info, EyeOff, Save } from 'lucide-react';
+import { SaveDot } from './SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { type SeoRow, updateSeoSetting } from '../actions';
 import { AdminTabBar } from './AdminTabBar';
@@ -26,6 +27,7 @@ export function SeoManager({ initialSettings }: Props) {
   const [settings, setSettings] = useState<SeoRow[]>(initialSettings);
   const [activeSlug, setActiveSlug] = useState<string>('_global');
   const { saving, saved, wrap: wrapSave } = useSaveState(2000);
+  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
 
   const handleChange = (id: string, field: keyof SeoRow, value: string | boolean) => {
     setSettings((prev) =>
@@ -139,7 +141,11 @@ export function SeoManager({ initialSettings }: Props) {
                 </span>
               </label>
 
-              <SaveButton saving={saving} saved={saved} onClick={() => handleSave(activeRow)} className="px-4 py-2 text-sm" />
+              <SaveDot status={dotStatus} />
+              <button onClick={() => handleSave(activeRow)} className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
+                <Save size={14} />
+                Save
+              </button>
             </div>
           </div>
         )}

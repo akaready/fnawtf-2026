@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { X, Trash2, Send, RefreshCw, Plus, Clock, Eye, CheckCircle2, XCircle, AlertCircle, FileText, Users, History } from 'lucide-react';
+import { X, Trash2, Send, RefreshCw, Plus, Clock, Eye, CheckCircle2, XCircle, AlertCircle, FileText, Users, History, Save } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
-import { SaveButton } from '@/app/admin/_components/SaveButton';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
 import type {
   ContractRow,
@@ -70,6 +71,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
   const [activeTab, setActiveTab] = useState('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmVoid, setConfirmVoid] = useState(false);
@@ -305,7 +307,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       ) : (
         <div className="flex flex-col h-full">
           {/* Header — title + status pill + close */}
-          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border">
+          <div className="flex-shrink-0 flex items-center justify-between px-6 h-[4rem] border-b border-admin-border bg-admin-bg-inset">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-xs font-admin-mono text-admin-text-faint flex-shrink-0">#{contract.contract_number}</span>
               {isEditable ? (
@@ -317,6 +319,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               ) : (
                 <span className="text-lg font-semibold text-admin-text-primary truncate">{title}</span>
               )}
+              <SaveDot status={dotStatus} />
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium ${STATUS_COLORS[contract.status]}`}>
@@ -680,7 +683,10 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
           <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
             <div className="flex items-center gap-3">
               {isEditable && (
-                <SaveButton saving={saving} saved={saved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
+                <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+                  <Save size={14} />
+                  Save
+                </button>
               )}
               {/* Send for signature */}
               {isEditable && !confirmSend && (

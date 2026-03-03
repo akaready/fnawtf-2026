@@ -2,11 +2,12 @@
 
 import { useState, useTransition, useCallback, useEffect } from 'react';
 import {
-  Check, Loader2, Upload, Film,
+  Check, Loader2, Upload, Film, Save,
   Trash2, X, UserPlus, Building2, Target, Link2,
   Globe, Linkedin, Search, MapPin, Calendar, Users as UsersIcon, Tag, RefreshCw,
 } from 'lucide-react';
-import { SaveButton } from './SaveButton';
+import { SaveDot } from './SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { TwoStateDeleteButton } from './TwoStateDeleteButton';
 import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
@@ -122,6 +123,7 @@ export function CompanyPanel({
   const [activeTab, setActiveTab] = useState<TabName>('info');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const { saving, saved: companySaved, wrap: wrapSave } = useSaveState(2000);
+  const dotStatus: AutoSaveStatus = saving ? 'saving' : companySaved ? 'saved' : 'idle';
   const [, startSave] = useTransition();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -323,7 +325,7 @@ export function CompanyPanel({
         />
 
         {/* Header: logo + name + project count + status pill + close */}
-        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border">
+        <div className="flex items-center gap-4 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-inset">
           <LogoDropzone
             logoUrl={localCompany.logo_url}
             uploading={uploadingId === localCompany.id}
@@ -344,6 +346,7 @@ export function CompanyPanel({
               </p>
             )}
           </div>
+          <SaveDot status={dotStatus} />
           {/* Status pill — read-only */}
           <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap bg-admin-bg-selected flex-shrink-0 ${statusCfg.color}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
@@ -749,7 +752,10 @@ export function CompanyPanel({
         {/* Footer action bar */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
           <div className="flex items-center gap-2">
-            <SaveButton saving={saving} saved={companySaved} onClick={handleSave} className="px-5 py-2.5 text-sm" />
+            <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+              <Save size={14} />
+              Save
+            </button>
             <button
               type="button"
               onClick={handleFetchInfo}

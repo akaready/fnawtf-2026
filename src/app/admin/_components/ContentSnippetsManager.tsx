@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useRef } from 'react';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
-import { SaveButton } from './SaveButton';
+import { SaveDot } from './SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
 import {
-  Plus, Trash2, Check, X, Download, ChevronDown,
+  Plus, Trash2, Check, X, Download, ChevronDown, Save,
   Pencil, FolderOpen, Maximize2, Minimize2,
 } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
@@ -78,6 +79,7 @@ function SnippetEditor({
 export function ContentSnippetsManager({ initialSnippets }: Props) {
   const [snippets, setSnippets]                 = useState(initialSnippets);
   const { saving, saved, wrap: wrapSave }        = useSaveState(2000);
+  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
   const [confirmDeleteId, setConfirmDeleteId]   = useState<string | null>(null);
   const [confirmDeleteCat, setConfirmDeleteCat] = useState<string | null>(null);
   const [creating, setCreating]                 = useState(false);
@@ -380,7 +382,11 @@ export function ContentSnippetsManager({ initialSnippets }: Props) {
 
             <div className="flex-shrink-0 border-t border-admin-border px-8 py-3 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <SaveButton saving={saving} saved={saved} onClick={() => handleSave(active)} className="px-5 py-2 text-sm" />
+                <SaveDot status={dotStatus} />
+                <button onClick={() => handleSave(active)} className="btn-primary inline-flex items-center gap-2 px-5 py-2 text-sm">
+                  <Save size={14} />
+                  Save
+                </button>
                 <div className="relative">
                   <button
                     onClick={() => setCatDropOpen(v => !v)}

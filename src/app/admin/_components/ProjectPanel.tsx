@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
-import { X, Trash2, Loader2, ChevronDown } from 'lucide-react';
-import { SaveButton } from './SaveButton';
+import { X, Trash2, Loader2, ChevronDown, Save } from 'lucide-react';
+import { SaveDot } from './SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
@@ -78,6 +79,7 @@ export function ProjectPanel({
   const [deleting, startDelete] = useTransition();
   const [, startStatusTransition] = useTransition();
   const { saving: isSaving, saved: isSaved, wrap: wrapSave } = useSaveState(2500);
+  const dotStatus: AutoSaveStatus = isSaving ? 'saving' : isSaved ? 'saved' : 'idle';
   const statusRef = useRef<HTMLDivElement>(null);
 
   // Refs for tabs that expose save/isDirty
@@ -199,7 +201,7 @@ export function ProjectPanel({
       />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0">
+      <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
         {project?.thumbnail_url ? (
           <div className="w-14 h-9 rounded overflow-hidden bg-admin-bg-hover flex-shrink-0">
             <img src={String(project.thumbnail_url)} alt="" className="w-full h-full object-cover" />
@@ -213,6 +215,7 @@ export function ProjectPanel({
             <p className="text-xs text-admin-text-faint truncate">{String(project.slug)}</p>
           ) : null}
         </div>
+        <SaveDot status={dotStatus} />
         {!isNew && (
           <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
             published
@@ -297,7 +300,10 @@ export function ProjectPanel({
       {!isNew && projectId && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
           <div className="flex items-center gap-3">
-            <SaveButton saving={isSaving} saved={isSaved} onClick={handleSaveAll} className="px-5 py-2.5 text-sm" />
+            <button onClick={handleSaveAll} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+              <Save size={14} />
+              Save
+            </button>
             {/* Status dropdown */}
             <div ref={statusRef} className="relative">
               <button
