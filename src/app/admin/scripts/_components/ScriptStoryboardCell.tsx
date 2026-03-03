@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X } from 'lucide-react';
 import { deleteStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
+import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
 import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact } from '@/types/scripts';
 
@@ -174,27 +175,9 @@ export function ScriptStoryboardCell({
         </div>
         {/* Hover actions */}
         <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded">
-          <button
-            onClick={generate}
-            className="w-7 h-7 flex items-center justify-center rounded bg-black/60 text-white hover:bg-admin-info transition-colors"
-            title="Regenerate"
-          >
-            <RefreshCw size={12} />
-          </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="w-7 h-7 flex items-center justify-center rounded bg-black/60 text-white hover:bg-admin-info transition-colors"
-            title="Upload photo"
-          >
-            <Upload size={12} />
-          </button>
-          <button
-            onClick={handleDelete}
-            className="w-7 h-7 flex items-center justify-center rounded bg-black/60 text-white hover:bg-admin-danger transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={12} />
-          </button>
+          <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
+          <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
+          <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={handleDelete} />
         </div>
         <input
           ref={fileRef}

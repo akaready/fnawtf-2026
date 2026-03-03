@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Trash2, Upload, Star, MapPin, ExternalLink, Camera, Save,
-  Image as ImageIcon, Loader2, Link2, Unlink,
+  Image as ImageIcon, Loader2, Link2, Unlink, Download, Expand,
 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { AdminLightbox } from '@/app/admin/_components/AdminLightbox';
+import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
+import { downloadSingleImage, downloadStoryboardZip } from '@/lib/scripts/downloadStoryboards';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
@@ -41,6 +44,8 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   const [linkedProjects, setLinkedProjects] = useState<{ id: string; title: string }[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [scoutDragOver, setScoutDragOver] = useState(false);
+  const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scoutInputRef = useRef<HTMLInputElement>(null);
 
@@ -152,6 +157,25 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
     await unlinkLocationFromProject(local.id, projectId);
   };
 
+  const handleScoutUpload = async (files: FileList | File[]) => {
+    if (!files.length || !local) return;
+    setUploading(true);
+    try {
+      let current = local;
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.set('file', file);
+        const img = await uploadLocationImage(current.id, fd);
+        current = { ...current, location_images: [...current.location_images, img] };
+        setLocal(current);
+        onUpdate(current);
+      }
+    } finally {
+      setUploading(false);
+      if (scoutInputRef.current) scoutInputRef.current.value = '';
+    }
+  };
+
   const handleDelete = async () => {
     if (!local) return;
     setDeleting(true);
@@ -189,12 +213,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-admin-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={dotStatus} /></h2>
-            {local.address && (
-              <p className="text-admin-xs text-admin-text-faint mt-0.5 truncate">
-                {[local.address, local.city, local.state].filter(Boolean).join(', ')}
-              </p>
-            )}
+            <h2 className="text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={dotStatus} /></h2>
           </div>
           <button
             onClick={handleClose}
@@ -232,7 +251,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <input
                   value={local.name}
                   onChange={e => updateField('name', e.target.value)}
-                  className="admin-input w-full text-admin-lg font-semibold"
+                  className="admin-input w-full"
                   placeholder="Location name"
                 />
               </Field>
@@ -335,11 +354,24 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
                   {local.location_images.length} image{local.location_images.length !== 1 ? 's' : ''}
                 </p>
-                <label className={`btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                  {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                  Upload
-                  <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={handleUpload} />
-                </label>
+                <div className="flex items-center gap-2">
+                  {local.location_images.length > 0 && (
+                    <button
+                      onClick={() => downloadStoryboardZip(
+                        local.location_images.map((img, i) => ({ imageUrl: img.image_url, filename: `${local.name || 'location'}-image-${i + 1}.jpg` })),
+                        `${local.name || 'location'}-images.zip`
+                      )}
+                      className="btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5"
+                    >
+                      <Download size={12} /> Download All
+                    </button>
+                  )}
+                  <label className={`btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                    Upload
+                    <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={handleUpload} />
+                  </label>
+                </div>
               </div>
 
               {local.location_images.length === 0 ? (
@@ -359,23 +391,19 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                           <Star size={10} fill="currentColor" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover/img:opacity-100">
+                      <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100">
                         {!img.is_featured && (
-                          <button
-                            onClick={() => handleSetFeatured(img)}
-                            className="p-1.5 rounded-admin-sm bg-black/60 text-white hover:bg-admin-warning/80 transition-colors"
-                            title="Set as featured"
-                          >
-                            <Star size={12} />
-                          </button>
+                          <ImageActionButton icon={Star} color="warning" title="Set as featured" onClick={() => handleSetFeatured(img)} />
                         )}
-                        <button
-                          onClick={() => handleDeleteImage(img)}
-                          className="p-1.5 rounded-admin-sm bg-black/60 text-white hover:bg-admin-danger/80 transition-colors"
-                          title="Delete image"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        <ImageActionButton icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `${local.name || 'location'}-${img.id}.jpg`)} />
+                        <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
+                          const sorted = [...local.location_images].sort((a, b) => a.sort_order - b.sort_order);
+                          setLightbox({
+                            images: sorted.map(i => ({ url: i.image_url, label: i.alt_text ?? undefined })),
+                            index: sorted.findIndex(i => i.id === img.id),
+                          });
+                        }} />
+                        <ImageActionButton icon={Trash2} color="danger" title="Delete image" onClick={() => handleDeleteImage(img)} />
                       </div>
                     </div>
                   ))}
@@ -403,7 +431,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                 <InfoRow label="Host">
                   <span className="flex items-center gap-2">
                     {ps.host.avatar && (
-                      <img src={ps.host.avatar} alt="" className="w-6 h-6 rounded-full object-cover" />
+                      <img src={ps.host.avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
                     )}
                     {ps.host.profile_url ? (
                       <a href={ps.host.profile_url} target="_blank" rel="noopener noreferrer" className="text-admin-info hover:underline">
@@ -419,7 +447,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
                   <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Amenities</p>
                   <div className="flex flex-wrap gap-1.5">
                     {ps.amenities.map(a => (
-                      <span key={a} className="px-2 py-0.5 rounded-admin-sm bg-admin-bg-hover text-xs text-admin-text-muted">{a}</span>
+                      <span key={a} className="px-3 py-1 rounded-admin-md bg-admin-bg-hover text-sm text-admin-text-muted">{a}</span>
                     ))}
                   </div>
                 </div>
@@ -433,13 +461,23 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               {ps.hours && Object.keys(ps.hours).length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Hours</p>
-                  <div className="space-y-0.5">
-                    {Object.entries(ps.hours).map(([day, time]) => (
-                      <div key={day} className="flex justify-between text-xs">
-                        <span className="text-admin-text-muted capitalize">{day}</span>
-                        <span className="text-admin-text-primary">{time}</span>
-                      </div>
-                    ))}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-0">
+                    <div className="space-y-0.5">
+                      {Object.entries(ps.hours).filter(([day]) => ['monday','tuesday','wednesday','thursday','friday'].includes(day.toLowerCase())).map(([day, time]) => (
+                        <div key={day} className="flex items-center gap-2 text-xs">
+                          <span className="text-admin-text-muted capitalize w-12">{day.slice(0, 3)}</span>
+                          <span className="text-admin-text-primary">{time}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-0.5">
+                      {Object.entries(ps.hours).filter(([day]) => ['saturday','sunday'].includes(day.toLowerCase())).map(([day, time]) => (
+                        <div key={day} className="flex items-center gap-2 text-xs">
+                          <span className="text-admin-text-muted capitalize w-12">{day.slice(0, 3)}</span>
+                          <span className="text-admin-text-primary">{time}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -454,9 +492,20 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               )}
               {ps.reviews && ps.reviews.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
-                    Reviews{ps.rating ? ` (${ps.rating.score} via ${ps.rating.count} review${ps.rating.count !== 1 ? 's' : ''})` : ` (${ps.reviews.length})`}
-                  </p>
+                  <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">Reviews</p>
+                  {ps.rating && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={i} size={14}
+                            className={i < Math.round(ps.rating!.score) ? 'text-amber-400 fill-amber-400' : 'text-admin-text-faint'}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-sm font-medium text-admin-text-primary">{ps.rating.score}</span>
+                      <span className="text-xs text-admin-text-faint">({ps.rating.count} review{ps.rating.count !== 1 ? 's' : ''})</span>
+                    </div>
+                  )}
                   <div className="space-y-3">
                     {ps.reviews.map((r, idx) => (
                       <div key={idx} className="px-3 py-2.5 rounded-admin-sm bg-admin-bg-hover space-y-1">
@@ -485,73 +534,88 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 
           {tab === 'scout' && (
             <div className="space-y-5">
-              <div className="flex items-start justify-between">
-                <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
-                  {scoutImages.length} scout photo{scoutImages.length !== 1 ? 's' : ''}
-                </p>
-                <label className={`btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                  {uploading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
-                  Upload Scout Photos
-                  <input ref={scoutInputRef} type="file" accept="image/*" multiple className="sr-only" onChange={async (e) => {
-                    const files = e.target.files;
-                    if (!files?.length || !local) return;
-                    setUploading(true);
-                    try {
-                      for (const file of Array.from(files)) {
-                        const fd = new FormData();
-                        fd.set('file', file);
-                        const img = await uploadLocationImage(local.id, fd);
-                        const updated = { ...local, location_images: [...local.location_images, img] };
-                        setLocal(updated);
-                        onUpdate(updated);
-                      }
-                    } finally {
-                      setUploading(false);
-                      if (scoutInputRef.current) scoutInputRef.current.value = '';
-                    }
-                  }} />
-                </label>
+              {/* Dropzone */}
+              <div
+                onDrop={e => { e.preventDefault(); setScoutDragOver(false); if (e.dataTransfer.files.length) handleScoutUpload(e.dataTransfer.files); }}
+                onDragOver={e => { e.preventDefault(); setScoutDragOver(true); }}
+                onDragLeave={() => setScoutDragOver(false)}
+                onClick={() => !uploading && scoutInputRef.current?.click()}
+                className={`relative flex flex-col items-center justify-center gap-2 px-6 py-10 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                  scoutDragOver
+                    ? 'border-admin-info bg-admin-info/5'
+                    : 'border-admin-border hover:border-admin-border-emphasis hover:bg-admin-bg-hover'
+                }`}
+              >
+                <input
+                  ref={scoutInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files?.length) handleScoutUpload(e.target.files); e.target.value = ''; }}
+                />
+                {uploading ? (
+                  <>
+                    <Loader2 size={24} className="text-admin-text-muted animate-spin" />
+                    <p className="text-sm text-admin-text-muted">Uploading…</p>
+                  </>
+                ) : (
+                  <>
+                    <Camera size={24} className="text-admin-text-faint" />
+                    <p className="text-sm text-admin-text-muted">
+                      Drop scout photos here or click to browse
+                    </p>
+                    <p className="text-xs text-admin-text-faint">JPG, PNG, WebP — multiple files accepted</p>
+                  </>
+                )}
               </div>
 
-              {scoutImages.length === 0 ? (
-                <div className="text-center py-12 text-admin-text-faint">
-                  <Camera size={32} strokeWidth={1} className="mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">No scout photos yet.</p>
-                  <p className="text-xs mt-1">Upload photos from your location scout.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {scoutImages
-                    .sort((a, b) => a.sort_order - b.sort_order)
-                    .map(img => (
-                    <div key={img.id} className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover">
-                      <img src={img.image_url} alt={img.alt_text ?? ''} loading="lazy" className="w-full h-full object-cover" />
-                      {img.is_featured && (
-                        <div className="absolute top-1 left-1 p-1 rounded-admin-sm bg-admin-warning/20 text-admin-warning">
-                          <Star size={10} fill="currentColor" />
-                        </div>
+              {/* Photo grid */}
+              {scoutImages.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-admin-xs font-semibold uppercase tracking-widest text-admin-text-faint">
+                      {scoutImages.length} scout photo{scoutImages.length !== 1 ? 's' : ''}
+                    </p>
+                    <button
+                      onClick={() => downloadStoryboardZip(
+                        scoutImages.map((img, i) => ({ imageUrl: img.image_url, filename: `${local.name || 'location'}-scout-${i + 1}.jpg` })),
+                        `${local.name || 'location'}-scout-photos.zip`
                       )}
-                      <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover/img:opacity-100">
-                        {!img.is_featured && (
-                          <button
-                            onClick={() => handleSetFeatured(img)}
-                            className="p-1.5 rounded-admin-sm bg-black/60 text-white hover:bg-admin-warning/80 transition-colors"
-                            title="Set as featured"
-                          >
-                            <Star size={12} />
-                          </button>
+                      className="btn-secondary px-3 py-1.5 text-admin-sm inline-flex items-center gap-1.5"
+                    >
+                      <Download size={12} /> Download All
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {scoutImages
+                      .sort((a, b) => a.sort_order - b.sort_order)
+                      .map(img => (
+                      <div key={img.id} className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover">
+                        <img src={img.image_url} alt={img.alt_text ?? ''} loading="lazy" className="w-full h-full object-cover" />
+                        {img.is_featured && (
+                          <div className="absolute top-1 left-1 p-1 rounded-admin-sm bg-admin-warning/20 text-admin-warning">
+                            <Star size={10} fill="currentColor" />
+                          </div>
                         )}
-                        <button
-                          onClick={() => handleDeleteImage(img)}
-                          className="p-1.5 rounded-admin-sm bg-black/60 text-white hover:bg-admin-danger/80 transition-colors"
-                          title="Delete image"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100">
+                          {!img.is_featured && (
+                            <ImageActionButton icon={Star} color="warning" title="Set as featured" onClick={() => handleSetFeatured(img)} />
+                          )}
+                          <ImageActionButton icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `${local.name || 'location'}-scout-${img.id}.jpg`)} />
+                          <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
+                            const sorted = [...scoutImages].sort((a, b) => a.sort_order - b.sort_order);
+                            setLightbox({
+                              images: sorted.map(i => ({ url: i.image_url, label: i.alt_text ?? undefined })),
+                              index: sorted.findIndex(i => i.id === img.id),
+                            });
+                          }} />
+                          <ImageActionButton icon={Trash2} color="danger" title="Delete image" onClick={() => handleDeleteImage(img)} />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -663,6 +727,14 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
             onClose();
           }}
         />
+
+        {lightbox && (
+          <AdminLightbox
+            images={lightbox.images}
+            startIndex={lightbox.index}
+            onClose={() => setLightbox(null)}
+          />
+        )}
       </div>
     </PanelDrawer>
   );

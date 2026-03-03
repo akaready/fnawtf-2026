@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown, Upload, Loader2, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, Upload, Loader2, ImageIcon, Download, Expand } from 'lucide-react';
 import { saveProjectBTSImages, uploadBTSImage } from '../actions';
+import { AdminLightbox } from './AdminLightbox';
+import { ImageActionButton } from './ImageActionButton';
+import { downloadSingleImage, downloadStoryboardZip } from '@/lib/scripts/downloadStoryboards';
 
 interface BTSImage {
   image_url: string;
@@ -29,6 +32,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
   const [uploadCount, setUploadCount] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
   const [dragOver, setDragOver] = useState(false);
+  const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const update = (index: number, key: keyof BTSImage, value: string | null) => {
@@ -192,29 +196,60 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted opacity-0 group-hover/bts:opacity-100 hover:text-admin-danger hover:bg-red-500/8 transition-all mt-2"
-              >
-                <Trash2 size={13} />
-              </button>
+              <div className="flex items-center gap-1 opacity-0 group-hover/bts:opacity-100 transition-opacity mt-2">
+                {img.image_url && (
+                  <>
+                    <ImageActionButton variant="row" icon={Expand} color="neutral" title="View fullscreen" onClick={() => {
+                      const withUrls = images.filter(im => im.image_url);
+                      const idx = withUrls.findIndex(im => im.image_url === img.image_url);
+                      setLightbox({
+                        images: withUrls.map(im => ({ url: im.image_url, label: im.caption ?? undefined })),
+                        index: idx >= 0 ? idx : 0,
+                      });
+                    }} />
+                    <ImageActionButton variant="row" icon={Download} color="info" title="Download image" onClick={() => downloadSingleImage(img.image_url, `bts-${i + 1}.jpg`)} />
+                  </>
+                )}
+                <ImageActionButton variant="row" icon={Trash2} color="danger" title="Delete" onClick={() => remove(i)} />
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Manual add (for pasting URLs) */}
-      <button
-        type="button"
-        onClick={() => {
-          setImages((prev) => [...prev, { image_url: '', caption: null, sort_order: prev.length }]);
-          setIsDirty(true);
-        }}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
-      >
-        <Plus size={14} /> Add via URL
-      </button>
+      {/* Bottom actions */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setImages((prev) => [...prev, { image_url: '', caption: null, sort_order: prev.length }]);
+            setIsDirty(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
+        >
+          <Plus size={14} /> Add via URL
+        </button>
+        {images.filter(img => img.image_url).length > 0 && (
+          <button
+            type="button"
+            onClick={() => downloadStoryboardZip(
+              images.filter(img => img.image_url).map((img, i) => ({ imageUrl: img.image_url, filename: `bts-${i + 1}.jpg` })),
+              'bts-images.zip'
+            )}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
+          >
+            <Download size={14} /> Download All
+          </button>
+        )}
+      </div>
+
+      {lightbox && (
+        <AdminLightbox
+          images={lightbox.images}
+          startIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   );
 });
