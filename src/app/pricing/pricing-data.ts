@@ -333,14 +333,14 @@ export const crowdfundingTiers: CrowdfundingTier[] = [
 ];
 
 export const fundraisingPackage: FundraisingPackage = {
-  startingPrice: 15000,
-  minimumDown: 3000,
+  startingPrice: 10000,
+  minimumDown: 2000,
   minimumDownPercent: 20,
   paymentTermDays: 180,
   multiplierOnSuccess: 2,
   details: [
-    'Pitch video packages starting at $15,000',
-    'Minimum 20% down ($3,000)',
+    'Pitch video packages starting at $10,000',
+    'Minimum 20% down ($2,000)',
     'Rest owed in 180 days, or after you raise — whichever comes first',
     'If you raise within 6 months, unpaid balance owed at 2x (risk coverage)',
   ],
@@ -365,19 +365,19 @@ export const fundraisingIncluded: AddOn[] = [
 ];
 
 export const fundraisingAddOns: AddOn[] = [
-  { id: 'fundraising-broll', name: 'B-roll footage of your product', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
-  { id: 'fundraising-scripted-videos', name: "Add'l scripted videos (1x)", price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
-  { id: 'fundraising-faqs', name: "Add'l unscripted FAQs (10x)", price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
-  { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
-  { id: 'fundraising-rush', name: '72-hour rush fee', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   {
     id: 'fundraising-additional-speakers',
     name: 'Additional speakers',
     price: 2500,
-    priceSuffix: '/each',
-    priceDisplay: '$2,500/each',
+    priceSuffix: '/ea',
+    priceDisplay: '$2,500/ea',
     tier: 'fundraising',
     quantity: { min: 1, max: 10, default: 1, unit: 'speakers' },
   },
+  { id: 'fundraising-broll', name: 'B-roll footage of your product', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-scripted-videos', name: "Add'l scripted videos (1x)", price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-faqs', name: "Add'l unscripted FAQs (5x)", price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-rush', name: '72-hour rush fee', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-additional-post', name: 'Additional week of post', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
 ];

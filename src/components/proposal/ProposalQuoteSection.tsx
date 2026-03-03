@@ -42,6 +42,7 @@ export function ProposalQuoteSection({ proposalId, quotes: initialQuotes }: Prop
         crowdfunding_enabled: source.crowdfunding_enabled,
         crowdfunding_tier: source.crowdfunding_tier,
         fundraising_enabled: source.fundraising_enabled,
+        fundraising_tier: source.fundraising_tier,
         defer_payment: source.defer_payment,
         friendly_discount_pct: source.friendly_discount_pct,
         total_amount: source.total_amount,
@@ -212,17 +213,45 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
           </div>
         )}
         {quote.down_amount != null && quote.total_amount != null && (
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm text-muted-foreground">
-              {quote.fundraising_enabled ? 'Balance due after raise'
-                : quote.crowdfunding_enabled && quote.defer_payment ? <>Balance due <u>after</u> crowdfunding raise</>
-                : quote.crowdfunding_enabled ? <>Balance due <u>before</u> crowdfunding launch</>
-                : 'Balance due upon delivery'}
-            </span>
-            <span className="text-base font-display font-bold text-muted-foreground">
-              ${(quote.total_amount - quote.down_amount).toLocaleString()}
-            </span>
-          </div>
+          quote.fundraising_enabled ? (() => {
+            const ftiers = [{ preRaise: 100, multiplier: 1 }, { preRaise: 80, multiplier: 1.25 }, { preRaise: 60, multiplier: 1.5 }, { preRaise: 40, multiplier: 1.75 }, { preRaise: 20, multiplier: 2 }];
+            const ft = ftiers[quote.fundraising_tier ?? 0];
+            const t = quote.total_amount!;
+            const dp = (quote.fundraising_tier ?? 0) === 4 ? 0.2 : 0.4;
+            const del = Math.round(t * Math.max(0, ft.preRaise / 100 - dp));
+            const postBase = t - Math.round(t * ft.preRaise / 100);
+            const postRaise = Math.round(postBase * ft.multiplier);
+            return (
+              <>
+                {del > 0 && (
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm text-muted-foreground">Due on delivery</span>
+                    <span className="text-base font-display font-bold text-muted-foreground">${del.toLocaleString()}</span>
+                  </div>
+                )}
+                {postRaise > 0 && (
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                    <span className="text-base font-display font-bold text-muted-foreground">${postRaise.toLocaleString()}</span>
+                  </div>
+                )}
+                {ft.multiplier > 1 && postRaise > 0 && (
+                  <p className="text-xs text-muted-foreground/40">{ft.multiplier}x multiplier on post-raise balance</p>
+                )}
+              </>
+            );
+          })() : (
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm text-muted-foreground">
+                {quote.crowdfunding_enabled && quote.defer_payment ? <>Balance due <u>after</u> crowdfunding raise</>
+                  : quote.crowdfunding_enabled ? <>Balance due <u>before</u> crowdfunding launch</>
+                  : 'Balance due upon delivery'}
+              </span>
+              <span className="text-base font-display font-bold text-muted-foreground">
+                ${(quote.total_amount - quote.down_amount).toLocaleString()}
+              </span>
+            </div>
+          )
         )}
         {quote.defer_payment && (
           <p className="text-xs text-muted-foreground/40 italic">

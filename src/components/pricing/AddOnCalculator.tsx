@@ -1111,6 +1111,7 @@ export function AddOnCalculator() {
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(false);
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(0);
   const [fundraisingEnabled, setFundraisingEnabled] = useState(false);
+  const [fundraisingTierIndex, setFundraisingTierIndex] = useState(0);
 
   // Persist calculator state to sessionStorage so /start can pick it up
   const PRICING_QUOTE_KEY = 'fna-pricing-quote';
@@ -1125,10 +1126,11 @@ export function AddOnCalculator() {
       crowdfunding_enabled: crowdfundingEnabled,
       crowdfunding_tier: crowdfundingTierIndex,
       fundraising_enabled: fundraisingEnabled,
+      fundraising_tier: fundraisingTierIndex,
       friendly_discount_pct: 0,
     };
     sessionStorage.setItem(PRICING_QUOTE_KEY, JSON.stringify(snapshot));
-  }, [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled]);
+  }, [activeTab, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingEnabled, crowdfundingTierIndex, fundraisingEnabled, fundraisingTierIndex]);
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => {
@@ -1450,6 +1452,8 @@ export function AddOnCalculator() {
               onCrowdfundingTierChange={setCrowdfundingTierIndex}
               fundraisingEnabled={fundraisingEnabled}
               onFundraisingToggle={handleFundraisingToggle}
+              fundraisingTierIndex={fundraisingTierIndex}
+              onFundraisingTierChange={setFundraisingTierIndex}
               totalDays={totalDays}
               photoCount={photoCount}
               tierSelections={tierSelections}

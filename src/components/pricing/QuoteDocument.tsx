@@ -13,7 +13,7 @@ import type { QuoteData, ContactInfo } from '@/lib/pdf/types';
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function BalanceLabelPdf({ data }: { data: QuoteData }) {
-  if (data.specialProgram === 'fundraising') return <Text style={S.balanceLabel}>Balance due after raise</Text>;
+  if (data.specialProgram === 'fundraising') return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> fundraising</Text>;
   if (data.specialProgram === 'crowdfunding' && data.deferPayment)
     return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</Text>;
   if (data.specialProgram === 'crowdfunding')
@@ -572,10 +572,30 @@ export function QuoteDocument({ data, contact }: QuoteDocumentProps) {
               <Text style={S.paymentAmount}>{fmt(data.downAmount)}</Text>
             </View>
             <Text style={S.paymentSub}>Minimum payment to begin</Text>
-            <View style={[S.paymentRow, { marginTop: 8 }]}>
-              <BalanceLabelPdf data={data} />
-              <Text style={S.balanceAmount}>{fmt(data.total - data.downAmount)}</Text>
-            </View>
+            {data.specialProgram === 'fundraising' ? (
+              <>
+                {data.fundraisingDeliveryAmount > 0 && (
+                  <View style={[S.paymentRow, { marginTop: 8 }]}>
+                    <Text style={S.balanceLabel}>Due on delivery</Text>
+                    <Text style={S.balanceAmount}>{fmt(data.fundraisingDeliveryAmount)}</Text>
+                  </View>
+                )}
+                {data.fundraisingPostRaiseAmount > 0 && (
+                  <View style={[S.paymentRow, { marginTop: 4 }]}>
+                    <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> fundraising</Text>
+                    <Text style={S.balanceAmount}>{fmt(data.fundraisingPostRaiseAmount)}</Text>
+                  </View>
+                )}
+                {data.fundraisingMultiplier > 1 && data.fundraisingPostRaiseAmount > 0 && (
+                  <Text style={[S.paymentSub, { marginTop: 2 }]}>{data.fundraisingMultiplier}x multiplier applied to post-raise balance</Text>
+                )}
+              </>
+            ) : (
+              <View style={[S.paymentRow, { marginTop: 8 }]}>
+                <BalanceLabelPdf data={data} />
+                <Text style={S.balanceAmount}>{fmt(data.total - data.downAmount)}</Text>
+              </View>
+            )}
           </View>
 
           {/* ── Special program note (never split) ── */}
@@ -595,9 +615,9 @@ export function QuoteDocument({ data, contact }: QuoteDocumentProps) {
               <Text style={S.programNoteTitle}>Private Equity Fundraising Program</Text>
               <Text style={S.programNoteText}>
                 Minimum 20% due at signing, the remainder due on delivery or after you raise.
-                Any amount unpaid at delivery pre-raise is billed at 2× post-raise.
+                Any amount unpaid at the time of delivery pre-raise is billed at the rates above post-raise to help cover our risk.
                 Travel outside Silicon Valley billed at 2× (flights, hotel, rental car, per diem).
-                A maximum fee of 50% of the total will be due after 1 year if no funds have yet been raised.
+                A fee of up to 50% the balance due after delivery (not including any risk-adjusted rates) will be due after 1 year if no funds have been raised yet.
               </Text>
             </View>
           )}

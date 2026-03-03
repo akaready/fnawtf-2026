@@ -843,6 +843,7 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
   crowdfunding_enabled: boolean;
   crowdfunding_tier: number;
   fundraising_enabled: boolean;
+  fundraising_tier: number;
   defer_payment: boolean;
   friendly_discount_pct: number;
   total_amount: number | null;

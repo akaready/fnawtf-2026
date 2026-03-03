@@ -24,6 +24,10 @@ export interface QuoteData {
   downAmount: number;
   specialProgram: 'crowdfunding' | 'fundraising' | null;
   deferPayment: boolean;
+  fundraisingTierIndex: number;
+  fundraisingMultiplier: number;
+  fundraisingDeliveryAmount: number;
+  fundraisingPostRaiseAmount: number;
 }
 
 export interface ContactInfo {

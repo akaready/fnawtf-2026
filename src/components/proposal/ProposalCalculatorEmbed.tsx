@@ -25,6 +25,7 @@ export interface CalculatorStateSnapshot {
   crowdfunding_enabled: boolean;
   crowdfunding_tier: number;
   fundraising_enabled: boolean;
+  fundraising_tier: number;
   friendly_discount_pct: number;
 }
 
@@ -114,6 +115,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
   );
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(initialQuote?.crowdfunding_enabled ?? false);
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(initialQuote?.crowdfunding_tier ?? 0);
+  const [fundraisingTierIndex, setFundraisingTierIndex] = useState(initialQuote?.fundraising_tier ?? 0);
   const [friendlyDiscountPct, setFriendlyDiscountPct] = useState(initialQuote?.friendly_discount_pct ?? 0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     () => sectionsForType(initSelectedType(proposalType, initialQuote?.quote_type))
@@ -183,7 +185,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     if (suppressDirtyRef.current) { suppressDirtyRef.current = false; return; }
     onAnyChange?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingTierIndex, friendlyDiscountPct]);
+  }, [selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, crowdfundingTierIndex, fundraisingTierIndex, friendlyDiscountPct]);
 
   // When activeQuoteId changes (user switched to a different quote tab),
   // reload all calculator state from the new initialQuote — in place, no remount.
@@ -222,6 +224,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     setPhotoCount(initialQuote.photo_count ?? 25);
     setCrowdfundingEnabled(initialQuote.crowdfunding_enabled ?? false);
     setCrowdfundingTierIndex(initialQuote.crowdfunding_tier ?? 0);
+    setFundraisingTierIndex(initialQuote.fundraising_tier ?? 0);
     setFriendlyDiscountPct(initialQuote.friendly_discount_pct ?? 0);
   }, [initialQuote, proposalType, typeOverride]);
 
@@ -236,9 +239,10 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     crowdfunding_enabled: effectiveCrowdfunding,
     crowdfunding_tier: crowdfundingTierIndex,
     fundraising_enabled: effectiveType === 'fundraising',
+    fundraising_tier: fundraisingTierIndex,
     friendly_discount_pct: friendlyDiscountPct,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [effectiveType, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, effectiveCrowdfunding, crowdfundingTierIndex, friendlyDiscountPct]);
+  }), [effectiveType, selectedAddOns, sliderValues, tierSelections, locationDays, photoCount, effectiveCrowdfunding, crowdfundingTierIndex, fundraisingTierIndex, friendlyDiscountPct]);
 
   // Standalone mode: emit state changes to parent instead of server saves
   const standaloneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -410,6 +414,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
           crowdfunding_enabled: effectiveCrowdfunding,
           crowdfunding_tier: crowdfundingTierIndex,
           fundraising_enabled: effectiveType === 'fundraising',
+          fundraising_tier: fundraisingTierIndex,
           defer_payment: false,
           friendly_discount_pct: 0,
           total_amount: null,
@@ -600,6 +605,8 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               onCrowdfundingTierChange={setCrowdfundingTierIndex}
               fundraisingEnabled={fundraisingEnabled}
               onFundraisingToggle={() => {}}
+              fundraisingTierIndex={fundraisingTierIndex}
+              onFundraisingTierChange={setFundraisingTierIndex}
               totalDays={totalDays}
               photoCount={photoCount}
               tierSelections={tierSelections}

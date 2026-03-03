@@ -23,6 +23,8 @@ interface CalculatorSummaryProps {
   onCrowdfundingTierChange: (i: number) => void;
   fundraisingEnabled: boolean;
   onFundraisingToggle: () => void;
+  fundraisingTierIndex: number;
+  onFundraisingTierChange: (i: number) => void;
   totalDays: number;
   photoCount: number;
   tierSelections?: Map<string, 'basic' | 'premium'>;
@@ -137,7 +139,7 @@ function calcTierTotal(
 
 // ── Balance label helper ─────────────────────────────────────────────────
 function balanceLabel(opts: { crowdfunding: boolean; deferred: boolean; fundraising: boolean }): React.ReactNode {
-  if (opts.fundraising) return 'Balance due after raise';
+  if (opts.fundraising) return <>Balance due <u>after</u> fundraising</>;
   if (opts.crowdfunding && opts.deferred) return <>Balance due <u>after</u> crowdfunding raise</>;
   if (opts.crowdfunding) return <>Balance due <u>before</u> crowdfunding launch</>;
   return 'Balance due upon delivery';
@@ -167,6 +169,9 @@ interface QuoteColumnData {
   downAmount: number;
   deferPayment: boolean;
   downPercent: number;
+  fundraisingTierIndex: number;
+  fundDeliveryAmount: number;
+  fundPostRaiseAmount: number;
 }
 
 function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColumnData {
@@ -195,7 +200,7 @@ function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColu
 
   const buildBase = buildActive ? 5000 : 0;
   const launchBase = launchActive ? 10000 : 0;
-  const fundBase = isFundraising ? 15000 : 0;
+  const fundBase = isFundraising ? 10000 : 0;
 
   const addOnTotal = (buildResult?.total ?? 0) + (launchResult?.total ?? 0) + (fundResult?.total ?? 0);
   const castCrewTotal = launchResult?.castCrewTotal ?? 0;
@@ -219,9 +224,19 @@ function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColu
   const hasDiscount = crowdDiscount > 0 || friendlyDiscount > 0;
   const total = hasDiscount ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
-  const downPct = isFundraising ? 0.2 : (quote.crowdfunding_enabled && quote.defer_payment) ? 0.6 : 0.4;
+  const fundTierIdx = isFundraising ? (quote.fundraising_tier ?? 0) : 0;
+  const downPct = isFundraising
+    ? (fundTierIdx === 4 ? 0.2 : 0.4)
+    : (quote.crowdfunding_enabled && quote.defer_payment) ? 0.6 : 0.4;
   const rawDown = Math.round(total * downPct);
   const downAmount = hasDiscount ? Math.ceil(rawDown / 50) * 50 : rawDown;
+
+  // Fundraising balance breakdown
+  const ftier = fundraisingTiers[fundTierIdx];
+  const fPreRaisePct = isFundraising ? ftier.preRaise / 100 : 0;
+  const fDelivery = isFundraising ? Math.round(total * Math.max(0, fPreRaisePct - downPct)) : 0;
+  const fPostBase = isFundraising ? total - Math.round(total * fPreRaisePct) : 0;
+  const fPostRaise = Math.round(fPostBase * (ftier?.multiplier ?? 1));
 
   return {
     label: quote.label,
@@ -245,10 +260,71 @@ function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColu
     downAmount,
     downPercent: downPct,
     deferPayment: quote.defer_payment,
+    fundraisingTierIndex: fundTierIdx,
+    fundDeliveryAmount: fDelivery,
+    fundPostRaiseAmount: fPostRaise,
   };
 }
 
 // ── Crowdfunding Slider ──────────────────────────────────────────────────
+
+// ── Fundraising Payment Tiers ─────────────────────────────────────────────
+const fundraisingTiers = [
+  { preRaise: 100, multiplier: 1,    label: '1x' },
+  { preRaise: 80,  multiplier: 1.25, label: '1.25x' },
+  { preRaise: 60,  multiplier: 1.5,  label: '1.5x' },
+  { preRaise: 40,  multiplier: 1.75, label: '1.75x' },
+  { preRaise: 20,  multiplier: 2,    label: '2x' },
+];
+
+function FundraisingPaymentSlider({
+  tierIndex,
+  onTierChange,
+}: {
+  tierIndex: number;
+  onTierChange: (i: number) => void;
+}) {
+  const currentTier = fundraisingTiers[tierIndex];
+  const isActive = tierIndex > 0;
+  return (
+    <>
+      <input
+        type="range"
+        min={0}
+        max={4}
+        step={1}
+        value={tierIndex}
+        onChange={(e) => onTierChange(Number(e.target.value))}
+        className={`w-full h-2 bg-border rounded-lg appearance-none cursor-pointer
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+          [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
+          [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
+          isActive
+            ? '[&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(161,77,253,0.4)] [&::-moz-range-thumb]:bg-purple-500'
+            : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
+        }`}
+      />
+      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+        <span>100%</span>
+        <span>80%</span>
+        <span>60%</span>
+        <span>40%</span>
+        <span>20%</span>
+      </div>
+      <div className="text-center mt-2">
+        <span className={`text-lg font-bold transition-colors duration-200 ${
+          isActive ? 'text-purple-400' : 'text-muted-foreground'
+        }`}>Pay {currentTier.preRaise}% before the raise</span>
+        <p className="text-xs text-muted-foreground">
+          {currentTier.multiplier > 1
+            ? `${currentTier.label} multiplier on post-raise balance`
+            : 'No multiplier — pay in full before raise'}
+        </p>
+      </div>
+    </>
+  );
+}
 
 function CrowdfundingSlider({
   tierIndex,
@@ -774,6 +850,8 @@ export function CalculatorSummary({
   onCrowdfundingTierChange,
   fundraisingEnabled,
   onFundraisingToggle: _onFundraisingToggle,
+  fundraisingTierIndex,
+  onFundraisingTierChange,
   totalDays,
   photoCount,
   tierSelections,
@@ -798,6 +876,7 @@ export function CalculatorSummary({
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
   const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(initialFriendlyDiscountPct ?? 0);
+  const [offerOpen, setOfferOpen] = useState(true);
   const [discountsOpen, setDiscountsOpen] = useState(
     (initialFriendlyDiscountPct ?? 0) > 0 || !!crowdfundingApproved || !!crowdfundingDeferred
   );
@@ -830,6 +909,26 @@ export function CalculatorSummary({
       gsap.to(el, { height: 0, opacity: 0, duration: 0.3, ease: 'power2.out' });
     }
   }, [discountsOpen]);
+
+  // ── Offer card GSAP animation ──
+  const offerContentRef = useRef<HTMLDivElement>(null);
+  const offerFirstRender = useRef(true);
+  useEffect(() => {
+    if (!offerContentRef.current) return;
+    const el = offerContentRef.current;
+    if (offerFirstRender.current) {
+      offerFirstRender.current = false;
+      el.style.height = offerOpen ? 'auto' : '0px';
+      el.style.opacity = offerOpen ? '1' : '0';
+      return;
+    }
+    if (offerOpen) {
+      const h = el.scrollHeight;
+      gsap.fromTo(el, { height: 0, opacity: 0 }, { height: h, opacity: 1, duration: 0.3, ease: 'power2.out', onComplete: () => { el.style.height = 'auto'; } });
+    } else {
+      gsap.to(el, { height: 0, opacity: 0, duration: 0.3, ease: 'power2.out' });
+    }
+  }, [offerOpen]);
 
   // ── Dropdown comparison state (proposal context only) ──
   const [showComparison, setShowComparison] = useState(false);
@@ -885,7 +984,7 @@ export function CalculatorSummary({
 
   const buildBase = buildActive ? 5000 : 0;
   const launchBase = launchActive ? 10000 : 0;
-  const fundraisingBase = fundraisingEnabled ? 15000 : 0;
+  const fundraisingBase = fundraisingEnabled ? 10000 : 0;
 
   const buildAddOnTotal = buildResult?.total ?? 0;
   const launchAddOnTotal = launchResult?.total ?? 0;
@@ -926,9 +1025,18 @@ export function CalculatorSummary({
   const rawTotal = subtotalWithFee - crowdfundingDiscount - friendlyDiscount;
   const total = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
-  const downPercent = fundraisingEnabled ? 0.2 : (effectiveCrowdfundingEnabled && deferPayment) ? 0.6 : 0.4;
+  const downPercent = fundraisingEnabled
+    ? (fundraisingTierIndex === 4 ? 0.2 : 0.4)
+    : (effectiveCrowdfundingEnabled && deferPayment) ? 0.6 : 0.4;
   const rawDown = Math.round(total * downPercent);
   const downAmount = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawDown / 50) * 50 : rawDown;
+
+  // ── Fundraising balance breakdown ──
+  const fundTier = fundraisingTiers[fundraisingTierIndex];
+  const fundPreRaisePct = fundraisingEnabled ? fundTier.preRaise / 100 : 0;
+  const fundDeliveryAmount = fundraisingEnabled ? Math.round(total * Math.max(0, fundPreRaisePct - downPercent)) : 0;
+  const fundPostRaiseBase = fundraisingEnabled ? total - Math.round(total * fundPreRaisePct) : 0;
+  const fundPostRaiseAmount = Math.round(fundPostRaiseBase * (fundTier?.multiplier ?? 1));
 
   // ── Build live column data (matches QuoteColumnData shape) ──
   const liveColumnData: QuoteColumnData = {
@@ -953,6 +1061,9 @@ export function CalculatorSummary({
     downAmount,
     downPercent,
     deferPayment,
+    fundraisingTierIndex,
+    fundDeliveryAmount,
+    fundPostRaiseAmount,
   };
 
   // ── FNA (left) column — always locked to the first/recommended FNA quote ──
@@ -966,6 +1077,37 @@ export function CalculatorSummary({
   return (
     <div>
     <div className="sticky top-[121px]">
+      {/* Collapsible Offer section — shown when fundraising enabled */}
+      {fundraisingEnabled && (
+        <div className="mb-4 rounded-lg border border-purple-800 overflow-hidden bg-purple-900/20">
+          <button
+            data-no-intercept
+            onClick={() => setOfferOpen((o) => !o)}
+            className="w-full flex items-center justify-between p-5 group"
+            aria-expanded={offerOpen}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-purple-900 flex items-center justify-center">
+                <Star className="w-5 h-5 text-purple-400" />
+              </div>
+              <h3 className="font-display text-lg font-bold text-foreground">Offer</h3>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110 ${offerOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div ref={offerContentRef} className="overflow-hidden">
+            <div className="relative px-5 pt-2 pb-5">
+              {isLocked && <div className="absolute inset-0 z-10" style={{ cursor: 'not-allowed' }} />}
+              <FundraisingPaymentSlider
+                tierIndex={fundraisingTierIndex}
+                onTierChange={(i) => { if (onInteraction?.()) return; onFundraisingTierChange(i); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Collapsible Discounts section — above the quote card */}
       {!fundraisingEnabled && (
         <div className="mb-4 rounded-lg border border-purple-800 overflow-hidden bg-purple-900/20">
@@ -1190,12 +1332,29 @@ export function CalculatorSummary({
                     </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(fnaColumnData.downAmount)}</span>
                   </div>
-                  <div className="flex justify-between items-center mt-1.5">
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      {balanceLabel({ crowdfunding: fnaColumnData.crowdfundingEnabled, deferred: fnaColumnData.deferPayment, fundraising: fnaColumnData.isFundraising })}
-                    </span>
-                    <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.total - fnaColumnData.downAmount)}</span>
-                  </div>
+                  {fnaColumnData.isFundraising ? (
+                    <>
+                      {fnaColumnData.fundDeliveryAmount > 0 && (
+                        <div className="flex justify-between items-center mt-1.5">
+                          <span className="text-sm font-semibold text-muted-foreground">Due on delivery</span>
+                          <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.fundDeliveryAmount)}</span>
+                        </div>
+                      )}
+                      {fnaColumnData.fundPostRaiseAmount > 0 && (
+                        <div className="flex justify-between items-center mt-1.5">
+                          <span className="text-sm font-semibold text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                          <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.fundPostRaiseAmount)}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center mt-1.5">
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        {balanceLabel({ crowdfunding: fnaColumnData.crowdfundingEnabled, deferred: fnaColumnData.deferPayment, fundraising: false })}
+                      </span>
+                      <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.total - fnaColumnData.downAmount)}</span>
+                    </div>
+                  )}
                 </div>
                 <div className={`pl-4 ${fundraisingEnabled ? 'border-l border-green-900/50' : 'border-l border-border'}`}>
                   <div className={`flex justify-between items-baseline mb-2 pb-2 border-b border-dashed ${fundraisingEnabled ? 'border-green-900/60' : 'border-border'}`}>
@@ -1209,12 +1368,29 @@ export function CalculatorSummary({
                     </div>
                     <span className="font-display font-bold text-2xl text-green-400">{formatPrice(liveColumnData.downAmount)}</span>
                   </div>
-                  <div className="flex justify-between items-center mt-1.5">
-                    <span className="text-sm font-semibold text-muted-foreground">
-                      {balanceLabel({ crowdfunding: liveColumnData.crowdfundingEnabled, deferred: liveColumnData.deferPayment, fundraising: liveColumnData.isFundraising })}
-                    </span>
-                    <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.total - liveColumnData.downAmount)}</span>
-                  </div>
+                  {liveColumnData.isFundraising ? (
+                    <>
+                      {liveColumnData.fundDeliveryAmount > 0 && (
+                        <div className="flex justify-between items-center mt-1.5">
+                          <span className="text-sm font-semibold text-muted-foreground">Due on delivery</span>
+                          <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.fundDeliveryAmount)}</span>
+                        </div>
+                      )}
+                      {liveColumnData.fundPostRaiseAmount > 0 && (
+                        <div className="flex justify-between items-center mt-1.5">
+                          <span className="text-sm font-semibold text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                          <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.fundPostRaiseAmount)}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center mt-1.5">
+                      <span className="text-sm font-semibold text-muted-foreground">
+                        {balanceLabel({ crowdfunding: liveColumnData.crowdfundingEnabled, deferred: liveColumnData.deferPayment, fundraising: false })}
+                      </span>
+                      <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.total - liveColumnData.downAmount)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1351,12 +1527,32 @@ export function CalculatorSummary({
             </div>
             <span className="font-display font-bold text-2xl text-green-400">{formatPrice(downAmount)}</span>
           </div>
-          <div className="flex justify-between items-center mt-2">
-            <span className="font-semibold text-muted-foreground">
-              {balanceLabel({ crowdfunding: effectiveCrowdfundingEnabled, deferred: deferPayment, fundraising: fundraisingEnabled })}
-            </span>
-            <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(total - downAmount)}</span>
-          </div>
+          {fundraisingEnabled ? (
+            <>
+              {fundDeliveryAmount > 0 && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="font-semibold text-muted-foreground">Due on delivery</span>
+                  <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(fundDeliveryAmount)}</span>
+                </div>
+              )}
+              {fundPostRaiseAmount > 0 && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="font-semibold text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                  <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(fundPostRaiseAmount)}</span>
+                </div>
+              )}
+              {fundTier.multiplier > 1 && fundPostRaiseAmount > 0 && (
+                <p className="text-xs text-muted-foreground/50 mt-1">{fundTier.label} multiplier applied to post-raise balance</p>
+              )}
+            </>
+          ) : (
+            <div className="flex justify-between items-center mt-2">
+              <span className="font-semibold text-muted-foreground">
+                {balanceLabel({ crowdfunding: effectiveCrowdfundingEnabled, deferred: deferPayment, fundraising: false })}
+              </span>
+              <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(total - downAmount)}</span>
+            </div>
+          )}
         </div>
           </motion.div>
         )}
@@ -1367,9 +1563,9 @@ export function CalculatorSummary({
         {fundraisingEnabled && (
           <div className="mt-3 p-4 rounded-lg bg-muted/20 border border-green-900 space-y-2 mb-6">
             <p className="text-base font-semibold text-foreground">Pay up front, or after you raise.</p>
-            <p className="text-sm text-muted-foreground">Minimum 20% due at signing, the rest due on delivery. Or, pay the rest after you raise.</p>
+            <p className="text-sm text-muted-foreground">Choose how much to pay before your raise using the slider above. Unpaid balances after delivery are subject to a multiplier.</p>
             <p className="text-xs text-muted-foreground/70 leading-relaxed">
-              <span className="font-semibold">Any amount unpaid at the time of delivery pre-raise is billed at 2x post-raise to help cover our risk.</span> Travel outside Silicon Valley billed at 2x (flights, hotel, rental car, per diem). Travel fees due on final delivery regardless of fee structure. A maximum fee of 50% of the total will be due after 1 year if no funds have yet been raised.
+              Post-raise multipliers range from 1.25x to 2x depending on how much is deferred. Any amount unpaid at the time of delivery pre-raise is billed at the rates above post-raise to help cover our risk. Travel outside Silicon Valley billed at 2x (flights, hotel, rental car, per diem). Travel fees due on final delivery regardless of fee structure. A fee of up to 50% the balance due after delivery (not including any risk-adjusted rates) will be due after 1 year if no funds have been raised yet.
             </p>
           </div>
         )}
@@ -1405,6 +1601,7 @@ export function CalculatorSummary({
               friendlyDiscount, friendlyDiscountPercent,
               showFriendlyDiscount,
               total, downPercent, downAmount,
+              fundraisingTierIndex, fundDeliveryAmount, fundPostRaiseAmount,
             })}
             prefillData={prefillData}
             onClose={() => setShowModal(false)}
@@ -1442,6 +1639,9 @@ function buildQuoteData(p: {
   total: number;
   downPercent: number;
   downAmount: number;
+  fundraisingTierIndex: number;
+  fundDeliveryAmount: number;
+  fundPostRaiseAmount: number;
 }): QuoteData {
   const tier = p.fundraisingEnabled
     ? 'Fundraising'
@@ -1484,5 +1684,9 @@ function buildQuoteData(p: {
       ? 'fundraising'
       : null,
     deferPayment: p.deferPayment,
+    fundraisingTierIndex: p.fundraisingTierIndex,
+    fundraisingMultiplier: fundraisingTiers[p.fundraisingTierIndex]?.multiplier ?? 1,
+    fundraisingDeliveryAmount: p.fundDeliveryAmount,
+    fundraisingPostRaiseAmount: p.fundPostRaiseAmount,
   };
 }

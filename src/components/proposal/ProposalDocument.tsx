@@ -453,11 +453,43 @@ export function ProposalDocument({ data }: ProposalDocumentProps) {
                         <Text style={S.paymentLabel}>Due at signing</Text>
                         <Text style={S.paymentAmount}>{fmt(fnaQuote.down_amount)}</Text>
                       </View>
-                      {fnaQuote.total_amount != null && (
+                      {fnaQuote.total_amount != null && fnaQuote.fundraising_enabled ? (() => {
+                        const ftiers = [
+                          { preRaise: 100, multiplier: 1 },
+                          { preRaise: 80, multiplier: 1.25 },
+                          { preRaise: 60, multiplier: 1.5 },
+                          { preRaise: 40, multiplier: 1.75 },
+                          { preRaise: 20, multiplier: 2 },
+                        ];
+                        const ft = ftiers[fnaQuote.fundraising_tier ?? 0];
+                        const t = fnaQuote.total_amount;
+                        const dp = (fnaQuote.fundraising_tier ?? 0) === 4 ? 0.2 : 0.4;
+                        const del = Math.round(t * Math.max(0, ft.preRaise / 100 - dp));
+                        const postBase = t - Math.round(t * ft.preRaise / 100);
+                        const postRaise = Math.round(postBase * ft.multiplier);
+                        return (
+                          <>
+                            {del > 0 && (
+                              <View style={[S.paymentRow, { marginTop: 6 }]}>
+                                <Text style={S.balanceLabel}>Due on delivery</Text>
+                                <Text style={S.balanceAmount}>{fmt(del)}</Text>
+                              </View>
+                            )}
+                            {postRaise > 0 && (
+                              <View style={[S.paymentRow, { marginTop: 4 }]}>
+                                <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> fundraising</Text>
+                                <Text style={S.balanceAmount}>{fmt(postRaise)}</Text>
+                              </View>
+                            )}
+                            {ft.multiplier > 1 && postRaise > 0 && (
+                              <Text style={{ marginTop: 2, fontSize: 7, color: '#999' }}>{ft.multiplier}x multiplier on post-raise balance</Text>
+                            )}
+                          </>
+                        );
+                      })() : fnaQuote.total_amount != null && (
                         <View style={[S.paymentRow, { marginTop: 6 }]}>
                           <Text style={S.balanceLabel}>
-                            {fnaQuote.fundraising_enabled ? 'Balance due after raise'
-                              : fnaQuote.crowdfunding_enabled && fnaQuote.defer_payment ? <>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</>
+                            {fnaQuote.crowdfunding_enabled && fnaQuote.defer_payment ? <>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</>
                               : fnaQuote.crowdfunding_enabled ? <>Balance due <Text style={{ textDecoration: 'underline' }}>before</Text> crowdfunding launch</>
                               : 'Balance due upon delivery'}
                           </Text>

@@ -63,6 +63,7 @@ function QuoteForm({
         crowdfunding_enabled: quote?.crowdfunding_enabled ?? false,
         crowdfunding_tier: quote?.crowdfunding_tier ?? 0,
         fundraising_enabled: quoteType === 'fundraising',
+        fundraising_tier: quote?.fundraising_tier ?? 0,
         is_locked: false,
         is_fna_quote: true,
       }, quote?.id);
