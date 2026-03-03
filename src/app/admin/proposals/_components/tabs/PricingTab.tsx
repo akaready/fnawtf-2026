@@ -54,7 +54,7 @@ function QuoteIcon({ index, className }: { index: number; className?: string }) 
   );
 }
 
-const labelCls = 'block text-xs text-admin-text-secondary uppercase tracking-wide mb-1';
+const labelCls = 'admin-label';
 const inputCls =
   'w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis placeholder:text-admin-text-ghost';
 
@@ -63,7 +63,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
-    [...initialQuotes.filter((q) => !q.deleted_at)].sort((a, b) => a.sort_order - b.sort_order),
+    [...initialQuotes.filter((q) => !q.deleted_at && q.is_fna_quote)].sort((a, b) => a.sort_order - b.sort_order),
   );
   const [selectedType, setSelectedType] = useState<PricingType>(() => initType(proposalType));
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(false);

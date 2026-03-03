@@ -397,15 +397,15 @@ function FormInputsDemo() {
   return (
     <div className="p-6 space-y-4 max-w-md">
       <div>
-        <label className="block text-xs text-admin-text-secondary uppercase tracking-wide mb-1">Default Input</label>
+        <label className="admin-label">Default Input</label>
         <input type="text" className="admin-input w-full px-3 py-2 text-sm" placeholder="Placeholder text…" />
       </div>
       <div>
-        <label className="block text-xs text-admin-text-secondary uppercase tracking-wide mb-1">Disabled Input</label>
+        <label className="admin-label">Disabled Input</label>
         <input type="text" className="admin-input w-full px-3 py-2 text-sm" value="Cannot edit" disabled />
       </div>
       <div>
-        <label className="block text-xs text-admin-text-secondary uppercase tracking-wide mb-1">Textarea</label>
+        <label className="admin-label">Textarea</label>
         <textarea className="admin-input w-full px-3 py-2 text-sm resize-none" rows={3} placeholder="Enter description…" />
       </div>
     </div>

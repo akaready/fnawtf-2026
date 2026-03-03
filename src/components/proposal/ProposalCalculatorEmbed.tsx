@@ -272,18 +272,23 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     return () => { if (saveRef) saveRef.current = null; };
   }, [saveRef, proposalId, activeQuoteId, buildSavePayload, onQuoteUpdated, onFnaSave]);
 
-  // Auto-save: only for unlocked (client) quotes; skipped in admin context (onFnaSave present = admin mode)
+  // Auto-save: for all unlocked quotes (both client and admin contexts)
   useEffect(() => {
     if (standalone) return; // standalone mode — no server saves
     if (isLocked) return;
-    if (onFnaSave) return; // admin mode — saves explicitly, not on auto-save
     if (!activeQuoteId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       const payload = buildSavePayload();
-      updateClientQuote(proposalId, payload, activeQuoteId)
-        .then(() => onQuoteUpdated?.(payload as CalculatorStateSnapshot))
-        .catch(console.error);
+      if (onFnaSave) {
+        onFnaSave(payload as CalculatorStateSnapshot)
+          .then(() => onQuoteUpdated?.(payload as CalculatorStateSnapshot))
+          .catch(console.error);
+      } else {
+        updateClientQuote(proposalId, payload, activeQuoteId)
+          .then(() => onQuoteUpdated?.(payload as CalculatorStateSnapshot))
+          .catch(console.error);
+      }
     }, 1500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -603,11 +608,11 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               saving={saving}
               saved={saved}
               hideGetStarted
-              hideSaveQuote={standalone || !onFnaSave}
+              hideSaveQuote={true}
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
               crowdfundingApproved={crowdfundingApproved || crowdfundingOverride}
               crowdfundingDeferred={crowdfundingDeferred}
-              hideCrowdfundingToggle={crowdfundingOverride !== undefined}
+              hideCrowdfundingToggle={true}
               isReadOnly={isReadOnly}
               isLocked={isLocked}
               allQuotes={standalone ? undefined : allQuotes}

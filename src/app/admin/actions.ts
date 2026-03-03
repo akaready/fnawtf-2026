@@ -2185,7 +2185,7 @@ export async function createScript(data: Record<string, unknown>): Promise<strin
 
   // Seed default tags
   const { DEFAULT_SCRIPT_TAGS } = await import('@/types/scripts');
-  const tagRows = DEFAULT_SCRIPT_TAGS.map(tag => ({ ...tag, script_id: scriptId }));
+  const tagRows = DEFAULT_SCRIPT_TAGS.map(tag => ({ ...tag, script_id: scriptId, slug: `tag-${crypto.randomUUID().slice(0, 8)}` }));
   await supabase.from('script_tags').insert(tagRows as never);
 
   revalidatePath('/admin/scripts');
@@ -2627,8 +2627,7 @@ async function duplicateScriptCore(
     await supabase.from('script_tags').insert({
       script_id: newScriptId,
       name: t.name,
-      slug: t.slug,
-      category: t.category,
+      slug: `tag-${crypto.randomUUID().slice(0, 8)}`,
       color: t.color,
     } as never);
   }
@@ -3761,8 +3760,7 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
     await supabase.from('script_tags').insert({
       script_id: newScriptId,
       name: t.name,
-      slug: t.slug,
-      category: t.category,
+      slug: `tag-${crypto.randomUUID().slice(0, 8)}`,
       color: t.color,
     } as never);
   }

@@ -128,7 +128,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
         <div className="flex-1 overflow-y-auto admin-scrollbar p-6 space-y-5">
           {/* Title */}
           <div>
-            <label className="block text-admin-sm font-medium text-admin-text-muted">Title</label>
+            <label className="admin-label">Title</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -138,7 +138,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
           {/* Status */}
           <div>
-            <label className="block text-admin-sm font-medium text-admin-text-muted">Status</label>
+            <label className="admin-label">Status</label>
             <AdminCombobox
               value={status}
               options={STATUS_OPTIONS}
@@ -151,7 +151,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
           {/* Project assignment */}
           <div>
-            <label className="block text-admin-sm font-medium text-admin-text-muted">Project</label>
+            <label className="admin-label">Project</label>
             {script.project_id ? (
               <div className="flex items-center gap-2">
                 <span className="text-admin-base text-admin-text-primary">
@@ -193,7 +193,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
           {/* Notes */}
           <div>
-            <label className="block text-admin-sm font-medium text-admin-text-muted">Notes</label>
+            <label className="admin-label">Notes</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}

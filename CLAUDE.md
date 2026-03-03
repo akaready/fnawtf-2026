@@ -110,6 +110,31 @@ ALL batch/selection actions (delete, merge, publish, etc.) render in the **toolb
 - `flex-1 overflow-y-auto` — only the content area scrolls, never the page
 - Admin scrollbar: `admin-scrollbar` (always visible) or `admin-scrollbar-auto` (on hover)
 
+### Side Panel Pattern (PanelDrawer)
+
+All record panels (CompanyPanel, ProjectPanel, ScriptStylePanel, etc.) use `PanelDrawer` and follow this structure:
+
+```
+<PanelDrawer open={open} onClose={handleClose} width="w-[480px]">
+  <div className="flex flex-col h-full">
+    {/* Header */}
+    <div className="... px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">
+    {/* Tab strip (if tabbed) */}
+    <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-wash">
+    {/* Body */}
+    <div className="flex-1 overflow-y-auto admin-scrollbar px-6 py-5 space-y-5">
+    {/* Footer */}
+    <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
+  </div>
+</PanelDrawer>
+```
+
+- **Header**: `bg-admin-bg-sidebar` — title + SaveDot + close button
+- **Tab strip**: `bg-admin-bg-wash` — ALWAYS use wash, never sidebar
+- **Footer**: `bg-admin-bg-wash` — Save button (every panel has one)
+- **Labels**: use `.admin-label` class (defined in globals.css)
+- **Save**: use `useAutoSave` hook + `SaveDot` in header; footer Save calls `flush()`
+
 ---
 
 ## UI Patterns

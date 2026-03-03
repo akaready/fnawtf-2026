@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useTransition, useCallback, useEffect } from 'react';
+import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import {
   Check, Loader2, Upload, Film, Save,
   Trash2, X, UserPlus, Building2, Target, Link2,
   Globe, Linkedin, Search, MapPin, Calendar, Users as UsersIcon, Tag, RefreshCw,
 } from 'lucide-react';
 import { SaveDot } from './SaveDot';
-import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { TwoStateDeleteButton } from './TwoStateDeleteButton';
 import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import {
   type ClientRow,
   updateClientRecord,
@@ -122,11 +121,38 @@ export function CompanyPanel({
   const [localCompany, setLocalCompany] = useState<ClientRow | null>(null);
   const [activeTab, setActiveTab] = useState<TabName>('info');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const { saving, saved: companySaved, wrap: wrapSave } = useSaveState(2000);
-  const dotStatus: AutoSaveStatus = saving ? 'saving' : companySaved ? 'saved' : 'idle';
   const [, startSave] = useTransition();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+
+  // Auto-save: keep a ref to current state so the save closure always reads latest
+  const stateRef = useRef<ClientRow | null>(null);
+  useEffect(() => { stateRef.current = localCompany; });
+
+  const autoSave = useAutoSave(async () => {
+    const c = stateRef.current;
+    if (!c) return;
+    await updateClientRecord(c.id, {
+      name: c.name,
+      company: c.company,
+      notes: c.notes,
+      logo_url: c.logo_url,
+      company_types: c.company_types ?? [],
+      status: c.status ?? 'active',
+      pipeline_stage: c.pipeline_stage ?? 'new',
+      website_url: c.website_url,
+      linkedin_url: c.linkedin_url,
+      description: c.description,
+      industry: c.industry,
+      location: c.location,
+      founded_year: c.founded_year,
+      company_size: c.company_size,
+      twitter_url: c.twitter_url,
+      instagram_url: c.instagram_url,
+    });
+    setDirty(false);
+    onCompanyUpdated(c);
+  });
   const [confirmClose, setConfirmClose] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeProjectRow, setActiveProjectRow] = useState<(Record<string, unknown> & { id: string }) | null>(null);
@@ -152,14 +178,16 @@ export function CompanyPanel({
       setContactSearch('');
       setTestimonialSearch('');
       setProjectSearch('');
+      autoSave.reset();
     }
-  }, [company?.id]);
+  }, [company?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ALL hooks must be declared before any conditional return
   const handleChange = useCallback((field: string, value: unknown) => {
     setLocalCompany((prev) => prev ? { ...prev, [field]: value } : prev);
     setDirty(true);
-  }, []);
+    autoSave.trigger();
+  }, [autoSave]);
 
   const handleLogoDrop = useCallback(async (file: File) => {
     setLocalCompany((current) => {
@@ -190,12 +218,12 @@ export function CompanyPanel({
   }, [localCompany, onCompanyUpdated]);
 
   const handleClose = useCallback(() => {
-    if (dirty) {
+    if (dirty || autoSave.hasPending) {
       setConfirmClose(true);
     } else {
       onClose();
     }
-  }, [dirty, onClose]);
+  }, [dirty, autoSave.hasPending, onClose]);
 
   if (!localCompany) return <PanelDrawer open={false} onClose={onClose}>{null}</PanelDrawer>;
 
@@ -247,28 +275,10 @@ export function CompanyPanel({
     handleChange('company_types', next);
   };
 
-  const handleSave = () => wrapSave(async () => {
-    await updateClientRecord(localCompany.id, {
-      name: localCompany.name,
-      company: localCompany.company,
-      notes: localCompany.notes,
-      logo_url: localCompany.logo_url,
-      company_types: localCompany.company_types ?? [],
-      status: localCompany.status ?? 'active',
-      pipeline_stage: localCompany.pipeline_stage ?? 'new',
-      website_url: localCompany.website_url,
-      linkedin_url: localCompany.linkedin_url,
-      description: localCompany.description,
-      industry: localCompany.industry,
-      location: localCompany.location,
-      founded_year: localCompany.founded_year,
-      company_size: localCompany.company_size,
-      twitter_url: localCompany.twitter_url,
-      instagram_url: localCompany.instagram_url,
-    });
-    setDirty(false);
-    onCompanyUpdated(localCompany);
-  });
+  const handleSave = async () => {
+    await autoSave.flush();
+    onClose();
+  };
 
   const handleDelete = () => {
     startSave(async () => {
@@ -298,6 +308,7 @@ export function CompanyPanel({
         return updated;
       });
       setDirty(true);
+      autoSave.trigger();
       setFetchDone(true);
       setTimeout(() => setFetchDone(false), 2000);
     } catch (err) {
@@ -346,7 +357,7 @@ export function CompanyPanel({
               </p>
             )}
           </div>
-          <SaveDot status={dotStatus} />
+          <SaveDot status={autoSave.status} />
           {/* Status pill — read-only */}
           <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap bg-admin-bg-selected flex-shrink-0 ${statusCfg.color}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
@@ -361,7 +372,7 @@ export function CompanyPanel({
         </div>
 
         {/* Tab strip */}
-        <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-sidebar">
+        <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-wash">
           {([
             { id: 'info',         label: 'Info',         count: null },
             { id: 'projects',     label: 'Projects',     count: clientProjects.length },

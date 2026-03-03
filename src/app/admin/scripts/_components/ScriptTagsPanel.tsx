@@ -8,7 +8,6 @@ import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { createScriptTag, updateScriptTag, deleteScriptTag } from '@/app/admin/actions';
 import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import type { ScriptTagRow } from '@/types/scripts';
-import { DEFAULT_SCRIPT_TAGS } from '@/types/scripts';
 
 interface Props {
   open: boolean;
@@ -16,12 +15,6 @@ interface Props {
   scriptId: string;
   tags: ScriptTagRow[];
   onTagsChange: (tags: ScriptTagRow[]) => void;
-}
-
-const DEFAULT_SLUGS = new Set(DEFAULT_SCRIPT_TAGS.map(t => t.slug));
-
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }: Props) {
@@ -35,6 +28,8 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptTagRow>>>({});
   const localEditsRef = useRef(localEdits);
   useEffect(() => { localEditsRef.current = localEdits; });
+  const tagsRef = useRef(tags);
+  useEffect(() => { tagsRef.current = tags; });
 
   // Auto-select first tag, or clear if deleted
   useEffect(() => {
@@ -63,7 +58,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
     for (const [tagId, edits] of entries) {
       await updateScriptTag(tagId, edits);
     }
-    const updated = tags.map(t => localEditsRef.current[t.id] ? { ...t, ...localEditsRef.current[t.id] } : t);
+    const updated = tagsRef.current.map(t => localEditsRef.current[t.id] ? { ...t, ...localEditsRef.current[t.id] } : t);
     onTagsChange(updated);
     setLocalEdits({});
   });
@@ -77,7 +72,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
     if (!newName.trim()) return;
     setAdding(true);
     try {
-      const slug = slugify(newName);
+      const slug = `tag-${crypto.randomUUID().slice(0, 8)}`;
       const color = newColor;
       const id = await createScriptTag(scriptId, {
         name: newName.trim(),
@@ -106,13 +101,8 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
 
   // Local-only update — marks dirty, no server call
   const handleLocalUpdate = (tagId: string, field: string, value: string) => {
-    const existing = tags.find(t => t.id === tagId);
     if (field === 'name') value = value.toLowerCase();
     const updates: Partial<ScriptTagRow> = { [field]: value };
-    // Auto-update slug when name changes (unless it's a default tag)
-    if (field === 'name' && existing && !DEFAULT_SLUGS.has(existing.slug)) {
-      updates.slug = slugify(value);
-    }
     setLocalEdits(prev => ({
       ...prev,
       [tagId]: { ...prev[tagId], ...updates },

@@ -3,8 +3,7 @@
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
 import { X, Trash2, Loader2, ChevronDown, Save } from 'lucide-react';
 import { SaveDot } from './SaveDot';
-import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { MetadataTab } from './MetadataTab';
@@ -78,8 +77,14 @@ export function ProjectPanel({
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleting, startDelete] = useTransition();
   const [, startStatusTransition] = useTransition();
-  const { saving: isSaving, saved: isSaved, wrap: wrapSave } = useSaveState(2500);
-  const dotStatus: AutoSaveStatus = isSaving ? 'saving' : isSaved ? 'saved' : 'idle';
+  const autoSave = useAutoSave(async () => {
+    const saves: Promise<void>[] = [];
+    if (projectTabRef.current?.isDirty) saves.push(projectTabRef.current.save());
+    if (!loadingRelated && creditsRef.current?.isDirty) saves.push(creditsRef.current.save());
+    if (!loadingRelated && btsRef.current?.isDirty) saves.push(btsRef.current.save());
+    await Promise.all(saves);
+  });
+  const handleDirty = useCallback(() => autoSave.trigger(), [autoSave]);
   const statusRef = useRef<HTMLDivElement>(null);
 
   // Refs for tabs that expose save/isDirty
@@ -100,6 +105,7 @@ export function ProjectPanel({
     setConfirmClose(false);
     setPublished(!!project?.published);
     setStatusOpen(false);
+    autoSave.reset();
 
     if (projectId) {
       setLoadingRelated(true);
@@ -146,19 +152,16 @@ export function ProjectPanel({
     onProjectCreated(newProject);
   }, [onProjectCreated]);
 
-  // Universal save — commits all dirty tabs
-  const handleSaveAll = () => wrapSave(async () => {
-    const saves: Promise<void>[] = [];
-    if (projectTabRef.current?.isDirty) saves.push(projectTabRef.current.save());
-    if (!loadingRelated && creditsRef.current?.isDirty) saves.push(creditsRef.current.save());
-    if (!loadingRelated && btsRef.current?.isDirty) saves.push(btsRef.current.save());
-    await Promise.all(saves);
-  });
+  // Save button: flush pending auto-save then close
+  const handleSaveAll = async () => {
+    await autoSave.flush();
+    onClose();
+  };
 
   // Close guard — warn if unsaved changes exist
   // Check refs at call-time (not render-time) because ref changes don't trigger re-renders
   const handleClose = useCallback(() => {
-    const dirty = [
+    const dirty = autoSave.hasPending || [
       projectTabRef.current?.isDirty,
       creditsRef.current?.isDirty,
       btsRef.current?.isDirty,
@@ -169,7 +172,7 @@ export function ProjectPanel({
     } else {
       onClose();
     }
-  }, [onClose]);
+  }, [onClose, autoSave.hasPending]);
 
   const handleStatusChange = useCallback((newPublished: boolean) => {
     if (!projectId) return;
@@ -215,7 +218,7 @@ export function ProjectPanel({
             <p className="text-xs text-admin-text-faint truncate">{String(project.slug)}</p>
           ) : null}
         </div>
-        <SaveDot status={dotStatus} />
+        <SaveDot status={autoSave.status} />
         {!isNew && (
           <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
             published
@@ -271,6 +274,7 @@ export function ProjectPanel({
             onSaved={handleSaved}
             onCreated={handleCreated}
             hideInlineSave={!isNew}
+            onDirty={handleDirty}
           />
         </div>
 
@@ -283,7 +287,7 @@ export function ProjectPanel({
         {activeTab === 'credits' && loadingRelated && <LoadingSkeleton />}
         {!loadingRelated && projectId && (
           <div key={`${projectId}-credits`} className={activeTab === 'credits' ? '' : 'hidden'}>
-            <CreditsTab ref={creditsRef} projectId={projectId} initialCredits={credits} roles={allRoles} people={allPeople} />
+            <CreditsTab ref={creditsRef} projectId={projectId} initialCredits={credits} roles={allRoles} people={allPeople} onDirty={handleDirty} />
           </div>
         )}
 
@@ -291,7 +295,7 @@ export function ProjectPanel({
         {activeTab === 'bts' && loadingRelated && <LoadingSkeleton />}
         {!loadingRelated && projectId && (
           <div key={`${projectId}-bts`} className={activeTab === 'bts' ? '' : 'hidden'}>
-            <BTSTab ref={btsRef} projectId={projectId} initialImages={btsImages} />
+            <BTSTab ref={btsRef} projectId={projectId} initialImages={btsImages} onDirty={handleDirty} />
           </div>
         )}
       </div>
@@ -300,7 +304,7 @@ export function ProjectPanel({
       {!isNew && projectId && (
         <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
           <div className="flex items-center gap-3">
-            <button onClick={handleSaveAll} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <button onClick={() => void handleSaveAll()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
               <Save size={14} />
               Save
             </button>

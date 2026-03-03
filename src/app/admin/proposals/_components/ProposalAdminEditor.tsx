@@ -3,6 +3,8 @@
 import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save } from 'lucide-react';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
+import { SaveDot } from '@/app/admin/_components/SaveDot';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import type { LucideIcon } from 'lucide-react';
 import { deleteProposal, type ClientRow } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
@@ -74,6 +76,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
 
   const isLive = status !== 'draft';
 
@@ -247,16 +250,24 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         <div className="flex items-center gap-3">
           <button
             onClick={async () => {
-              if (activeTab === 'pricing') await pricingRef.current?.save();
-              else if (activeTab === 'welcome') await welcomeRef.current?.save();
-              else if (activeTab === 'approach') await approachRef.current?.save();
-              else await detailsRef.current?.save();
+              try {
+                setSaveStatus('saving');
+                if (activeTab === 'pricing') await pricingRef.current?.save();
+                else if (activeTab === 'welcome') await welcomeRef.current?.save();
+                else if (activeTab === 'approach') await approachRef.current?.save();
+                else await detailsRef.current?.save();
+                setSaveStatus('saved');
+                setTimeout(() => setSaveStatus('idle'), 2000);
+              } catch {
+                setSaveStatus('error');
+              }
             }}
             className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
           >
             <Save size={14} />
             Save
           </button>
+          <SaveDot status={saveStatus} />
           <a
             href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
             target="_blank"

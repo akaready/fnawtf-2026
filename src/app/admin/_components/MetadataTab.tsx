@@ -44,6 +44,7 @@ interface Props {
   onCreated?: (newId: string) => void;
   /** Hide the inline save button (use when parent provides a universal footer save) */
   hideInlineSave?: boolean;
+  onDirty?: () => void;
 }
 
 export type MetadataTabHandle = {
@@ -77,7 +78,7 @@ function slugify(text: string) {
 }
 
 export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function MetadataTab(
-  { project, tagSuggestions, testimonials, clients: initialClients, onSaved, onCreated, hideInlineSave },
+  { project, tagSuggestions, testimonials, clients: initialClients, onSaved, onCreated, hideInlineSave, onDirty },
   ref
 ) {
   const router = useRouter();
@@ -116,6 +117,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
     setIsDirty(true);
+    onDirty?.();
   };
 
   async function doSave(): Promise<void> {
@@ -188,6 +190,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
               const c = id ? clients.find((cl) => cl.id === id) : null;
               setForm((f) => ({ ...f, client_name: c?.name ?? '', client_id: id }));
               setIsDirty(true);
+              onDirty?.();
             }}
             placeholder="Search clients…"
             createLabel="Add Client"
@@ -267,7 +270,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
                       id: t.id,
                       label: `${t.person_name ? `${t.person_name}: ` : ''}"${t.quote.slice(0, 60)}${t.quote.length > 60 ? '…' : ''}"`,
                     }))}
-                  onChange={(id) => { setLinkedTestimonialId(id ?? ''); setIsDirty(true); }}
+                  onChange={(id) => { setLinkedTestimonialId(id ?? ''); setIsDirty(true); onDirty?.(); }}
                   placeholder="Search testimonials…"
                 />
               </div>

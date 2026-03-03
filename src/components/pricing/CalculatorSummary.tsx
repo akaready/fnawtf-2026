@@ -948,7 +948,7 @@ export function CalculatorSummary({
   const fnaQuote = allQuotes?.find((q) => q.is_fna_quote);
   const fnaColumnData = fnaQuote ? calcTotalFromQuote(fnaQuote, allAddOns) : null;
   // Dropdown lists all quotes except the locked-left FNA recommended one
-  const otherQuotes = allQuotes?.filter((q) => q.id !== fnaQuote?.id) ?? [];
+  const otherQuotes = allQuotes?.filter((q) => q.id !== fnaQuote?.id && q.is_fna_quote) ?? [];
 
   const isComparing = showComparison && !!fnaColumnData;
 
@@ -1299,6 +1299,14 @@ export function CalculatorSummary({
                 <div className="flex justify-between">
                   <span className="text-green-600">Crowdfunding ({crowdfundingTierDiscounts[crowdfundingTierIndex]}% off)</span>
                   <span className="text-green-600">-{formatPrice(crowdfundingDiscount)}</span>
+                </div>
+              )}
+
+              {/* Friendly discount */}
+              {showFriendlyDiscount && friendlyDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-green-600">Friendly discount ({friendlyDiscountPercent}%)</span>
+                  <span className="text-green-600">-{formatPrice(friendlyDiscount)}</span>
                 </div>
               )}
             </div>

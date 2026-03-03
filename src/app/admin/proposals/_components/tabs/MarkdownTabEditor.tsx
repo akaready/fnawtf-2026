@@ -53,6 +53,8 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
   const initializedRef                  = useRef(false);
   const currentMarkdownRef              = useRef<string>(section?.custom_content ?? '');
   const titleTimerRef                   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bodyTimerRef                    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef                         = useRef<() => Promise<void>>(async () => {});
 
   // ── Save ────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,8 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
     get isDirty() { return isDirtyRef.current; },
   }), [save]);
 
+  saveRef.current = save;
+
   // ── Title change with debounced persist ────────────────────────────────
 
   const handleTitleChange = useCallback((value: string) => {
@@ -135,7 +139,11 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const md = (e.storage as any).markdown.getMarkdown();
       currentMarkdownRef.current = md;
-      if (initializedRef.current) isDirtyRef.current = true;
+      if (initializedRef.current) {
+        isDirtyRef.current = true;
+        if (bodyTimerRef.current) clearTimeout(bodyTimerRef.current);
+        bodyTimerRef.current = setTimeout(() => { void saveRef.current(); }, 600);
+      }
     },
     editorProps: {
       attributes: { class: 'outline-none min-h-[320px] prose-snippet' },
@@ -261,7 +269,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           {/* Page title */}
           {titlePlaceholder && (
             <div className="flex-shrink-0 max-w-3xl w-full px-8 pt-5 pb-2">
-              <label className="text-xs text-admin-text-secondary uppercase tracking-wide mb-1 block">Slide Title</label>
+              <label className="admin-label">Slide Title</label>
               <input
                 type="text"
                 value={title}

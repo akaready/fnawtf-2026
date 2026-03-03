@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useTransition, forwardRef, useImperativeHandle, useEffect, useCallback } from 'react';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from 'react';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { RefreshCw, Plus, X, UserPlus, Mail, Building2, Copy, Check } from 'lucide-react';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
@@ -56,7 +56,7 @@ const CONTACT_TYPES: { value: ContactType; label: string }[] = [
   { value: 'cast', label: 'Cast' },
 ];
 
-const labelCls = 'block text-xs text-admin-text-secondary uppercase tracking-wide mb-1';
+const labelCls = 'admin-label';
 const inputCls =
   'w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis placeholder:text-admin-text-ghost';
 const sectionHeadingCls = 'text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4';
@@ -65,20 +65,6 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onSaveStateChange, onProposalTypeChange },
   ref,
 ) {
-  const [isPending, startTransition] = useTransition();
-  const { saved, wrap: wrapSave } = useSaveState(2500);
-
-  const lastSavedRef = useRef({
-    contactName: proposal.contact_name,
-    contactEmail: proposal.contact_email ?? '',
-    contactCompany: proposal.contact_company,
-    proposalType: proposal.proposal_type as ProposalType,
-    title: proposal.title,
-    subtitle: proposal.subtitle,
-    slug: proposal.slug,
-    password: proposal.proposal_password,
-  });
-
   const contactName = proposal.contact_name;
   const contactEmail = proposal.contact_email ?? '';
   const [contactCompany, setContactCompany] = useState(proposal.contact_company);
@@ -88,6 +74,26 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   const [slug, setSlug] = useState(proposal.slug);
   const [password, setPassword] = useState(proposal.proposal_password);
   const [slugCopied, setSlugCopied] = useState(false);
+
+  // Auto-save state ref + hook
+  const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password });
+  useEffect(() => { stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password }; });
+
+  const autoSave = useAutoSave(async () => {
+    const s = stateRef.current;
+    await updateProposal(proposal.id, {
+      contact_name: s.contactName.trim(),
+      contact_email: s.contactEmail.trim() || null,
+      contact_company: s.contactCompany.trim(),
+      proposal_type: s.proposalType,
+      title: s.title.trim(),
+      subtitle: s.subtitle.trim(),
+      slug: s.slug.trim(),
+      proposal_password: s.password.trim(),
+    });
+    onProposalTypeChange?.(s.proposalType);
+    onUpdated();
+  });
 
   // Company search state
   const [clients, setClients] = useState(initialClients);
@@ -114,7 +120,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
   const handleSelectCompany = useCallback((client: ClientRow) => {
     setContactCompany(client.name);
-  }, []);
+    autoSave.trigger();
+  }, [autoSave]);
 
   const handleAddNewCompany = useCallback(async () => {
     if (!newCompanyName.trim()) return;
@@ -155,10 +162,11 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       setNewCompanyLocation('');
       setNewCompanyNotes('');
       setShowAddCompany(false);
+      autoSave.trigger();
     } finally {
       setAddingCompany(false);
     }
-  }, [newCompanyName, newCompanyEmail, newCompanyWebsite, newCompanyIndustry, newCompanyLocation, newCompanyNotes]);
+  }, [newCompanyName, newCompanyEmail, newCompanyWebsite, newCompanyIndustry, newCompanyLocation, newCompanyNotes, autoSave]);
 
   // Proposal contacts state
   const [propContacts, setPropContacts] = useState(initialProposalContacts);
@@ -254,49 +262,14 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
     }
   }, [newFirstName, newLastName, newEmail, newPhone, newRole, newCompany, newType, newNotes, newWebsite, newLinkedin, newInstagram, newImdb, proposal.id, resetNewContactForm]);
 
-  const handleSave = () => {
-    startTransition(() => wrapSave(async () => {
-      await updateProposal(proposal.id, {
-        contact_name: contactName.trim(),
-        contact_email: contactEmail.trim() || null,
-        contact_company: contactCompany.trim(),
-        proposal_type: proposalType,
-        title: title.trim(),
-        subtitle: subtitle.trim(),
-        slug: slug.trim(),
-        proposal_password: password.trim(),
-      });
-      lastSavedRef.current = {
-        contactName: contactName.trim(),
-        contactEmail: contactEmail.trim(),
-        contactCompany: contactCompany.trim(),
-        proposalType,
-        title: title.trim(),
-        subtitle: subtitle.trim(),
-        slug: slug.trim(),
-        password: password.trim(),
-      };
-      onProposalTypeChange?.(proposalType);
-      onUpdated();
-    }));
-  };
-
-  const s = lastSavedRef.current;
-  const isDirty =
-    contactName !== s.contactName ||
-    contactEmail !== s.contactEmail ||
-    contactCompany !== s.contactCompany ||
-    proposalType !== s.proposalType ||
-    title !== s.title ||
-    subtitle !== s.subtitle ||
-    slug !== s.slug ||
-    password !== s.password;
-
-  useImperativeHandle(ref, () => ({ save: handleSave, get isDirty() { return isDirty; } }));
+  useImperativeHandle(ref, () => ({
+    save: () => autoSave.flush(),
+    get isDirty() { return autoSave.hasPending; },
+  }));
 
   useEffect(() => {
-    onSaveStateChange?.(isPending, saved);
-  }, [isPending, saved]);
+    onSaveStateChange?.(autoSave.status === 'saving', autoSave.status === 'saved');
+  }, [autoSave.status]);
 
   return (
     <div className="px-8 py-8">
@@ -315,6 +288,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                 value={contactCompany}
                 onChange={(e) => {
                   setContactCompany(e.target.value);
+                  autoSave.trigger();
                 }}
                 placeholder="Search companies…"
                 className={inputCls + (contactCompany ? ' pr-8' : '')}
@@ -453,7 +427,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); autoSave.trigger(); }}
                 placeholder="Acme Corp Proposal"
                 className={inputCls}
               />
@@ -463,7 +437,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <AdminCombobox
                 value={proposalType}
                 options={PROPOSAL_TYPES.map((t) => ({ id: t.value, label: t.label }))}
-                onChange={(v) => { if (v) setProposalType(v as ProposalType); }}
+                onChange={(v) => { if (v) { setProposalType(v as ProposalType); autoSave.trigger(); } }}
                 nullable={false}
                 searchable={false}
                 placeholder="Select type"
@@ -477,7 +451,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             <input
               type="text"
               value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
+              onChange={(e) => { setSubtitle(e.target.value); autoSave.trigger(); }}
               placeholder="Elevating your brand through story-driven video"
               className={inputCls}
             />
@@ -511,12 +485,12 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <input
                 type="text"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value)}
+                onChange={(e) => { setSlug(e.target.value); autoSave.trigger(); }}
                 placeholder="acme-corp"
                 className={inputCls + ' font-mono'}
               />
               <button
-                onClick={() => setSlug(slugify(contactCompany))}
+                onClick={() => { setSlug(slugify(contactCompany)); autoSave.trigger(); }}
                 title="Regenerate slug from company name"
                 className="flex-shrink-0 p-2 rounded-lg border border-admin-border-muted bg-admin-bg-selected text-admin-text-dim hover:text-admin-text-secondary hover:border-admin-border-emphasis transition-colors"
               >
@@ -530,11 +504,11 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <input
                 type="text"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); autoSave.trigger(); }}
                 className={inputCls + ' font-mono'}
               />
               <button
-                onClick={() => setPassword(generatePassword())}
+                onClick={() => { setPassword(generatePassword()); autoSave.trigger(); }}
                 title="Generate new password"
                 className="flex-shrink-0 p-2 rounded-lg border border-admin-border-muted bg-admin-bg-selected text-admin-text-dim hover:text-admin-text-secondary hover:border-admin-border-emphasis transition-colors"
               >

@@ -28,6 +28,7 @@ interface Props {
   initialCredits: Credit[];
   roles?: RoleOption[];
   people?: PersonOption[];
+  onDirty?: () => void;
 }
 
 export type CreditsTabHandle = {
@@ -38,7 +39,7 @@ export type CreditsTabHandle = {
 /* ── Credits Tab ────────────────────────────────────────────────────────── */
 
 export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTab(
-  { projectId, initialCredits, roles: initialRoles = [], people: initialPeople = [] },
+  { projectId, initialCredits, roles: initialRoles = [], people: initialPeople = [], onDirty },
   ref
 ) {
   const [credits, setCredits] = useState<Credit[]>(
@@ -51,16 +52,19 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
   const updateCredit = (index: number, updates: Partial<Credit>) => {
     setCredits((prev) => prev.map((c, i) => (i === index ? { ...c, ...updates } : c)));
     setIsDirty(true);
+    onDirty?.();
   };
 
   const add = () => {
     setCredits((prev) => [...prev, { role: '', name: '', sort_order: prev.length, role_id: null, contact_id: null }]);
     setIsDirty(true);
+    onDirty?.();
   };
 
   const remove = (index: number) => {
     setCredits((prev) => prev.filter((_, i) => i !== index).map((c, i) => ({ ...c, sort_order: i })));
     setIsDirty(true);
+    onDirty?.();
   };
 
   const move = (index: number, dir: -1 | 1) => {
@@ -70,6 +74,7 @@ export const CreditsTab = forwardRef<CreditsTabHandle, Props>(function CreditsTa
     [next[index], next[target]] = [next[target], next[index]];
     setCredits(next.map((c, i) => ({ ...c, sort_order: i })));
     setIsDirty(true);
+    onDirty?.();
   };
 
   const handleCreateRole = async (name: string): Promise<string> => {

@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Trash2, Send, RefreshCw, Plus, Clock, Eye, CheckCircle2, XCircle, AlertCircle, FileText, Users, History, Save } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
-import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import type {
   ContractRow,
@@ -70,15 +71,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   const [contract, setContract] = useState<ContractRow | null>(null);
   const [events, setEvents] = useState<ContractEventRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
   const [activeTab, setActiveTab] = useState('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmVoid, setConfirmVoid] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
-  const [_isDirty, setIsDirty] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   // Edit state
   const [title, setTitle] = useState('');
@@ -97,6 +95,24 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
   const [proposalOptions, setProposalOptions] = useState<{ id: string; label: string }[]>([]);
   const [quoteOptions, setQuoteOptions] = useState<{ id: string; label: string }[]>([]);
 
+  // Ref for auto-save closure
+  const stateRef = useRef({ title, contractType, body, notes, clientId, contactId, proposalId, quoteId });
+  useEffect(() => { stateRef.current = { title, contractType, body, notes, clientId, contactId, proposalId, quoteId }; });
+
+  const autoSave = useAutoSave(async () => {
+    if (!contract) return;
+    const s = stateRef.current;
+    const updates: Record<string, unknown> = {
+      title: s.title, contract_type: s.contractType, body: s.body, notes: s.notes || null,
+      client_id: s.clientId || null, contact_id: s.contactId || null,
+      proposal_id: s.proposalId || null, quote_id: s.quoteId || null,
+    };
+    await updateContract(contract.id, updates);
+    const updated = { ...contract, ...updates, updated_at: new Date().toISOString() } as ContractRow;
+    setContract(updated);
+    onUpdated(updated);
+  });
+
   // New signer form
   const [showAddSigner, setShowAddSigner] = useState(false);
   const [signerMode, setSignerMode] = useState<'pick' | 'manual'>('pick');
@@ -111,8 +127,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       setContract(null);
       setEvents([]);
       setActiveTab('details');
-      setSaved(false);
-      setIsDirty(false);
+      autoSave.reset();
       return;
     }
     setLoading(true);
@@ -134,7 +149,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
         setContactId(c.contact_id);
         setProposalId(c.proposal_id);
         setQuoteId(c.quote_id);
-        setIsDirty(false);
+        autoSave.reset();
         setClientOptions(clients.map((cl) => ({ id: cl.id, label: cl.name })));
         setContactsData(contacts.map((ct) => ({ id: ct.id, first_name: ct.first_name, last_name: ct.last_name, email: ct.email })));
         setContactOptions(contacts.map((ct) => ({ id: ct.id, label: `${ct.first_name} ${ct.last_name}` })));
@@ -163,26 +178,9 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
   const handleSave = useCallback(async () => {
     if (!contract) return;
-    setSaving(true);
-    try {
-      const updates: Record<string, unknown> = {
-        title, contract_type: contractType, body, notes: notes || null,
-        client_id: clientId || null,
-        contact_id: contactId || null,
-        proposal_id: proposalId || null,
-        quote_id: quoteId || null,
-      };
-      await updateContract(contract.id, updates);
-      const updated = { ...contract, ...updates, updated_at: new Date().toISOString() } as ContractRow;
-      setContract(updated);
-      onUpdated(updated);
-      setSaved(true);
-      setIsDirty(false);
-      setTimeout(() => setSaved(false), 2000);
-    } finally {
-      setSaving(false);
-    }
-  }, [contract, title, contractType, body, notes, clientId, contactId, proposalId, quoteId, onUpdated]);
+    await autoSave.flush();
+    onClose();
+  }, [contract, autoSave, onClose]);
 
   const handleDelete = async () => {
     if (!contract) return;
@@ -191,9 +189,13 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
     onClose();
   };
 
-  const handleClose = () => {
-    onClose();
-  };
+  const handleClose = useCallback(() => {
+    if (autoSave.hasPending) {
+      setConfirmDiscard(true);
+    } else {
+      onClose();
+    }
+  }, [autoSave.hasPending, onClose]);
 
   const handleVoid = async () => {
     if (!contract) return;
@@ -301,6 +303,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[min(92vw,900px)]">
+      <DiscardChangesDialog
+        open={confirmDiscard}
+        onKeepEditing={() => setConfirmDiscard(false)}
+        onDiscard={() => { setConfirmDiscard(false); onClose(); }}
+      />
       {loading ? (
         <div className="flex items-center justify-center h-full text-admin-text-muted">Loading...</div>
       ) : !contract ? (
@@ -314,13 +321,13 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
               {isEditable ? (
                 <input
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitle(e.target.value); autoSave.trigger(); }}
                   className="bg-transparent text-admin-lg font-semibold text-admin-text-primary outline-none min-w-0 flex-1"
                 />
               ) : (
                 <span className="text-admin-lg font-semibold text-admin-text-primary truncate">{title}</span>
               )}
-              <SaveDot status={dotStatus} />
+              <SaveDot status={autoSave.status} />
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-admin-xs font-medium ${STATUS_COLORS[contract.status]}`}>
@@ -341,11 +348,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
             {activeTab === 'details' && (
               <div className="p-6 space-y-6">
                 <div>
-                  <label className="block text-admin-sm font-medium text-admin-text-muted">Title</label>
+                  <label className="admin-label">Title</label>
                   {isEditable ? (
                     <input
                       value={title}
-                      onChange={(e) => { setTitle(e.target.value); setIsDirty(true); }}
+                      onChange={(e) => { setTitle(e.target.value); autoSave.trigger(); }}
                       className="admin-input w-full"
                       placeholder="Contract title…"
                     />
@@ -355,12 +362,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-admin-sm font-medium text-admin-text-muted">Type</label>
+                    <label className="admin-label">Type</label>
                     {isEditable ? (
                       <AdminCombobox
                         options={TYPE_OPTIONS.map((o) => ({ id: o.value, label: o.label }))}
                         value={contractType}
-                        onChange={(v) => { if (v) { setContractType(v as ContractType); setIsDirty(true); } }}
+                        onChange={(v) => { if (v) { setContractType(v as ContractType); autoSave.trigger(); } }}
                         placeholder="Select type…"
                         nullable={false}
                         searchable={false}
@@ -370,7 +377,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                     )}
                   </div>
                   <div>
-                    <label className="block text-admin-sm font-medium text-admin-text-muted">Template</label>
+                    <label className="admin-label">Template</label>
                     <div className="text-admin-base text-admin-text-secondary">
                       {contract.template?.name || <span className="text-admin-text-faint">From scratch</span>}
                     </div>
@@ -382,12 +389,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   <h3 className="text-admin-xs font-semibold text-admin-text-muted uppercase tracking-wider mb-3">Linked Records</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-admin-sm font-medium text-admin-text-muted">Client</label>
+                      <label className="admin-label">Client</label>
                       {isEditable ? (
                         <AdminCombobox
                           options={clientOptions}
                           value={clientId}
-                          onChange={(v) => { setClientId(v); setIsDirty(true); }}
+                          onChange={(v) => { setClientId(v); autoSave.trigger(); }}
                           placeholder="Search clients…"
                         />
                       ) : (
@@ -395,12 +402,12 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       )}
                     </div>
                     <div>
-                      <label className="block text-admin-sm font-medium text-admin-text-muted">Contact</label>
+                      <label className="admin-label">Contact</label>
                       {isEditable ? (
                         <AdminCombobox
                           options={contactOptions}
                           value={contactId}
-                          onChange={(v) => { setContactId(v); setIsDirty(true); }}
+                          onChange={(v) => { setContactId(v); autoSave.trigger(); }}
                           placeholder="Search contacts…"
                         />
                       ) : (
@@ -410,7 +417,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       )}
                     </div>
                     <div>
-                      <label className="block text-admin-sm font-medium text-admin-text-muted">Proposal</label>
+                      <label className="admin-label">Proposal</label>
                       {isEditable ? (
                         <AdminCombobox
                           options={proposalOptions}
@@ -418,7 +425,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                           onChange={(v) => {
                             setProposalId(v);
                             if (!v) setQuoteId(null);
-                            setIsDirty(true);
+                            autoSave.trigger();
                           }}
                           placeholder="Search proposals…"
                         />
@@ -427,13 +434,13 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       )}
                     </div>
                     <div>
-                      <label className="block text-admin-sm font-medium text-admin-text-muted">Quote</label>
+                      <label className="admin-label">Quote</label>
                       {isEditable ? (
                         proposalId ? (
                           <AdminCombobox
                             options={quoteOptions}
                             value={quoteId}
-                            onChange={(v) => { setQuoteId(v); setIsDirty(true); }}
+                            onChange={(v) => { setQuoteId(v); autoSave.trigger(); }}
                             placeholder="Search quotes…"
                           />
                         ) : (
@@ -450,11 +457,11 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-admin-sm font-medium text-admin-text-muted">Notes</label>
+                  <label className="admin-label">Notes</label>
                   {isEditable ? (
                     <textarea
                       value={notes}
-                      onChange={(e) => { setNotes(e.target.value); setIsDirty(true); }}
+                      onChange={(e) => { setNotes(e.target.value); autoSave.trigger(); }}
                       rows={3}
                       className="admin-input w-full resize-none"
                       placeholder="Internal notes..."
@@ -489,7 +496,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                   {isEditable ? (
                     <textarea
                       value={body}
-                      onChange={(e) => { setBody(e.target.value); setIsDirty(true); }}
+                      onChange={(e) => { setBody(e.target.value); autoSave.trigger(); }}
                       className="w-full h-full min-h-[400px] resize-none bg-admin-bg-overlay border border-admin-border rounded-lg text-admin-text-primary font-admin-mono outline-none focus:border-admin-border admin-scrollbar"
                       placeholder="Contract body text..."
                       spellCheck={false}
@@ -564,7 +571,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
 
                       {signerMode === 'pick' ? (
                         <div>
-                          <label className="block text-admin-sm font-medium text-admin-text-muted">Contact</label>
+                          <label className="admin-label">Contact</label>
                           <AdminCombobox
                             options={contactOptions}
                             value={signerContactPick || null}
@@ -581,7 +588,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       ) : (
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-admin-sm font-medium text-admin-text-muted">Name</label>
+                            <label className="admin-label">Name</label>
                             <input
                               value={newSignerName}
                               onChange={(e) => setNewSignerName(e.target.value)}
@@ -591,7 +598,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                             />
                           </div>
                           <div>
-                            <label className="block text-admin-sm font-medium text-admin-text-muted">Email</label>
+                            <label className="admin-label">Email</label>
                             <input
                               value={newSignerEmail}
                               onChange={(e) => setNewSignerEmail(e.target.value)}
@@ -604,7 +611,7 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
                       )}
 
                       <div>
-                        <label className="block text-admin-sm font-medium text-admin-text-muted">Role</label>
+                        <label className="admin-label">Role</label>
                         <AdminCombobox
                           options={[
                             { id: 'signer', label: 'Signer' },

@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Globe, Home, Play, ClipboardList, DollarSign, Info, EyeOff, Save } from 'lucide-react';
 import { SaveDot } from './SaveDot';
-import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { type SeoRow, updateSeoSetting } from '../actions';
 import { AdminTabBar } from './AdminTabBar';
 
@@ -26,16 +25,13 @@ interface Props {
 export function SeoManager({ initialSettings }: Props) {
   const [settings, setSettings] = useState<SeoRow[]>(initialSettings);
   const [activeSlug, setActiveSlug] = useState<string>('_global');
-  const { saving, saved, wrap: wrapSave } = useSaveState(2000);
-  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
 
-  const handleChange = (id: string, field: keyof SeoRow, value: string | boolean) => {
-    setSettings((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
-    );
-  };
+  // Ref tracks the active row so the autoSave closure always reads current state
+  const activeRowRef = useRef<SeoRow | null>(null);
 
-  const handleSave = (row: SeoRow) => wrapSave(async () => {
+  const autoSave = useAutoSave(async () => {
+    const row = activeRowRef.current;
+    if (!row) return;
     await updateSeoSetting(row.id, {
       meta_title: row.meta_title,
       meta_description: row.meta_description,
@@ -47,6 +43,18 @@ export function SeoManager({ initialSettings }: Props) {
     });
   });
 
+  const handleChange = (id: string, field: keyof SeoRow, value: string | boolean) => {
+    setSettings((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
+    autoSave.trigger();
+  };
+
+  const handleTabChange = (slug: string) => {
+    if (autoSave.hasPending) autoSave.flush();
+    setActiveSlug(slug);
+  };
+
   const sorted = [...settings].sort((a, b) => {
     const ai = PAGE_ORDER.indexOf(a.page_slug);
     const bi = PAGE_ORDER.indexOf(b.page_slug);
@@ -54,6 +62,9 @@ export function SeoManager({ initialSettings }: Props) {
   });
 
   const activeRow = sorted.find((r) => r.page_slug === activeSlug) ?? sorted[0];
+
+  // Keep ref in sync so autoSave closure reads latest field values
+  useEffect(() => { activeRowRef.current = activeRow ?? null; });
 
   return (
     <>
@@ -69,7 +80,7 @@ export function SeoManager({ initialSettings }: Props) {
           };
         })}
         activeTab={activeSlug}
-        onTabChange={setActiveSlug}
+        onTabChange={handleTabChange}
         dividerAfter="_global"
       />
 
@@ -141,8 +152,8 @@ export function SeoManager({ initialSettings }: Props) {
                 </span>
               </label>
 
-              <SaveDot status={dotStatus} />
-              <button onClick={() => handleSave(activeRow)} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+              <SaveDot status={autoSave.status} />
+              <button onClick={() => autoSave.flush()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
                 <Save size={14} />
                 Save
               </button>
@@ -178,7 +189,7 @@ function Field({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="text-admin-sm font-medium text-admin-text-muted">{label}</label>
+        <label className="admin-label">{label}</label>
         {maxLength && (
           <span
             className={`text-admin-xs ${

@@ -16,6 +16,7 @@ interface BTSImage {
 interface Props {
   projectId: string;
   initialImages: BTSImage[];
+  onDirty?: () => void;
 }
 
 export type BTSTabHandle = {
@@ -25,7 +26,7 @@ export type BTSTabHandle = {
 
 const inputClass = 'admin-input w-full';
 
-export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectId, initialImages }, ref) {
+export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectId, initialImages, onDirty }, ref) {
   const [images, setImages] = useState<BTSImage[]>(initialImages);
   const [isDirty, setIsDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -38,6 +39,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
   const update = (index: number, key: keyof BTSImage, value: string | null) => {
     setImages((prev) => prev.map((img, i) => (i === index ? { ...img, [key]: value } : img)));
     setIsDirty(true);
+    onDirty?.();
   };
 
   const remove = (index: number) => {
@@ -45,6 +47,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
       prev.filter((_, i) => i !== index).map((img, i) => ({ ...img, sort_order: i }))
     );
     setIsDirty(true);
+    onDirty?.();
   };
 
   const move = (index: number, dir: -1 | 1) => {
@@ -54,6 +57,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
     [next[index], next[target]] = [next[target], next[index]];
     setImages(next.map((img, i) => ({ ...img, sort_order: i })));
     setIsDirty(true);
+    onDirty?.();
   };
 
   const handleUploadFiles = useCallback(async (files: FileList | File[]) => {
@@ -85,9 +89,10 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
         return merged.map((img, i) => ({ ...img, sort_order: i }));
       });
       setIsDirty(true);
+      onDirty?.();
     }
     setUploading(false);
-  }, [projectId]);
+  }, [projectId, onDirty]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -224,6 +229,7 @@ export const BTSTab = forwardRef<BTSTabHandle, Props>(function BTSTab({ projectI
           onClick={() => {
             setImages((prev) => [...prev, { image_url: '', caption: null, sort_order: prev.length }]);
             setIsDirty(true);
+            onDirty?.();
           }}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg bg-admin-bg-hover text-admin-text-muted hover:bg-admin-bg-hover-strong hover:text-admin-text-primary transition-colors"
         >

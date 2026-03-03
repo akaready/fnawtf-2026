@@ -214,13 +214,13 @@ export interface ScriptWithProject extends ScriptRow {
   project?: { id: string; title: string } | null;
 }
 
-/** Default tags seeded on every new script. Colors are reserved. */
-export const DEFAULT_SCRIPT_TAGS: { name: string; slug: string; category: string; color: string }[] = [
-  { name: 'Interview',        slug: 'interview',   category: 'general', color: '#f97316' }, // orange
-  { name: 'B-Roll',           slug: 'broll',       category: 'general', color: '#3b82f6' }, // blue
-  { name: 'Graphics',         slug: 'gfx',         category: 'general', color: '#22c55e' }, // green
-  { name: 'Overlay Graphics', slug: 'gfx-overlay', category: 'general', color: '#84cc16' }, // lime
-  { name: 'Stock',            slug: 'stock',       category: 'general', color: '#38bdf8' }, // sky
-  { name: 'Transition',       slug: 'transition',  category: 'general', color: '#14b8a6' }, // teal
-  { name: 'VFX',              slug: 'vfx',         category: 'general', color: '#8b5cf6' }, // violet
+/** Default tags seeded on every new script. */
+export const DEFAULT_SCRIPT_TAGS: { name: string; color: string }[] = [
+  { name: 'Interview',        color: '#f97316' },
+  { name: 'B-Roll',           color: '#3b82f6' },
+  { name: 'Graphics',         color: '#22c55e' },
+  { name: 'Overlay Graphics', color: '#84cc16' },
+  { name: 'Stock',            color: '#38bdf8' },
+  { name: 'Transition',       color: '#14b8a6' },
+  { name: 'VFX',              color: '#8b5cf6' },
 ];

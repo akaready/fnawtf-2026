@@ -10,10 +10,9 @@ import { AdminLightbox } from '@/app/admin/_components/AdminLightbox';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { downloadSingleImage, downloadStoryboardZip } from '@/lib/scripts/downloadStoryboards';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
-import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
+import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
-import { useSaveState } from '@/app/admin/_hooks/useSaveState';
 import {
   updateLocationRecord,
   deleteLocationRecord,
@@ -51,20 +50,34 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scoutInputRef = useRef<HTMLInputElement>(null);
 
-  // Local editable state + dirty tracking
+  // Local editable state
   const [local, setLocal] = useState<LocationWithImages | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const { saving, saved, wrap: wrapSave } = useSaveState(2000);
-  const dotStatus: AutoSaveStatus = saving ? 'saving' : saved ? 'saved' : 'idle';
+
+  // Ref for auto-save closure to read current state
+  const stateRef = useRef<LocationWithImages | null>(null);
+  useEffect(() => { stateRef.current = local; });
+
+  const autoSave = useAutoSave(async () => {
+    const current = stateRef.current;
+    if (!current || !location) return;
+    const changes: Record<string, unknown> = {};
+    for (const key of ['name', 'description', 'address', 'city', 'state', 'zip', 'notes', 'peerspace_url'] as const) {
+      if (current[key] !== location[key]) changes[key] = current[key];
+    }
+    if (Object.keys(changes).length > 0) {
+      await updateLocationRecord(location.id, changes);
+    }
+    onUpdate(current);
+  });
 
   // Sync local state when location prop changes
   useEffect(() => {
     setLocal(location ? { ...location } : null);
-    setDirty(false);
     setConfirmDelete(false);
     setConfirmClose(false);
     setTab('details');
-  }, [location?.id]);
+    autoSave.reset();
+  }, [location?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load linked projects when tab changes
   useEffect(() => {
@@ -79,29 +92,21 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
 
   const updateField = useCallback((field: string, value: unknown) => {
     setLocal(prev => prev ? { ...prev, [field]: value } as LocationWithImages : prev);
-    setDirty(true);
-  }, []);
+    autoSave.trigger();
+  }, [autoSave]);
 
-  const handleSave = () => wrapSave(async () => {
-    if (!local || !location) return;
-    const changes: Record<string, unknown> = {};
-    for (const key of ['name', 'description', 'address', 'city', 'state', 'zip', 'notes'] as const) {
-      if (local[key] !== location[key]) changes[key] = local[key];
-    }
-    if (Object.keys(changes).length > 0) {
-      await updateLocationRecord(location.id, changes);
-    }
-    onUpdate(local);
-    setDirty(false);
-  });
+  const handleSave = async () => {
+    await autoSave.flush();
+    onClose();
+  };
 
   const handleClose = useCallback(() => {
-    if (dirty) {
+    if (autoSave.hasPending) {
       setConfirmClose(true);
     } else {
       onClose();
     }
-  }, [dirty, onClose]);
+  }, [autoSave.hasPending, onClose]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -215,7 +220,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={dotStatus} /></h2>
+            <h2 className="text-lg font-semibold text-admin-text-primary truncate inline-flex items-center gap-1">{local.name}<SaveDot status={autoSave.status} /></h2>
           </div>
           <button
             onClick={handleClose}
@@ -727,7 +732,7 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
           onKeepEditing={() => setConfirmClose(false)}
           onDiscard={() => {
             setConfirmClose(false);
-            setDirty(false);
+            autoSave.reset();
             onClose();
           }}
         />

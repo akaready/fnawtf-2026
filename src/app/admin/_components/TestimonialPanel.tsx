@@ -193,7 +193,7 @@ export function TestimonialPanel({
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-5 space-y-5">
         {/* Quote */}
         <div className="space-y-1.5">
-          <label className="text-admin-sm font-medium text-admin-text-muted">Quote</label>
+          <label className="admin-label">Quote</label>
           <textarea
             value={quote}
             onChange={(e) => {
@@ -211,7 +211,7 @@ export function TestimonialPanel({
 
         {/* Contact */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
+          <label className="admin-label flex items-center gap-1.5">
             <User size={12} /> Contact
           </label>
           <AdminCombobox
@@ -231,7 +231,7 @@ export function TestimonialPanel({
 
         {/* Contact Title Override */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
+          <label className="admin-label flex items-center gap-1.5">
             <PenLine size={12} /> Contact Title Override
           </label>
           <input
@@ -245,7 +245,7 @@ export function TestimonialPanel({
 
         {/* Client */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
+          <label className="admin-label flex items-center gap-1.5">
             <Building2 size={12} /> Client
           </label>
           <AdminCombobox
@@ -258,7 +258,7 @@ export function TestimonialPanel({
 
         {/* Project */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-admin-sm font-medium text-admin-text-muted">
+          <label className="admin-label flex items-center gap-1.5">
             <LayoutGrid size={12} /> Project
           </label>
           <AdminCombobox
