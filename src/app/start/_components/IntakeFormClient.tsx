@@ -10,7 +10,7 @@ import {
   MessageSquare, Heart, X, Check, ArrowRight, Trash2, GripVertical,
   ChevronLeft, ChevronRight, LogOut, BarChart3, Megaphone, Globe,
   PenTool, Search as SearchIcon, Home, Camera, Code, Share2,
-  Flame, Trophy, Send, CalendarCheck, HelpCircle, Hammer, TrendingUp, Coins, BadgeDollarSign, Building2, HeartHandshake,
+  Send, CalendarCheck, HelpCircle, Hammer, TrendingUp, Coins, BadgeDollarSign, Building2, HeartHandshake,
   Palette, Type,
 } from 'lucide-react';
 import Cal, { getCalApi } from '@calcom/embed-react';
@@ -57,7 +57,7 @@ const PROJECT_PHASES = [
   { value: 'launch', label: 'Launch', subtitle: 'Production & delivery', icon: Rocket },
   { value: 'scale', label: 'Scale', subtitle: 'Ongoing creative partnership', icon: TrendingUp },
   { value: 'crowdfunding', label: 'Crowdfunding', subtitle: 'Risk-aligned campaign pricing for Kickstarter and IndieGoGo, available for Build and Launch', icon: Coins },
-  { value: 'fundraising', label: 'Fundraising', subtitle: 'Investor-grade pitch video for privaty equity funding or friends and family raises', icon: BadgeDollarSign },
+  { value: 'fundraising', label: 'Fundraising', subtitle: 'Investor-grade "pitch video" for private equity funding or friends and family rounds', icon: BadgeDollarSign },
 ] as const;
 
 // Valid phase combinations: build/launch can pair with each other and with crowdfunding. scale and fundraising are standalone.
@@ -174,12 +174,12 @@ function ConfirmDeleteButton({ onConfirm, className }: { onConfirm: () => void; 
 
   if (armed) {
     return (
-      <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
-        <button type="button" onClick={onConfirm} className="text-red-400 hover:text-red-300 transition-colors" aria-label="Confirm delete">
-          <Check className="w-4 h-4" />
+      <span className={`inline-flex items-center gap-3 sm:gap-1 ${className ?? ''}`}>
+        <button type="button" onClick={onConfirm} className="p-1.5 sm:p-0 text-red-400 hover:text-red-300 transition-colors" aria-label="Confirm delete">
+          <Check className="w-5 h-5 sm:w-4 sm:h-4" />
         </button>
-        <button type="button" onClick={() => setArmed(false)} className="text-white/30 hover:text-white/50 transition-colors" aria-label="Cancel delete">
-          <X className="w-4 h-4" />
+        <button type="button" onClick={() => setArmed(false)} className="p-1.5 sm:p-0 text-white/30 hover:text-white/50 transition-colors" aria-label="Cancel delete">
+          <X className="w-5 h-5 sm:w-4 sm:h-4" />
         </button>
       </span>
     );
@@ -187,8 +187,8 @@ function ConfirmDeleteButton({ onConfirm, className }: { onConfirm: () => void; 
 
   return (
     <button type="button" onClick={() => setArmed(true)}
-      className={`text-white/15 hover:text-red-400 transition-colors ${className ?? ''}`} aria-label="Delete">
-      <Trash2 className="w-4 h-4" />
+      className={`p-1.5 sm:p-0 text-white/15 hover:text-red-400 transition-colors ${className ?? ''}`} aria-label="Delete">
+      <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
     </button>
   );
 }
@@ -399,72 +399,30 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-// ── Experience Triangle Visualization ────────────────────────────────────────
+// ── Experience Selector ──────────────────────────────────────────────────────
 
 function ExperienceVisualizer({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const idx = EXPERIENCE_OPTIONS.findIndex((o) => o.value === value);
   const activeIdx = idx >= 0 ? idx : -1;
-  const BAR_DATA: { count: string; Icon: React.ElementType }[] = [
-    { count: '0 videos', Icon: Sparkles },
-    { count: '1–3 videos', Icon: Home },
-    { count: '1–5 videos', Icon: Flame },
-    { count: '5+ videos', Icon: Trophy },
-  ];
 
   return (
-    <div className="space-y-6">
-      {/* Staircase bars — icon + count inside, fixed heights */}
-      <div className="flex items-end justify-center gap-3" style={{ height: 180 }}>
-        {EXPERIENCE_OPTIONS.map((opt, i) => {
-          const isSelected = i === activeIdx;
-          const { count, Icon } = BAR_DATA[i];
-          const heightPct = i === 0 ? 50 : 25 * (i + 1);
-          const isFirst = i === 0;
-          return (
-            <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
-              className="flex-1 h-full flex items-end">
-              <div className="relative w-full rounded-lg transition-all duration-300 flex flex-col items-center justify-center gap-1"
-                style={{
-                  height: `${heightPct}%`,
-                  backgroundColor: isFirst ? 'transparent' : (isSelected ? '#a14dfd' : '#2a2a2a'),
-                  boxShadow: isSelected && !isFirst ? '0 0 16px #a14dfd44' : 'none',
-                  border: isFirst
-                    ? `2px dashed ${isSelected ? '#a14dfd' : '#333333'}`
-                    : `1px solid ${isSelected ? '#a14dfd' : '#333333'}`,
-                  overflow: 'hidden',
-                }}>
-                {isSelected && (
-                  <>
-                    <Icon className="w-8 h-8 relative z-10" style={{ color: isFirst ? '#a14dfd' : '#ffffff' }} />
-                    <span className="text-xs font-mono font-bold relative z-10" style={{ color: isFirst ? '#a14dfd' : '#ffffff' }}>
-                      {count}
-                    </span>
-                  </>
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-      {/* Selection buttons */}
-      <div className="flex justify-center gap-3">
-        {EXPERIENCE_OPTIONS.map((opt, i) => {
-          const active = i === activeIdx;
-          return (
-            <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
-              className="flex-1 text-center px-3 py-4 rounded-xl border transition-all duration-200"
-              style={{
-                borderColor: active ? '#a14dfd' : '#222222',
-                backgroundColor: active ? '#1a0a2e' : 'transparent',
-                color: active ? '#ffffff' : '#888888',
-              }}
-            >
-              <span className="text-base font-medium block">{opt.label}</span>
-              <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-col gap-3">
+      {EXPERIENCE_OPTIONS.map((opt, i) => {
+        const active = i === activeIdx;
+        return (
+          <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
+            className="w-full text-left px-5 py-4 rounded-xl border transition-all duration-200"
+            style={{
+              borderColor: active ? '#a14dfd' : '#222222',
+              backgroundColor: active ? '#1a0a2e' : 'transparent',
+              color: active ? '#ffffff' : '#888888',
+            }}
+          >
+            <span className="text-base font-medium block">{opt.label}</span>
+            <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -492,6 +450,8 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
   });
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const cellRefs = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null, null]);
+  const touchDragId = useRef<string | null>(null);
 
   const commit = (next: Grid) => {
     setGrid(next);
@@ -519,6 +479,27 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
     setDragOverIdx(null);
   };
 
+  // Touch drag support for mobile
+  const handleTouchStart = (itemId: string) => { touchDragId.current = itemId; };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchDragId.current) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const idx = cellRefs.current.findIndex((ref) => ref && ref.contains(el));
+    setDragOverIdx(idx >= 0 ? idx : null);
+  };
+  const handleTouchEnd = () => {
+    if (!touchDragId.current || dragOverIdx === null) { touchDragId.current = null; setDragOverIdx(null); return; }
+    const next: Grid = [...grid];
+    const sourceIdx = next.indexOf(touchDragId.current);
+    const targetItem = next[dragOverIdx];
+    if (sourceIdx >= 0) next[sourceIdx] = targetItem;
+    next[dragOverIdx] = touchDragId.current;
+    commit(next);
+    touchDragId.current = null;
+    setDragOverIdx(null);
+  };
+
   const renderCell = (idx: number, isRankSlot: boolean) => {
     const itemId = grid[idx];
     const item = itemId ? PRIORITY_ITEMS.find((p) => p.id === itemId) : null;
@@ -528,21 +509,30 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
     if (item) {
       return (
         <div
+          ref={(el) => { cellRefs.current[idx] = el; }}
           key={idx} draggable
           onDragStart={() => setDragId(item.id)}
           onDragEnd={() => { setDragId(null); setDragOverIdx(null); }}
           onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
           onDragLeave={() => setDragOverIdx(null)}
           onDrop={(e) => { e.preventDefault(); handleDrop(idx, e); }}
+          onTouchStart={() => handleTouchStart(item.id)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           onClick={() => {
             if (!isRankSlot) {
               // Tap pool item to place in first empty rank slot
               const next: Grid = [...grid];
               const emptyRank = [3, 4, 5].find((i) => !next[i]);
               if (emptyRank !== undefined) { next[idx] = ''; next[emptyRank] = item.id; commit(next); }
+            } else {
+              // Tap ranked item to return to pool
+              const next: Grid = [...grid];
+              const emptyPool = [0, 1, 2].find((i) => !next[i]);
+              if (emptyPool !== undefined) { next[idx] = ''; next[emptyPool] = item.id; commit(next); }
             }
           }}
-          className={`relative flex items-center gap-4 rounded-xl border cursor-grab active:cursor-grabbing transition-all duration-200 h-[88px] ${
+          className={`relative flex items-center gap-4 rounded-xl border cursor-grab active:cursor-grabbing transition-all duration-200 select-none touch-none h-[88px] ${
             isRankSlot ? 'px-6' : 'flex-col justify-center px-4'}`}
           style={{
             borderColor: isOver ? '#a14dfd' : `${item.color}44`,
@@ -574,6 +564,7 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
     // Empty cell
     return (
       <div key={idx}
+        ref={(el) => { cellRefs.current[idx] = el; }}
         onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
         onDragLeave={() => setDragOverIdx(null)}
         onDrop={(e) => { e.preventDefault(); handleDrop(idx, e); }}
@@ -695,20 +686,26 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
       {links.map((link, i) => {
         const og = link.url.trim() ? ogCache[link.url.trim()] : undefined;
         const ogImg = og?.image || null;
+        const hasPreview = ogImg || og?.favicon;
         return (
           <div key={i} className="flex flex-col sm:flex-row gap-4 items-start">
-            <div className="w-full h-32 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
-              {ogImg ? (
-                <img src={ogImg} alt="" className="w-full h-full object-cover" />
-              ) : og?.favicon ? (
-                <img src={og.favicon} alt="" className="w-6 h-6" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              ) : (
-                <Globe className="w-6 h-6 text-white/15" />
-              )}
-            </div>
+            {hasPreview && (
+              <div className="w-full h-32 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                {ogImg ? (
+                  <img src={ogImg} alt="" className="w-full h-full object-cover" />
+                ) : og?.favicon ? (
+                  <img src={og.favicon} alt="" className="w-6 h-6" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                ) : null}
+              </div>
+            )}
             <div className="flex-1 space-y-2">
-              <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
-                className={inputClass} />
+              <div className="flex items-center gap-2">
+                <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
+                  className={`${inputClass} flex-1`} />
+                {links.length > 1 && (
+                  <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
+                )}
+              </div>
               <textarea
                 placeholder="What makes you different from this competitor?"
                 value={link.note || ''}
@@ -717,9 +714,6 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
                 className={textareaClass}
               />
             </div>
-            {links.length > 1 && (
-              <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0 self-center" />
-            )}
           </div>
         );
       })}
@@ -918,27 +912,38 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
           </div>
         </div>
       </div>
-      {/* Mobile — back/next buttons */}
-      <div ref={mobileBarRef} className="fixed bottom-6 left-4 right-4 z-[200] flex sm:hidden gap-3">
-        <button
-          onClick={() => { let prev = activeIndex - 1; while (prev >= 0 && hiddenIndices?.has(prev)) prev--; if (prev >= 0) onNavigate(prev); }}
-          disabled={activeIndex <= 0}
-          aria-label="Previous slide"
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] bg-white/[0.04] backdrop-blur-lg text-sm font-medium transition-all duration-200 disabled:opacity-30"
-          style={{ color: '#ffffff' }}
-        >
-          <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-        <button
-          onClick={() => { let next = activeIndex + 1; while (next < count && hiddenIndices?.has(next)) next++; if (next < count) onNavigate(next); }}
-          disabled={activeIndex >= count - 1}
-          aria-label="Next slide"
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] bg-white/[0.04] backdrop-blur-lg text-sm font-medium transition-all duration-200 disabled:opacity-30"
-          style={{ color: '#ffffff' }}
-        >
-          Next <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+      {/* Mobile — dot strip only (swipe to navigate) */}
+      {activeIndex >= 0 && (
+        <div ref={mobileBarRef} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden items-center justify-center px-6 py-3">
+          <div className="flex items-center gap-2.5">
+            <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-1">
+              <Home size={14} strokeWidth={1.5} style={{ color: '#777777' }} />
+            </button>
+            {Array.from({ length: count }).map((_, i) => {
+              const isHidden = hiddenIndices?.has(i);
+              if (isHidden) return null;
+              const isActive = i === activeIndex;
+              const isLast = i === count - 1;
+              if (isLast) {
+                return (
+                  <button key={i} onClick={() => onNavigate(i)} aria-label="Go to submit" className="flex items-center justify-center p-1">
+                    <Send size={12} strokeWidth={1.8} style={{ color: isActive ? '#ffffff' : '#555555' }} />
+                  </button>
+                );
+              }
+              return (
+                <span key={i} className="block rounded-full transition-all duration-300"
+                  style={{
+                    width: isActive ? 18 : 6,
+                    height: 6,
+                    backgroundColor: isActive ? '#ffffff' : '#555555',
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -1315,7 +1320,7 @@ export function IntakeFormClient() {
   }, [booked, submitting]);
 
   // ── Navigation ───────────────────────────────────────
-  const togglePhase = (value: string) => {
+  const togglePhase = (value: string, stayOnSlide?: number) => {
     const active = phases.includes(value);
     if (active) {
       let next = phases.filter((p) => p !== value);
@@ -1328,6 +1333,13 @@ export function IntakeFormClient() {
       setPhases(['build', 'crowdfunding']);
     } else {
       setPhases([...phases, value]);
+    }
+    // Prevent scroll snap from jumping when Goals slide is revealed/hidden
+    if (stayOnSlide !== undefined) {
+      requestAnimationFrame(() => {
+        const el = slideRefsArr.current[stayOnSlide]?.current;
+        if (el) el.scrollIntoView({ inline: 'start', block: 'nearest', behavior: 'instant' as ScrollBehavior });
+      });
     }
   };
 
@@ -1621,7 +1633,7 @@ export function IntakeFormClient() {
             ))}
           </h1>
 
-          <p data-subtitle className="text-xl text-white/40 max-w-lg leading-relaxed mb-8" style={{ opacity: 0 }}>
+          <p data-subtitle className="text-base sm:text-xl text-white/40 max-w-lg leading-relaxed mb-8" style={{ opacity: 0 }}>
             Tell us about your project. The more detail you share, the better we can tailor our creative approach.
           </p>
 
@@ -1637,8 +1649,9 @@ export function IntakeFormClient() {
               <div ref={introFillRef} className="absolute inset-0 bg-black pointer-events-none"
                 style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }} />
               <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
-                Get Started
-                <motion.span variants={iconVariants} initial="hidden" animate={introHovered ? 'visible' : 'hidden'} className="flex items-center text-lg">
+                <span className="sm:hidden">Swipe right to start</span>
+                <span className="hidden sm:inline">Get Started</span>
+                <motion.span variants={iconVariants} initial="hidden" animate={introHovered ? 'visible' : 'hidden'} className="hidden sm:flex items-center text-lg">
                   →
                 </motion.span>
               </span>
@@ -1661,11 +1674,11 @@ export function IntakeFormClient() {
             </a>
           </div>
 
-          {/* Instructions — matching proposal exactly */}
-          <p data-instructions className="sm:hidden text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+          {/* Instructions */}
+          <p data-instructions className="sm:hidden text-sm text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
             Swipe left or right to advance.
           </p>
-          <p data-instructions className="hidden sm:block text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+          <p data-instructions className="hidden sm:block text-sm text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
             Navigate with arrow keys, page dots below, or the left/right buttons.
           </p>
         </div>
@@ -1678,7 +1691,7 @@ export function IntakeFormClient() {
   // ── Render: Slide deck ───────────────────────────────
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 py-20 md:py-24 bg-black';
+  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-20 pb-24 sm:py-20 md:py-24 bg-black';
 
   return (
     <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
@@ -1907,7 +1920,7 @@ export function IntakeFormClient() {
             <SlideHeader eyebrow="10" title="Partners" subtitle="Are you already working with other service providers?" />
             <div className="space-y-6">
               <ChipSelect options={PARTNER_OPTIONS} selected={partners} onChange={setPartners} large />
-              <ChipSelect options={PARTNER_STATUS_OPTIONS} selected={partners} onChange={setPartners} compact />
+              <ChipSelect options={PARTNER_STATUS_OPTIONS} selected={partners} onChange={setPartners} cols={1} />
               <div><FieldLabel icon={Link2} label="Who are your partners?" />
                 <textarea placeholder="List any companies or agencies you're working with" value={partnerDetails} onChange={(e) => setPartnerDetails(e.target.value)} rows={3} className={textareaClass} /></div>
             </div>
@@ -1945,7 +1958,7 @@ export function IntakeFormClient() {
           <div className="max-w-4xl mx-auto">
             <SlideHeader eyebrow={showGoals ? '12' : '11'} title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
 
-            {/* ── Phase toggles (single row, mirrors Project page) ── */}
+            {/* ── Phase toggles (wrapping, with labels) ── */}
             <div className="flex flex-wrap gap-2 mt-4">
               {PROJECT_PHASES.map((phase) => {
                 const active = phases.includes(phase.value);
@@ -1957,14 +1970,14 @@ export function IntakeFormClient() {
                     key={phase.value}
                     type="button"
                     disabled={disabled}
-                    onClick={() => togglePhase(phase.value)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-2 rounded-xl border transition-all duration-200 ${
+                    onClick={() => togglePhase(phase.value, 11)}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border transition-all duration-200 ${
                       disabled ? 'opacity-25 cursor-not-allowed border-white/5' :
                       active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
                     }`}
                   >
                     <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-accent' : ''}`} />
-                    <span className="text-sm font-medium hidden sm:inline">{phase.label}</span>
+                    <span className="text-sm font-medium">{phase.label}</span>
                   </button>
                 );
               })}
@@ -2022,7 +2035,7 @@ export function IntakeFormClient() {
                   </p>
                 </div>
 
-                <div data-submit-missing className="flex flex-col gap-3 max-w-xl mx-auto">
+                <div data-submit-missing className="flex flex-col gap-4 max-w-xl mx-auto">
                   {(() => {
                     const grouped = missingFields.reduce<Record<number, typeof missingFields>>((acc, f) => {
                       (acc[f.slide] ??= []).push(f);
@@ -2032,13 +2045,13 @@ export function IntakeFormClient() {
                       .sort(([a], [b]) => Number(a) - Number(b))
                       .map(([slide, fields]) => (
                         <button key={slide} onClick={() => navigateTo(Number(slide))}
-                          className="flex items-center gap-4 w-full text-left px-5 py-4 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-all group"
+                          className="flex flex-col sm:flex-row items-start gap-2 sm:gap-4 w-full text-left px-5 py-4 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-all group"
                         >
-                          <ChevronLeft size={16} className="text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 self-start mt-0.5" />
+                          <ChevronLeft size={16} className="text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 -rotate-90 sm:rotate-0 sm:mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white mb-1">{SLIDE_NAMES[Number(slide)]}</p>
                             {fields.map((f) => (
-                              <p key={f.key} className="text-sm" style={{ color: '#888888' }}>
+                              <p key={f.key} className="text-sm mt-1" style={{ color: '#888888' }}>
                                 <span className="text-white/60">{f.label}</span> — {f.explanation}
                               </p>
                             ))}

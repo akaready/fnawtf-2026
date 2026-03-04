@@ -99,16 +99,18 @@ function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: A
   const hasQuantity = addOn.quantity && quantity !== undefined && onQuantityChange;
   return (
     <div className="w-full flex items-center justify-between p-4 border border-border/50 rounded-lg bg-[#020202] text-left">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className="w-5 h-5 rounded border-2 border-[#6e6e74] bg-[#6e6e74] flex items-center justify-center flex-shrink-0">
+      <div className="flex items-start gap-4 flex-1 min-w-0">
+        <div className="w-5 h-5 rounded border-2 border-[#6e6e74] bg-[#6e6e74] flex items-center justify-center flex-shrink-0 mt-0.5">
           <svg className="w-3 h-3 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <span className="text-sm font-medium text-muted-foreground">{addOn.name}</span>
-        {addOn.description && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">{addOn.description}</span>
-        )}
+        <div className="min-w-0">
+          <span className="text-sm font-medium text-muted-foreground">{addOn.name}</span>
+          {addOn.description && (
+            <span className="text-xs text-muted-foreground block">{addOn.description}</span>
+          )}
+        </div>
       </div>
       {hasQuantity ? (
         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -601,16 +603,16 @@ function AddOnRow({
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
-      <div className="flex items-center gap-4 flex-1 min-w-0">
+      <div className="flex items-start gap-4 flex-1 min-w-0">
         {lockedNotIncluded ? (
-          <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center flex-shrink-0">
+          <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center flex-shrink-0 mt-0.5">
             <X className="w-3 h-3 text-background" strokeWidth={3} />
           </div>
         ) : compareRemoved ? (
-          <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center flex-shrink-0" />
+          <div className="w-5 h-5 rounded border-2 border-red-900/50 bg-transparent flex items-center justify-center flex-shrink-0 mt-0.5" />
         ) : (
           <div
-            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors duration-200 ${
               isLocked
                 ? 'border-purple-400 bg-purple-400'
                 : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
@@ -625,15 +627,17 @@ function AddOnRow({
             )}
           </div>
         )}
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>
-          {addOn.name}
-          {selected && perDayDisplay && (
-            <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
+        <div className="min-w-0">
+          <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>
+            {addOn.name}
+            {selected && perDayDisplay && (
+              <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
+            )}
+          </span>
+          {addOn.description && (
+            <span className={`text-xs block ${lockedNotIncluded ? 'text-white/10' : 'text-muted-foreground'}`}>{addOn.description}</span>
           )}
-        </span>
-        {addOn.description && (
-          <span className={`text-xs whitespace-nowrap ${lockedNotIncluded ? 'text-white/10' : 'text-muted-foreground'}`}>{addOn.description}</span>
-        )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
