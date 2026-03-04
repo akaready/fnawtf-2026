@@ -18,7 +18,7 @@ function PhaseSection({ phase, projects, index }: { phase: typeof PHASES[number]
   const isActive = useInView(sectionRef, { once: false, margin: '0px 0px -70% 0px' });
 
   return (
-    <section ref={sectionRef} className="relative py-16 lg:py-32 border-b border-white/5 px-6 lg:px-16">
+    <section id={phase.id} ref={sectionRef} className="relative py-16 lg:py-32 border-b border-white/5 px-6 lg:px-16 scroll-mt-20">
       <div className="max-w-7xl mx-auto relative z-10">
         <div className={`grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start lg:items-stretch ${isEven ? '' : 'lg:[direction:rtl]'}`}>
           {/* Content — ghost number anchors right edge to this column */}
