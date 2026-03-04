@@ -152,9 +152,9 @@ const STORAGE_KEY = 'fna-intake-draft';
 // ── Shared styles ────────────────────────────────────────────────────────────
 
 const inputClass =
-  'w-full px-4 py-3.5 bg-black border border-white/10 rounded-xl text-base text-foreground placeholder:text-white/40 focus:outline-none focus:border-accent/50 transition-colors font-body';
+  'w-full px-3 sm:px-4 py-3 sm:py-3.5 bg-black border border-white/10 rounded-xl text-base text-foreground placeholder:text-white/40 focus:outline-none focus:border-accent/50 transition-colors font-body';
 
-const textareaClass = `${inputClass} resize-none`;
+const textareaClass = `${inputClass} resize-none scrollbar-hide`;
 
 const labelClass = 'block text-base font-medium text-white/90 mb-2.5';
 
@@ -285,7 +285,7 @@ function ChipSelect({
     : large
       ? 'grid gap-3 grid-cols-2 md:grid-cols-4'
       : compact
-        ? 'grid gap-3 grid-cols-3'
+        ? 'grid gap-3 grid-cols-2 sm:grid-cols-3'
         : 'flex flex-wrap gap-3';
 
   return (
@@ -338,7 +338,7 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
       </button>
 
       {/* Timeline stop buttons */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {TIMELINE_STOPS.map((stop, i) => {
           const active = i === activeIdx;
           const Icon = stop.icon;
@@ -362,8 +362,8 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
         })}
       </div>
 
-      {/* Gradient track + circles centered under each box */}
-      <div className="relative">
+      {/* Gradient track + circles centered under each box (hidden on mobile where grid is 2-col) */}
+      <div className="relative hidden sm:block">
         {/* Track bar */}
         <div className="absolute top-1/2 -translate-y-1/2 rounded-full h-2" style={{ left: '12.5%', right: '12.5%', backgroundColor: '#222222' }}>
           {activeIdx >= 0 && (
@@ -918,29 +918,26 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
           </div>
         </div>
       </div>
-      {/* Mobile */}
-      <div ref={mobileBarRef} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] flex sm:hidden">
-        <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.07] rounded-full px-3 py-2 backdrop-blur-lg">
-          {Array.from({ length: count }).map((_, i) => {
-            const isHidden = hiddenIndices?.has(i);
-            return (
-            <div key={i} className="overflow-hidden" style={{
-              width: isHidden ? 0 : 'auto', opacity: isHidden ? 0 : 1,
-              marginLeft: isHidden ? -4 : 0, marginRight: isHidden ? -4 : 0,
-              transition: 'width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, margin 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
-            }}>
-              <button onClick={() => onNavigate(i)} aria-label={`Go to slide ${i + 1}`} className="flex items-center justify-center p-0.5">
-                {i === count - 1 ? (
-                  <Send size={i === activeIndex ? 14 : 12} strokeWidth={1.8} className="transition-all duration-300" style={{ color: i === activeIndex ? '#ffffff' : '#777777' }} />
-                ) : (
-                  <span className="block rounded-full transition-all duration-300"
-                    style={{ width: i === activeIndex ? 8 : 6, height: i === activeIndex ? 8 : 6, backgroundColor: i === activeIndex ? '#ffffff' : '#777777' }} />
-                )}
-              </button>
-            </div>
-            );
-          })}
-        </div>
+      {/* Mobile — back/next buttons */}
+      <div ref={mobileBarRef} className="fixed bottom-6 left-4 right-4 z-[200] flex sm:hidden gap-3">
+        <button
+          onClick={() => { let prev = activeIndex - 1; while (prev >= 0 && hiddenIndices?.has(prev)) prev--; if (prev >= 0) onNavigate(prev); }}
+          disabled={activeIndex <= 0}
+          aria-label="Previous slide"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] bg-white/[0.04] backdrop-blur-lg text-sm font-medium transition-all duration-200 disabled:opacity-30"
+          style={{ color: '#ffffff' }}
+        >
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+        <button
+          onClick={() => { let next = activeIndex + 1; while (next < count && hiddenIndices?.has(next)) next++; if (next < count) onNavigate(next); }}
+          disabled={activeIndex >= count - 1}
+          aria-label="Next slide"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-white/[0.07] bg-white/[0.04] backdrop-blur-lg text-sm font-medium transition-all duration-200 disabled:opacity-30"
+          style={{ color: '#ffffff' }}
+        >
+          Next <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
     </>
   );
@@ -1681,11 +1678,11 @@ export function IntakeFormClient() {
   // ── Render: Slide deck ───────────────────────────────
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 py-20 md:py-24 bg-black';
+  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 py-20 md:py-24 bg-black';
 
   return (
     <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
-      <div ref={deckRef} className="flex-1 flex overflow-x-scroll [scroll-snap-type:x_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div ref={deckRef} className="flex-1 flex overflow-x-scroll [scroll-snap-type:x_mandatory] scrollbar-hide">
 
         {/* ── Slide 0: About You ──────────────────────── */}
         <section ref={slideRefsArr.current[0] as React.RefObject<HTMLElement>} className={slideClass}>
