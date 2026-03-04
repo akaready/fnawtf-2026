@@ -1146,7 +1146,6 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
           count={count}
           activeIndex={activeIndex}
           onNavigate={onNavigate}
-          onHome={onHome}
           onExit={onExit}
           hiddenIndices={hiddenIndices}
           mobileBarRef={mobileBarRef}
