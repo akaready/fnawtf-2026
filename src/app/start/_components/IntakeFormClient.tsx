@@ -904,6 +904,8 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onExit, hiddenIndices,
     };
 
     const onMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') && !scrubbingRef.current) return;
       e.preventDefault();
       e.stopPropagation();
       if (!scrubbingRef.current) {
@@ -919,6 +921,9 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onExit, hiddenIndices,
     };
 
     const onEnd = (e: TouchEvent) => {
+      // Let button taps (Exit, Send) go through — onClick handles them
+      const target = e.target as HTMLElement;
+      if (target.closest('button') && !scrubbingRef.current) return;
       e.preventDefault();
       e.stopPropagation();
       if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
