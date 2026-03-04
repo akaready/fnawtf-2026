@@ -2405,9 +2405,9 @@ export function IntakeFormClient() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6" style={{ backgroundColor: '#22c55e20' }}>
                       <Check className="w-8 h-8" style={{ color: '#22c55e' }} />
                     </div>
-                    <p className="text-xl font-medium text-white mb-2">You&apos;re all set!</p>
+                    <p className="text-xl font-medium text-white mb-2">Meeting booked!</p>
                     <p className="text-base max-w-md mx-auto" style={{ color: '#888888' }}>
-                      Excited to chat with you about your project. Hit submit below and we&apos;ll be ready for our call.
+                      Now just hit submit and we&apos;ll be ready for our call.
                     </p>
                   </div>
                 )}
