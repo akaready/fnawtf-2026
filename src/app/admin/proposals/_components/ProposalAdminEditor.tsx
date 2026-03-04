@@ -80,12 +80,12 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const autoSave = useAutoSave(async () => {
-    const saves: Promise<void>[] = [];
-    if (detailsRef.current?.isDirty) saves.push(detailsRef.current.save());
-    if (welcomeRef.current?.isDirty) saves.push(welcomeRef.current.save());
-    if (approachRef.current?.isDirty) saves.push(approachRef.current.save());
-    if (pricingRef.current?.isDirty) saves.push(pricingRef.current.save());
-    await Promise.all(saves);
+    await Promise.all([
+      detailsRef.current?.save(),
+      welcomeRef.current?.save(),
+      approachRef.current?.save(),
+      pricingRef.current?.save(),
+    ]);
   });
   const handleDirty = useCallback(() => autoSave.trigger(), [autoSave]);
 

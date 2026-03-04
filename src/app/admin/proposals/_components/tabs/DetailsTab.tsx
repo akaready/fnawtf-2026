@@ -79,6 +79,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   // Auto-save state ref + hook
   const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate });
   useEffect(() => { stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate }; });
+  const isDirtyRef = useRef(false);
 
   const autoSave = useAutoSave(async () => {
     const s = stateRef.current;
@@ -93,10 +94,11 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       proposal_password: s.password.trim(),
       prepared_date: s.preparedDate || null,
     });
+    isDirtyRef.current = false;
     onProposalTypeChange?.(s.proposalType);
     onUpdated();
   });
-  const markDirty = useCallback(() => { autoSave.trigger(); onDirty?.(); }, [autoSave, onDirty]);
+  const markDirty = useCallback(() => { isDirtyRef.current = true; autoSave.trigger(); onDirty?.(); }, [autoSave, onDirty]);
 
   // Company search state
   const [clients, setClients] = useState(initialClients);
@@ -267,7 +269,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
 
   useImperativeHandle(ref, () => ({
     save: () => autoSave.flush(),
-    get isDirty() { return autoSave.hasPending; },
+    get isDirty() { return isDirtyRef.current; },
   }));
 
   useEffect(() => {

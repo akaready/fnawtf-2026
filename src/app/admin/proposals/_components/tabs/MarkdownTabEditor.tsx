@@ -48,6 +48,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl]           = useState('');
   const [title, setTitle]               = useState(section?.custom_title ?? '');
+  const titleRef                        = useRef(section?.custom_title ?? '');
   const linkInputRef                    = useRef<HTMLInputElement>(null);
   const sectionRef                      = useRef<ProposalSectionRow | null>(section);
   const isDirtyRef                      = useRef(false);
@@ -61,11 +62,12 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
   const save = useCallback(async () => {
     const markdownContent = currentMarkdownRef.current;
+    const titleValue = titleRef.current || null;
     const current = sectionRef.current;
     try {
       if (current) {
-        await updateProposalSection(current.id, { custom_content: markdownContent, custom_title: title || null });
-        const updated = { ...current, custom_content: markdownContent, custom_title: title || null };
+        await updateProposalSection(current.id, { custom_content: markdownContent, custom_title: titleValue });
+        const updated = { ...current, custom_content: markdownContent, custom_title: titleValue };
         sectionRef.current = updated;
         onSectionUpdated(updated);
       } else {
@@ -74,7 +76,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           section_type: 'text',
           sort_order: sortOrder,
           custom_content: markdownContent,
-          custom_title: title || null,
+          custom_title: titleValue,
           layout_columns: 1,
           layout_position: 'full',
         });
@@ -84,7 +86,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           section_type: 'text',
           snippet_id: null,
           custom_content: markdownContent,
-          custom_title: title || null,
+          custom_title: titleValue,
           layout_columns: 1,
           layout_position: 'full',
           sort_order: sortOrder,
@@ -97,7 +99,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
     } catch {
       // swallow — caller may show error via saving state
     }
-  }, [proposalId, sortOrder, onSectionUpdated, title]);
+  }, [proposalId, sortOrder, onSectionUpdated]);
 
   useImperativeHandle(ref, () => ({
     save,
@@ -110,6 +112,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
   const handleTitleChange = useCallback((value: string) => {
     setTitle(value);
+    titleRef.current = value;
     if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
     titleTimerRef.current = setTimeout(() => {
       const current = sectionRef.current;
