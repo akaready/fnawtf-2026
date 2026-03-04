@@ -51,7 +51,7 @@ const sections = [
       <p>
         Any information you submit through forms on this site (such as contact forms or
         project inquiries) is subject to our{' '}
-        <a href="/privacy" className="underline text-foreground/80 hover:text-foreground transition-colors">
+        <a href="/privacy" className="underline hover:no-underline text-foreground/80 hover:text-foreground transition-colors">
           Privacy Policy
         </a>
         . By submitting information, you represent that it is accurate and that you have the
@@ -114,7 +114,7 @@ const sections = [
     content: (
       <p>
         If you have questions about these Terms of Service, contact us at{' '}
-        <a href="mailto:hi@fna.wtf" className="underline text-foreground/80 hover:text-foreground transition-colors">
+        <a href="mailto:hi@fna.wtf" className="underline hover:no-underline text-foreground/80 hover:text-foreground transition-colors">
           hi@fna.wtf
         </a>
         .

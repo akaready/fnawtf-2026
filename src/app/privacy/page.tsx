@@ -108,7 +108,7 @@ const sections = [
     content: (
       <p>
         If you have questions about this Privacy Policy or your personal data, contact us at{' '}
-        <a href="mailto:hi@fna.wtf" className="underline text-foreground/80 hover:text-foreground transition-colors">
+        <a href="mailto:hi@fna.wtf" className="underline hover:no-underline text-foreground/80 hover:text-foreground transition-colors">
           hi@fna.wtf
         </a>
         .
