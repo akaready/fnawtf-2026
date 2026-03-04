@@ -423,9 +423,10 @@ function ExperienceVisualizer({ value, onChange }: { value: string; onChange: (v
               <span className="text-base font-medium block">{opt.label}</span>
               <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
             </div>
-            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
               <Icon size={20} strokeWidth={1.5} style={{ color: active ? '#a14dfd' : '#555555' }} />
-              <span className="text-xs font-medium" style={{ color: active ? '#a14dfd' : '#555555' }}>{opt.videos}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color: active ? '#a14dfd' : '#555555' }}>{opt.videos}</span>
+              <span className="text-[10px] uppercase tracking-wider" style={{ color: active ? '#a14dfd' : '#444444' }}>videos</span>
             </div>
           </button>
         );
@@ -804,35 +805,46 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, hiddenIndices,
     return visibleIndices[idx] ?? null;
   }, [visibleIndices]);
 
+  const vibrate = useCallback((ms: number | number[]) => {
+    try { navigator?.vibrate?.(ms); } catch {}
+  }, []);
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
     const touch = e.touches[0];
     holdTimer.current = setTimeout(() => {
       setScrubbing(true);
+      vibrate(20);
       const idx = getIndexFromTouch(touch.clientX);
       setScrubIndex(idx);
     }, 300);
-  }, [getIndexFromTouch]);
+  }, [getIndexFromTouch, vibrate]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
     if (!scrubbing) {
-      // If they move before hold triggers, cancel
       if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
       return;
     }
     e.preventDefault();
     const touch = e.touches[0];
     const idx = getIndexFromTouch(touch.clientX);
+    if (idx !== scrubIndex) {
+      vibrate(10);
+    }
     setScrubIndex(idx);
-  }, [scrubbing, getIndexFromTouch]);
+  }, [scrubbing, scrubIndex, getIndexFromTouch, vibrate]);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
     if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
     if (scrubbing && scrubIndex !== null) {
+      vibrate(15);
       onNavigate(scrubIndex);
     }
     setScrubbing(false);
     setScrubIndex(null);
-  }, [scrubbing, scrubIndex, onNavigate]);
+  }, [scrubbing, scrubIndex, onNavigate, vibrate]);
 
   useEffect(() => {
     return () => { if (holdTimer.current) clearTimeout(holdTimer.current); };
@@ -841,7 +853,7 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, hiddenIndices,
   const displayName = scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
 
   return (
-    <div ref={mobileBarRef as React.RefObject<HTMLDivElement>} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden flex-col items-center px-6 py-3">
+    <div ref={mobileBarRef as React.RefObject<HTMLDivElement>} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden flex-col items-center px-6 py-3 touch-none">
       {/* Scrub tooltip */}
       {scrubbing && displayName && (
         <div className="mb-3 px-4 py-2 bg-black/80 border border-white/20 backdrop-blur-2xl rounded-xl text-white text-sm font-semibold tracking-wide animate-in fade-in duration-150">
@@ -1815,7 +1827,7 @@ export function IntakeFormClient() {
 
   return (
     <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
-      <div ref={deckRef} className="flex-1 flex overflow-x-scroll [scroll-snap-type:x_mandatory] scrollbar-hide">
+      <div ref={deckRef} className="flex-1 flex overflow-x-scroll [scroll-snap-type:x_mandatory] [overscroll-behavior-x:contain] scrollbar-hide">
 
         {/* ── Slide 0: About You ──────────────────────── */}
         <section ref={slideRefsArr.current[0] as React.RefObject<HTMLElement>} className={slideClass}>
