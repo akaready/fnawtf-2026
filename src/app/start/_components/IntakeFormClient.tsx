@@ -2384,11 +2384,11 @@ export function IntakeFormClient() {
                 </div>
 
                 {!booked ? (
-                  <div data-submit-cal className="overflow-hidden bg-black -mx-4 sm:mx-0">
+                  <div data-submit-cal className="overflow-hidden bg-black -mx-4 sm:mx-0" style={{ height: 540 }}>
                     <Cal
                       namespace="start-form-review"
                       calLink="fnawtf/start-form-review"
-                      style={{ width: '100%' }}
+                      style={{ width: '100%', height: '100%', overflow: 'auto' }}
                       config={{
                         layout: 'month_view',
                         useSlotsViewOnSmallScreen: 'true',

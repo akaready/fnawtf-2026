@@ -228,6 +228,15 @@ html::-webkit-scrollbar {
   display: none;
 }
 
+/* ─── Cal.com embed iframe scrollbar hide ─────────────────────────────── */
+[data-submit-cal] iframe {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+[data-submit-cal] iframe::-webkit-scrollbar {
+  display: none;
+}
+
 /* ─── iOS Safari: prevent auto-zoom on input focus ─────────────────────── */
 @supports (-webkit-touch-callout: none) {
   input, textarea, select { font-size: 16px !important; }
