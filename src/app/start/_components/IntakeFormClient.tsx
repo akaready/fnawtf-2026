@@ -333,7 +333,7 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
         <HelpCircle className="w-6 h-6" style={{ color: isUnsure ? '#a14dfd' : '#888888' }} />
         <div className="text-left">
           <span className="text-base font-medium block">Flexible</span>
-          <span className="text-sm hidden sm:block" style={{ color: isUnsure ? '#888888' : '#777777' }}>Help us figure out the right timeline</span>
+          <span className="text-sm" style={{ color: isUnsure ? '#888888' : '#777777' }}>Help us figure out the right timeline</span>
         </div>
       </button>
 
@@ -1802,21 +1802,43 @@ export function IntakeFormClient() {
     }
   }, []);
 
-  // Swipe right on intro to start (mobile)
+  // Swipe left on intro to start (mobile) — native listeners to prevent browser back-swipe
   const introTouchStart = useRef<{ x: number; y: number } | null>(null);
-  const handleIntroTouchStart = useCallback((e: React.TouchEvent) => {
-    introTouchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }, []);
-  const handleIntroTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!introTouchStart.current) return;
-    const dx = e.changedTouches[0].clientX - introTouchStart.current.x;
-    const dy = Math.abs(e.changedTouches[0].clientY - introTouchStart.current.y);
-    introTouchStart.current = null;
-    // Swipe left (finger moves left = navigate right/forward) with enough horizontal distance
-    if (dx < -50 && dy < 100) {
-      handleLeaveIntro(() => setStarted(true));
-    }
-  }, [handleLeaveIntro]);
+  useEffect(() => {
+    const el = introSectionRef.current;
+    if (!el || started) return;
+
+    const onStart = (e: TouchEvent) => {
+      introTouchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!introTouchStart.current) return;
+      const dx = e.touches[0].clientX - introTouchStart.current.x;
+      const dy = Math.abs(e.touches[0].clientY - introTouchStart.current.y);
+      // If horizontal swipe, prevent browser back/forward gesture
+      if (Math.abs(dx) > 10 && Math.abs(dx) > dy) {
+        e.preventDefault();
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!introTouchStart.current) return;
+      const dx = e.changedTouches[0].clientX - introTouchStart.current.x;
+      const dy = Math.abs(e.changedTouches[0].clientY - introTouchStart.current.y);
+      introTouchStart.current = null;
+      if (dx < -50 && dy < 100) {
+        handleLeaveIntro(() => setStarted(true));
+      }
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, [started, handleLeaveIntro]);
 
   if (!started) {
     const titleLines = [["Let's", 'build'], ['something', 'great.']];
@@ -1824,8 +1846,6 @@ export function IntakeFormClient() {
       <>
       <section
         ref={introSectionRef}
-        onTouchStart={handleIntroTouchStart}
-        onTouchEnd={handleIntroTouchEnd}
         className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
         style={{
           backgroundColor: 'var(--surface-elevated)',
