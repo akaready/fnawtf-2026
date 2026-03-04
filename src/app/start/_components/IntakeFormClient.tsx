@@ -872,46 +872,68 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
     try { navigator?.vibrate?.(ms); } catch {}
   }, []);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
-    const touch = e.touches[0];
-    holdTimer.current = setTimeout(() => {
-      setScrubbing(true);
-      vibrate(20);
-      const idx = getIndexFromTouch(touch.clientX);
-      setScrubIndex(idx);
-    }, 300);
-  }, [getIndexFromTouch, vibrate]);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
-    if (!scrubbing) {
-      if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
-      return;
-    }
-    e.preventDefault();
-    const touch = e.touches[0];
-    const idx = getIndexFromTouch(touch.clientX);
-    if (idx !== scrubIndex) {
-      vibrate(10);
-    }
-    setScrubIndex(idx);
-  }, [scrubbing, scrubIndex, getIndexFromTouch, vibrate]);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
-    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
-    if (scrubbing && scrubIndex !== null) {
-      vibrate(15);
-      onNavigate(scrubIndex);
-    }
-    setScrubbing(false);
-    setScrubIndex(null);
-  }, [scrubbing, scrubIndex, onNavigate, vibrate]);
+  // Use native listeners with { passive: false } so preventDefault actually works
+  const scrubbingRef = useRef(false);
+  const scrubIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
-    return () => { if (holdTimer.current) clearTimeout(holdTimer.current); };
-  }, []);
+    const el = dotsContainerRef.current;
+    if (!el) return;
+
+    const onStart = (e: TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const touch = e.touches[0];
+      holdTimer.current = setTimeout(() => {
+        scrubbingRef.current = true;
+        setScrubbing(true);
+        vibrate(20);
+        const idx = getIndexFromTouch(touch.clientX);
+        scrubIndexRef.current = idx;
+        setScrubIndex(idx);
+      }, 300);
+    };
+
+    const onMove = (e: TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!scrubbingRef.current) {
+        if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+        return;
+      }
+      const touch = e.touches[0];
+      const idx = getIndexFromTouch(touch.clientX);
+      if (idx !== scrubIndexRef.current) {
+        vibrate(10);
+      }
+      scrubIndexRef.current = idx;
+      setScrubIndex(idx);
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+      if (scrubbingRef.current && scrubIndexRef.current !== null) {
+        vibrate(15);
+        onNavigate(scrubIndexRef.current);
+      }
+      scrubbingRef.current = false;
+      scrubIndexRef.current = null;
+      setScrubbing(false);
+      setScrubIndex(null);
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+    };
+  }, [getIndexFromTouch, vibrate, onNavigate]);
 
   const displayName = scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
 
@@ -926,9 +948,6 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       <div
         ref={dotsContainerRef as React.RefObject<HTMLDivElement>}
         className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5 select-none"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-2.5 -m-1.5">
           <Home size={16} strokeWidth={1.5} style={{ color: '#999999' }} />
