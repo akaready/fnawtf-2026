@@ -46,11 +46,10 @@ interface ProposalPanelProps {
   open: boolean;
   viewCount?: number;
   onClose: () => void;
-  onProposalUpdated?: (proposal: ProposalRow) => void;
   onProposalDeleted?: (id: string) => void;
 }
 
-export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalUpdated, onProposalDeleted }: ProposalPanelProps) {
+export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalDeleted }: ProposalPanelProps) {
   const editorRef = useRef<ProposalEditorHandle>(null);
   const [data, setData] = useState<PanelData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,7 +92,6 @@ export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposal
         clients,
       });
       setLoadedFor(proposalId);
-      if (onProposalUpdated) onProposalUpdated(proposal);
     }).finally(() => setLoading(false));
   }, [proposalId]); // eslint-disable-line react-hooks/exhaustive-deps
 

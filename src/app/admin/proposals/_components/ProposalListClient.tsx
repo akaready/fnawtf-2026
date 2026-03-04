@@ -347,7 +347,6 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         open={!!activeId}
         viewCount={activeId ? viewCounts[activeId]?.views ?? 0 : 0}
         onClose={() => setActiveId(null)}
-        onProposalUpdated={(updated) => setProposals((prev) => prev.map((p) => p.id === updated.id ? updated : p))}
         onProposalDeleted={(id) => {
           setProposals((prev) => prev.filter((p) => p.id !== id));
           setActiveId(null);
