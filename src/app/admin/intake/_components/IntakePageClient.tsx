@@ -151,7 +151,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      s.name.toLowerCase().includes(q) ||
+      `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) ||
       s.email.toLowerCase().includes(q) ||
       s.project_name.toLowerCase().includes(q) ||
       (s.pitch && s.pitch.toLowerCase().includes(q))
@@ -225,7 +225,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
                     className="cursor-pointer hover:bg-admin-bg-hover transition-colors"
                   >
                     <td className="px-6 py-3">
-                      <div className="font-medium text-admin-text-primary">{s.name}</div>
+                      <div className="font-medium text-admin-text-primary">{s.first_name} {s.last_name}</div>
                       <div className="text-xs text-admin-text-dim">{s.email}</div>
                     </td>
                     <td className="px-4 py-3 text-admin-text-secondary max-w-[200px] truncate">
@@ -374,7 +374,7 @@ function IntakeDetailPanel({
         <div>
           <SectionLabel>People</SectionLabel>
           <div className="space-y-2">
-            <ContactCard name={s.name} email={s.email} title={s.title || undefined} />
+            <ContactCard name={`${s.first_name} ${s.last_name}`.trim()} email={s.email} title={s.title || undefined} />
             {stakeholderEntries.map((sh, i) => (
               <ContactCard key={i} name={sh.name} email={sh.email} title={sh.title || undefined} />
             ))}

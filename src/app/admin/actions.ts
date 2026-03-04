@@ -2082,7 +2082,9 @@ export async function unlinkMeetingRelationship(relationshipId: string) {
 
 export interface IntakeSubmission {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  nickname: string | null;
   email: string;
   title: string | null;
   company_name: string | null;

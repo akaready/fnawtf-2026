@@ -128,7 +128,8 @@ function phasesToQuoteType(phases: string[]): PricingType {
 }
 
 const FIELD_META: Record<string, { label: string; explanation: string; slide: number }> = {
-  name:          { label: 'Your name',        explanation: 'We need to know who we\'re working with.',                      slide: 0 },
+  firstName:     { label: 'First name',       explanation: 'We need to know who we\'re working with.',                      slide: 0 },
+  lastName:      { label: 'Last name',        explanation: 'We need to know who we\'re working with.',                      slide: 0 },
   email:         { label: 'Email address',    explanation: 'This is how we\'ll send confirmations and follow up.',          slide: 0 },
   title:         { label: 'Your title',       explanation: 'Helps us understand your role in the project.',                 slide: 0 },
   companyName:   { label: 'Company name',     explanation: 'We need to know which company or brand this is for.',           slide: 1 },
@@ -1274,7 +1275,9 @@ export function IntakeFormClient() {
   const dotsRevealed = useRef(false);
 
   // Contact
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [title, setTitle] = useState('');
   const [stakeholders, setStakeholders] = useState<{ name: string; email: string; title: string }[]>([]);
@@ -1368,7 +1371,14 @@ export function IntakeFormClient() {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const d = JSON.parse(raw);
-      if (d.name) setName(d.name);
+      if (d.firstName) setFirstName(d.firstName);
+      else if (d.name) { // backwards compat with old drafts
+        const parts = d.name.split(' ');
+        setFirstName(parts[0] || '');
+        setLastName(parts.slice(1).join(' ') || '');
+      }
+      if (d.lastName) setLastName(d.lastName);
+      if (d.nickname) setNickname(d.nickname);
       if (d.email) setEmail(d.email);
       if (d.title) setTitle(d.title);
       if (d.stakeholders) {
@@ -1632,7 +1642,7 @@ export function IntakeFormClient() {
     const timer = setTimeout(() => {
       try {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-          name, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
+          firstName, lastName, nickname, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
           vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
           deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
           experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
@@ -1641,7 +1651,7 @@ export function IntakeFormClient() {
       } catch { /* ignore */ }
     }, 500);
     return () => clearTimeout(timer);
-  }, [started, name, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
+  }, [started, firstName, lastName, nickname, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
       vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
       deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
       experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
@@ -1672,7 +1682,8 @@ export function IntakeFormClient() {
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (!name.trim()) e.name = 'Required';
+    if (!firstName.trim()) e.firstName = 'Required';
+    if (!lastName.trim()) e.lastName = 'Required';
     if (!email.trim()) e.email = 'Required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = 'Invalid email';
     if (!title.trim()) e.title = 'Required';
@@ -1708,7 +1719,8 @@ export function IntakeFormClient() {
     try {
       const videoLinksText = videoRefs.filter((v) => v.url.trim()).map((v) => `${v.url}${v.notes ? ` — ${v.notes}` : ''}`).join('\n');
       const data: IntakeFormData = {
-        name: name.trim(), email: email.trim().toLowerCase(), title: title.trim() || undefined,
+        first_name: firstName.trim(), last_name: lastName.trim(), nickname: nickname.trim() || undefined,
+        email: email.trim().toLowerCase(), title: title.trim() || undefined,
         stakeholders: stakeholders.filter((s) => s.name.trim() || s.email.trim()).map((s) => `${s.name.trim()} <${s.email.trim()}>${s.title.trim() ? ` — ${s.title.trim()}` : ''}`).join('\n') || undefined,
         company_name: companyName.trim() || undefined,
         project_name: projectName.trim(), phases: phases.length ? phases : undefined, pitch: pitch.trim(),
@@ -1961,12 +1973,28 @@ export function IntakeFormClient() {
           <div className="max-w-2xl mx-auto">
             <SlideHeader eyebrow="01" title="People" subtitle="Who will we be in touch with?" />
             <div className="space-y-6">
-              <div id="field-name">
+              <div>
                 <FieldLabel icon={User} label="Your name" required />
-                <input type="text" placeholder="First and last name" value={name}
-                  onChange={(e) => { setName(e.target.value); clearError('name'); }}
-                  className={`${inputClass} ${errors.name ? 'border-red-500/50' : ''}`} />
-                {errors.name && <p className="text-xs text-red-400 mt-1.5">{errors.name}</p>}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1" id="field-firstName">
+                    <input type="text" placeholder="First name" value={firstName}
+                      onChange={(e) => { setFirstName(e.target.value); clearError('firstName'); }}
+                      className={`${inputClass} ${errors.firstName ? 'border-red-500/50' : ''}`} />
+                    {errors.firstName && <p className="text-xs text-red-400 mt-1.5">{errors.firstName}</p>}
+                  </div>
+                  <div className="flex-1" id="field-lastName">
+                    <input type="text" placeholder="Last name" value={lastName}
+                      onChange={(e) => { setLastName(e.target.value); clearError('lastName'); }}
+                      className={`${inputClass} ${errors.lastName ? 'border-red-500/50' : ''}`} />
+                    {errors.lastName && <p className="text-xs text-red-400 mt-1.5">{errors.lastName}</p>}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <FieldLabel icon={User} label="Nickname" />
+                <input type="text" placeholder="What should we call you?" value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className={inputClass} />
               </div>
               <div id="field-email">
                 <FieldLabel icon={Mail} label="Email address" required />
@@ -2283,7 +2311,7 @@ export function IntakeFormClient() {
                 <FileUploader files={files} onAdd={handleFileAdd} onRemove={(i) => setFiles((p) => p.filter((_, j) => j !== i))} uploading={uploading} /></div>
               <div><FieldLabel icon={MessageSquare} label="Anything else we should know?" />
                 <textarea placeholder="Additional context, questions, links." value={anythingElse} onChange={(e) => setAnythingElse(e.target.value)} rows={4} className={textareaClass} /></div>
-              <div><FieldLabel icon={Heart} label="Who referred you?" />
+              <div><FieldLabel icon={Heart} label="Did anyone refer you?" />
                 <input type="text" placeholder="Let us know so we can thank them!" value={referral} onChange={(e) => setReferral(e.target.value)} className={inputClass} /></div>
             </div>
           </div>
@@ -2359,7 +2387,7 @@ export function IntakeFormClient() {
                       config={{
                         layout: 'month_view',
                         useSlotsViewOnSmallScreen: 'true',
-                        name: name.trim(),
+                        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
                         email: email.trim(),
                         notes: `Company: ${companyName.trim()}\nProject: ${projectName.trim()}\nPitch: ${pitch.trim()}`,
                       }}

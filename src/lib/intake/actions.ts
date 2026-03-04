@@ -4,7 +4,9 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 export interface IntakeFormData {
   // Contact
-  name: string;
+  first_name: string;
+  last_name: string;
+  nickname?: string;
   email: string;
   title?: string;
   stakeholders?: string;
@@ -71,7 +73,9 @@ export async function submitIntakeForm(data: IntakeFormData) {
   const supabase = createServiceClient();
 
   const { error } = await supabase.from('intake_submissions').insert({
-    name: data.name,
+    first_name: data.first_name,
+    last_name: data.last_name,
+    nickname: data.nickname || null,
     email: data.email,
     title: data.title || null,
     stakeholders: data.stakeholders || null,
