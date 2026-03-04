@@ -2386,7 +2386,7 @@ export function IntakeFormClient() {
                 {!booked ? (
                   <div data-submit-cal className="overflow-hidden bg-black -mx-4 sm:mx-0" style={{ height: 540 }}>
                     <Cal
-                      key={`${firstName}-${lastName}-${email}-${companyName}`}
+                      key={`cal-${currentSlide === TOTAL_SLIDES - 1 ? `${firstName}-${lastName}-${email}-${companyName}` : 'pending'}`}
                       namespace="start-form-review"
                       calLink="fnawtf/start-form-review"
                       style={{ width: '100%', height: '100%', overflow: 'auto' }}
@@ -2395,7 +2395,8 @@ export function IntakeFormClient() {
                         useSlotsViewOnSmallScreen: 'true',
                         name: `${firstName.trim()} ${lastName.trim()}`.trim(),
                         email: email.trim(),
-                        notes: `Company: ${companyName.trim()}\nProject: ${projectName.trim()}\nPitch: ${pitch.trim()}`,
+                        company: companyName.trim(),
+                        notes: `Project: ${projectName.trim()}\nPitch: ${pitch.trim()}`,
                       }}
                     />
                   </div>
