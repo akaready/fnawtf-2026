@@ -228,13 +228,17 @@ html::-webkit-scrollbar {
   display: none;
 }
 
-/* ─── Cal.com embed iframe scrollbar hide ─────────────────────────────── */
+/* ─── Cal.com embed scrollbar hide ────────────────────────────────────── */
+[data-submit-cal],
+[data-submit-cal] *,
 [data-submit-cal] iframe {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
+[data-submit-cal]::-webkit-scrollbar,
+[data-submit-cal] *::-webkit-scrollbar,
 [data-submit-cal] iframe::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }
 
 /* ─── iOS Safari: prevent auto-zoom on input focus ─────────────────────── */
