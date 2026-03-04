@@ -2364,7 +2364,7 @@ export function IntakeFormClient() {
                   <p className="text-base" style={{ color: '#888888' }}>Pick a time that works and we will walk through your submission together.</p>
                 </div>
 
-                <div data-submit-steps className="flex justify-center gap-8 mb-8">
+                <div data-submit-steps className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-8 mb-8">
                   {[
                     { step: '1', text: 'Book a review call below', done: booked },
                     { step: '2', text: 'Submit your start form', done: submitted },
@@ -2381,7 +2381,7 @@ export function IntakeFormClient() {
                 </div>
 
                 {!booked ? (
-                  <div data-submit-cal className="rounded-2xl overflow-hidden border border-white/10 bg-black" style={{ height: 500 }}>
+                  <div data-submit-cal className="rounded-2xl overflow-hidden bg-black" style={{ height: 500 }}>
                     <Cal
                       namespace="start-form-review"
                       calLink="fnawtf/start-form-review"
