@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, BarChart3, Megaphone, Globe,
   PenTool, Search as SearchIcon, Home, Camera, Code, Share2,
   Send, CalendarCheck, HelpCircle, Hammer, TrendingUp, Coins, BadgeDollarSign, Building2, HeartHandshake,
-  Palette, Type, Film, Trophy,
+  Palette, Type, Trophy, Flame,
 } from 'lucide-react';
 import Cal, { getCalApi } from '@calcom/embed-react';
 import confetti from 'canvas-confetti';
@@ -85,8 +85,8 @@ const PRIORITY_ITEMS = [
 const EXPERIENCE_OPTIONS = [
   { value: 'none', label: 'First time', description: 'Brand new to professional video', videos: '0', icon: Sparkles },
   { value: 'inhouse', label: 'In-house only', description: "We've handled it ourselves so far", videos: '1–3', icon: Home },
-  { value: 'some', label: 'Some experience', description: "Worked with a production team", videos: '4–10', icon: Film },
-  { value: 'experienced', label: 'Experienced', description: 'Video is a regular part of our strategy', videos: '10+', icon: Trophy },
+  { value: 'some', label: 'Some experience', description: "Worked with a production team", videos: '1–5', icon: Flame },
+  { value: 'experienced', label: 'Experienced', description: 'Video is a regular part of our strategy', videos: '5+', icon: Trophy },
 ] as const;
 
 const PARTNER_OPTIONS = [
@@ -404,33 +404,96 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
 function ExperienceVisualizer({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const idx = EXPERIENCE_OPTIONS.findIndex((o) => o.value === value);
   const activeIdx = idx >= 0 ? idx : -1;
+  const BAR_DATA: { count: string; Icon: React.ElementType }[] = [
+    { count: '0 videos', Icon: Sparkles },
+    { count: '1–3 videos', Icon: Home },
+    { count: '1–5 videos', Icon: Flame },
+    { count: '5+ videos', Icon: Trophy },
+  ];
 
   return (
-    <div className="flex flex-col gap-3">
-      {EXPERIENCE_OPTIONS.map((opt, i) => {
-        const active = i === activeIdx;
-        const Icon = opt.icon;
-        return (
-          <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
-            className="w-full text-left px-5 py-4 rounded-xl border transition-all duration-200 flex items-center gap-4"
-            style={{
-              borderColor: active ? '#a14dfd' : '#222222',
-              backgroundColor: active ? '#1a0a2e' : 'transparent',
-              color: active ? '#ffffff' : '#888888',
-            }}
-          >
-            <div className="flex-1 min-w-0">
-              <span className="text-base font-medium block">{opt.label}</span>
-              <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-              <Icon size={20} strokeWidth={1.5} style={{ color: active ? '#a14dfd' : '#555555' }} />
-              <span className="text-xs font-bold tabular-nums" style={{ color: active ? '#a14dfd' : '#555555' }}>{opt.videos}</span>
-              <span className="text-[10px] uppercase tracking-wider" style={{ color: active ? '#a14dfd' : '#444444' }}>videos</span>
-            </div>
-          </button>
-        );
-      })}
+    <div className="space-y-6">
+      {/* Desktop: staircase chart + row of buttons */}
+      <div className="hidden sm:block space-y-6">
+        <div className="flex items-end justify-center gap-3" style={{ height: 180 }}>
+          {EXPERIENCE_OPTIONS.map((opt, i) => {
+            const isSelected = i === activeIdx;
+            const { count, Icon } = BAR_DATA[i];
+            const heightPct = i === 0 ? 50 : 25 * (i + 1);
+            const isFirst = i === 0;
+            return (
+              <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
+                className="flex-1 h-full flex items-end">
+                <div className="relative w-full rounded-lg transition-all duration-300 flex flex-col items-center justify-center gap-1"
+                  style={{
+                    height: `${heightPct}%`,
+                    backgroundColor: isFirst ? 'transparent' : (isSelected ? '#a14dfd' : '#2a2a2a'),
+                    boxShadow: isSelected && !isFirst ? '0 0 16px #a14dfd44' : 'none',
+                    border: isFirst
+                      ? `2px dashed ${isSelected ? '#a14dfd' : '#333333'}`
+                      : `1px solid ${isSelected ? '#a14dfd' : '#333333'}`,
+                    overflow: 'hidden',
+                  }}>
+                  {isSelected && (
+                    <>
+                      <Icon className="w-8 h-8 relative z-10" style={{ color: isFirst ? '#a14dfd' : '#ffffff' }} />
+                      <span className="text-xs font-mono font-bold relative z-10" style={{ color: isFirst ? '#a14dfd' : '#ffffff' }}>
+                        {count}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex justify-center gap-3">
+          {EXPERIENCE_OPTIONS.map((opt, i) => {
+            const active = i === activeIdx;
+            return (
+              <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
+                className="flex-1 text-center px-3 py-4 rounded-xl border transition-all duration-200"
+                style={{
+                  borderColor: active ? '#a14dfd' : '#222222',
+                  backgroundColor: active ? '#1a0a2e' : 'transparent',
+                  color: active ? '#ffffff' : '#666666',
+                }}
+              >
+                <span className="text-base font-medium block">{opt.label}</span>
+                <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#555555' }}>{opt.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile: stacked buttons with icon + video count */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {EXPERIENCE_OPTIONS.map((opt, i) => {
+          const active = i === activeIdx;
+          const Icon = opt.icon;
+          return (
+            <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
+              className="w-full text-left px-5 py-4 rounded-xl border transition-all duration-200 flex items-center gap-4"
+              style={{
+                borderColor: active ? '#a14dfd' : '#222222',
+                backgroundColor: active ? '#1a0a2e' : 'transparent',
+                color: active ? '#ffffff' : '#888888',
+              }}
+            >
+              <div className="flex-1 min-w-0">
+                <span className="text-base font-medium block">{opt.label}</span>
+                <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
+              </div>
+              <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                <Icon size={20} strokeWidth={1.5} style={{ color: active ? '#a14dfd' : '#555555' }} />
+                <span className="text-xs font-bold tabular-nums" style={{ color: active ? '#a14dfd' : '#555555' }}>{opt.videos}</span>
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: active ? '#a14dfd' : '#444444' }}>videos</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -785,8 +848,8 @@ function FileUploader({ files, onAdd, onRemove, uploading }: {
 
 // ── Mobile Dot Strip with tap-hold scrubber ──────────────────────────────────
 
-function MobileDotStrip({ count, activeIndex, onNavigate, onHome, hiddenIndices, mobileBarRef }: {
-  count: number; activeIndex: number; onNavigate: (i: number) => void; onHome: () => void;
+function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hiddenIndices, mobileBarRef }: {
+  count: number; activeIndex: number; onNavigate: (i: number) => void; onHome: () => void; onExit: () => void;
   hiddenIndices?: Set<number>; mobileBarRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [scrubbing, setScrubbing] = useState(false);
@@ -892,6 +955,10 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, hiddenIndices,
             />
           );
         })}
+        <div className="w-px h-4 bg-white/20 mx-1" />
+        <button onClick={onExit} aria-label="Save and exit" className="flex items-center justify-center p-2.5 -m-1.5">
+          <LogOut size={14} strokeWidth={1.5} style={{ color: '#777777' }} />
+        </button>
       </div>
     </div>
   );
@@ -1054,6 +1121,7 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
           activeIndex={activeIndex}
           onNavigate={onNavigate}
           onHome={onHome}
+          onExit={onExit}
           hiddenIndices={hiddenIndices}
           mobileBarRef={mobileBarRef}
         />
