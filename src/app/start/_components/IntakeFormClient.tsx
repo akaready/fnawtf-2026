@@ -858,8 +858,8 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
   const dotsContainerRef = useRef<HTMLDivElement>(null);
   const visibleIndices = useMemo(() => Array.from({ length: count }).map((_: unknown, i: number) => i).filter((i: number) => !hiddenIndices?.has(i)), [count, hiddenIndices]);
 
-  // Scrub indices: -1 = Home, 0..N = slides, -2 = Exit
-  const scrubItems = useMemo(() => [-1, ...visibleIndices, -2], [visibleIndices]);
+  // Scrub indices: 0..N = slides, -2 = Exit
+  const scrubItems = useMemo(() => [...visibleIndices, -2], [visibleIndices]);
 
   const getIndexFromTouch = useCallback((clientX: number) => {
     const container = dotsContainerRef.current;
@@ -882,8 +882,7 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
     let tapStartX = 0;
 
     const doNavigate = (idx: number) => {
-      if (idx === -1) onHome();
-      else if (idx === -2) onExit();
+      if (idx === -2) onExit();
       else onNavigate(idx);
     };
 
@@ -944,9 +943,9 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       el.removeEventListener('touchend', onEnd);
       if (holdTimer.current) clearTimeout(holdTimer.current);
     };
-  }, [getIndexFromTouch, onNavigate, onHome, onExit]);
+  }, [getIndexFromTouch, onNavigate, onExit]);
 
-  const displayName = scrubIndex === -1 ? 'Home' : scrubIndex === -2 ? 'Exit' : scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
+  const displayName = scrubIndex === -2 ? 'Exit' : scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
 
   return (
     <div ref={mobileBarRef as React.RefObject<HTMLDivElement>} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden flex-col items-center px-6 py-3">
@@ -958,11 +957,8 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       )}
       <div
         ref={dotsContainerRef as React.RefObject<HTMLDivElement>}
-        className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5 select-none"
+        className="flex items-center gap-3 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5 select-none"
       >
-        <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-2.5 -m-1.5">
-          <Home size={16} strokeWidth={1.5} style={{ color: scrubbing && scrubIndex === -1 ? '#ffffff' : '#999999' }} />
-        </button>
         {visibleIndices.map((i) => {
           const isActive = i === activeIndex;
           const isScrubTarget = scrubbing && i === scrubIndex;
@@ -1921,7 +1917,7 @@ export function IntakeFormClient() {
   // ── Render: Slide deck ───────────────────────────────
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-16 pb-44 sm:py-20 md:py-24 bg-black';
+  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-20 pb-44 sm:py-20 md:py-24 bg-black';
 
   return (
     <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
