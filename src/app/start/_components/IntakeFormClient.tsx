@@ -332,8 +332,8 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
       >
         <HelpCircle className="w-5 h-5" style={{ color: isUnsure ? '#a14dfd' : '#888888' }} />
         <div className="text-left">
-          <span className="text-base font-medium block">Unsure</span>
-          <span className="text-sm" style={{ color: isUnsure ? '#888888' : '#777777' }}>We&apos;re flexible — help us figure out the right timeline</span>
+          <span className="text-base font-medium block">Flexible</span>
+          <span className="text-sm" style={{ color: isUnsure ? '#888888' : '#777777' }}>Help us figure out the right timeline</span>
         </div>
       </button>
 
@@ -858,15 +858,18 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
   const dotsContainerRef = useRef<HTMLDivElement>(null);
   const visibleIndices = useMemo(() => Array.from({ length: count }).map((_: unknown, i: number) => i).filter((i: number) => !hiddenIndices?.has(i)), [count, hiddenIndices]);
 
+  // Scrub indices: -1 = Home, 0..N = slides, -2 = Exit
+  const scrubItems = useMemo(() => [-1, ...visibleIndices, -2], [visibleIndices]);
+
   const getIndexFromTouch = useCallback((clientX: number) => {
     const container = dotsContainerRef.current;
     if (!container) return null;
     const rect = container.getBoundingClientRect();
     const x = clientX - rect.left;
     const ratio = Math.max(0, Math.min(1, x / rect.width));
-    const idx = Math.round(ratio * (visibleIndices.length - 1));
-    return visibleIndices[idx] ?? null;
-  }, [visibleIndices]);
+    const idx = Math.round(ratio * (scrubItems.length - 1));
+    return scrubItems[idx] ?? null;
+  }, [scrubItems]);
 
   // Use native listeners with { passive: false } so preventDefault actually works
   const scrubbingRef = useRef(false);
@@ -876,13 +879,19 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
     const el = dotsContainerRef.current;
     if (!el) return;
 
+    let tapStartX = 0;
+
+    const doNavigate = (idx: number) => {
+      if (idx === -1) onHome();
+      else if (idx === -2) onExit();
+      else onNavigate(idx);
+    };
+
     const onStart = (e: TouchEvent) => {
-      // Let button taps through (home, send, exit)
-      const target = e.target as HTMLElement;
-      if (target.closest('button')) return;
       e.preventDefault();
       e.stopPropagation();
       const touch = e.touches[0];
+      tapStartX = touch.clientX;
       holdTimer.current = setTimeout(() => {
         scrubbingRef.current = true;
         setScrubbing(true);
@@ -896,7 +905,9 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       e.preventDefault();
       e.stopPropagation();
       if (!scrubbingRef.current) {
-        if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+        // Cancel hold if finger moved too far
+        const dx = Math.abs(e.touches[0].clientX - tapStartX);
+        if (dx > 10 && holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
         return;
       }
       const touch = e.touches[0];
@@ -910,7 +921,13 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       e.stopPropagation();
       if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
       if (scrubbingRef.current && scrubIndexRef.current !== null) {
-        onNavigate(scrubIndexRef.current);
+        // Long hold scrub — navigate to scrub target
+        doNavigate(scrubIndexRef.current);
+      } else {
+        // Short tap — navigate to tapped position
+        const touch = e.changedTouches[0];
+        const idx = getIndexFromTouch(touch.clientX);
+        if (idx !== null) doNavigate(idx);
       }
       scrubbingRef.current = false;
       scrubIndexRef.current = null;
@@ -927,12 +944,12 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       el.removeEventListener('touchend', onEnd);
       if (holdTimer.current) clearTimeout(holdTimer.current);
     };
-  }, [getIndexFromTouch, onNavigate]);
+  }, [getIndexFromTouch, onNavigate, onHome, onExit]);
 
-  const displayName = scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
+  const displayName = scrubIndex === -1 ? 'Home' : scrubIndex === -2 ? 'Exit' : scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
 
   return (
-    <div ref={mobileBarRef as React.RefObject<HTMLDivElement>} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden flex-col items-center px-6 py-3 touch-none">
+    <div ref={mobileBarRef as React.RefObject<HTMLDivElement>} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden flex-col items-center px-6 py-3">
       {/* Scrub tooltip */}
       {scrubbing && displayName && (
         <div className="mb-3 px-4 py-2 bg-black/80 border border-white/20 backdrop-blur-2xl rounded-xl text-white text-sm font-semibold tracking-wide animate-in fade-in duration-150">
@@ -944,7 +961,7 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
         className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5 select-none"
       >
         <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-2.5 -m-1.5">
-          <Home size={16} strokeWidth={1.5} style={{ color: '#999999' }} />
+          <Home size={16} strokeWidth={1.5} style={{ color: scrubbing && scrubIndex === -1 ? '#ffffff' : '#999999' }} />
         </button>
         {visibleIndices.map((i) => {
           const isActive = i === activeIndex;
@@ -970,7 +987,7 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
         })}
         <div className="w-px h-4 bg-white/20 mx-1" />
         <button onClick={onExit} aria-label="Save and exit" className="flex items-center justify-center p-2.5 -m-1.5">
-          <LogOut size={14} strokeWidth={1.5} style={{ color: '#777777' }} />
+          <LogOut size={14} strokeWidth={1.5} style={{ color: scrubbing && scrubIndex === -2 ? '#ffffff' : '#777777' }} />
         </button>
       </div>
     </div>
