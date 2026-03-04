@@ -2146,7 +2146,7 @@ export function IntakeFormClient() {
                     <input type="date" value={timelineDate} min={todayStr}
                       onChange={(e) => { setTimelineDate(e.target.value); clearError('timelineDate'); }}
                       className={`${inputClass} [color-scheme:dark] !w-full !max-w-full overflow-hidden appearance-none ${errors.timelineDate ? 'border-red-500/50' : ''}`}
-                      style={{ minWidth: 0 }} />
+                      style={{ minWidth: 0, textAlign: 'left' }} />
                     {errors.timelineDate && <p className="text-xs text-red-400 mt-1.5">{errors.timelineDate}</p>}
                   </motion.div>
                 )}
