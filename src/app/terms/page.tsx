@@ -4,7 +4,7 @@ import { FooterCTA } from '@/components/layout/FooterCTA';
 import { Reveal } from '@/components/animations/Reveal';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service - FNA.WTF',
+  title: 'FNA.wtf • Terms',
   description: 'Terms and conditions for using the Friends \'n Allies website.',
 };
 

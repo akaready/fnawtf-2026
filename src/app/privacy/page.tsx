@@ -4,7 +4,7 @@ import { FooterCTA } from '@/components/layout/FooterCTA';
 import { Reveal } from '@/components/animations/Reveal';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy - FNA.WTF',
+  title: 'FNA.wtf • Privacy',
   description: 'How Friends \'n Allies collects, uses, and protects your information.',
 };
 
