@@ -318,7 +318,7 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
   // Red → Orange → Yellow-green → Green
   const STOP_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6'];
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Unsure — separate option above */}
       <button
         type="button"
