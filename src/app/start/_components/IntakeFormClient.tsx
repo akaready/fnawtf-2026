@@ -1804,9 +1804,6 @@ export function IntakeFormClient() {
     return () => observer.disconnect();
   }, [started]);
 
-  // ── Render: Success ──────────────────────────────────
-  if (submitted) return <SuccessScreen />;
-
   const slidesWrapperRef = useRef<HTMLDivElement>(null);
   const handleGoHome = useCallback(() => {
     const wrapper = slidesWrapperRef.current;
@@ -1867,6 +1864,9 @@ export function IntakeFormClient() {
       el.removeEventListener('touchend', onEnd);
     };
   }, [started, handleLeaveIntro]);
+
+  // ── Render: Success ──────────────────────────────────
+  if (submitted) return <SuccessScreen />;
 
   if (!started) {
     const titleLines = [["Let's", 'build'], ['something', 'great.']];
