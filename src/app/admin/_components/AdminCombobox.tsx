@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-const inputCls =
-  'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
+const inputCls = 'admin-input w-full';
 
 const inputClsCompact =
   'w-full rounded border border-admin-border-subtle bg-admin-bg-base px-2 h-7 text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-border-focus';

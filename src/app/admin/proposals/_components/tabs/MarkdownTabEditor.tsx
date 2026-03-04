@@ -6,8 +6,7 @@ import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import { Markdown } from 'tiptap-markdown';
-import { Bold, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink, Trash2, Search } from 'lucide-react';
-import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
+import { Bold, Heading2, Heading3, List, ListOrdered, Link2, ExternalLink, Trash2, Search, Filter, PanelRight } from 'lucide-react';
 import { addProposalSection, updateProposalSection } from '@/app/admin/actions';
 import type { ProposalSectionRow, ContentSnippetRow, ProposalType } from '@/types/proposal';
 
@@ -190,6 +189,8 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
   const [snippetSearch, setSnippetSearch] = useState('');
   const [snippetCategory, setSnippetCategory] = useState(defaultSnippetCategory ?? '');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const matchingSnippets = useMemo(
     () => snippets.filter((s) => s.snippet_type === proposalType || s.snippet_type === 'general'),
@@ -305,6 +306,18 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
               <span className="w-px h-3.5 bg-admin-border-muted mx-1 flex-shrink-0" />
 
+              {/* Sidebar toggle — show when collapsed */}
+              {!sidebarOpen && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  title="Show snippets"
+                  className="p-1.5 rounded transition-colors text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover ml-auto"
+                >
+                  <PanelRight size={14} />
+                </button>
+              )}
+
               {/* Link button */}
               {isLink ? (
                 <div className="flex items-center gap-1 px-2 py-1 rounded bg-admin-bg-hover text-xs">
@@ -350,7 +363,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           </div>
 
           {/* Scrollable dark content area — fills remaining height */}
-          <div className="flex-1 overflow-y-auto admin-scrollbar bg-black/40">
+          <div className="flex-1 overflow-y-auto admin-scrollbar bg-admin-bg-base">
             <div className="max-w-3xl">
 
               {/* Link URL input */}
@@ -421,51 +434,95 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
         </div>
 
         {/* Snippet sidebar */}
-        <div className="w-64 flex-shrink-0 border-l border-admin-border flex flex-col">
-          <div className="px-3 h-[3rem] border-b border-admin-border flex-shrink-0 flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-admin-text-ghost pointer-events-none" />
-              <input
-                type="text"
-                value={snippetSearch}
-                onChange={(e) => setSnippetSearch(e.target.value)}
-                placeholder="Search snippets…"
-                className="w-full h-8 bg-black/40 border border-admin-border rounded-md pl-8 pr-3 text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-border-emphasis"
-              />
-            </div>
-            {snippetCategories.length > 0 && (
-              <div className="flex-shrink-0 w-32">
-                <AdminCombobox
-                  value={snippetCategory || null}
-                  options={snippetCategories.map((c) => ({ id: c, label: c }))}
-                  onChange={(v) => setSnippetCategory(v ?? '')}
-                  placeholder="All categories"
+        {sidebarOpen && (
+          <div className="w-72 flex-shrink-0 border-l border-admin-border flex flex-col">
+            <div className="px-3 h-[3rem] border-b border-admin-border flex-shrink-0 flex items-center gap-1.5">
+              <div className="relative flex-1 min-w-0">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-admin-text-ghost pointer-events-none" />
+                <input
+                  type="text"
+                  value={snippetSearch}
+                  onChange={(e) => setSnippetSearch(e.target.value)}
+                  placeholder="Search snippets…"
+                  className="admin-input w-full h-8 pl-8 pr-3 text-xs"
                 />
               </div>
-            )}
+              {snippetCategories.length > 0 && (
+                <div className="relative flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen((o) => !o)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                      snippetCategory
+                        ? 'text-admin-info bg-admin-info-bg'
+                        : 'text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover'
+                    }`}
+                    title={snippetCategory ? `Filter: ${snippetCategory}` : 'Filter by category'}
+                  >
+                    <Filter size={13} />
+                  </button>
+                  {filterOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 min-w-[140px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
+                        <button
+                          type="button"
+                          onClick={() => { setSnippetCategory(''); setFilterOpen(false); }}
+                          className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                            !snippetCategory ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          All
+                        </button>
+                        {snippetCategories.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => { setSnippetCategory(c); setFilterOpen(false); }}
+                            className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                              snippetCategory === c ? 'text-admin-info bg-admin-info-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                            }`}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                title="Hide snippets"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+              >
+                <PanelRight size={13} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto admin-scrollbar p-3 space-y-2">
+              {visibleSnippets.length === 0 ? (
+                <p className="text-xs text-admin-text-ghost pt-2">No snippets match.</p>
+              ) : (
+                visibleSnippets.map((snippet) => (
+                  <button
+                    key={snippet.id}
+                    type="button"
+                    onClick={() => handleSnippetInsert(snippet.body)}
+                    className="w-full text-left p-3 rounded-lg border border-admin-border hover:border-admin-border-emphasis bg-admin-bg-subtle hover:bg-admin-bg-hover transition-colors group"
+                  >
+                    <p className="text-sm font-medium text-admin-text-secondary group-hover:text-admin-text-primary transition-colors leading-tight">
+                      {snippet.title}
+                    </p>
+                    <p className="text-xs text-admin-text-faint mt-1.5 line-clamp-3 leading-relaxed">
+                      {snippet.body}
+                    </p>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto admin-scrollbar p-3 space-y-2">
-            {visibleSnippets.length === 0 ? (
-              <p className="text-xs text-admin-text-ghost pt-2">No snippets match.</p>
-            ) : (
-              visibleSnippets.map((snippet) => (
-                <button
-                  key={snippet.id}
-                  type="button"
-                  onClick={() => handleSnippetInsert(snippet.body)}
-                  className="w-full text-left p-3 rounded-lg border border-admin-border hover:border-admin-border-emphasis bg-admin-bg-subtle hover:bg-admin-bg-hover transition-colors group"
-                >
-                  <p className="text-sm font-medium text-admin-text-secondary group-hover:text-admin-text-primary transition-colors leading-tight">
-                    {snippet.title}
-                  </p>
-                  <p className="text-xs text-admin-text-faint mt-1.5 line-clamp-3 leading-relaxed">
-                    {snippet.body}
-                  </p>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
+        )}
 
       </div>{/* /flex row */}
 

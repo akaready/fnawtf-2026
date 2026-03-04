@@ -77,8 +77,7 @@ function QuoteIcon({ index, className }: { index: number; className?: string }) 
 }
 
 const labelCls = 'admin-label';
-const inputCls =
-  'w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis placeholder:text-admin-text-ghost';
+const inputCls = 'admin-input w-full';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
   { proposalId, proposalType, initialQuotes, onProposalTypeChange, onDirty }: PricingTabProps,
