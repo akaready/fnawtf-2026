@@ -887,6 +887,9 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onExit, hiddenIndices,
     };
 
     const onStart = (e: TouchEvent) => {
+      // Let button taps (Exit, Send, etc.) go through normally
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) return;
       e.preventDefault();
       e.stopPropagation();
       const touch = e.touches[0];
@@ -1529,6 +1532,7 @@ export function IntakeFormClient() {
   // ── Navigation ───────────────────────────────────────
   const togglePhase = (value: string, stayOnSlide?: number) => {
     const active = phases.includes(value);
+    const standalone = PHASE_RULES[value]?.length === 0; // scale, fundraising
     if (active) {
       let next = phases.filter((p) => p !== value);
       // Crowdfunding requires build or launch — remove it if no host remains
@@ -1538,8 +1542,13 @@ export function IntakeFormClient() {
       setPhases(next);
     } else if (value === 'crowdfunding' && phases.length === 0) {
       setPhases(['build', 'crowdfunding']);
+    } else if (standalone) {
+      // Standalone phases replace everything
+      setPhases([value]);
     } else {
-      setPhases([...phases, value]);
+      // Non-standalone: remove any standalone phases first
+      const next = phases.filter((p) => PHASE_RULES[p]?.length !== 0);
+      setPhases([...next, value]);
     }
     // Prevent scroll snap from jumping when Goals slide is revealed/hidden
     if (stayOnSlide !== undefined) {
