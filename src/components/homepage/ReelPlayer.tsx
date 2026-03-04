@@ -260,9 +260,9 @@ export function ReelPlayer({
         onClick={togglePlay}
       />
 
-      {/* Loading Indicator */}
-      {isLoading && !error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+      {/* Loading Indicator — only while actively playing and buffering */}
+      {isLoading && isPlaying && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
           <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       )}
