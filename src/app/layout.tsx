@@ -13,6 +13,7 @@ import { Footer } from '@/components/layout/Footer';
 import { VideoDimmingOverlay } from '@/components/layout/VideoDimmingOverlay';
 import { VideoPlayerProvider } from '@/contexts/VideoPlayerContext';
 import { SiteLayoutWrapper } from '@/components/layout/SiteLayoutWrapper';
+import { PostHogProvider } from '@/app/providers/PostHogProvider';
 
 export const metadata: Metadata = {
   title: 'FNA.WTF',
@@ -33,6 +34,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('fna-admin-theme')==='light')document.documentElement.dataset.adminLight='1'}catch(e){}` }} />
       </head>
       <body className="bg-background text-foreground">
+        <PostHogProvider>
         <VideoPlayerProvider>
           <SiteLayoutWrapper
             nav={
@@ -47,6 +49,7 @@ export default function RootLayout({
             {children}
           </SiteLayoutWrapper>
         </VideoPlayerProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

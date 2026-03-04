@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true, // Required for PostHog reverse proxy
   turbopack: {
     root: process.cwd(),
   },
@@ -35,6 +36,15 @@ const nextConfig: NextConfig = {
       {
         source: '/cdn/videos/:path*',
         destination: 'https://vz-6b68e26c-531.b-cdn.net/:path*',
+      },
+      // Proxy PostHog requests through our domain to bypass ad blockers
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
       },
     ];
   },
