@@ -219,6 +219,20 @@ html::-webkit-scrollbar {
   background: rgba(255, 255, 255, 0.25);
 }
 
+/* ─── Scrollbar hide (public-facing) ───────────────────────────────────── */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── iOS Safari: prevent auto-zoom on input focus ─────────────────────── */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select { font-size: 16px !important; }
+}
+
 /* ─── Admin light mode (CSS inversion) ──────────────────────────────────── */
 .admin-shell.light-mode,
 html[data-admin-light] .admin-shell {

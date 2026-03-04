@@ -502,8 +502,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
 
       {/* Calculator body */}
       <div
-        className={`flex-1 overflow-y-auto min-h-0${isLocked && onLockedInteract ? ' cursor-pointer [&_*]:!cursor-pointer' : ''}`}
-        style={{ scrollbarWidth: 'none' }}
+        className={`flex-1 overflow-y-auto scrollbar-hide min-h-0${isLocked && onLockedInteract ? ' cursor-pointer [&_*]:!cursor-pointer' : ''}`}
         onClick={isLocked && onLockedInteract ? (e) => {
           if (!(e.target as HTMLElement).closest('[data-no-intercept]')) onLockedInteract();
         } : undefined}

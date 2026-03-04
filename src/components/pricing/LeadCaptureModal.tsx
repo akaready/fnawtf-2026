@@ -184,7 +184,7 @@ export function LeadCaptureModal({ onComplete, onDismiss }: LeadCaptureModalProp
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-        className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none px-4 py-8 overflow-y-auto"
+        className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none px-4 py-8 overflow-y-auto scrollbar-hide"
       >
         <div
           className="relative w-full max-w-md bg-surface border border-border rounded-2xl p-6 pointer-events-auto shadow-2xl my-auto"

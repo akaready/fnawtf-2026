@@ -152,13 +152,13 @@ const STORAGE_KEY = 'fna-intake-draft';
 // ── Shared styles ────────────────────────────────────────────────────────────
 
 const inputClass =
-  'w-full px-4 py-3.5 bg-black border border-white/10 rounded-xl text-base text-foreground placeholder:text-white/20 focus:outline-none focus:border-accent/50 transition-colors font-body';
+  'w-full px-4 py-3.5 bg-black border border-white/10 rounded-xl text-base text-foreground placeholder:text-white/40 focus:outline-none focus:border-accent/50 transition-colors font-body';
 
 const textareaClass = `${inputClass} resize-none`;
 
 const labelClass = 'block text-base font-medium text-white/90 mb-2.5';
 
-const helperClass = 'text-sm text-white/30 mt-2 leading-relaxed';
+const helperClass = 'text-sm text-white/50 mt-2 leading-relaxed';
 
 // ── Framer icon reveal (matching proposal exactly) ───────────────────────────
 
@@ -209,7 +209,7 @@ function StakeholderRow({ stakeholder, onChange, onRemove }: {
 
   return (
     <div className="flex gap-2 items-center">
-      <div className="flex gap-2 flex-1 min-w-0">
+      <div className="flex flex-col sm:flex-row gap-2 flex-1 min-w-0">
         <input type="text" placeholder="Name" value={stakeholder.name}
           onChange={(e) => onChange({ ...stakeholder, name: e.target.value })}
           onFocus={() => setFocused('name')} onBlur={() => setFocused(null)}
@@ -327,13 +327,13 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
         style={{
           borderColor: isUnsure ? '#a14dfd' : '#333333',
           backgroundColor: isUnsure ? '#1a0a2e' : 'transparent',
-          color: isUnsure ? '#ffffff' : '#666666',
+          color: isUnsure ? '#ffffff' : '#888888',
         }}
       >
-        <HelpCircle className="w-5 h-5" style={{ color: isUnsure ? '#a14dfd' : '#666666' }} />
+        <HelpCircle className="w-5 h-5" style={{ color: isUnsure ? '#a14dfd' : '#888888' }} />
         <div className="text-left">
           <span className="text-base font-medium block">Unsure</span>
-          <span className="text-sm" style={{ color: isUnsure ? '#888888' : '#444444' }}>We&apos;re flexible — help us figure out the right timeline</span>
+          <span className="text-sm" style={{ color: isUnsure ? '#888888' : '#777777' }}>We&apos;re flexible — help us figure out the right timeline</span>
         </div>
       </button>
 
@@ -349,14 +349,14 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
               onClick={() => onChange(stop.value)}
               className="flex flex-col items-center gap-2 py-3 rounded-xl border transition-all duration-200"
               style={{
-                color: active ? '#ffffff' : '#555555',
+                color: active ? '#ffffff' : '#777777',
                 borderColor: active ? STOP_COLORS[i] : '#222222',
                 backgroundColor: active ? `${STOP_COLORS[i]}15` : 'transparent',
               }}
             >
-              <Icon className="w-6 h-6 transition-colors" style={{ color: active ? STOP_COLORS[i] : '#555555' }} />
+              <Icon className="w-6 h-6 transition-colors" style={{ color: active ? STOP_COLORS[i] : '#777777' }} />
               <span className="text-base font-medium">{stop.label}</span>
-              <span className="text-sm hidden sm:block" style={{ color: active ? '#888888' : '#444444' }}>{stop.description}</span>
+              <span className="text-sm hidden sm:block" style={{ color: active ? '#888888' : '#777777' }}>{stop.description}</span>
             </button>
           );
         })}
@@ -388,7 +388,7 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
                     ? { backgroundColor: STOP_COLORS[i], borderColor: STOP_COLORS[i], transform: 'scale(1.25)' }
                     : i < activeIdx
                       ? { backgroundColor: STOP_COLORS[i], borderColor: STOP_COLORS[i] }
-                      : { backgroundColor: '#000000', borderColor: '#444444' }
+                      : { backgroundColor: '#000000', borderColor: '#777777' }
                 }
               />
             </div>
@@ -456,11 +456,11 @@ function ExperienceVisualizer({ value, onChange }: { value: string; onChange: (v
               style={{
                 borderColor: active ? '#a14dfd' : '#222222',
                 backgroundColor: active ? '#1a0a2e' : 'transparent',
-                color: active ? '#ffffff' : '#666666',
+                color: active ? '#ffffff' : '#888888',
               }}
             >
               <span className="text-base font-medium block">{opt.label}</span>
-              <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#555555' }}>{opt.description}</span>
+              <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
             </button>
           );
         })}
@@ -557,7 +557,7 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
               </div>
               <div className="flex-1">
                 <span className="text-base font-medium text-white">{item.label}</span>
-                <p className="text-sm mt-0.5" style={{ color: '#666666' }}>{item.description}</p>
+                <p className="text-sm mt-0.5" style={{ color: '#888888' }}>{item.description}</p>
               </div>
               <GripVertical className="w-4 h-4 text-white/15 flex-shrink-0" />
             </>
@@ -585,7 +585,7 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
       >
         {isRankSlot && (
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold font-mono flex-shrink-0"
-            style={{ backgroundColor: '#1a1a1a', color: '#444444' }}>
+            style={{ backgroundColor: '#1a1a1a', color: '#777777' }}>
             {rankNum}
           </div>
         )}
@@ -636,8 +636,8 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
       {videos.map((v, i) => {
         const thumb = !brokenThumbs.has(i) ? getThumbnail(v.url) : null;
         return (
-          <div key={i} className="flex gap-4 items-start">
-            <div className="w-32 h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
+          <div key={i} className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="w-full h-32 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
               {thumb ? <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={() => setBrokenThumbs(s => new Set(s).add(i))} /> : <Play className="w-6 h-6 text-white/15" />}
             </div>
             <div className="flex-1 space-y-2">
@@ -696,8 +696,8 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
         const og = link.url.trim() ? ogCache[link.url.trim()] : undefined;
         const ogImg = og?.image || null;
         return (
-          <div key={i} className="flex gap-4 items-start">
-            <div className="w-32 h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
+          <div key={i} className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="w-full h-32 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
               {ogImg ? (
                 <img src={ogImg} alt="" className="w-full h-full object-cover" />
               ) : og?.favicon ? (
@@ -759,7 +759,7 @@ function FileUploader({ files, onAdd, onRemove, uploading }: {
             <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/10 bg-black text-sm">
               <FileText className="w-4 h-4 text-accent/60 flex-shrink-0" />
               <span className="text-white/70 truncate flex-1">{f.name}</span>
-              <button type="button" onClick={() => onRemove(i)} className="text-white/20 hover:text-white/50 transition-colors"><X className="w-4 h-4" /></button>
+              <button type="button" onClick={() => onRemove(i)} aria-label={`Remove ${f.name}`} className="text-white/20 hover:text-white/50 transition-colors"><X className="w-4 h-4" /></button>
             </div>
           ))}
         </div>
@@ -850,7 +850,7 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
             <button onClick={onHome} aria-label="Back to intro"
               className="flex items-center justify-center px-2 py-1.5 rounded-lg transition-all duration-200"
               style={{
-                color: activeIndex === -1 ? '#ffffff' : homeHovered ? '#999999' : '#555555',
+                color: activeIndex === -1 ? '#ffffff' : homeHovered ? '#999999' : '#777777',
                 backgroundColor: activeIndex === -1 ? 'rgba(255,255,255,0.18)' : homeHovered ? 'rgba(255,255,255,0.10)' : 'transparent',
                 transform: homeHovered ? 'scale(1.2)' : 'scale(1)',
               }}
@@ -889,12 +889,12 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
                     }}
                   >
                     {i === count - 1 ? (
-                      <Send size={18} strokeWidth={1.8} className="transition-all duration-200" style={{ color: isActive ? '#ffffff' : isHovered ? '#999999' : '#555555' }} />
+                      <Send size={18} strokeWidth={1.8} className="transition-all duration-200" style={{ color: isActive ? '#ffffff' : isHovered ? '#999999' : '#777777' }} />
                     ) : (
                       <span className="block rounded-full transition-all duration-200"
                         style={{
                           width: 9, height: 9,
-                          backgroundColor: isActive ? '#ffffff' : isHovered ? '#999999' : '#555555',
+                          backgroundColor: isActive ? '#ffffff' : isHovered ? '#999999' : '#777777',
                         }}
                       />
                     )}
@@ -911,7 +911,7 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
           >
             <button onClick={onExit} aria-label="Save and exit"
               className="flex items-center justify-center px-2 py-1.5 rounded-lg hover:bg-white/[0.06] transition-all duration-200"
-              style={{ color: exitHovered ? '#999999' : '#555555' }}
+              style={{ color: exitHovered ? '#999999' : '#777777' }}
             >
               <LogOut size={20} strokeWidth={1.5} />
             </button>
@@ -931,10 +931,10 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
             }}>
               <button onClick={() => onNavigate(i)} aria-label={`Go to slide ${i + 1}`} className="flex items-center justify-center p-0.5">
                 {i === count - 1 ? (
-                  <Send size={i === activeIndex ? 14 : 12} strokeWidth={1.8} className="transition-all duration-300" style={{ color: i === activeIndex ? '#ffffff' : '#555555' }} />
+                  <Send size={i === activeIndex ? 14 : 12} strokeWidth={1.8} className="transition-all duration-300" style={{ color: i === activeIndex ? '#ffffff' : '#777777' }} />
                 ) : (
                   <span className="block rounded-full transition-all duration-300"
-                    style={{ width: i === activeIndex ? 8 : 6, height: i === activeIndex ? 8 : 6, backgroundColor: i === activeIndex ? '#ffffff' : '#555555' }} />
+                    style={{ width: i === activeIndex ? 8 : 6, height: i === activeIndex ? 8 : 6, backgroundColor: i === activeIndex ? '#ffffff' : '#777777' }} />
                 )}
               </button>
             </div>
@@ -1726,7 +1726,7 @@ export function IntakeFormClient() {
                   </button>
                 </div>
                 {stakeholders.length > 0 && (
-                  <p className="text-xs mt-3" style={{ color: '#555555' }}>
+                  <p className="text-xs mt-3" style={{ color: '#777777' }}>
                     By adding stakeholders you confirm consent for us to contact them on your behalf.
                   </p>
                 )}
@@ -1763,7 +1763,7 @@ export function IntakeFormClient() {
               <div>
                 <FieldLabel icon={Hammer} label="What services are you interested in?" required />
                 {[PROJECT_PHASES.slice(0, 3), PROJECT_PHASES.slice(3)].map((row, ri) => (
-                  <div key={ri} className={`flex gap-3 ${ri === 0 ? 'mt-3' : 'mt-3'}`}>
+                  <div key={ri} className={`flex flex-wrap gap-3 ${ri === 0 ? 'mt-3' : 'mt-3'}`}>
                     {row.map((phase) => {
                       const active = phases.includes(phase.value);
                       const compatible = phases.length === 0 || phases.every((p) => PHASE_RULES[p]?.includes(phase.value) ?? false);
@@ -1782,7 +1782,7 @@ export function IntakeFormClient() {
                         >
                           <Icon className={`w-6 h-6 ${active ? 'text-accent' : ''}`} />
                           <span className="text-base font-medium">{phase.label}</span>
-                          <span className="text-sm leading-tight" style={{ color: active ? '#888888' : '#444444' }}>{phase.subtitle}</span>
+                          <span className="text-sm leading-tight" style={{ color: active ? '#888888' : '#777777' }}>{phase.subtitle}</span>
                         </button>
                       );
                     })}
@@ -1949,7 +1949,7 @@ export function IntakeFormClient() {
             <SlideHeader eyebrow={showGoals ? '12' : '11'} title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
 
             {/* ── Phase toggles (single row, mirrors Project page) ── */}
-            <div className="flex gap-2 mt-4">
+            <div className="flex flex-wrap gap-2 mt-4">
               {PROJECT_PHASES.map((phase) => {
                 const active = phases.includes(phase.value);
                 const compatible = phases.length === 0 || phases.every((p) => PHASE_RULES[p]?.includes(phase.value) ?? false);
@@ -1976,7 +1976,7 @@ export function IntakeFormClient() {
             {!(phases.includes('build') || phases.includes('launch') || phases.includes('fundraising')) ? (
               /* ── No quotable phase selected ── */
               <div className="mt-6">
-                <p className="text-base" style={{ color: '#666666' }}>
+                <p className="text-base" style={{ color: '#888888' }}>
                   {phases.length === 0
                     ? 'Select a service above to configure your quote.'
                     : 'Pricing for this service is custom \u2014 we\u2019ll discuss on our call.'}
@@ -2120,7 +2120,7 @@ export function IntakeFormClient() {
                           : (<>Submit<motion.span variants={iconVariants} initial="hidden" animate={submitHovered ? 'visible' : 'hidden'} className="flex items-center"><ArrowRight className="w-5 h-5" /></motion.span></>)}
                     </span>
                   </motion.button>
-                  <p data-submit-disclaimer className="text-xs mt-4 mx-auto" style={{ color: '#444444' }}>
+                  <p data-submit-disclaimer className="text-xs mt-4 mx-auto" style={{ color: '#777777' }}>
                     By submitting, you agree to be contacted by Friends &apos;n Allies regarding this project.
                   </p>
                 </div>

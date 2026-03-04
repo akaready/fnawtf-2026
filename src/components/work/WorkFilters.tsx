@@ -365,7 +365,7 @@ function FilterDrawer({ open, onClose, filters, availableTags, activeFilterCount
             </div>
 
             {/* Accordion body */}
-            <div className="overflow-y-auto flex-1 px-5">
+            <div className="overflow-y-auto scrollbar-hide flex-1 px-5">
               {sections.map((s) => (
                 <DrawerSection
                   key={s.id}

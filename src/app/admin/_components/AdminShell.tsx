@@ -186,7 +186,7 @@ function AdminShellInner({ children, userEmail }: Props) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 pt-2 pb-3 space-y-1 px-2 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+        <nav className="flex-1 pt-2 pb-3 space-y-1 px-2 overflow-y-auto admin-scrollbar-auto">
           {navItems.map(({ href, label, icon: Icon, children }, i) => {
             // Active if this is the most-specific nav item that matches the current path
             const active = pathname.startsWith(href) && !navItems.some(

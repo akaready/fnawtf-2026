@@ -378,7 +378,7 @@ export function AdminSearchModal({ open, onClose }: Props) {
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="overflow-y-auto max-h-[400px]" style={{ scrollbarWidth: 'none' }}>
+        <div ref={listRef} className="overflow-y-auto max-h-[400px] admin-scrollbar-auto">
           {loading && (
             <div className="px-4 py-8 text-center text-xs text-admin-text-faint">Searching…</div>
           )}
