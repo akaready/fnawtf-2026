@@ -480,7 +480,8 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
   };
 
   // Touch drag support for mobile
-  const handleTouchStart = (itemId: string) => { touchDragId.current = itemId; };
+  const [touchDragging, setTouchDragging] = useState<string | null>(null);
+  const handleTouchStart = (itemId: string) => { touchDragId.current = itemId; setTouchDragging(itemId); };
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchDragId.current) return;
     const touch = e.touches[0];
@@ -489,14 +490,17 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
     setDragOverIdx(idx >= 0 ? idx : null);
   };
   const handleTouchEnd = () => {
-    if (!touchDragId.current || dragOverIdx === null) { touchDragId.current = null; setDragOverIdx(null); return; }
-    const next: Grid = [...grid];
-    const sourceIdx = next.indexOf(touchDragId.current);
-    const targetItem = next[dragOverIdx];
-    if (sourceIdx >= 0) next[sourceIdx] = targetItem;
-    next[dragOverIdx] = touchDragId.current;
-    commit(next);
+    const wasDropped = touchDragId.current && dragOverIdx !== null;
+    if (wasDropped) {
+      const next: Grid = [...grid];
+      const sourceIdx = next.indexOf(touchDragId.current!);
+      const targetItem = next[dragOverIdx!];
+      if (sourceIdx >= 0) next[sourceIdx] = targetItem;
+      next[dragOverIdx!] = touchDragId.current!;
+      commit(next);
+    }
     touchDragId.current = null;
+    setTouchDragging(null);
     setDragOverIdx(null);
   };
 
@@ -507,6 +511,7 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
     const rankNum = isRankSlot ? idx - 2 : null; // 1, 2, 3
 
     if (item) {
+      const isBeingDragged = touchDragging === item.id;
       return (
         <div
           ref={(el) => { cellRefs.current[idx] = el; }}
@@ -520,23 +525,27 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onClick={() => {
+            if (touchDragging) return; // Don't trigger tap after drag
             if (!isRankSlot) {
-              // Tap pool item to place in first empty rank slot
               const next: Grid = [...grid];
               const emptyRank = [3, 4, 5].find((i) => !next[i]);
               if (emptyRank !== undefined) { next[idx] = ''; next[emptyRank] = item.id; commit(next); }
             } else {
-              // Tap ranked item to return to pool
               const next: Grid = [...grid];
               const emptyPool = [0, 1, 2].find((i) => !next[i]);
               if (emptyPool !== undefined) { next[idx] = ''; next[emptyPool] = item.id; commit(next); }
             }
           }}
-          className={`relative flex items-center gap-4 rounded-xl border cursor-grab active:cursor-grabbing transition-all duration-200 select-none touch-none h-[88px] ${
+          className={`relative flex items-center gap-4 rounded-xl border cursor-grab active:cursor-grabbing select-none touch-none h-[88px] ${
             isRankSlot ? 'px-6' : 'flex-col justify-center px-4'}`}
           style={{
-            borderColor: isOver ? '#a14dfd' : `${item.color}44`,
-            backgroundColor: isOver ? '#a14dfd10' : `${item.color}10`,
+            borderColor: isBeingDragged ? item.color : isOver ? '#a14dfd' : `${item.color}44`,
+            backgroundColor: isBeingDragged ? `${item.color}25` : isOver ? '#a14dfd10' : `${item.color}10`,
+            transform: isBeingDragged ? 'scale(1.05)' : 'scale(1)',
+            boxShadow: isBeingDragged ? `0 0 24px ${item.color}40` : 'none',
+            opacity: isBeingDragged ? 0.9 : 1,
+            zIndex: isBeingDragged ? 50 : 'auto',
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.2s ease, background-color 0.2s ease',
           }}
         >
           {isRankSlot ? (
@@ -628,16 +637,20 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
         const thumb = !brokenThumbs.has(i) ? getThumbnail(v.url) : null;
         return (
           <div key={i} className="flex flex-col sm:flex-row gap-4 items-start">
-            <div className="w-full h-32 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
-              {thumb ? <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={() => setBrokenThumbs(s => new Set(s).add(i))} /> : <Play className="w-6 h-6 text-white/15" />}
-            </div>
+            {thumb && (
+              <div className="w-full h-32 sm:w-32 sm:h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={() => setBrokenThumbs(s => new Set(s).add(i))} />
+              </div>
+            )}
             <div className="flex-1 space-y-2">
-              <input type="url" placeholder="YouTube or Vimeo link" value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={inputClass} />
+              <div className="flex items-center gap-2">
+                <input type="url" placeholder="YouTube or Vimeo link" value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
+                {videos.length > 1 && (
+                  <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
+                )}
+              </div>
               <textarea placeholder="What do you like about this video?" value={v.notes} onChange={(e) => update(i, 'notes', e.target.value)} rows={3} className={textareaClass} />
             </div>
-            {videos.length > 1 && (
-              <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0 self-center" />
-            )}
           </div>
         );
       })}
@@ -915,7 +928,7 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
       {/* Mobile — dot strip only (swipe to navigate) */}
       {activeIndex >= 0 && (
         <div ref={mobileBarRef} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden items-center justify-center px-6 py-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5">
             <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-1">
               <Home size={14} strokeWidth={1.5} style={{ color: '#777777' }} />
             </button>
@@ -1595,12 +1608,30 @@ export function IntakeFormClient() {
     }
   }, []);
 
+  // Swipe right on intro to start (mobile)
+  const introTouchStart = useRef<{ x: number; y: number } | null>(null);
+  const handleIntroTouchStart = useCallback((e: React.TouchEvent) => {
+    introTouchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+  const handleIntroTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!introTouchStart.current) return;
+    const dx = e.changedTouches[0].clientX - introTouchStart.current.x;
+    const dy = Math.abs(e.changedTouches[0].clientY - introTouchStart.current.y);
+    introTouchStart.current = null;
+    // Swipe left (finger moves left = navigate right/forward) with enough horizontal distance
+    if (dx < -50 && dy < 100) {
+      handleLeaveIntro(() => setStarted(true));
+    }
+  }, [handleLeaveIntro]);
+
   if (!started) {
     const titleLines = [["Let's", 'build'], ['something', 'great.']];
     return (
       <>
       <section
         ref={introSectionRef}
+        onTouchStart={handleIntroTouchStart}
+        onTouchEnd={handleIntroTouchEnd}
         className="h-screen w-screen relative flex flex-col items-center justify-center overflow-hidden pb-10"
         style={{
           backgroundColor: 'var(--surface-elevated)',
@@ -1691,7 +1722,7 @@ export function IntakeFormClient() {
   // ── Render: Slide deck ───────────────────────────────
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-20 pb-24 sm:py-20 md:py-24 bg-black';
+  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-20 pb-32 sm:py-20 md:py-24 bg-black';
 
   return (
     <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
@@ -1880,7 +1911,7 @@ export function IntakeFormClient() {
                     <FieldLabel icon={Calendar} label="Target date" />
                     <input type="date" value={timelineDate} min={todayStr}
                       onChange={(e) => { setTimelineDate(e.target.value); clearError('timelineDate'); }}
-                      className={`${inputClass} [color-scheme:dark] ${errors.timelineDate ? 'border-red-500/50' : ''}`} />
+                      className={`${inputClass} [color-scheme:dark] max-w-full ${errors.timelineDate ? 'border-red-500/50' : ''}`} />
                     {errors.timelineDate && <p className="text-xs text-red-400 mt-1.5">{errors.timelineDate}</p>}
                   </motion.div>
                 )}
@@ -2047,7 +2078,7 @@ export function IntakeFormClient() {
                         <button key={slide} onClick={() => navigateTo(Number(slide))}
                           className="flex flex-col sm:flex-row items-start gap-2 sm:gap-4 w-full text-left px-5 py-4 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-all group"
                         >
-                          <ChevronLeft size={16} className="text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 -rotate-90 sm:rotate-0 sm:mt-0.5" />
+                          <ChevronLeft size={16} className="text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white mb-1">{SLIDE_NAMES[Number(slide)]}</p>
                             {fields.map((f) => (

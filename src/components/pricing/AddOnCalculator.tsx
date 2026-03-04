@@ -222,33 +222,40 @@ function SliderRow({
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
-        {enabled && !isLocked && (
-          <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
-            <span className="text-xs text-muted-foreground">${slider.min.toLocaleString()}</span>
-            <input
-              type="range"
-              min={slider.min}
-              max={slider.max}
-              step={slider.step}
-              value={value}
-              onChange={(e) => onValueChange(addOn.id, Number(e.target.value))}
-              className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                ${(compareAdded || compareIncreased)
-                  ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
-                  : compareDecreased
-                    ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
-                    : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
-                }`}
-            />
-            <span className="text-xs text-muted-foreground">${slider.max.toLocaleString()}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
+            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+              {enabled ? `$${value.toLocaleString('en-US')}${addOn.perDay ? '/day' : ''}` : addOn.priceDisplay}
+            </span>
           </div>
-        )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
-          {enabled ? `$${value.toLocaleString('en-US')}${addOn.perDay ? '/day' : ''}` : addOn.priceDisplay}
-        </span>
+          {addOn.description && (
+            <span className="text-xs text-muted-foreground block mt-0.5">{addOn.description}</span>
+          )}
+          {enabled && !isLocked && (
+            <div className="flex items-center gap-2 mt-2 touch-none" onClick={(e) => e.stopPropagation()}>
+              <span className="text-xs text-muted-foreground">${slider.min.toLocaleString()}</span>
+              <input
+                type="range"
+                min={slider.min}
+                max={slider.max}
+                step={slider.step}
+                value={value}
+                onChange={(e) => onValueChange(addOn.id, Number(e.target.value))}
+                className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 sm:[&::-webkit-slider-thumb]:w-4 sm:[&::-webkit-slider-thumb]:h-4
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                  ${(compareAdded || compareIncreased)
+                    ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
+                    : compareDecreased
+                      ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
+                      : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                  }`}
+              />
+              <span className="text-xs text-muted-foreground">${slider.max.toLocaleString()}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -369,7 +376,7 @@ function MultiSliderRow({
 
       {/* Individual location sliders */}
       {enabled && !isLocked && (
-        <div className="mt-3 space-y-3 pl-9" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-3 space-y-5 pl-9 touch-none" onClick={(e) => e.stopPropagation()}>
           {Array.from({ length: count }, (_, i) => {
             const key = `${addOn.id}:${i}`;
             const val = sliderValues.get(key) ?? slider.default;
@@ -377,8 +384,11 @@ function MultiSliderRow({
             const selectedDays = locationDays.get(key) ?? allDays;
             return (
               <div key={i} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <span className="text-xs text-muted-foreground">Loc. {i + 1}</span>
+                  <span className="text-xs font-medium text-foreground">${val.toLocaleString()}/day</span>
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap w-20">Location {i + 1}</span>
                   <input
                     type="range"
                     min={slider.min}
@@ -387,7 +397,7 @@ function MultiSliderRow({
                     value={val}
                     onChange={(e) => onValueChange(key, Number(e.target.value))}
                     className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
-                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 sm:[&::-webkit-slider-thumb]:w-4 sm:[&::-webkit-slider-thumb]:h-4
                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
                       ${(compareAdded || compareIncreased)
                         ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
@@ -396,7 +406,6 @@ function MultiSliderRow({
                           : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                       }`}
                   />
-                  <span className="text-xs font-medium text-foreground w-16 text-right">${val.toLocaleString()}/day</span>
                 </div>
                 {/* Day toggles inline — only show when multiple production days */}
                 {totalDays > 1 && (
@@ -487,8 +496,8 @@ function PhotoSliderRow({
                   : 'border-border bg-[#020202] hover:border-purple-500/50'
       }`}
     >
-      <div className="flex items-center gap-4">
-        <div className="flex-shrink-0">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 mt-0.5">
           {lockedNotIncluded ? (
             <div className="w-5 h-5 rounded border-2 border-red-950 bg-red-950 flex items-center justify-center">
               <X className="w-3 h-3 text-background" strokeWidth={3} />
@@ -513,38 +522,42 @@ function PhotoSliderRow({
             </div>
           )}
         </div>
-        <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'} whitespace-nowrap`}>{addOn.name}</span>
-        {!enabled && !isLocked && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">includes {ps.included} photos, add&apos;l at ${ps.extraPrice}/ea</span>
-        )}
-        {enabled && !isLocked && (
-          <div className="flex-1 flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
-            <span className="text-xs text-muted-foreground">{ps.included}</span>
-            <input
-              type="range"
-              min={ps.included}
-              max={ps.max}
-              step={5}
-              value={photoCount}
-              onChange={(e) => onPhotoCountChange(Number(e.target.value))}
-              className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-                ${(compareAdded || compareIncreased)
-                  ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
-                  : compareDecreased
-                    ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
-                    : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
-                }`}
-            />
-            <span className="text-xs text-muted-foreground">{ps.max}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
+            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+              {enabled
+                ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
+                : addOn.priceDisplay}
+            </span>
           </div>
-        )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
-          {enabled
-            ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
-            : addOn.priceDisplay}
-        </span>
+          {!enabled && !isLocked && (
+            <span className="text-xs text-muted-foreground block mt-1">includes {ps.included} photos, add&apos;l at ${ps.extraPrice}/ea</span>
+          )}
+          {enabled && !isLocked && (
+            <div className="flex items-center gap-2 mt-2 touch-none" onClick={(e) => e.stopPropagation()}>
+              <span className="text-xs text-muted-foreground">{ps.included}</span>
+              <input
+                type="range"
+                min={ps.included}
+                max={ps.max}
+                step={5}
+                value={photoCount}
+                onChange={(e) => onPhotoCountChange(Number(e.target.value))}
+                className={`flex-1 h-1.5 bg-border rounded-full appearance-none cursor-pointer
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 sm:[&::-webkit-slider-thumb]:w-4 sm:[&::-webkit-slider-thumb]:h-4
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+                  ${(compareAdded || compareIncreased)
+                    ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
+                    : compareDecreased
+                      ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
+                      : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                  }`}
+              />
+              <span className="text-xs text-muted-foreground">{ps.max}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

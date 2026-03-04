@@ -1128,7 +1128,7 @@ export function CalculatorSummary({
             />
           </button>
           <div ref={discountContentRef} className="overflow-hidden">
-            <div className="relative px-5 pt-2 pb-5 space-y-4">
+            <div className="relative px-5 pt-2 pb-5 space-y-4 touch-none">
               {isLocked && <div className="absolute inset-0 z-10" style={{ cursor: 'not-allowed' }} />}
 
               {/* Friendly discount slider — hidden when crowdfunding is active */}
