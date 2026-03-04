@@ -659,7 +659,7 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
 
 // ── Competitor Link Inputs (with OG meta previews) ──────────────────────────
 
-interface CompetitorLink { url: string; }
+interface CompetitorLink { url: string; note?: string; }
 interface OgMeta { title: string; description: string | null; image: string | null; siteName: string; favicon: string; url: string; }
 
 function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; onChange: (v: CompetitorLink[]) => void }) {
@@ -667,12 +667,15 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
   const debounceTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const update = (idx: number, val: string) => {
-    const copy = [...links]; copy[idx] = { url: val }; onChange(copy);
+    const copy = [...links]; copy[idx] = { ...copy[idx], url: val }; onChange(copy);
     // Debounced OG fetch
     if (debounceTimers.current[idx]) clearTimeout(debounceTimers.current[idx]);
     if (val.trim() && /^https?:\/\/.+\..+/.test(val.trim())) {
       debounceTimers.current[idx] = setTimeout(() => fetchOg(val.trim()), 600);
     }
+  };
+  const updateNote = (idx: number, val: string) => {
+    const copy = [...links]; copy[idx] = { ...copy[idx], note: val }; onChange(copy);
   };
   const add = () => onChange([...links, { url: '' }]);
   const remove = (idx: number) => onChange(links.filter((_, i) => i !== idx));
@@ -691,33 +694,31 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
     <div className="space-y-4">
       {links.map((link, i) => {
         const og = link.url.trim() ? ogCache[link.url.trim()] : undefined;
+        const ogImg = og?.image || null;
         return (
-          <div key={i} className="space-y-2">
-            <div className="flex gap-2 items-center">
-              <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
-                className={inputClass + ' flex-1'} />
-              {links.length > 1 && (
-                <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0 self-center" />
+          <div key={i} className="flex gap-4 items-start">
+            <div className="w-32 h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
+              {ogImg ? (
+                <img src={ogImg} alt="" className="w-full h-full object-cover" />
+              ) : og?.favicon ? (
+                <img src={og.favicon} alt="" className="w-6 h-6" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              ) : (
+                <Globe className="w-6 h-6 text-white/15" />
               )}
             </div>
-            {og && (
-              <div className="flex gap-3 p-3 rounded-xl border border-white/10 bg-white/[0.03]">
-                {og.image ? (
-                  <div className="w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
-                    <img src={og.image} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/5 flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={og.favicon} alt="" className="w-5 h-5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white truncate">{og.title}</p>
-                  {og.description && <p className="text-xs mt-0.5 truncate" style={{ color: '#888888' }}>{og.description}</p>}
-                  <p className="text-xs mt-1 truncate" style={{ color: '#555555' }}>{og.siteName}</p>
-                </div>
-              </div>
+            <div className="flex-1 space-y-2">
+              <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
+                className={inputClass} />
+              <textarea
+                placeholder="What makes you different from this competitor?"
+                value={link.note || ''}
+                onChange={(e) => updateNote(i, e.target.value)}
+                rows={2}
+                className={textareaClass}
+              />
+            </div>
+            {links.length > 1 && (
+              <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0 self-center" />
             )}
           </div>
         );
@@ -1484,7 +1485,7 @@ export function IntakeFormClient() {
         excitement: excitement.trim() || undefined, key_feature: keyFeature.trim() || undefined,
         vision: vision.trim() || undefined, avoid: avoid.trim() || undefined, audience: audience.trim() || undefined,
         challenge: challenge.trim() || undefined,
-        competitors: competitors.filter((c) => c.url.trim()).map((c) => c.url.trim()).join('\n') || undefined,
+        competitors: competitors.filter((c) => c.url.trim()).map((c) => ({ url: c.url.trim(), note: c.note?.trim() || undefined })),
         video_links: videoLinksText || undefined, deliverables, deliverable_notes: deliverableNotes.trim() || undefined,
         timeline, timeline_date: timelineDate || undefined, timeline_notes: timelineNotes.trim() || undefined,
         priority_order: priorityOrder, experience, experience_notes: experienceNotes.trim() || undefined,

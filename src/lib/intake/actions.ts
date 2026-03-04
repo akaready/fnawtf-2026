@@ -20,7 +20,7 @@ export interface IntakeFormData {
   avoid?: string;
   audience?: string;
   challenge?: string;
-  competitors?: string;
+  competitors?: { url: string; note?: string }[];
 
   // Creative
   video_links?: string;
@@ -85,7 +85,7 @@ export async function submitIntakeForm(data: IntakeFormData) {
     avoid: data.avoid || null,
     audience: data.audience || null,
     challenge: data.challenge || null,
-    competitors: data.competitors || null,
+    competitors: data.competitors?.length ? data.competitors : null,
     video_links: data.video_links || null,
     deliverables: data.deliverables,
     deliverable_notes: data.deliverable_notes || null,
