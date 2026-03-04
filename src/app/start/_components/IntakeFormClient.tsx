@@ -552,6 +552,8 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
   };
 
   // Touch drag support for mobile
+  const activeDragId = dragId || touchDragId.current;
+  const dragColor = activeDragId ? PRIORITY_ITEMS.find((p) => p.id === activeDragId)?.color ?? '#a14dfd' : '#a14dfd';
   const [touchDragging, setTouchDragging] = useState<string | null>(null);
   const handleTouchStart = (itemId: string) => { touchDragId.current = itemId; setTouchDragging(itemId); };
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -611,8 +613,8 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
           className={`relative flex items-center gap-4 rounded-xl border cursor-grab active:cursor-grabbing select-none touch-none h-[88px] ${
             isRankSlot ? 'px-6' : 'flex-col justify-center px-4'}`}
           style={{
-            borderColor: isBeingDragged ? item.color : isOver ? '#a14dfd' : `${item.color}44`,
-            backgroundColor: isBeingDragged ? `${item.color}25` : isOver ? '#a14dfd10' : `${item.color}10`,
+            borderColor: isBeingDragged ? item.color : isOver ? dragColor : `${item.color}44`,
+            backgroundColor: isBeingDragged ? `${item.color}25` : isOver ? `${dragColor}10` : `${item.color}10`,
             transform: isBeingDragged ? 'scale(1.05)' : 'scale(1)',
             boxShadow: isBeingDragged ? `0 0 24px ${item.color}40` : 'none',
             opacity: isBeingDragged ? 0.9 : 1,
@@ -651,8 +653,8 @@ function PriorityRanker({ order, onChange }: { order: string[]; onChange: (order
         onDrop={(e) => { e.preventDefault(); handleDrop(idx, e); }}
         className="flex items-center gap-4 rounded-xl border-2 border-dashed transition-all duration-200 h-[88px] px-6"
         style={{
-          borderColor: isOver ? '#a14dfd' : '#222222',
-          backgroundColor: isOver ? '#a14dfd10' : 'transparent',
+          borderColor: isOver ? dragColor : '#222222',
+          backgroundColor: isOver ? `${dragColor}10` : 'transparent',
         }}
       >
         {isRankSlot && (
@@ -2073,7 +2075,7 @@ export function IntakeFormClient() {
                           disabled={disabled}
                           onClick={() => togglePhase(phase.value)}
                           className={`flex-1 flex flex-col items-center gap-2 py-5 px-3 rounded-xl border transition-all duration-200 text-center ${
-                            disabled ? 'opacity-25 cursor-not-allowed border-white/5' :
+                            disabled ? 'opacity-15 cursor-not-allowed border-white/5' :
                             active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
                           }`}
                         >
@@ -2266,7 +2268,7 @@ export function IntakeFormClient() {
                     disabled={disabled}
                     onClick={() => togglePhase(phase.value, 11)}
                     className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border transition-all duration-200 ${
-                      disabled ? 'opacity-25 cursor-not-allowed border-white/5' :
+                      disabled ? 'opacity-15 cursor-not-allowed border-white/5' :
                       active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
                     }`}
                   >
