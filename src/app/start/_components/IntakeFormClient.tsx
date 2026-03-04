@@ -1689,7 +1689,7 @@ export function IntakeFormClient() {
     const section = introSectionRef.current;
     const inner = introInnerRef.current;
     const bgOverlay = section?.querySelector('[data-bg-overlay]') as HTMLElement | null;
-    if (inner) gsap.to(inner, { opacity: 0, y: -20, duration: 0.35, ease: 'power2.in' });
+    if (inner) gsap.to(inner, { opacity: 0, x: -40, duration: 0.35, ease: 'power2.in' });
     if (bgOverlay) {
       gsap.to(bgOverlay, { opacity: 1, duration: 0.4, ease: 'power2.in', onComplete: then });
     } else {
