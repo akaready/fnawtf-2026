@@ -715,7 +715,7 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
             )}
             <div className="flex-1 w-full space-y-2">
               <div className="flex items-center gap-2">
-                <input type="url" placeholder="YouTube or Vimeo link." value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
+                <input type="url" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
                 {videos.length > 1 && (
                   <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
                 )}
@@ -868,10 +868,6 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
     return visibleIndices[idx] ?? null;
   }, [visibleIndices]);
 
-  const vibrate = useCallback((ms: number | number[]) => {
-    try { navigator?.vibrate?.(ms); } catch {}
-  }, []);
-
   // Use native listeners with { passive: false } so preventDefault actually works
   const scrubbingRef = useRef(false);
   const scrubIndexRef = useRef<number | null>(null);
@@ -881,13 +877,15 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
     if (!el) return;
 
     const onStart = (e: TouchEvent) => {
+      // Let button taps through (home, send, exit)
+      const target = e.target as HTMLElement;
+      if (target.closest('button')) return;
       e.preventDefault();
       e.stopPropagation();
       const touch = e.touches[0];
       holdTimer.current = setTimeout(() => {
         scrubbingRef.current = true;
         setScrubbing(true);
-        vibrate(20);
         const idx = getIndexFromTouch(touch.clientX);
         scrubIndexRef.current = idx;
         setScrubIndex(idx);
@@ -903,9 +901,6 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       }
       const touch = e.touches[0];
       const idx = getIndexFromTouch(touch.clientX);
-      if (idx !== scrubIndexRef.current) {
-        vibrate(10);
-      }
       scrubIndexRef.current = idx;
       setScrubIndex(idx);
     };
@@ -915,7 +910,6 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       e.stopPropagation();
       if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
       if (scrubbingRef.current && scrubIndexRef.current !== null) {
-        vibrate(15);
         onNavigate(scrubIndexRef.current);
       }
       scrubbingRef.current = false;
@@ -933,7 +927,7 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hidden
       el.removeEventListener('touchend', onEnd);
       if (holdTimer.current) clearTimeout(holdTimer.current);
     };
-  }, [getIndexFromTouch, vibrate, onNavigate]);
+  }, [getIndexFromTouch, onNavigate]);
 
   const displayName = scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
 
@@ -2025,7 +2019,7 @@ export function IntakeFormClient() {
         {/* ── Slide 2: Vision & Audience ──────────────── */}
         <section ref={slideRefsArr.current[2] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="03" title="Vision" subtitle="What does success look like, and who are you reaching?" />
+            <SlideHeader eyebrow="03" title="Vision" subtitle="What does success look like?" />
             <div className="space-y-6">
               <div><FieldLabel icon={Heart} label="What is the product/service vision?" required />
                 <textarea placeholder="What excites you most about it?" value={excitement} onChange={(e) => setExcitement(e.target.value)} rows={3} className={textareaClass} /></div>
@@ -2068,7 +2062,7 @@ export function IntakeFormClient() {
         {/* ── Slide 5: Deliverables ────────────────────── */}
         <section ref={slideRefsArr.current[5] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="06" title="Deliverables" subtitle="What assets do you need? Select all that apply." />
+            <SlideHeader eyebrow="06" title="Deliverables" subtitle="What do you need? Select all that apply." />
             <div className="space-y-6">
               <div id="field-deliverables">
                 <ChipSelect options={DELIVERABLE_OPTIONS} selected={deliverables} onChange={(v) => { setDeliverables(v); clearError('deliverables'); }} large />
@@ -2113,7 +2107,7 @@ export function IntakeFormClient() {
         {/* ── Slide 7: Priorities ──────────────────────── */}
         <section ref={slideRefsArr.current[7] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="08" title="Priorities" subtitle="Balancing quality, speed, and cost is a balancing act." />
+            <SlideHeader eyebrow="08" title="Priorities" subtitle="Balancing quality, speed, and cost is critical." />
             <PriorityRanker order={priorityOrder} onChange={setPriorityOrder} />
           </div>
         </section>
@@ -2121,7 +2115,7 @@ export function IntakeFormClient() {
         {/* ── Slide 8: Experience ──────────────────────── */}
         <section ref={slideRefsArr.current[8] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="09" title="Experience" subtitle="No wrong answers — this helps us calibrate our process." />
+            <SlideHeader eyebrow="09" title="Experience" subtitle="No wrong answers, just helps us calibrate." />
             <div className="space-y-6">
               <div id="field-experience">
                 <ExperienceVisualizer value={experience} onChange={(v) => { setExperience(v); clearError('experience'); }} />
@@ -2136,7 +2130,7 @@ export function IntakeFormClient() {
         {/* ── Slide 9: Partners ────────────────────────── */}
         <section ref={slideRefsArr.current[9] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="10" title="Partners" subtitle="Are you already working with other service providers?" />
+            <SlideHeader eyebrow="10" title="Partners" subtitle="Already with any other service providers?" />
             <div className="space-y-6">
               <ChipSelect options={PARTNER_OPTIONS} selected={partners} onChange={setPartners} large />
               <ChipSelect options={PARTNER_STATUS_OPTIONS} selected={partners} onChange={setPartners} cols={1} />
@@ -2207,7 +2201,7 @@ export function IntakeFormClient() {
               <div className="mt-6">
                 <p className="text-base" style={{ color: '#888888' }}>
                   {phases.length === 0
-                    ? 'Select a service above to configure your quote.'
+                    ? 'Select a service above to configure.'
                     : 'Pricing for this service is custom \u2014 we\u2019ll discuss on our call.'}
                 </p>
               </div>
