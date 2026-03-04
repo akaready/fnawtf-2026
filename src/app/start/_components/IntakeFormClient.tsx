@@ -2365,20 +2365,22 @@ export function IntakeFormClient() {
                   <p className="text-base" style={{ color: '#888888' }}>Pick a time that works and we will walk through your submission together.</p>
                 </div>
 
-                <div data-submit-steps className="flex flex-col items-center sm:flex-row sm:items-start justify-center gap-3 sm:gap-8 mb-8">
-                  {[
-                    { step: '1', text: 'Book a review call below', done: booked },
-                    { step: '2', text: 'Submit your start form', done: submitted },
-                    { step: '3', text: 'We chat and review together', done: false },
-                  ].map((item) => (
-                    <div key={item.step} className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ backgroundColor: item.done ? '#22c55e' : '#2a1a3e', color: item.done ? '#000000' : '#a14dfd' }}>
-                        {item.done ? <Check className="w-3.5 h-3.5" /> : item.step}
-                      </span>
-                      <p className="text-sm" style={{ color: item.done ? '#22c55e' : '#777777' }}>{item.text}</p>
-                    </div>
-                  ))}
+                <div data-submit-steps className="flex justify-center mb-8">
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+                    {[
+                      { step: '1', text: 'Book a review call below', done: booked },
+                      { step: '2', text: 'Submit your start form', done: submitted },
+                      { step: '3', text: 'We chat and review together', done: false },
+                    ].map((item) => (
+                      <div key={item.step} className="flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                          style={{ backgroundColor: item.done ? '#22c55e' : '#2a1a3e', color: item.done ? '#000000' : '#a14dfd' }}>
+                          {item.done ? <Check className="w-4 h-4" /> : item.step}
+                        </span>
+                        <p className="text-base" style={{ color: item.done ? '#22c55e' : '#777777' }}>{item.text}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {!booked ? (
