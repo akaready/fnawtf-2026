@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, BarChart3, Megaphone, Globe,
   PenTool, Search as SearchIcon, Home, Camera, Code, Share2,
   Send, CalendarCheck, HelpCircle, Hammer, TrendingUp, Coins, BadgeDollarSign, Building2, HeartHandshake,
-  Palette, Type,
+  Palette, Type, Film, Trophy,
 } from 'lucide-react';
 import Cal, { getCalApi } from '@calcom/embed-react';
 import confetti from 'canvas-confetti';
@@ -83,10 +83,10 @@ const PRIORITY_ITEMS = [
 ] as const;
 
 const EXPERIENCE_OPTIONS = [
-  { value: 'none', label: 'First time', description: 'Brand new to professional video' },
-  { value: 'inhouse', label: 'In-house only', description: "We've handled it ourselves so far" },
-  { value: 'some', label: 'Some experience', description: "Worked with a production team" },
-  { value: 'experienced', label: 'Experienced', description: 'Video is a regular part of our strategy' },
+  { value: 'none', label: 'First time', description: 'Brand new to professional video', videos: '0', icon: Sparkles },
+  { value: 'inhouse', label: 'In-house only', description: "We've handled it ourselves so far", videos: '1–3', icon: Home },
+  { value: 'some', label: 'Some experience', description: "Worked with a production team", videos: '4–10', icon: Film },
+  { value: 'experienced', label: 'Experienced', description: 'Video is a regular part of our strategy', videos: '10+', icon: Trophy },
 ] as const;
 
 const PARTNER_OPTIONS = [
@@ -409,17 +409,24 @@ function ExperienceVisualizer({ value, onChange }: { value: string; onChange: (v
     <div className="flex flex-col gap-3">
       {EXPERIENCE_OPTIONS.map((opt, i) => {
         const active = i === activeIdx;
+        const Icon = opt.icon;
         return (
           <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
-            className="w-full text-left px-5 py-4 rounded-xl border transition-all duration-200"
+            className="w-full text-left px-5 py-4 rounded-xl border transition-all duration-200 flex items-center gap-4"
             style={{
               borderColor: active ? '#a14dfd' : '#222222',
               backgroundColor: active ? '#1a0a2e' : 'transparent',
               color: active ? '#ffffff' : '#888888',
             }}
           >
-            <span className="text-base font-medium block">{opt.label}</span>
-            <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
+            <div className="flex-1 min-w-0">
+              <span className="text-base font-medium block">{opt.label}</span>
+              <span className="text-sm mt-1.5 block leading-snug" style={{ color: active ? '#999999' : '#777777' }}>{opt.description}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 flex-shrink-0">
+              <Icon size={20} strokeWidth={1.5} style={{ color: active ? '#a14dfd' : '#555555' }} />
+              <span className="text-xs font-medium" style={{ color: active ? '#a14dfd' : '#555555' }}>{opt.videos}</span>
+            </div>
           </button>
         );
       })}
@@ -644,10 +651,10 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
             )}
             <div className="flex-1 w-full space-y-2">
               <div className="flex items-center gap-2">
+                <input type="url" placeholder="YouTube or Vimeo link." value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
                 {videos.length > 1 && (
                   <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
                 )}
-                <input type="url" placeholder="YouTube or Vimeo link." value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
               </div>
               <textarea placeholder="What do you like about this video?" value={v.notes} onChange={(e) => update(i, 'notes', e.target.value)} rows={3} className={textareaClass} />
             </div>
@@ -713,11 +720,11 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
             )}
             <div className="flex-1 w-full space-y-2">
               <div className="flex items-center gap-2">
+                <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
+                  className={`${inputClass} flex-1`} />
                 {links.length > 1 && (
                   <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
                 )}
-                <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
-                  className={`${inputClass} flex-1`} />
               </div>
               <textarea
                 placeholder="What makes you different from this competitor?"
@@ -755,7 +762,7 @@ function FileUploader({ files, onAdd, onRemove, uploading }: {
         <Upload className={`w-8 h-8 ${dragActive ? 'text-accent' : 'text-white/20'}`} />
         <div className="text-center">
           <p className="text-base text-white/50">{uploading ? 'Uploading...' : 'Drop files here or click to browse'}</p>
-          <p className="text-sm text-white/20 mt-1">PDFs, images, documents — up to 50 MB each</p>
+          <p className="text-sm text-white/20 mt-1">PDFs, images, docs up to 50 MB each.</p>
         </div>
         {uploading && <div className="w-6 h-6 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />}
       </div>
@@ -843,7 +850,7 @@ function MobileDotStrip({ count, activeIndex, onNavigate, onHome, hiddenIndices,
       )}
       <div
         ref={dotsContainerRef as React.RefObject<HTMLDivElement>}
-        className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5"
+        className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5 select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1714,7 +1721,7 @@ export function IntakeFormClient() {
         ref={introSectionRef}
         onTouchStart={handleIntroTouchStart}
         onTouchEnd={handleIntroTouchEnd}
-        className="h-screen w-screen relative flex flex-col items-center justify-center overflow-hidden pb-10"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
         style={{
           backgroundColor: 'var(--surface-elevated)',
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)',
@@ -1993,7 +2000,7 @@ export function IntakeFormClient() {
                     <FieldLabel icon={Calendar} label="Target date" />
                     <input type="date" value={timelineDate} min={todayStr}
                       onChange={(e) => { setTimelineDate(e.target.value); clearError('timelineDate'); }}
-                      className={`${inputClass} [color-scheme:dark] w-full py-3 sm:w-auto sm:py-2 ${errors.timelineDate ? 'border-red-500/50' : ''}`} />
+                      className={`${inputClass} [color-scheme:dark] w-full max-w-full box-border ${errors.timelineDate ? 'border-red-500/50' : ''}`} />
                     {errors.timelineDate && <p className="text-xs text-red-400 mt-1.5">{errors.timelineDate}</p>}
                   </motion.div>
                 )}
@@ -2126,7 +2133,7 @@ export function IntakeFormClient() {
             <SlideHeader eyebrow={showGoals ? '13' : '12'} title="Extras" subtitle="Upload files and add any final context." />
             <div className="space-y-8">
               <div><FieldLabel icon={Upload} label="Files to share" />
-                <p className={`${helperClass} mb-3`}>Market research, brand guidelines, NDAs, assets — anything relevant.</p>
+                <p className={`${helperClass} mb-3`}>Market research, brand guidelines, NDAs, existing photo or video assets — anything is relevant.</p>
                 <FileUploader files={files} onAdd={handleFileAdd} onRemove={(i) => setFiles((p) => p.filter((_, j) => j !== i))} uploading={uploading} /></div>
               <div><FieldLabel icon={MessageSquare} label="Anything else we should know?" />
                 <textarea placeholder="Additional context, questions, links." value={anythingElse} onChange={(e) => setAnythingElse(e.target.value)} rows={4} className={textareaClass} /></div>

@@ -305,7 +305,7 @@ function FundraisingPaymentSlider({
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
-      <div className="flex justify-between mt-1 text-xs text-muted-foreground px-[10px]">
+      <div className="flex justify-between mt-1 text-xs text-muted-foreground px-1">
         <span>100%</span>
         <span>80%</span>
         <span>60%</span>
@@ -360,7 +360,7 @@ function CrowdfundingSlider({
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
-      <div className="flex justify-between mt-1 text-xs text-muted-foreground px-[10px]">
+      <div className="flex justify-between mt-1 text-xs text-muted-foreground px-1">
         <span>0%</span>
         <span>10%</span>
         <span>20%</span>
@@ -1152,7 +1152,7 @@ export function CalculatorSummary({
                         : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
                     }`}
                   />
-                  <div className="flex justify-between mt-1 text-xs text-muted-foreground px-[10px]">
+                  <div className="flex justify-between mt-1 text-xs text-muted-foreground px-1">
                     <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
                   </div>
                   <div className="text-center mt-2">
