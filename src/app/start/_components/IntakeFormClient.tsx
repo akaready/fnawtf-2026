@@ -1934,7 +1934,8 @@ export function IntakeFormClient() {
           {/* Email Button — matching proposal exactly */}
           <div data-email className="w-full max-w-[12rem] mb-5" style={{ opacity: 0 }}>
             <a ref={introEmailRef} href="mailto:hi@fna.wtf"
-              className="relative w-full px-6 py-3 font-medium text-white bg-black border border-white rounded-lg overflow-hidden flex items-center justify-center"
+              className="relative w-full px-6 py-3 font-medium text-white bg-black border border-white rounded-lg overflow-hidden flex items-center justify-center no-underline"
+              style={{ color: 'white', WebkitTapHighlightColor: 'transparent' }}
             >
               <div ref={introEmailFillRef} className="absolute inset-0 bg-white pointer-events-none"
                 style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }} />
@@ -2364,7 +2365,7 @@ export function IntakeFormClient() {
                   <p className="text-base" style={{ color: '#888888' }}>Pick a time that works and we will walk through your submission together.</p>
                 </div>
 
-                <div data-submit-steps className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-8 mb-8">
+                <div data-submit-steps className="flex flex-col items-center sm:flex-row sm:items-start justify-center gap-3 sm:gap-8 mb-8">
                   {[
                     { step: '1', text: 'Book a review call below', done: booked },
                     { step: '2', text: 'Submit your start form', done: submitted },
