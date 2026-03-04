@@ -325,7 +325,7 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
         onClick={() => onChange('unsure')}
         className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border transition-all duration-200"
         style={{
-          borderColor: isUnsure ? '#a14dfd' : '#333333',
+          borderColor: isUnsure ? '#a14dfd' : '#222222',
           backgroundColor: isUnsure ? '#1a0a2e' : 'transparent',
           color: isUnsure ? '#ffffff' : '#888888',
         }}
