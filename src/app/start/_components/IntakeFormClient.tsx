@@ -2129,7 +2129,13 @@ export function IntakeFormClient() {
             <SlideHeader eyebrow="07" title="Timeline" subtitle="When do you need this completed?" />
             <div className="space-y-8">
               <div id="field-timeline">
-                <TimelineSlider value={timeline} onChange={(v) => { setTimeline(v); clearError('timeline'); clearError('timelineDate'); setTimelineDate(''); }} />
+                <TimelineSlider value={timeline} onChange={(v) => {
+                  setTimeline(v); clearError('timeline'); clearError('timelineDate');
+                  if (v === 'specific') {
+                    const d = new Date(); d.setDate(d.getDate() + 42);
+                    setTimelineDate(d.toISOString().split('T')[0]);
+                  } else { setTimelineDate(''); }
+                }} />
                 {errors.timeline && <p className="text-xs text-red-400 mt-2">{errors.timeline}</p>}
               </div>
               <AnimatePresence>
