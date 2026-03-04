@@ -1,12 +1,12 @@
 'use client';
 
 import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save } from 'lucide-react';
+import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save, Eye, ChevronDown } from 'lucide-react';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import type { LucideIcon } from 'lucide-react';
-import { deleteProposal, type ClientRow } from '@/app/admin/actions';
+import { deleteProposal, updateProposal, type ClientRow } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
 import type { DetailsTabHandle } from './tabs/DetailsTab';
 import { WelcomeTab } from './tabs/WelcomeTab';
@@ -49,6 +49,7 @@ interface Props {
   quotes: ProposalQuoteRow[];
   allProjects: BrowserProject[];
   proposalProjects: ProposalProjectWithProject[];
+  viewCount?: number;
   onClose?: () => void;
   onDelete?: (id: string) => void;
 }
@@ -62,12 +63,14 @@ const STATUS_BADGE: Record<string, string> = {
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
-  milestones, quotes, allProjects, proposalProjects, onClose, onDelete,
+  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
   const [sections, setSections] = useState(initialSections);
-  const [status] = useState(initialProposal.status);
+  const [status, setStatus] = useState(initialProposal.status);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const statusRef = useRef<HTMLDivElement>(null);
   const [isDeleting, startDelete] = useTransition();
   const detailsRef = useRef<DetailsTabHandle>(null);
   const welcomeRef = useRef<WelcomeTabHandle>(null);
@@ -86,7 +89,11 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   });
   const handleDirty = useCallback(() => autoSave.trigger(), [autoSave]);
 
-  const isLive = status !== 'draft';
+  const handleStatusChange = useCallback(async (newStatus: 'draft' | 'sent') => {
+    setStatus(newStatus);
+    setStatusOpen(false);
+    await updateProposal(proposal.id, { status: newStatus });
+  }, [proposal.id]);
 
   const handleClose = useCallback(() => {
     const dirty = autoSave.hasPending || [
@@ -133,24 +140,25 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         onDiscard={() => { setConfirmClose(false); autoSave.reset(); onClose?.(); }}
       />
 
-      {/* Header: title + meta (left) | status + X (right) */}
+      {/* Header: title + meta (left) | views + status + X (right) */}
       <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-admin-border">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight truncate">{proposal.title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight truncate flex items-center">{proposal.title}<SaveDot status={autoSave.status} /></h1>
             <p className="text-sm mt-1 text-admin-text-muted font-mono truncate">
-              /p/{proposal.slug} · #{proposal.proposal_number}
+              /p/{proposal.slug}
             </p>
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
-            <span className="flex items-center gap-1.5 px-4 py-1 rounded-full text-xs text-admin-text-dim whitespace-nowrap bg-admin-bg-selected">
-              <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-green-400' : 'bg-white/25'}`} />
-              {isLive ? 'Live' : 'Draft'}
+            <span className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs whitespace-nowrap ${
+              viewCount > 0 ? 'bg-admin-bg-selected text-admin-text-dim' : 'bg-admin-bg-selected text-admin-text-ghost'
+            }`}>
+              <Eye size={11} />
+              {viewCount} {viewCount === 1 ? 'view' : 'views'}
             </span>
             <span className={`px-4 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
               {status}
             </span>
-            <SaveDot status={autoSave.status} />
             <button
               onClick={handleClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-dim hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
@@ -270,6 +278,50 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             <Save size={14} />
             Save
           </button>
+          {/* Status toggle — Draft / Sent */}
+          <div ref={statusRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setStatusOpen((o) => !o)}
+              className={`${status !== 'draft' ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
+            >
+              {status === 'draft' ? 'Draft' : status === 'sent' ? 'Sent' : status.charAt(0).toUpperCase() + status.slice(1)}
+              <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {statusOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
+                <div className="absolute bottom-full mb-1 left-0 min-w-[160px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('sent')}
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                      status !== 'draft' ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                      Sent
+                    </span>
+                    {status !== 'draft' && <Check size={12} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('draft')}
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                      status === 'draft' ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                      Draft
+                    </span>
+                    {status === 'draft' && <Check size={12} />}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <a
             href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
             target="_blank"

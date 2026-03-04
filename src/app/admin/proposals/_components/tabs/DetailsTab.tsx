@@ -58,8 +58,7 @@ const CONTACT_TYPES: { value: ContactType; label: string }[] = [
 ];
 
 const labelCls = 'admin-label';
-const inputCls =
-  'w-full bg-black/40 border border-admin-border rounded-lg px-3 py-2 text-sm text-admin-text-primary focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis placeholder:text-admin-text-ghost';
+const inputCls = 'admin-input w-full';
 const sectionHeadingCls = 'text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4';
 
 export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
@@ -75,10 +74,11 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   const [slug, setSlug] = useState(proposal.slug);
   const [password, setPassword] = useState(proposal.proposal_password);
   const [slugCopied, setSlugCopied] = useState(false);
+  const [preparedDate, setPreparedDate] = useState(proposal.prepared_date ?? '');
 
   // Auto-save state ref + hook
-  const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password });
-  useEffect(() => { stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password }; });
+  const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate });
+  useEffect(() => { stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate }; });
 
   const autoSave = useAutoSave(async () => {
     const s = stateRef.current;
@@ -91,6 +91,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       subtitle: s.subtitle.trim(),
       slug: s.slug.trim(),
       proposal_password: s.password.trim(),
+      prepared_date: s.preparedDate || null,
     });
     onProposalTypeChange?.(s.proposalType);
     onUpdated();
@@ -399,7 +400,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                   <button
                     onClick={handleAddNewCompany}
                     disabled={!newCompanyName.trim() || addingCompany}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-admin-bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {addingCompany ? 'Adding…' : 'Add Company'}
                   </button>
@@ -414,7 +415,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             ) : (
               <button
                 onClick={() => setShowAddCompany(true)}
-                className="mt-1.5 flex items-center gap-1.5 text-xs text-admin-text-faint hover:text-admin-text-secondary transition-colors"
+                className="btn-ghost-add mt-1.5 px-3 py-1.5 text-xs font-medium gap-1.5"
               >
                 <Plus size={12} />
                 Add new company
@@ -521,12 +522,38 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         </div>
       </section>
 
-      {/* Contacts (approved access list) */}
+      {/* Contacts */}
       <section>
         <p className={sectionHeadingCls}>Contacts</p>
         <p className="text-xs text-admin-text-faint -mt-2 mb-4">
-          People with approved access to this proposal. Their emails are validated on login.
+          Contacts associated with this proposal.
         </p>
+
+        {/* Prepared for preview */}
+        {propContacts.length > 0 && (
+          <div className="mb-4 px-3 py-2.5 bg-admin-bg-subtle border border-admin-border rounded-lg">
+            <p className="text-xs text-admin-text-dim">
+              Prepared for{' '}
+              <span className="text-admin-text-primary font-medium">
+                {propContacts.map((c) => c.first_name).filter(Boolean).join(' & ') || 'Unknown'}
+              </span>
+              {preparedDate && (
+                <span className="text-admin-text-ghost">{' '}· {new Date(preparedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Prepared date */}
+        <div className="mb-4">
+          <label className={labelCls}>Prepared date</label>
+          <input
+            type="date"
+            value={preparedDate}
+            onChange={(e) => { setPreparedDate(e.target.value); markDirty(); }}
+            className={inputCls + ' max-w-[200px]'}
+          />
+        </div>
 
         {/* Existing proposal contacts */}
         {propContacts.length > 0 && (
@@ -740,7 +767,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <button
                 onClick={handleAddNewContact}
                 disabled={!newFirstName.trim() || addingContact}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-admin-bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {addingContact ? 'Adding…' : 'Add Contact'}
               </button>
@@ -755,7 +782,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         ) : (
           <button
             onClick={() => setShowAddNew(true)}
-            className="mt-3 flex items-center gap-1.5 text-xs text-admin-text-faint hover:text-admin-text-secondary transition-colors"
+            className="btn-ghost-add mt-3 px-3 py-1.5 text-xs font-medium gap-1.5"
           >
             <Plus size={12} />
             Add new contact

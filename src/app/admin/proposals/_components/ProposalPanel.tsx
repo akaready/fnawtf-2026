@@ -44,12 +44,13 @@ interface PanelData {
 interface ProposalPanelProps {
   proposalId: string | null;
   open: boolean;
+  viewCount?: number;
   onClose: () => void;
   onProposalUpdated?: (proposal: ProposalRow) => void;
   onProposalDeleted?: (id: string) => void;
 }
 
-export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, onProposalDeleted }: ProposalPanelProps) {
+export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalUpdated, onProposalDeleted }: ProposalPanelProps) {
   const editorRef = useRef<ProposalEditorHandle>(null);
   const [data, setData] = useState<PanelData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -124,6 +125,7 @@ export function ProposalPanel({ proposalId, open, onClose, onProposalUpdated, on
           quotes={data.quotes}
           allProjects={data.allProjects}
           proposalProjects={data.proposalProjects}
+          viewCount={viewCount}
           onClose={onClose}
           onDelete={onProposalDeleted}
         />
