@@ -330,10 +330,10 @@ function TimelineSlider({ value, onChange }: { value: string; onChange: (v: stri
           color: isUnsure ? '#ffffff' : '#888888',
         }}
       >
-        <HelpCircle className="w-5 h-5" style={{ color: isUnsure ? '#a14dfd' : '#888888' }} />
+        <HelpCircle className="w-6 h-6" style={{ color: isUnsure ? '#a14dfd' : '#888888' }} />
         <div className="text-left">
           <span className="text-base font-medium block">Flexible</span>
-          <span className="text-sm" style={{ color: isUnsure ? '#888888' : '#777777' }}>Help us figure out the right timeline</span>
+          <span className="text-sm hidden sm:block" style={{ color: isUnsure ? '#888888' : '#777777' }}>Help us figure out the right timeline</span>
         </div>
       </button>
 
@@ -848,8 +848,8 @@ function FileUploader({ files, onAdd, onRemove, uploading }: {
 
 // ── Mobile Dot Strip with tap-hold scrubber ──────────────────────────────────
 
-function MobileDotStrip({ count, activeIndex, onNavigate, onHome, onExit, hiddenIndices, mobileBarRef }: {
-  count: number; activeIndex: number; onNavigate: (i: number) => void; onHome: () => void; onExit: () => void;
+function MobileDotStrip({ count, activeIndex, onNavigate, onExit, hiddenIndices, mobileBarRef }: {
+  count: number; activeIndex: number; onNavigate: (i: number) => void; onExit: () => void;
   hiddenIndices?: Set<number>; mobileBarRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [scrubbing, setScrubbing] = useState(false);
