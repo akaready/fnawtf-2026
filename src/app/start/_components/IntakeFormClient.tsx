@@ -1722,7 +1722,7 @@ export function IntakeFormClient() {
   // ── Render: Slide deck ───────────────────────────────
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-20 pb-32 sm:py-20 md:py-24 bg-black';
+  const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto scrollbar-hide px-4 sm:px-6 pt-16 pb-44 sm:py-20 md:py-24 bg-black';
 
   return (
     <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
