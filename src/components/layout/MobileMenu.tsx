@@ -159,7 +159,7 @@ export function MobileMenu({ currentPage }: MobileMenuProps) {
 
         {!pathname.startsWith('/admin') && (
           <div ref={ctaRef} style={{ opacity: 0 }}>
-            <NavButton href="/start" isPrimary iconName="rocket">
+            <NavButton href="/start" isPrimary iconName="rocket" size="lg">
               Get Started
             </NavButton>
           </div>

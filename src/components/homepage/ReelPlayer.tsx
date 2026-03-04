@@ -239,7 +239,8 @@ export function ReelPlayer({
   }, [isPlaying, setIsVideoPlaying]);
 
   // Show play button when paused, or during hover preview (encourages click-to-play with sound)
-  const showPlayButton = !isLoading && !error && (!isPlaying || hoverInitiatedRef.current);
+  // Not gated on isLoading — on mobile, canplay won't fire until the user taps play
+  const showPlayButton = !error && (!isPlaying || hoverInitiatedRef.current);
 
   return (
     <div
@@ -255,6 +256,7 @@ export function ReelPlayer({
         poster={placeholderSrc}
         muted
         playsInline
+        preload="metadata"
         onClick={togglePlay}
       />
 
