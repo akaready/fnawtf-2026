@@ -1954,7 +1954,7 @@ export function IntakeFormClient() {
         {/* ── Slide 0: About You ──────────────────────── */}
         <section ref={slideRefsArr.current[0] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="01" title="People" subtitle="Who should we be in touch with?" />
+            <SlideHeader eyebrow="01" title="People" subtitle="Who will we be in touch with?" />
             <div className="space-y-6">
               <div id="field-name">
                 <FieldLabel icon={User} label="Your name" required />
