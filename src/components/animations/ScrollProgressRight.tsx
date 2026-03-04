@@ -25,7 +25,7 @@ export function ScrollProgressRight() {
   }, []);
 
   return (
-    <>
+    <div className="hidden sm:block">
       {/* 1px border line at right edge */}
       <div
         className="fixed top-0 right-[7px] w-px h-full z-50 pointer-events-none"
@@ -45,6 +45,6 @@ export function ScrollProgressRight() {
         style={{ height: '0%', backgroundColor: '#a14dfd' }}
         aria-hidden="true"
       />
-    </>
+    </div>
   );
 }

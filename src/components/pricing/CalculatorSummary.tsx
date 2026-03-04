@@ -296,7 +296,7 @@ function FundraisingPaymentSlider({
         value={tierIndex}
         onChange={(e) => onTierChange(Number(e.target.value))}
         className={`w-full h-2 bg-border rounded-lg appearance-none cursor-pointer
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 sm:[&::-webkit-slider-thumb]:w-5 sm:[&::-webkit-slider-thumb]:h-5
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
           [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
           [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
@@ -305,7 +305,7 @@ function FundraisingPaymentSlider({
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
-      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+      <div className="flex justify-between mt-1 text-xs text-muted-foreground px-[10px]">
         <span>100%</span>
         <span>80%</span>
         <span>60%</span>
@@ -351,7 +351,7 @@ function CrowdfundingSlider({
         value={tierIndex}
         onChange={(e) => onTierChange(Number(e.target.value))}
         className={`w-full h-2 bg-border rounded-lg appearance-none cursor-pointer
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 sm:[&::-webkit-slider-thumb]:w-5 sm:[&::-webkit-slider-thumb]:h-5
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
           [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
           [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
@@ -360,7 +360,7 @@ function CrowdfundingSlider({
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
-      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+      <div className="flex justify-between mt-1 text-xs text-muted-foreground px-[10px]">
         <span>0%</span>
         <span>10%</span>
         <span>20%</span>
@@ -1143,7 +1143,7 @@ export function CalculatorSummary({
                     readOnly={!!isLocked}
                     onChange={isLocked ? undefined : (e) => { if (onInteraction?.()) return; const v = Number(e.target.value); setFriendlyDiscountPercent(v); onFriendlyDiscountChange?.(v); }}
                     className={`w-full h-2 bg-border rounded-lg appearance-none ${isLocked ? 'pointer-events-none' : 'cursor-pointer'}
-                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8 sm:[&::-webkit-slider-thumb]:w-5 sm:[&::-webkit-slider-thumb]:h-5
+                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
                       [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
                       [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
@@ -1152,7 +1152,7 @@ export function CalculatorSummary({
                         : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
                     }`}
                   />
-                  <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between mt-1 text-xs text-muted-foreground px-[10px]">
                     <span>0%</span><span>5%</span><span>10%</span><span>15%</span><span>20%</span>
                   </div>
                   <div className="text-center mt-2">

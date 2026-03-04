@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, createRef } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, createRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import {
@@ -49,7 +49,7 @@ const DELIVERABLE_OPTIONS = [
 
 const DELIVERABLE_META_OPTIONS = [
   { value: 'all', label: 'All of the above', icon: Check },
-  { value: 'unsure', label: 'Not sure yet — help us decide', icon: MessageSquare },
+  { value: 'unsure', label: 'Help us decide', icon: MessageSquare },
 ] as const;
 
 const PROJECT_PHASES = [
@@ -642,12 +642,12 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
                 <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={() => setBrokenThumbs(s => new Set(s).add(i))} />
               </div>
             )}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 w-full space-y-2">
               <div className="flex items-center gap-2">
-                <input type="url" placeholder="YouTube or Vimeo link" value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
                 {videos.length > 1 && (
                   <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
                 )}
+                <input type="url" placeholder="YouTube or Vimeo link." value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={`${inputClass} flex-1`} />
               </div>
               <textarea placeholder="What do you like about this video?" value={v.notes} onChange={(e) => update(i, 'notes', e.target.value)} rows={3} className={textareaClass} />
             </div>
@@ -711,13 +711,13 @@ function CompetitorLinkInputs({ links, onChange }: { links: CompetitorLink[]; on
                 ) : null}
               </div>
             )}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 w-full space-y-2">
               <div className="flex items-center gap-2">
-                <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
-                  className={`${inputClass} flex-1`} />
                 {links.length > 1 && (
                   <ConfirmDeleteButton onConfirm={() => remove(i)} className="flex-shrink-0" />
                 )}
+                <input type="url" placeholder="https://competitor-website.com" value={link.url} onChange={(e) => update(i, e.target.value)}
+                  className={`${inputClass} flex-1`} />
               </div>
               <textarea
                 placeholder="What makes you different from this competitor?"
@@ -771,6 +771,109 @@ function FileUploader({ files, onAdd, onRemove, uploading }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Mobile Dot Strip with tap-hold scrubber ──────────────────────────────────
+
+function MobileDotStrip({ count, activeIndex, onNavigate, onHome, hiddenIndices, mobileBarRef }: {
+  count: number; activeIndex: number; onNavigate: (i: number) => void; onHome: () => void;
+  hiddenIndices?: Set<number>; mobileBarRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [scrubbing, setScrubbing] = useState(false);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dotsContainerRef = useRef<HTMLDivElement>(null);
+  const visibleIndices = useMemo(() => Array.from({ length: count }).map((_: unknown, i: number) => i).filter((i: number) => !hiddenIndices?.has(i)), [count, hiddenIndices]);
+
+  const getIndexFromTouch = useCallback((clientX: number) => {
+    const container = dotsContainerRef.current;
+    if (!container) return null;
+    const rect = container.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, x / rect.width));
+    const idx = Math.round(ratio * (visibleIndices.length - 1));
+    return visibleIndices[idx] ?? null;
+  }, [visibleIndices]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    holdTimer.current = setTimeout(() => {
+      setScrubbing(true);
+      const idx = getIndexFromTouch(touch.clientX);
+      setScrubIndex(idx);
+    }, 300);
+  }, [getIndexFromTouch]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!scrubbing) {
+      // If they move before hold triggers, cancel
+      if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+      return;
+    }
+    e.preventDefault();
+    const touch = e.touches[0];
+    const idx = getIndexFromTouch(touch.clientX);
+    setScrubIndex(idx);
+  }, [scrubbing, getIndexFromTouch]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+    if (scrubbing && scrubIndex !== null) {
+      onNavigate(scrubIndex);
+    }
+    setScrubbing(false);
+    setScrubIndex(null);
+  }, [scrubbing, scrubIndex, onNavigate]);
+
+  useEffect(() => {
+    return () => { if (holdTimer.current) clearTimeout(holdTimer.current); };
+  }, []);
+
+  const displayName = scrubIndex !== null ? SLIDE_NAMES[scrubIndex] : null;
+
+  return (
+    <div ref={mobileBarRef as React.RefObject<HTMLDivElement>} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden flex-col items-center px-6 py-3">
+      {/* Scrub tooltip */}
+      {scrubbing && displayName && (
+        <div className="mb-3 px-4 py-2 bg-black/80 border border-white/20 backdrop-blur-2xl rounded-xl text-white text-sm font-semibold tracking-wide animate-in fade-in duration-150">
+          {displayName}
+        </div>
+      )}
+      <div
+        ref={dotsContainerRef as React.RefObject<HTMLDivElement>}
+        className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-2.5 -m-1.5">
+          <Home size={16} strokeWidth={1.5} style={{ color: '#999999' }} />
+        </button>
+        {visibleIndices.map((i) => {
+          const isActive = i === activeIndex;
+          const isScrubTarget = scrubbing && i === scrubIndex;
+          const isLast = i === count - 1;
+          if (isLast) {
+            return (
+              <button key={i} onClick={() => onNavigate(i)} aria-label="Go to submit" className="flex items-center justify-center p-2.5 -m-1.5">
+                <Send size={14} strokeWidth={1.8} style={{ color: isActive || isScrubTarget ? '#ffffff' : '#555555' }} />
+              </button>
+            );
+          }
+          return (
+            <span key={i} className="block rounded-full transition-all duration-200"
+              style={{
+                width: isActive ? 18 : isScrubTarget ? 14 : 6,
+                height: 6,
+                backgroundColor: isActive ? '#ffffff' : isScrubTarget ? '#cccccc' : '#555555',
+                transform: isScrubTarget && !isActive ? 'scale(1.3)' : 'scale(1)',
+              }}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -925,37 +1028,16 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
           </div>
         </div>
       </div>
-      {/* Mobile — dot strip only (swipe to navigate) */}
+      {/* Mobile — dot strip with tap-hold scrubber */}
       {activeIndex >= 0 && (
-        <div ref={mobileBarRef} className="fixed bottom-6 left-0 right-0 z-[200] flex sm:hidden items-center justify-center px-6 py-3">
-          <div className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.12] backdrop-blur-2xl rounded-full px-5 py-2.5">
-            <button onClick={onHome} aria-label="Back to intro" className="flex items-center justify-center p-1">
-              <Home size={14} strokeWidth={1.5} style={{ color: '#777777' }} />
-            </button>
-            {Array.from({ length: count }).map((_, i) => {
-              const isHidden = hiddenIndices?.has(i);
-              if (isHidden) return null;
-              const isActive = i === activeIndex;
-              const isLast = i === count - 1;
-              if (isLast) {
-                return (
-                  <button key={i} onClick={() => onNavigate(i)} aria-label="Go to submit" className="flex items-center justify-center p-1">
-                    <Send size={12} strokeWidth={1.8} style={{ color: isActive ? '#ffffff' : '#555555' }} />
-                  </button>
-                );
-              }
-              return (
-                <span key={i} className="block rounded-full transition-all duration-300"
-                  style={{
-                    width: isActive ? 18 : 6,
-                    height: 6,
-                    backgroundColor: isActive ? '#ffffff' : '#555555',
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
+        <MobileDotStrip
+          count={count}
+          activeIndex={activeIndex}
+          onNavigate={onNavigate}
+          onHome={onHome}
+          hiddenIndices={hiddenIndices}
+          mobileBarRef={mobileBarRef}
+        />
       )}
     </>
   );
@@ -1795,8 +1877,8 @@ export function IntakeFormClient() {
                 {errors.projectName && <p className="text-xs text-red-400 mt-1.5">{errors.projectName}</p>}
               </div>
               <div id="field-pitch">
-                <FieldLabel icon={Sparkles} label="In one sentence, what are you launching?" required />
-                <input type="text" placeholder="The elevator pitch" value={pitch}
+                <FieldLabel icon={Sparkles} label="What are you making? One sentence." required />
+                <input type="text" placeholder="The elevator pitch." value={pitch}
                   onChange={(e) => { setPitch(e.target.value); clearError('pitch'); }}
                   className={`${inputClass} ${errors.pitch ? 'border-red-500/50' : ''}`} />
                 {errors.pitch && <p className="text-xs text-red-400 mt-1.5">{errors.pitch}</p>}
@@ -1839,14 +1921,14 @@ export function IntakeFormClient() {
           <div className="max-w-2xl mx-auto">
             <SlideHeader eyebrow="03" title="Vision" subtitle="What does success look like, and who are you reaching?" />
             <div className="space-y-6">
-              <div><FieldLabel icon={Heart} label="What excites you most about this product?" required />
-                <textarea placeholder="What drives your passion?" value={excitement} onChange={(e) => setExcitement(e.target.value)} rows={3} className={textareaClass} /></div>
+              <div><FieldLabel icon={Heart} label="What is the product/service vision?" required />
+                <textarea placeholder="What excites you most about it?" value={excitement} onChange={(e) => setExcitement(e.target.value)} rows={3} className={textareaClass} /></div>
               <div><FieldLabel icon={Star} label="Key feature or benefit to highlight" required />
-                <input type="text" placeholder="The single most important thing" value={keyFeature} onChange={(e) => setKeyFeature(e.target.value)} className={inputClass} /></div>
+                <input type="text" placeholder="The single most important thing." value={keyFeature} onChange={(e) => setKeyFeature(e.target.value)} className={inputClass} /></div>
               <div><FieldLabel icon={Eye} label="Describe your ideal video campaign" required />
-                <textarea placeholder="Goals, feelings, visual style, locations, voice-over..." value={vision} onChange={(e) => setVision(e.target.value)} rows={4} className={textareaClass} /></div>
+                <textarea placeholder="Goals, feelings, visual style, locations, voice-over." value={vision} onChange={(e) => setVision(e.target.value)} rows={4} className={textareaClass} /></div>
               <div><FieldLabel icon={Target} label="Target audience" required />
-                <textarea placeholder="Demographics, psychographics, market research..." value={audience} onChange={(e) => setAudience(e.target.value)} rows={3} className={textareaClass} /></div>
+                <textarea placeholder="Demographics, psychographics, market research." value={audience} onChange={(e) => setAudience(e.target.value)} rows={3} className={textareaClass} /></div>
             </div>
           </div>
         </section>
@@ -1857,7 +1939,7 @@ export function IntakeFormClient() {
             <SlideHeader eyebrow="04" title="Challenges" subtitle="Help us understand what to avoid and who you're up against." />
             <div className="space-y-6">
               <div><FieldLabel icon={Ban} label="What should we avoid?" required />
-                <textarea placeholder="Styles, tones, or approaches that aren't right for your brand" value={avoid} onChange={(e) => setAvoid(e.target.value)} rows={3} className={textareaClass} /></div>
+                <textarea placeholder="Styles, tones, or approaches that aren't right for your brand." value={avoid} onChange={(e) => setAvoid(e.target.value)} rows={3} className={textareaClass} /></div>
               <div><FieldLabel icon={AlertTriangle} label="Biggest communication challenge" required />
                 <textarea placeholder="What's been the hardest part to convey?" value={challenge} onChange={(e) => setChallenge(e.target.value)} rows={3} className={textareaClass} /></div>
               <div><FieldLabel icon={Shield} label="Top competitors" />
@@ -1890,7 +1972,7 @@ export function IntakeFormClient() {
                 {errors.deliverables && <p className="text-xs text-red-400 mt-2">{errors.deliverables}</p>}
               </div>
               <div><FieldLabel icon={MessageSquare} label="Additional deliverable details" />
-                <textarea placeholder="Specifics about formats, quantities, or custom deliverables" value={deliverableNotes} onChange={(e) => setDeliverableNotes(e.target.value)} rows={3} className={textareaClass} /></div>
+                <textarea placeholder="Specifics about formats, quantities, or custom deliverables." value={deliverableNotes} onChange={(e) => setDeliverableNotes(e.target.value)} rows={3} className={textareaClass} /></div>
             </div>
           </div>
         </section>
@@ -1911,13 +1993,13 @@ export function IntakeFormClient() {
                     <FieldLabel icon={Calendar} label="Target date" />
                     <input type="date" value={timelineDate} min={todayStr}
                       onChange={(e) => { setTimelineDate(e.target.value); clearError('timelineDate'); }}
-                      className={`${inputClass} [color-scheme:dark] max-w-full ${errors.timelineDate ? 'border-red-500/50' : ''}`} />
+                      className={`${inputClass} [color-scheme:dark] w-full py-3 sm:w-auto sm:py-2 ${errors.timelineDate ? 'border-red-500/50' : ''}`} />
                     {errors.timelineDate && <p className="text-xs text-red-400 mt-1.5">{errors.timelineDate}</p>}
                   </motion.div>
                 )}
               </AnimatePresence>
               <div><FieldLabel icon={MessageSquare} label="Additional timing details" />
-                <textarea placeholder="Event dates, launch windows, external deadlines..." value={timelineNotes} onChange={(e) => setTimelineNotes(e.target.value)} rows={2} className={textareaClass} /></div>
+                <textarea placeholder="Event dates, launch windows, external deadlines." value={timelineNotes} onChange={(e) => setTimelineNotes(e.target.value)} rows={2} className={textareaClass} /></div>
             </div>
           </div>
         </section>
@@ -1940,7 +2022,7 @@ export function IntakeFormClient() {
                 {errors.experience && <p className="text-xs text-red-400 mt-2">{errors.experience}</p>}
               </div>
               <div><FieldLabel icon={MessageSquare} label="Additional context" />
-                <textarea placeholder="Links to previous work, notes on your experience..." value={experienceNotes} onChange={(e) => setExperienceNotes(e.target.value)} rows={2} className={textareaClass} /></div>
+                <textarea placeholder="Links to previous work, notes on your experience." value={experienceNotes} onChange={(e) => setExperienceNotes(e.target.value)} rows={2} className={textareaClass} /></div>
             </div>
           </div>
         </section>
@@ -1953,7 +2035,7 @@ export function IntakeFormClient() {
               <ChipSelect options={PARTNER_OPTIONS} selected={partners} onChange={setPartners} large />
               <ChipSelect options={PARTNER_STATUS_OPTIONS} selected={partners} onChange={setPartners} cols={1} />
               <div><FieldLabel icon={Link2} label="Who are your partners?" />
-                <textarea placeholder="List any companies or agencies you're working with" value={partnerDetails} onChange={(e) => setPartnerDetails(e.target.value)} rows={3} className={textareaClass} /></div>
+                <textarea placeholder="List any companies or agencies you're working with." value={partnerDetails} onChange={(e) => setPartnerDetails(e.target.value)} rows={3} className={textareaClass} /></div>
             </div>
           </div>
         </section>
@@ -2047,9 +2129,9 @@ export function IntakeFormClient() {
                 <p className={`${helperClass} mb-3`}>Market research, brand guidelines, NDAs, assets — anything relevant.</p>
                 <FileUploader files={files} onAdd={handleFileAdd} onRemove={(i) => setFiles((p) => p.filter((_, j) => j !== i))} uploading={uploading} /></div>
               <div><FieldLabel icon={MessageSquare} label="Anything else we should know?" />
-                <textarea placeholder="Additional context, questions, links..." value={anythingElse} onChange={(e) => setAnythingElse(e.target.value)} rows={4} className={textareaClass} /></div>
+                <textarea placeholder="Additional context, questions, links." value={anythingElse} onChange={(e) => setAnythingElse(e.target.value)} rows={4} className={textareaClass} /></div>
               <div><FieldLabel icon={Heart} label="Who referred you?" />
-                <input type="text" placeholder="If someone sent you our way, let us know so we can thank them" value={referral} onChange={(e) => setReferral(e.target.value)} className={inputClass} /></div>
+                <input type="text" placeholder="Let us know so we can thank them!" value={referral} onChange={(e) => setReferral(e.target.value)} className={inputClass} /></div>
             </div>
           </div>
         </section>
@@ -2060,7 +2142,7 @@ export function IntakeFormClient() {
             {missingFields.length > 0 ? (
               <>
                 <div data-submit-heading className="text-center mb-10">
-                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">Hold up...</h2>
+                  <h2 className="text-5xl md:text-6xl font-bold tracking-tight mb-3">Hold up...</h2>
                   <p className="text-base max-w-lg mx-auto" style={{ color: '#888888' }}>
                     A few details are missing. Please fix these so we can make the most of our call. Thanks!
                   </p>
@@ -2095,7 +2177,7 @@ export function IntakeFormClient() {
             ) : (
               <>
                 <div data-submit-heading className="text-center mb-8">
-                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">Book our review call.</h2>
+                  <h2 className="text-5xl md:text-6xl font-bold tracking-tight mb-3">Book our review call.</h2>
                   <p className="text-base" style={{ color: '#888888' }}>Pick a time that works and we will walk through your submission together.</p>
                 </div>
 
