@@ -25,7 +25,7 @@ const TIMELINE_LABELS: Record<string, string> = {
   soon: 'Within 6 Weeks',
   later: '2+ Months',
   specific: 'Specific Date',
-  unsure: 'Unsure',
+  unsure: 'Flexible',
 };
 
 const TIMELINE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -422,7 +422,7 @@ function IntakeDetailPanel({
         <DetailBlock label="What to Avoid" value={s.avoid} />
         <DetailBlock label="Target Audience" value={s.audience} />
         <DetailBlock label="Challenge" value={s.challenge} />
-        <DetailBlock label="Competitors" value={s.competitors} />
+        <DetailBlock label="Competitors" value={Array.isArray(s.competitors) ? s.competitors.map((c: { url: string; note?: string }) => c.note ? `${c.url} — ${c.note}` : c.url).join('\n') : s.competitors} />
 
         <hr className="border-admin-border-subtle" />
 
