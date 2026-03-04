@@ -2395,7 +2395,7 @@ export function IntakeFormClient() {
                         useSlotsViewOnSmallScreen: 'true',
                         name: `${firstName.trim()} ${lastName.trim()}`.trim(),
                         email: email.trim(),
-                        company: companyName.trim(),
+                        companyName: companyName.trim(),
                         notes: `Project: ${projectName.trim()}\nPitch: ${pitch.trim()}`,
                       }}
                     />
