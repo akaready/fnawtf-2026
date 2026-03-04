@@ -6,7 +6,7 @@ import gsap from 'gsap';
 import {
   User, Mail, Briefcase, Users, Rocket, Sparkles, Star, Eye,
   Ban, Target, AlertTriangle, Shield, Play, Package, Calendar,
-  Gauge, Link2, DollarSign, MailOpen, Upload, FileText,
+  Gauge, Link2, MailOpen, Upload, FileText,
   MessageSquare, Heart, X, Check, ArrowRight, Trash2, GripVertical,
   ChevronLeft, ChevronRight, LogOut, BarChart3, Megaphone, Globe,
   PenTool, Search as SearchIcon, Home, Camera, Code, Share2,
@@ -56,8 +56,8 @@ const PROJECT_PHASES = [
   { value: 'build', label: 'Build', subtitle: 'Brand, strategy & scripting', icon: Hammer },
   { value: 'launch', label: 'Launch', subtitle: 'Production & delivery', icon: Rocket },
   { value: 'scale', label: 'Scale', subtitle: 'Ongoing creative partnership', icon: TrendingUp },
-  { value: 'crowdfunding', label: 'Crowdfunding', subtitle: 'Risk-aligned campaign pricing', icon: Coins },
-  { value: 'fundraising', label: 'Fundraising', subtitle: 'Investor-grade pitch video', icon: BadgeDollarSign },
+  { value: 'crowdfunding', label: 'Crowdfunding', subtitle: 'Risk-aligned campaign pricing for Kickstarter and IndieGoGo, available for Build and Launch', icon: Coins },
+  { value: 'fundraising', label: 'Fundraising', subtitle: 'Investor-grade pitch video for privaty equity funding or friends and family raises', icon: BadgeDollarSign },
 ] as const;
 
 // Valid phase combinations: build/launch can pair with each other and with crowdfunding. scale and fundraising are standalone.
@@ -115,9 +115,9 @@ const EMAIL_LIST_OPTIONS = [
   { value: '25000+', label: '25,000+' },
 ] as const;
 
-const SLIDE_NAMES = ['People', 'Project', 'Vision', 'Challenges', 'References', 'Deliverables', 'Timeline', 'Priorities', 'Experience', 'Partners', 'Investment', 'Goals', 'Extras', 'Submit'];
+const SLIDE_NAMES = ['People', 'Project', 'Vision', 'Challenges', 'References', 'Deliverables', 'Timeline', 'Priorities', 'Experience', 'Partners', 'Goals', 'Investment', 'Extras', 'Submit'];
 const TOTAL_SLIDES = SLIDE_NAMES.length;
-const GOALS_SLIDE_INDEX = 11;
+const GOALS_SLIDE_INDEX = 10;
 
 function phasesToQuoteType(phases: string[]): PricingType {
   if (phases.includes('fundraising')) return 'fundraising';
@@ -142,6 +142,9 @@ const FIELD_META: Record<string, { label: string; explanation: string; slide: nu
   priorityOrder: { label: 'Priorities',       explanation: 'Rank all three so we can balance quality, speed, and cost.',    slide: 7 },
   experience:    { label: 'Experience level',  explanation: 'This helps us calibrate our process to your comfort level.',   slide: 8 },
   partners:      { label: 'Partners',         explanation: 'Let us know who else is involved so we can coordinate.',        slide: 9 },
+  publicGoal:    { label: 'Public goal',      explanation: 'We need your crowdfunding target to shape the campaign.',       slide: 10 },
+  internalGoal:  { label: 'Internal goal',    explanation: 'Knowing your real target helps us plan strategy.',              slide: 10 },
+  emailListSize: { label: 'Email list size',  explanation: 'List size helps us estimate launch-day performance.',           slide: 10 },
 };
 
 const STORAGE_KEY = 'fna-intake-draft';
@@ -616,10 +619,14 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
   const add = () => onChange([...videos, { url: '', notes: '' }]);
   const remove = (idx: number) => onChange(videos.filter((_, i) => i !== idx));
 
+  const [brokenThumbs, setBrokenThumbs] = useState<Set<number>>(new Set());
+
   const getThumbnail = (url: string): string | null => {
     try {
       const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
       if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
+      const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+      if (vimeoMatch) return `https://vumbnail.com/${vimeoMatch[1]}.jpg`;
     } catch { /* ignore */ }
     return null;
   };
@@ -627,11 +634,11 @@ function VideoReferenceInputs({ videos, onChange }: { videos: VideoRef[]; onChan
   return (
     <div className="space-y-4">
       {videos.map((v, i) => {
-        const thumb = getThumbnail(v.url);
+        const thumb = !brokenThumbs.has(i) ? getThumbnail(v.url) : null;
         return (
           <div key={i} className="flex gap-4 items-start">
             <div className="w-32 h-20 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex-shrink-0 flex items-center justify-center">
-              {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <Play className="w-6 h-6 text-white/15" />}
+              {thumb ? <img src={thumb} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={() => setBrokenThumbs(s => new Set(s).add(i))} /> : <Play className="w-6 h-6 text-white/15" />}
             </div>
             <div className="flex-1 space-y-2">
               <input type="url" placeholder="YouTube or Vimeo link" value={v.url} onChange={(e) => update(i, 'url', e.target.value)} className={inputClass} />
@@ -778,7 +785,8 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
   const exitRef = useRef<HTMLDivElement>(null);
   const hasRevealed = useRef(false);
 
-  // Staggered reveal from below on mount (matching ProposalProgressDots)
+  // Reveal bar from below on mount — animate containers only to avoid
+  // GSAP inline styles conflicting with React inline styles on individual dots
   useEffect(() => {
     if (skipReveal || hasRevealed.current) return;
     hasRevealed.current = true;
@@ -786,26 +794,15 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
 
     const bar = barRef.current;
     const mobileBar = mobileBarRef.current;
-    const items = [
-      homeBtnRef.current,
-      homeSepRef.current,
-      ...dotRefs.current.filter((el, i) => el && !hiddenIndices?.has(i)),
-      separatorRef.current,
-      exitRef.current,
-    ].filter(Boolean);
+    const barsToAnimate = [bar, mobileBar].filter(Boolean);
 
     if (bar) gsap.set(bar, { y: 40, opacity: 0 });
     if (mobileBar) gsap.set(mobileBar, { y: 40, opacity: 0 });
-    gsap.set(items, { y: 12, opacity: 0 });
 
     const tl = gsap.timeline({ delay: 1 });
-    const barsToAnimate = [bar, mobileBar].filter(Boolean);
     if (barsToAnimate.length) {
       tl.to(barsToAnimate, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
     }
-    tl.to(items, {
-      y: 0, opacity: 1, duration: 0.35, ease: 'power3.out', stagger: 0.06,
-    }, '-=0.15');
   }, [count, skipReveal]);
 
   // Compute tooltip position — anchor Y to first dot so tooltips align
@@ -968,8 +965,8 @@ function IntakeNavArrows({ onPrev, onNext, isFirst, isLast, onExit }: {
   useEffect(() => {
     if (isFirst) {
       if (!hasEnteredRef.current) return;
+      // Only hide prev arrow on intro — right arrow stays visible
       if (leftRef.current) gsap.to(leftRef.current, { x: -150, opacity: 0, duration: 0.45, ease: 'power3.in' });
-      if (rightRef.current) gsap.to(rightRef.current, { x: 150, opacity: 0, duration: 0.45, ease: 'power3.in' });
     } else {
       const isFirstEntry = !hasEnteredRef.current;
       hasEnteredRef.current = true;
@@ -1000,14 +997,14 @@ function IntakeNavArrows({ onPrev, onNext, isFirst, isLast, onExit }: {
   return (
     <>
       <button ref={leftRef} onClick={onPrev} aria-label="Previous" className={`${baseClass} left-5`}
-        style={{ pointerEvents: !isFirst ? 'auto' : 'none' }} disabled={isFirst}
+        style={{ pointerEvents: isFirst ? 'none' : 'auto' }} disabled={isFirst}
         onMouseEnter={() => handleEnter(leftRef)} onMouseLeave={() => handleLeave(leftRef)}
       >
         <ChevronLeft size={20} strokeWidth={1.5} />
         <span className={arrowLabelClass}>PREV</span>
       </button>
       <button ref={rightRef} onClick={isLast ? onExit : onNext} aria-label={isLast ? 'Save and exit' : 'Next'}
-        className={`${baseClass} right-5`} style={{ pointerEvents: !isFirst ? 'auto' : 'none' }} disabled={isFirst}
+        className={`${baseClass} right-5`} style={{ pointerEvents: hasEnteredRef.current ? 'auto' : 'none' }}
         onMouseEnter={() => handleEnter(rightRef)} onMouseLeave={() => handleLeave(rightRef)}
       >
         {isLast ? (
@@ -1113,8 +1110,8 @@ export function IntakeFormClient() {
   const [referral, setReferral] = useState('');
 
   // Quote
-  const [wantsQuote, setWantsQuote] = useState<'undecided' | 'build' | 'skip' | 'cleared'>('undecided');
   const [quoteState, setQuoteState] = useState<CalculatorStateSnapshot | null>(null);
+  const [budgetInteracted, setBudgetInteracted] = useState(false);
 
   // ── Refs ─────────────────────────────────────────────
   const deckRef = useRef<HTMLDivElement>(null);
@@ -1192,9 +1189,7 @@ export function IntakeFormClient() {
       if (d.anythingElse) setAnythingElse(d.anythingElse);
       if (d.referral) setReferral(d.referral);
       if (d.quoteState) setQuoteState(d.quoteState);
-      if (d.wantsQuote === 'build' || d.wantsQuote === 'skip' || d.wantsQuote === 'cleared') setWantsQuote(d.wantsQuote);
-      else if (d.wantsQuote === true) setWantsQuote('build');
-      else if (d.wantsQuote === false) setWantsQuote('skip');
+      if (d.budgetInteracted) setBudgetInteracted(true);
     } catch { /* ignore */ }
 
     // Check for quote state passed from /pricing page
@@ -1214,7 +1209,7 @@ export function IntakeFormClient() {
           setPhases(phasesToSet);
         }
         setQuoteState(pq as CalculatorStateSnapshot);
-        setWantsQuote('build');
+        setBudgetInteracted(true);
         sessionStorage.removeItem('fna-pricing-quote');
       }
     } catch { /* ignore */ }
@@ -1230,25 +1225,7 @@ export function IntakeFormClient() {
     const inner = introInnerRef.current;
     if (!section || !inner) return;
 
-    // Skip animation on return visits — just make everything visible
-    if (hasSeenIntro.current) {
-      const bgOverlay = section.querySelector('[data-bg-overlay]') as HTMLElement;
-      const eyebrow = inner.querySelector('[data-eyebrow]') as HTMLElement;
-      const words = inner.querySelectorAll('[data-word]');
-      const subtitle = inner.querySelector('[data-subtitle]') as HTMLElement;
-      const button = inner.querySelector('[data-button]') as HTMLElement;
-      const emailEl = inner.querySelector('[data-email]') as HTMLElement;
-      const instructionEls = inner.querySelectorAll('[data-instructions]');
-      if (bgOverlay) gsap.set(bgOverlay, { opacity: 0 });
-      if (eyebrow) gsap.set(eyebrow, { opacity: 1, y: 0 });
-      gsap.set(words, { y: '0%' });
-      if (subtitle) gsap.set(subtitle, { opacity: 1, y: 0 });
-      if (button) gsap.set(button, { opacity: 1, y: 0 });
-      if (emailEl) gsap.set(emailEl, { opacity: 1, y: 0 });
-      if (instructionEls.length) gsap.set(instructionEls, { opacity: 1, y: 0 });
-      return;
-    }
-
+    const isReturn = hasSeenIntro.current;
     hasSeenIntro.current = true;
 
     const ctx = gsap.context(() => {
@@ -1267,8 +1244,11 @@ export function IntakeFormClient() {
       if (emailEl) gsap.set(emailEl, { opacity: 0, y: 20 });
       if (instructionEls.length) gsap.set(instructionEls, { opacity: 0, y: 12 });
 
-      const tl = gsap.timeline({ delay: 0.3 });
-      if (bgOverlay) tl.to(bgOverlay, { opacity: 0, duration: 0.8, ease: 'power2.out' });
+      const tl = gsap.timeline({ delay: isReturn ? 0.05 : 0.3 });
+      if (bgOverlay) {
+        if (isReturn) gsap.set(bgOverlay, { opacity: 1 });
+        tl.to(bgOverlay, { opacity: 0, duration: isReturn ? 0.5 : 0.8, ease: 'power2.out' });
+      }
       tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, bgOverlay ? '-=0.3' : '>')
         .to(words, { y: '0%', duration: 1.3, ease: 'expo.out', stagger: 0.07 }, '-=0.3')
         .to(subtitle, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5')
@@ -1337,6 +1317,22 @@ export function IntakeFormClient() {
   }, [booked, submitting]);
 
   // ── Navigation ───────────────────────────────────────
+  const togglePhase = (value: string) => {
+    const active = phases.includes(value);
+    if (active) {
+      let next = phases.filter((p) => p !== value);
+      // Crowdfunding requires build or launch — remove it if no host remains
+      if ((value === 'build' || value === 'launch') && next.includes('crowdfunding') && !next.includes('build') && !next.includes('launch')) {
+        next = next.filter((p) => p !== 'crowdfunding');
+      }
+      setPhases(next);
+    } else if (value === 'crowdfunding' && phases.length === 0) {
+      setPhases(['build', 'crowdfunding']);
+    } else {
+      setPhases([...phases, value]);
+    }
+  };
+
   const showGoals = phases.includes('crowdfunding');
 
   const dotHiddenIndices = (() => {
@@ -1356,12 +1352,21 @@ export function IntakeFormClient() {
     el.scrollIntoView({ inline: 'start', block: 'nearest', behavior: 'smooth' });
   }, [showGoals, currentSlide]);
 
+  // Track showGoals in a ref so the IntersectionObserver (set up once) can read it
+  const showGoalsRef = useRef(showGoals);
+  useEffect(() => { showGoalsRef.current = showGoals; }, [showGoals]);
+
   useEffect(() => {
     if (!started) return;
     const observers: IntersectionObserver[] = [];
     slideRefsArr.current.forEach((ref, i) => {
       if (!ref.current) return;
-      const obs = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setCurrentSlide(i); }, { threshold: 0.5 });
+      const obs = new IntersectionObserver(([entry]) => {
+        // Never let the Goals slide steal focus via intersection — only explicit navigation
+        if (entry.isIntersecting && !(i === GOALS_SLIDE_INDEX && !showGoalsRef.current)) {
+          setCurrentSlide(i);
+        }
+      }, { threshold: 0.5 });
       obs.observe(ref.current);
       observers.push(obs);
     });
@@ -1400,7 +1405,7 @@ export function IntakeFormClient() {
           vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
           deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
           experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
-          budget, emailListSize, anythingElse, referral, wantsQuote, quoteState,
+          budget, emailListSize, anythingElse, referral, budgetInteracted, quoteState,
         }));
       } catch { /* ignore */ }
     }, 500);
@@ -1409,7 +1414,7 @@ export function IntakeFormClient() {
       vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
       deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
       experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
-      budget, emailListSize, anythingElse, referral, wantsQuote, quoteState]);
+      budget, emailListSize, anythingElse, referral, budgetInteracted, quoteState]);
 
   // ── File handling ────────────────────────────────────
   const handleFileAdd = useCallback(async (fileList: FileList) => {
@@ -1451,6 +1456,11 @@ export function IntakeFormClient() {
     if (priorityOrder.length < 3) e.priorityOrder = 'Rank all three';
     if (!experience) e.experience = 'Required';
     if (partners.length === 0) e.partners = 'Please select at least one';
+    if (phases.includes('crowdfunding')) {
+      if (!publicGoal.trim()) e.publicGoal = 'Required';
+      if (!internalGoal.trim()) e.internalGoal = 'Required';
+      if (!emailListSize) e.emailListSize = 'Required';
+    }
     return e;
   };
 
@@ -1458,7 +1468,7 @@ export function IntakeFormClient() {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      const errorSlideMap: Record<string, number> = { name: 0, email: 0, title: 0, companyName: 1, projectName: 1, pitch: 1, excitement: 2, keyFeature: 2, deliverables: 5, timeline: 6, timelineDate: 6, priorityOrder: 7, experience: 8, partners: 9 };
+      const errorSlideMap: Record<string, number> = { name: 0, email: 0, title: 0, companyName: 1, projectName: 1, pitch: 1, excitement: 2, keyFeature: 2, deliverables: 5, timeline: 6, timelineDate: 6, priorityOrder: 7, experience: 8, partners: 9, publicGoal: 10, internalGoal: 10, emailListSize: 10 };
       const firstKey = Object.keys(errs)[0];
       navigateTo(errorSlideMap[firstKey] ?? 0);
       return;
@@ -1483,6 +1493,7 @@ export function IntakeFormClient() {
         email_list_size: emailListSize || undefined, file_urls: files.map((f) => f.url),
         anything_else: anythingElse.trim() || undefined, referral: referral.trim() || undefined,
         quote_data: quoteState ? (quoteState as unknown as Record<string, unknown>) : undefined,
+        budget_interacted: budgetInteracted,
       };
       await submitIntakeForm(data);
       sessionStorage.removeItem(STORAGE_KEY);
@@ -1551,7 +1562,29 @@ export function IntakeFormClient() {
   // ── Render: Success ──────────────────────────────────
   if (submitted) return <SuccessScreen />;
 
+  const slidesWrapperRef = useRef<HTMLDivElement>(null);
+  const handleGoHome = useCallback(() => {
+    const wrapper = slidesWrapperRef.current;
+    if (!wrapper) { setStarted(false); return; }
+    gsap.to(wrapper, {
+      opacity: 0, duration: 0.35, ease: 'power2.in',
+      onComplete: () => setStarted(false),
+    });
+  }, []);
+
   // ── Render: Intro (matching TitleSlide exactly) ──────
+  const handleLeaveIntro = useCallback((then: () => void) => {
+    const section = introSectionRef.current;
+    const inner = introInnerRef.current;
+    const bgOverlay = section?.querySelector('[data-bg-overlay]') as HTMLElement | null;
+    if (inner) gsap.to(inner, { opacity: 0, y: -20, duration: 0.35, ease: 'power2.in' });
+    if (bgOverlay) {
+      gsap.to(bgOverlay, { opacity: 1, duration: 0.4, ease: 'power2.in', onComplete: then });
+    } else {
+      setTimeout(then, 350);
+    }
+  }, []);
+
   if (!started) {
     const titleLines = [["Let's", 'build'], ['something', 'great.']];
     return (
@@ -1598,7 +1631,7 @@ export function IntakeFormClient() {
           <div data-button className="w-full max-w-sm mb-5" style={{ opacity: 0 }}>
             <motion.button
               ref={introButtonRef}
-              onClick={() => setStarted(true)}
+              onClick={() => handleLeaveIntro(() => setStarted(true))}
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="relative w-full px-6 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden"
@@ -1639,7 +1672,7 @@ export function IntakeFormClient() {
           </p>
         </div>
       </section>
-      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={-1} onNavigate={(i) => { setStarted(true); setTimeout(() => navigateTo(i), 50); }} onHome={() => {}} onExit={handleExit} onRevealed={() => { dotsRevealed.current = true; }} hiddenIndices={dotHiddenIndices} />
+      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={-1} onNavigate={(i) => { handleLeaveIntro(() => { setStarted(true); setTimeout(() => navigateTo(i), 50); }); }} onHome={() => {}} onExit={handleExit} skipReveal={dotsRevealed.current} onRevealed={() => { dotsRevealed.current = true; }} hiddenIndices={dotHiddenIndices} />
       </>
     );
   }
@@ -1650,7 +1683,7 @@ export function IntakeFormClient() {
   const slideClass = '[scroll-snap-align:start] [scroll-snap-stop:always] flex-shrink-0 w-screen h-screen overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 py-20 md:py-24 bg-black';
 
   return (
-    <div className="h-screen flex flex-col bg-black">
+    <div ref={slidesWrapperRef} className="h-screen flex flex-col bg-black">
       <div ref={deckRef} className="flex-1 flex overflow-x-scroll [scroll-snap-type:x_mandatory] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
         {/* ── Slide 0: About You ──────────────────────── */}
@@ -1740,15 +1773,7 @@ export function IntakeFormClient() {
                           key={phase.value}
                           type="button"
                           disabled={disabled}
-                          onClick={() => {
-                            if (active) {
-                              setPhases(phases.filter((p) => p !== phase.value));
-                            } else if (phase.value === 'crowdfunding' && phases.length === 0) {
-                              setPhases(['build', 'crowdfunding']);
-                            } else {
-                              setPhases([...phases, phase.value]);
-                            }
-                          }}
+                          onClick={() => togglePhase(phase.value)}
                           className={`flex-1 flex flex-col items-center gap-2 py-5 px-3 rounded-xl border transition-all duration-200 text-center ${
                             disabled ? 'opacity-25 cursor-not-allowed border-white/5' :
                             active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
@@ -1858,7 +1883,7 @@ export function IntakeFormClient() {
         {/* ── Slide 7: Priorities ──────────────────────── */}
         <section ref={slideRefsArr.current[7] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="08" title="Priorities" subtitle="Quality, speed, and cost are always in balance. Knowing yours helps us tailor the approach." />
+            <SlideHeader eyebrow="08" title="Priorities" subtitle="Balancing quality, speed, and cost is a balancing act." />
             <PriorityRanker order={priorityOrder} onChange={setPriorityOrder} />
           </div>
         </section>
@@ -1891,88 +1916,16 @@ export function IntakeFormClient() {
           </div>
         </section>
 
-        {/* ── Slide 10: Investment (optional quote builder) ── */}
-        <section ref={slideRefsArr.current[10] as React.RefObject<HTMLElement>} className={slideClass}>
-          <div className="max-w-4xl mx-auto">
-            <SlideHeader eyebrow="11" title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
-
-            {!(phases.includes('build') || phases.includes('launch') || phases.includes('fundraising')) ? (
-              /* ── No quotable service selected ── */
-              <div className="flex flex-col items-center gap-2 mt-4">
-                <p className="text-base" style={{ color: '#666666' }}>
-                  {phases.length === 0
-                    ? 'Select a service on the Project page to get started.'
-                    : 'Pricing for this service is custom \u2014 we\u2019ll discuss on our call.'}
-                </p>
-              </div>
-            ) : wantsQuote === 'undecided' || wantsQuote === 'skip' ? (
-              /* ── Opt-in gate (default + skip state) ── */
-              <div className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto mt-4">
-                <button type="button" onClick={() => setWantsQuote('build')}
-                  className="flex-1 flex flex-col items-center gap-3 py-8 px-6 rounded-xl border border-white/10 bg-black hover:border-accent/40 hover:bg-accent/[0.06] transition-all duration-200 group">
-                  <Coins className="w-7 h-7 text-white/40 group-hover:text-accent transition-colors" />
-                  <span className="text-lg font-semibold text-white">Build a Quote</span>
-                  <span className="text-sm leading-snug" style={{ color: '#666666' }}>Configure add-ons and options to estimate your investment.</span>
-                </button>
-                <button type="button" onClick={() => { setWantsQuote('skip'); navigateTo(currentSlide + 1); }}
-                  className="flex-1 flex flex-col items-center gap-3 py-8 px-6 rounded-xl border border-white/10 bg-black hover:border-white/20 hover:bg-white/[0.04] transition-all duration-200 group">
-                  <ArrowRight className="w-7 h-7 text-white/40 group-hover:text-white/60 transition-colors" />
-                  <span className="text-lg font-semibold text-white">Skip</span>
-                  <span className="text-sm leading-snug" style={{ color: '#666666' }}>We&apos;ll discuss pricing on our call instead.</span>
-                </button>
-              </div>
-            ) : wantsQuote === 'cleared' ? (
-              /* ── Cleared quote ── */
-              <div className="max-w-md mx-auto mt-4">
-                <p className="text-base text-center mb-6" style={{ color: '#666666' }}>No problem — we&apos;ll cover pricing on the call.</p>
-                <button type="button" onClick={() => setWantsQuote('build')}
-                  className="w-full flex items-center gap-5 h-[88px] px-6 rounded-xl border border-white/10 bg-black hover:border-accent/40 hover:bg-accent/[0.06] transition-all duration-200 group">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(161,77,253,0.12)' }}>
-                    <Coins className="w-5 h-5 text-accent" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <span className="text-base font-medium text-white">Changed your mind?</span>
-                    <p className="text-sm mt-0.5" style={{ color: '#666666' }}>Build a quote to bring into our call.</p>
-                  </div>
-                  <ArrowRight className="w-5 h-5 text-white/30 group-hover:text-white/60 transition-colors flex-shrink-0" />
-                </button>
-              </div>
-            ) : (
-              /* ── Quote builder (wantsQuote === 'build') ── */
-              <div>
-                <div className="flex justify-end mb-4">
-                  <button type="button" onClick={() => { setWantsQuote('cleared'); setQuoteState(null); }}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-sm text-red-400/60 hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/[0.06] transition-all duration-200">
-                    <X className="w-4 h-4" /> Clear quote
-                  </button>
-                </div>
-
-                <ProposalCalculatorEmbed
-                  proposalId=""
-                  proposalType={phasesToQuoteType(phases) as ProposalType}
-                  standalone
-                  typeOverride={phasesToQuoteType(phases)}
-                  crowdfundingOverride={phases.includes('crowdfunding')}
-                  onStateChange={(state) => setQuoteState(state)}
-                />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* ── Slide 11: Goals & Budget (crowdfunding only) ── */}
-        <section ref={slideRefsArr.current[11] as React.RefObject<HTMLElement>} className={showGoals ? slideClass : ''} style={showGoals ? undefined : { width: 0, minWidth: 0, overflow: 'hidden', padding: 0 }}>
+        {/* ── Slide 10: Goals (crowdfunding only) ── */}
+        <section ref={slideRefsArr.current[10] as React.RefObject<HTMLElement>} className={showGoals ? slideClass : ''} style={showGoals ? undefined : { width: 0, minWidth: 0, overflow: 'hidden', padding: 0 }}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="12" title="Goals" subtitle="Help us understand your campaign targets." />
+            <SlideHeader eyebrow="11" title="Goals" subtitle="Help us understand your campaign targets." />
             <div className="space-y-6">
-              <div><FieldLabel icon={Target} label="Public goal (e.g. crowdfunding target)" />
+              <div><FieldLabel icon={Target} label="Public goal (e.g. crowdfunding target)" required />
                 <input type="text" placeholder='e.g. "Raise $25,000 on Kickstarter"' value={publicGoal} onChange={(e) => setPublicGoal(e.target.value)} className={inputClass} /></div>
-              <div><FieldLabel icon={Gauge} label="Internal goal" />
+              <div><FieldLabel icon={Gauge} label="Internal goal" required />
                 <input type="text" placeholder="e.g. Internally, we're projecting $250,000" value={internalGoal} onChange={(e) => setInternalGoal(e.target.value)} className={inputClass} /></div>
-              <div><FieldLabel icon={DollarSign} label="Anticipated video campaign budget" />
-                <input type="text" placeholder="A range is fine — e.g. $10k–$25k" value={budget} onChange={(e) => setBudget(e.target.value)} className={inputClass} />
-                <p className={helperClass}>Helps us shape the creative to fit what&apos;s achievable.</p></div>
-              <div><FieldLabel icon={MailOpen} label="Current email list size" />
+              <div><FieldLabel icon={MailOpen} label="Current email list size" required />
                 <div className="flex flex-wrap gap-2.5">
                   {EMAIL_LIST_OPTIONS.map((opt) => {
                     const active = emailListSize === opt.value;
@@ -1989,10 +1942,64 @@ export function IntakeFormClient() {
           </div>
         </section>
 
+        {/* ── Slide 11: Investment (optional quote builder) ── */}
+        <section ref={slideRefsArr.current[11] as React.RefObject<HTMLElement>} className={slideClass}>
+          <div className="max-w-4xl mx-auto">
+            <SlideHeader eyebrow={showGoals ? '12' : '11'} title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
+
+            {/* ── Phase toggles (single row, mirrors Project page) ── */}
+            <div className="flex gap-2 mt-4">
+              {PROJECT_PHASES.map((phase) => {
+                const active = phases.includes(phase.value);
+                const compatible = phases.length === 0 || phases.every((p) => PHASE_RULES[p]?.includes(phase.value) ?? false);
+                const disabled = !active && !compatible;
+                const Icon = phase.icon;
+                return (
+                  <button
+                    key={phase.value}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => togglePhase(phase.value)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-2 rounded-xl border transition-all duration-200 ${
+                      disabled ? 'opacity-25 cursor-not-allowed border-white/5' :
+                      active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-accent' : ''}`} />
+                    <span className="text-sm font-medium hidden sm:inline">{phase.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {!(phases.includes('build') || phases.includes('launch') || phases.includes('fundraising')) ? (
+              /* ── No quotable phase selected ── */
+              <div className="mt-6">
+                <p className="text-base" style={{ color: '#666666' }}>
+                  {phases.length === 0
+                    ? 'Select a service above to configure your quote.'
+                    : 'Pricing for this service is custom \u2014 we\u2019ll discuss on our call.'}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-6">
+              <ProposalCalculatorEmbed
+                proposalId=""
+                proposalType={phasesToQuoteType(phases) as ProposalType}
+                standalone
+                typeOverride={phasesToQuoteType(phases)}
+                crowdfundingOverride={phases.includes('crowdfunding')}
+                onStateChange={(state) => { setQuoteState(state); setBudgetInteracted(true); }}
+              />
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* ── Slide 12: Wrap Up ────────────────────────── */}
         <section ref={slideRefsArr.current[12] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="13" title="Extras" subtitle="Upload files and add any final context." />
+            <SlideHeader eyebrow={showGoals ? '13' : '12'} title="Extras" subtitle="Upload files and add any final context." />
             <div className="space-y-8">
               <div><FieldLabel icon={Upload} label="Files to share" />
                 <p className={`${helperClass} mb-3`}>Market research, brand guidelines, NDAs, assets — anything relevant.</p>
@@ -2123,7 +2130,7 @@ export function IntakeFormClient() {
       </div>
 
       {/* Progress dots + exit */}
-      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={currentSlide} onNavigate={navigateTo} onHome={() => setStarted(false)} onExit={handleExit} skipReveal={dotsRevealed.current} hiddenIndices={dotHiddenIndices} />
+      <IntakeProgressDots count={TOTAL_SLIDES} activeIndex={currentSlide} onNavigate={navigateTo} onHome={handleGoHome} onExit={handleExit} skipReveal={dotsRevealed.current} hiddenIndices={dotHiddenIndices} />
 
       {/* Nav arrows — matching ProposalNavArrows */}
       <IntakeNavArrows

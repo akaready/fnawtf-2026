@@ -64,6 +64,7 @@ export interface IntakeFormData {
 
   // Quote
   quote_data?: Record<string, unknown>;
+  budget_interacted?: boolean;
 }
 
 export async function submitIntakeForm(data: IntakeFormData) {
@@ -104,6 +105,7 @@ export async function submitIntakeForm(data: IntakeFormData) {
     anything_else: data.anything_else || null,
     referral: data.referral || null,
     quote_data: data.quote_data || null,
+    budget_interacted: data.budget_interacted ?? false,
   });
 
   if (error) throw new Error(error.message);
