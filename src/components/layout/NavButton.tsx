@@ -117,7 +117,7 @@ export function NavButton({ href, children, isPrimary = false, inverted = false,
     };
   }, [isPrimary, inverted, restColor, hoverColor, isActive]);
 
-  const padding = size === 'lg' ? 'px-4 py-3 text-base' : inverted || !isPrimary ? 'px-4 py-2' : 'px-6 py-2';
+  const padding = size === 'lg' ? 'px-8 py-4 text-lg' : inverted || !isPrimary ? 'px-4 py-2' : 'px-6 py-2';
 
   const baseClass = inverted
     ? `relative inline-block ${padding} font-medium text-black bg-white border border-white/20 rounded-lg overflow-hidden`

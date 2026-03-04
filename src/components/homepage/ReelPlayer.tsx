@@ -219,14 +219,24 @@ export function ReelPlayer({
     setIsMuted(next);
   }, []);
 
-  // Fullscreen
+  // Fullscreen — use webkitEnterFullscreen on iOS (Safari doesn't support requestFullscreen on divs)
   const toggleFullscreen = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    const video = videoRef.current;
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !video) return;
 
     if (!document.fullscreenElement) {
-      container.requestFullscreen().catch(console.error);
+      if (container.requestFullscreen) {
+        container.requestFullscreen().catch(() => {
+          // Fallback for iOS Safari
+          if ((video as any).webkitEnterFullscreen) {
+            (video as any).webkitEnterFullscreen();
+          }
+        });
+      } else if ((video as any).webkitEnterFullscreen) {
+        (video as any).webkitEnterFullscreen();
+      }
       setIsFullscreen(true);
       setIsVideoPlaying(false);
     } else {
@@ -249,6 +259,7 @@ export function ReelPlayer({
       style={{ aspectRatio }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={() => { if (isPlaying) setShowControls((s) => !s); }}
     >
       <video
         ref={videoRef}
