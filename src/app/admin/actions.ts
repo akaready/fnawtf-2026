@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { notifySlack } from '@/lib/slack/notify';
 
 async function requireAuth() {
   const supabase = await createClient();
@@ -53,6 +54,19 @@ export async function batchSetPublished(ids: string[], published: boolean) {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/projects');
   revalidatePath('/work');
+
+  if (published) {
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, title, client_name')
+      .in('id', ids);
+    for (const p of (projects as { id: string; title: string; client_name: string }[]) ?? []) {
+      notifySlack({
+        type: 'project_published',
+        data: { id: p.id, title: p.title, clientName: p.client_name },
+      });
+    }
+  }
 }
 
 export async function batchDeleteProjects(ids: string[]) {
@@ -609,7 +623,14 @@ export async function createProposal(data: {
     .single();
   if (error) throw new Error(error.message);
   revalidatePath('/admin/proposals');
-  return (row as { id: string }).id;
+
+  const proposalId = (row as { id: string }).id;
+  notifySlack({
+    type: 'proposal_created',
+    data: { id: proposalId, title: data.title, company: data.contact_company, slug: data.slug },
+  });
+
+  return proposalId;
 }
 
 export async function updateProposal(id: string, data: Record<string, unknown>) {
@@ -2110,7 +2131,7 @@ export interface IntakeSubmission {
   avoid: string | null;
   audience: string | null;
   challenge: string | null;
-  competitors: string | null;
+  competitors: { url: string; note?: string }[] | null;
   video_links: string | null;
   deliverable_notes: string | null;
   timeline_notes: string | null;
@@ -2124,6 +2145,7 @@ export interface IntakeSubmission {
   anything_else: string | null;
   referral: string | null;
   quote_data: Record<string, unknown> | null;
+  budget_interacted: boolean;
 }
 
 export async function getIntakeSubmissions(): Promise<IntakeSubmission[]> {
@@ -2149,6 +2171,13 @@ export async function updateIntakeSubmission(id: string, updates: Partial<Intake
 export async function deleteIntakeSubmission(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('intake_submissions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/intake');
+}
+
+export async function batchDeleteIntakeSubmissions(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('intake_submissions').delete().in('id', ids);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/intake');
 }

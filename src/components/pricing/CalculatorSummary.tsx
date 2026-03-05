@@ -147,7 +147,7 @@ function balanceLabel(opts: { crowdfunding: boolean; deferred: boolean; fundrais
 
 // ── Compute totals from a stored ProposalQuoteRow ────────────────────────
 
-interface QuoteColumnData {
+export interface QuoteColumnData {
   label: string;
   quoteId: string;
   buildActive: boolean;
@@ -174,7 +174,7 @@ interface QuoteColumnData {
   fundPostRaiseAmount: number;
 }
 
-function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColumnData {
+export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): QuoteColumnData {
   const sel = new Map(Object.entries(quote.selected_addons ?? {}));
   const sliders = new Map(Object.entries(quote.slider_values ?? {}));
   const tiers = new Map(
