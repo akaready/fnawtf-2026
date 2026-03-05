@@ -1,6 +1,7 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/service';
+import { notifySlack } from '@/lib/slack/notify';
 
 export interface IntakeFormData {
   // Contact
@@ -13,6 +14,7 @@ export interface IntakeFormData {
 
   // Project basics
   company_name?: string;
+  company_url?: string;
   project_name: string;
   phases?: string[];
   pitch: string;
@@ -69,10 +71,78 @@ export interface IntakeFormData {
   budget_interacted?: boolean;
 }
 
+// ── Helpers (not exported as server actions) ──────────────────────────────
+
+async function createCompanyServiceRole(
+  name: string,
+  email: string,
+  websiteUrl?: string,
+): Promise<string> {
+  const supabase = createServiceClient();
+  const { data: row, error } = await supabase
+    .from('clients')
+    .insert({
+      name,
+      email,
+      website_url: websiteUrl ?? null,
+      company_types: ['lead'],
+      status: 'prospect',
+      pipeline_stage: 'new',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as { id: string }).id;
+}
+
+async function scrapeAndUpdateCompany(clientId: string, websiteUrl?: string): Promise<void> {
+  if (!websiteUrl) return;
+  try {
+    const url = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
+    const resp = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FNA-Admin/1.0)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) return;
+    const html = await resp.text();
+
+    // Extract meta description
+    const getMeta = (name: string): string | undefined => {
+      const patterns = [
+        new RegExp(`<meta[^>]+(?:name|property)=["']${name}["'][^>]+content=["']([^"']+)["']`, 'i'),
+        new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["']${name}["']`, 'i'),
+      ];
+      for (const p of patterns) {
+        const m = html.match(p);
+        if (m?.[1]) return m[1].trim();
+      }
+      return undefined;
+    };
+
+    const description = getMeta('description') ?? getMeta('og:description');
+
+    // Extract social links
+    const linkedinMatch = html.match(/href=["'](https?:\/\/(?:www\.)?linkedin\.com\/company\/[^"'\s]+)["']/i);
+    const twitterMatch = html.match(/href=["'](https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/[^"'\s]+)["']/i);
+    const instagramMatch = html.match(/href=["'](https?:\/\/(?:www\.)?instagram\.com\/[^"'\s]+)["']/i);
+
+    const updates: Record<string, string> = { website_url: url };
+    if (description) updates.description = description;
+    if (linkedinMatch?.[1]) updates.linkedin_url = linkedinMatch[1];
+    if (twitterMatch?.[1]) updates.twitter_url = twitterMatch[1];
+    if (instagramMatch?.[1]) updates.instagram_url = instagramMatch[1];
+
+    const supabase = createServiceClient();
+    await supabase.from('clients').update(updates).eq('id', clientId);
+  } catch { /* fire and forget — never throw */ }
+}
+
+// ── Main submit action ────────────────────────────────────────────────────
+
 export async function submitIntakeForm(data: IntakeFormData) {
   const supabase = createServiceClient();
 
-  const { error } = await supabase.from('intake_submissions').insert({
+  const { data: inserted, error } = await supabase.from('intake_submissions').insert({
     first_name: data.first_name,
     last_name: data.last_name,
     nickname: data.nickname || null,
@@ -80,6 +150,7 @@ export async function submitIntakeForm(data: IntakeFormData) {
     title: data.title || null,
     stakeholders: data.stakeholders || null,
     company_name: data.company_name || null,
+    company_url: data.company_url || null,
     project_name: data.project_name,
     phases: data.phases || [],
     pitch: data.pitch,
@@ -110,9 +181,47 @@ export async function submitIntakeForm(data: IntakeFormData) {
     referral: data.referral || null,
     quote_data: data.quote_data || null,
     budget_interacted: data.budget_interacted ?? false,
-  });
+  }).select('id').single();
 
   if (error) throw new Error(error.message);
+
+  // Auto-create company record and link it
+  if (data.company_name) {
+    try {
+      const clientId = await createCompanyServiceRole(
+        data.company_name,
+        data.email,
+        data.company_url,
+      );
+      // Link the intake submission to the new company
+      await supabase
+        .from('intake_submissions')
+        .update({ client_id: clientId })
+        .eq('id', inserted.id);
+
+      // Fire-and-forget: scrape company website for metadata
+      if (data.company_url) {
+        scrapeAndUpdateCompany(clientId, data.company_url).catch(() => {});
+      }
+    } catch { /* company creation failed — don't block submission */ }
+  }
+
+  notifySlack({
+    type: 'intake_submitted',
+    data: {
+      name: `${data.first_name} ${data.last_name}`.trim(),
+      email: data.email,
+      company: data.company_name,
+      project: data.project_name,
+      deliverables: data.deliverables,
+      budget: data.budget,
+      timeline: data.timeline,
+      pitch: data.pitch,
+      phases: data.phases,
+      experience: data.experience,
+      referral: data.referral,
+    },
+  });
 }
 
 export async function uploadIntakeFile(formData: FormData): Promise<string> {

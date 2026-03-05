@@ -15,8 +15,8 @@ import {
   BarChart3, PenTool, Camera, Share2, Search as SearchIcon, HeartHandshake,
 } from 'lucide-react';
 import { QuoteSummaryCard } from './QuoteSummaryCard';
+import { IntakeCompanyCard } from './IntakeCompanyCard';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
-import { AdminCombobox } from '../../_components/AdminCombobox';
 import { AdminDataTable } from '../../_components/table/AdminDataTable';
 import type { ColDef } from '../../_components/table/types';
 import { PanelDrawer } from '../../_components/PanelDrawer';
@@ -429,15 +429,9 @@ function IntakeDetailPanel({
             <p className="text-sm text-admin-text-muted truncate">{s.company_name}</p>
           )}
         </div>
-        <AdminCombobox
-          value={s.status}
-          options={Object.entries(INTAKE_STATUSES).map(([val, { label }]) => ({ id: val, label }))}
-          onChange={(v) => { if (v) onStatusChange(v); }}
-          nullable={false}
-          searchable={false}
-        />
-        <div className="flex items-center flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <SaveDot status={saveStatus} />
+          <StatusBadge status={s.status} config={INTAKE_STATUSES} />
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">
             <X size={16} />
           </button>
@@ -484,15 +478,34 @@ function IntakeDetailPanel({
               </div>
             </div>
 
-            {/* Link to Company */}
+            {/* Company */}
             <div>
-              <SectionLabel>Link to Company</SectionLabel>
-              <AdminCombobox
-                value={s.client_id || null}
-                options={clients.map((c) => ({ id: c.id, label: c.name }))}
-                onChange={(v) => onLinkClient(v)}
-                placeholder="Not linked"
-              />
+              <SectionLabel>Company</SectionLabel>
+              <IntakeCompanyCard submission={s} clients={clients} onLinkClient={onLinkClient} />
+            </div>
+
+            {/* Status */}
+            <div>
+              <SectionLabel>Status</SectionLabel>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(INTAKE_STATUSES).map(([key, cfg]) => {
+                  const isActive = s.status === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => onStatusChange(key)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                        isActive
+                          ? cfg.className + ' border-current'
+                          : 'border-admin-border-subtle bg-transparent text-admin-text-muted/25 hover:text-admin-text-faint hover:border-admin-border'
+                      }`}
+                    >
+                      {cfg.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <hr className="border-admin-border-subtle" />

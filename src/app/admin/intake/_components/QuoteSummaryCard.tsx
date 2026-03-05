@@ -106,7 +106,7 @@ export function QuoteSummaryCard({ quoteData, budgetInteracted }: {
           {QUOTE_TYPE_LABELS[stub.quote_type] || stub.quote_type}
         </span>
         {budgetInteracted && (
-          <span className="text-xs text-admin-text-dim">Calculator used</span>
+          <span className="text-xs text-admin-text-dim ml-auto">Calculator used</span>
         )}
       </div>
 

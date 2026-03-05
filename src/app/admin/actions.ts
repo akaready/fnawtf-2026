@@ -2146,6 +2146,7 @@ export interface IntakeSubmission {
   referral: string | null;
   quote_data: Record<string, unknown> | null;
   budget_interacted: boolean;
+  company_url: string | null;
 }
 
 export async function getIntakeSubmissions(): Promise<IntakeSubmission[]> {

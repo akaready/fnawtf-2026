@@ -1286,6 +1286,7 @@ export function IntakeFormClient() {
 
   // Project
   const [companyName, setCompanyName] = useState('');
+  const [companyUrl, setCompanyUrl] = useState('');
   const [projectName, setProjectName] = useState('');
   const [phases, setPhases] = useState<string[]>([]);
   const [pitch, setPitch] = useState('');
@@ -1416,6 +1417,7 @@ export function IntakeFormClient() {
       if (d.budget) setBudget(d.budget);
       if (d.emailListSize) setEmailListSize(d.emailListSize);
       if (d.companyName) setCompanyName(d.companyName);
+      if (d.companyUrl) setCompanyUrl(d.companyUrl);
       if (d.anythingElse) setAnythingElse(d.anythingElse);
       if (d.referral) setReferral(d.referral);
       if (d.quoteState) setQuoteState(d.quoteState);
@@ -1644,7 +1646,7 @@ export function IntakeFormClient() {
     const timer = setTimeout(() => {
       try {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-          firstName, lastName, nickname, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
+          firstName, lastName, nickname, email, title, stakeholders, companyName, companyUrl, projectName, phases, pitch, excitement, keyFeature,
           vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
           deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
           experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
@@ -1653,7 +1655,7 @@ export function IntakeFormClient() {
       } catch { /* ignore */ }
     }, 500);
     return () => clearTimeout(timer);
-  }, [started, firstName, lastName, nickname, email, title, stakeholders, companyName, projectName, phases, pitch, excitement, keyFeature,
+  }, [started, firstName, lastName, nickname, email, title, stakeholders, companyName, companyUrl, projectName, phases, pitch, excitement, keyFeature,
       vision, avoid, audience, challenge, competitors, videoRefs, deliverables,
       deliverableNotes, timeline, timelineDate, timelineNotes, priorityOrder,
       experience, experienceNotes, partners, partnerDetails, publicGoal, internalGoal,
@@ -1725,6 +1727,7 @@ export function IntakeFormClient() {
         email: email.trim().toLowerCase(), title: title.trim() || undefined,
         stakeholders: stakeholders.filter((s) => s.name.trim() || s.email.trim()).map((s) => `${s.name.trim()} <${s.email.trim()}>${s.title.trim() ? ` — ${s.title.trim()}` : ''}`).join('\n') || undefined,
         company_name: companyName.trim() || undefined,
+        company_url: companyUrl.trim() || undefined,
         project_name: projectName.trim(), phases: phases.length ? phases : undefined, pitch: pitch.trim(),
         excitement: excitement.trim() || undefined, key_feature: keyFeature.trim() || undefined,
         vision: vision.trim() || undefined, avoid: avoid.trim() || undefined, audience: audience.trim() || undefined,
@@ -2044,6 +2047,12 @@ export function IntakeFormClient() {
                 <FieldLabel icon={Building2} label="Company name" required />
                 <input type="text" placeholder='e.g. "Acme Inc."' value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
+                  className={inputClass} />
+              </div>
+              <div>
+                <FieldLabel icon={Link2} label="Company website" />
+                <input type="url" placeholder="https://yourcompany.com" value={companyUrl}
+                  onChange={(e) => setCompanyUrl(e.target.value)}
                   className={inputClass} />
               </div>
               <div id="field-projectName">

@@ -47,8 +47,8 @@ export const MEETING_STATUSES: Record<string, StatusConfig> = {
 
 /** Intake submission statuses */
 export const INTAKE_STATUSES: Record<string, StatusConfig> = {
-  new:       { label: 'New',       className: 'bg-admin-info-bg text-admin-info' },
-  reviewed:  { label: 'Reviewed',  className: 'bg-admin-warning-bg text-admin-warning' },
+  new:       { label: 'New',       className: 'bg-admin-warning-bg text-admin-warning' },
+  reviewed:  { label: 'Reviewed',  className: 'bg-admin-accent-bg text-accent' },
   converted: { label: 'Converted', className: 'bg-admin-success-bg text-admin-success' },
   archived:  { label: 'Archived',  className: 'bg-admin-bg-active text-admin-text-dim' },
 };
