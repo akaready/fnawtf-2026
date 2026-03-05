@@ -19,10 +19,14 @@ export const useTheme = () => useContext(ThemeContext);
 const STORAGE_KEY = 'fna-admin-theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'dark';
-    return (localStorage.getItem(STORAGE_KEY) as Theme) || 'dark';
-  });
+  const [theme, setTheme] = useState<Theme>('dark');
+
+  // Read saved theme after mount to avoid hydration mismatch
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    if (saved && saved !== theme) setTheme(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, theme);
