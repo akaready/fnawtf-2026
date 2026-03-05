@@ -51,6 +51,7 @@ interface Props {
   viewCount?: number;
   onClose?: () => void;
   onDelete?: (id: string) => void;
+  onUpdated?: (fields: Partial<ProposalRow>) => void;
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -62,7 +63,7 @@ const STATUS_BADGE: Record<string, string> = {
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
-  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete,
+  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
@@ -138,8 +139,8 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
     });
   }
 
-  function handleUpdated() {
-    // no-op: panel owns the data lifecycle
+  function handleUpdated(fields: Partial<ProposalRow>) {
+    onUpdated?.(fields);
   }
 
   const welcomeSection = sections.find(s => s.sort_order === 0 && s.section_type === 'text') ?? null;
@@ -219,6 +220,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             onUpdated={handleUpdated}
             onProposalTypeChange={(type) => setProposalType(type)}
             onDirty={handleDirty}
+            currentProposalType={proposalType}
           />
         </div>
         <div className={activeTab === 'welcome' ? 'h-full overflow-hidden' : 'hidden'}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { RefreshCw, Plus, X, UserPlus, Mail, Building2, Copy, Check } from 'lucide-react';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
@@ -20,9 +20,10 @@ interface DetailsTabProps {
   contacts: ContactRow[];
   proposalContacts: (ContactRow & { pivot_id: string })[];
   clients: ClientRow[];
-  onUpdated: () => void;
+  onUpdated: (fields: Partial<ProposalRow>) => void;
   onProposalTypeChange?: (type: ProposalType) => void;
   onDirty?: () => void;
+  currentProposalType?: ProposalType;
 }
 
 function slugify(text: string): string {
@@ -60,23 +61,29 @@ const inputCls = 'admin-input w-full';
 const sectionHeadingCls = 'text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4';
 
 export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
-  { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onProposalTypeChange, onDirty },
+  { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onProposalTypeChange, onDirty, currentProposalType },
   ref,
 ) {
   const contactName = proposal.contact_name;
   const contactEmail = proposal.contact_email ?? '';
   const [contactCompany, setContactCompany] = useState(proposal.contact_company);
   const [proposalType, setProposalType] = useState<ProposalType>(proposal.proposal_type);
+  useEffect(() => {
+    if (currentProposalType && currentProposalType !== proposalType) {
+      setProposalType(currentProposalType);
+    }
+  }, [currentProposalType]); // eslint-disable-line react-hooks/exhaustive-deps
   const [title, setTitle] = useState(proposal.title);
   const [subtitle, setSubtitle] = useState(proposal.subtitle);
   const [slug, setSlug] = useState(proposal.slug);
   const [password, setPassword] = useState(proposal.proposal_password);
   const [slugCopied, setSlugCopied] = useState(false);
   const [preparedDate, setPreparedDate] = useState(proposal.prepared_date ?? '');
+  const [showApproach, setShowApproach] = useState(proposal.show_approach);
 
   // Save state — no local autoSave; parent coordinates all saves
-  const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate });
-  stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate };
+  const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate, showApproach });
+  stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate, showApproach };
   const isDirtyRef = useRef(false);
 
   const save = useCallback(async () => {
@@ -91,10 +98,18 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       slug: s.slug.trim(),
       proposal_password: s.password.trim(),
       prepared_date: s.preparedDate || null,
+      show_approach: s.showApproach,
     });
     isDirtyRef.current = false;
     onProposalTypeChange?.(s.proposalType);
-    onUpdated();
+    onUpdated({
+      title: s.title.trim(),
+      contact_name: s.contactName.trim(),
+      contact_email: s.contactEmail.trim() || null,
+      contact_company: s.contactCompany.trim(),
+      proposal_type: s.proposalType,
+      slug: s.slug.trim(),
+    });
   }, [proposal.id, onProposalTypeChange, onUpdated]);
   const markDirty = useCallback(() => { isDirtyRef.current = true; onDirty?.(); }, [onDirty]);
 
@@ -454,6 +469,20 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               placeholder="Elevating your brand through story-driven video"
               className={inputCls}
             />
+          </div>
+
+          {/* Slide visibility */}
+          <div className="flex items-center gap-3 pt-2">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showApproach}
+                onChange={(e) => { setShowApproach(e.target.checked); markDirty(); }}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-[18px] bg-admin-bg-hover peer-checked:bg-admin-success rounded-full transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[14px] after:w-[14px] after:transition-transform peer-checked:after:translate-x-[14px]" />
+            </label>
+            <span className="text-sm text-admin-text-secondary">Show Approach slide</span>
           </div>
         </div>
       </section>

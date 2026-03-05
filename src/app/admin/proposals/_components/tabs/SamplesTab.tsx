@@ -201,27 +201,22 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
   // Sort by sort_order for display
   const sortedProposalProjects = [...proposalProjects].sort((a, b) => a.sort_order - b.sort_order);
 
-  const handleMove = useCallback(async (id: string, direction: 'up' | 'down') => {
-    setProposalProjects((prev) => {
-      const sorted = [...prev].sort((a, b) => a.sort_order - b.sort_order);
-      const idx = sorted.findIndex((p) => p.id === id);
-      if (idx < 0) return prev;
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= sorted.length) return prev;
+  const handleMove = useCallback((id: string, direction: 'up' | 'down') => {
+    const sorted = [...proposalProjects].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = sorted.findIndex((p) => p.id === id);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
 
-      // Swap sort_order values
-      const updated = sorted.map((p, i) => {
-        if (i === idx) return { ...p, sort_order: sorted[swapIdx].sort_order };
-        if (i === swapIdx) return { ...p, sort_order: sorted[idx].sort_order };
-        return p;
-      });
-
-      // Persist in background
-      void reorderProposalProjects(updated.map((p) => ({ id: p.id, sort_order: p.sort_order })));
-
-      return updated;
+    const updated = sorted.map((p, i) => {
+      if (i === idx) return { ...p, sort_order: sorted[swapIdx].sort_order };
+      if (i === swapIdx) return { ...p, sort_order: sorted[idx].sort_order };
+      return p;
     });
-  }, []);
+
+    setProposalProjects(updated);
+    void reorderProposalProjects(updated.map((p) => ({ id: p.id, sort_order: p.sort_order })));
+  }, [proposalProjects]);
 
   return (
     <div className="flex h-full">

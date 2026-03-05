@@ -351,6 +351,9 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           setProposals((prev) => prev.filter((p) => p.id !== id));
           setActiveId(null);
         }}
+        onProposalUpdated={(updated) =>
+          setProposals((prev) => prev.map((p) => p.id === updated.id ? { ...p, ...updated } : p))
+        }
       />
     </div>
   );
