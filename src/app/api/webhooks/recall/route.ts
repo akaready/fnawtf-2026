@@ -6,6 +6,7 @@ import {
   downloadTranscript,
 } from '@/lib/recall';
 import { matchAttendeesForMeeting } from '@/lib/meetings/matchAttendees';
+import { notifySlack } from '@/lib/slack/notify';
 
 export async function POST(request: NextRequest) {
   // Verify webhook secret
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     const { data: meeting } = await supabase
       .from('meetings')
-      .select('id')
+      .select('id, title')
       .eq('recall_bot_id', botId)
       .single();
 
@@ -190,6 +191,11 @@ export async function POST(request: NextRequest) {
         .eq('id', meeting.id);
 
       console.log(`Transcript stored for meeting ${meeting.id}`);
+
+      notifySlack({
+        type: 'transcript_ready',
+        data: { meetingTitle: (meeting as { title?: string }).title || 'Untitled meeting' },
+      });
     } catch (err) {
       console.error(`Failed to fetch transcript ${transcriptId}:`, err);
       await supabase

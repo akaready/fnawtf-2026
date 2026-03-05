@@ -20,6 +20,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource/space-grotesk": "^5.2.10",
     "@react-pdf/renderer": "^4.3.2",
+    "@slack/web-api": "^7.14.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.38.0",
     "@tailwindcss/container-queries": "^0.1.1",

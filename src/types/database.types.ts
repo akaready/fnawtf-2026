@@ -65,6 +65,7 @@ export type Database = {
           company_size: string | null;
           twitter_url: string | null;
           instagram_url: string | null;
+          slack_channel_id: string | null;
           created_at: string;
         };
         Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at'>;

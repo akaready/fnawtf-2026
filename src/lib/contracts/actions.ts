@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { revalidatePath } from 'next/cache';
+import { notifySlack } from '@/lib/slack/notify';
 import type {
   ContractTemplateRow,
   ContractRow,
@@ -509,12 +510,18 @@ export async function handleSignWellWebhook(event: {
   // Find contract by SignWell document ID
   const { data: contract, error: cErr } = await supabase
     .from('contracts')
-    .select('id, status')
+    .select('id, status, title, client:clients(company, slack_channel_id)')
     .eq('signwell_document_id', event.document_id)
     .single();
   if (cErr || !contract) return;
 
-  const contractId = (contract as { id: string }).id;
+  const { id: contractId, title: contractTitle, client: contractClient } = contract as {
+    id: string;
+    title: string;
+    client: { company?: string; slack_channel_id?: string } | null;
+  };
+  const companyName = contractClient?.company ?? null;
+  const slackChannelId = contractClient?.slack_channel_id ?? null;
 
   if (event.event_type === 'document_viewed' && event.signer) {
     await supabase
@@ -537,6 +544,11 @@ export async function handleSignWellWebhook(event: {
       event_type: 'viewed',
       signer_email: event.signer.email,
     } as never);
+
+    notifySlack({
+      type: 'contract_viewed',
+      data: { contractId, title: contractTitle, signerEmail: event.signer.email, companyName, slackChannelId },
+    });
   }
 
   if (event.event_type === 'document_signed' && event.signer) {
@@ -570,6 +582,18 @@ export async function handleSignWellWebhook(event: {
         } as never)
         .eq('id', contractId);
     }
+
+    notifySlack({
+      type: 'contract_signed',
+      data: {
+        contractId,
+        title: contractTitle,
+        signerEmail: event.signer.email,
+        allSigned: !!allSigned,
+        companyName,
+        slackChannelId,
+      },
+    });
   }
 
   if (event.event_type === 'document_declined' && event.signer) {
@@ -589,6 +613,11 @@ export async function handleSignWellWebhook(event: {
       event_type: 'declined',
       signer_email: event.signer.email,
     } as never);
+
+    notifySlack({
+      type: 'contract_declined',
+      data: { contractId, title: contractTitle, signerEmail: event.signer.email, companyName, slackChannelId },
+    });
   }
 
   revalidatePath('/admin/contracts');
