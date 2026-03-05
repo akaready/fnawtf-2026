@@ -138,11 +138,12 @@ function calcTierTotal(
 }
 
 // ── Balance label helper ─────────────────────────────────────────────────
-function balanceLabel(opts: { crowdfunding: boolean; deferred: boolean; fundraising: boolean }): React.ReactNode {
-  if (opts.fundraising) return <>Balance due <u>after</u> fundraising</>;
-  if (opts.crowdfunding && opts.deferred) return <>Balance due <u>after</u> crowdfunding raise</>;
-  if (opts.crowdfunding) return <>Balance due <u>before</u> crowdfunding launch</>;
-  return 'Balance due upon delivery';
+function balanceLabel(opts: { crowdfunding: boolean; deferred: boolean; fundraising: boolean; remainingPercent: number }): React.ReactNode {
+  const pct = `${opts.remainingPercent}%`;
+  if (opts.fundraising) return <>{pct} due <u>after raise</u></>;
+  if (opts.crowdfunding && opts.deferred) return <>{pct} due <u>after raise</u></>;
+  if (opts.crowdfunding) return <>{pct} due <u>before launch</u></>;
+  return `${pct} due upon delivery`;
 }
 
 // ── Compute totals from a stored ProposalQuoteRow ────────────────────────
@@ -1342,7 +1343,7 @@ export function CalculatorSummary({
                       )}
                       {fnaColumnData.fundPostRaiseAmount > 0 && (
                         <div className="flex justify-between items-center mt-1.5">
-                          <span className="text-sm font-semibold text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                          <span className="text-sm font-semibold text-muted-foreground">{Math.round((1 - fnaColumnData.downPercent) * 100)}% due <u>after raise</u></span>
                           <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.fundPostRaiseAmount)}</span>
                         </div>
                       )}
@@ -1350,7 +1351,7 @@ export function CalculatorSummary({
                   ) : (
                     <div className="flex justify-between items-center mt-1.5">
                       <span className="text-sm font-semibold text-muted-foreground">
-                        {balanceLabel({ crowdfunding: fnaColumnData.crowdfundingEnabled, deferred: fnaColumnData.deferPayment, fundraising: false })}
+                        {balanceLabel({ crowdfunding: fnaColumnData.crowdfundingEnabled, deferred: fnaColumnData.deferPayment, fundraising: false, remainingPercent: Math.round((1 - fnaColumnData.downPercent) * 100) })}
                       </span>
                       <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(fnaColumnData.total - fnaColumnData.downAmount)}</span>
                     </div>
@@ -1378,7 +1379,7 @@ export function CalculatorSummary({
                       )}
                       {liveColumnData.fundPostRaiseAmount > 0 && (
                         <div className="flex justify-between items-center mt-1.5">
-                          <span className="text-sm font-semibold text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                          <span className="text-sm font-semibold text-muted-foreground">{Math.round((1 - liveColumnData.downPercent) * 100)}% due <u>after raise</u></span>
                           <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.fundPostRaiseAmount)}</span>
                         </div>
                       )}
@@ -1386,7 +1387,7 @@ export function CalculatorSummary({
                   ) : (
                     <div className="flex justify-between items-center mt-1.5">
                       <span className="text-sm font-semibold text-muted-foreground">
-                        {balanceLabel({ crowdfunding: liveColumnData.crowdfundingEnabled, deferred: liveColumnData.deferPayment, fundraising: false })}
+                        {balanceLabel({ crowdfunding: liveColumnData.crowdfundingEnabled, deferred: liveColumnData.deferPayment, fundraising: false, remainingPercent: Math.round((1 - liveColumnData.downPercent) * 100) })}
                       </span>
                       <span className="font-display font-bold text-base text-muted-foreground">{formatPrice(liveColumnData.total - liveColumnData.downAmount)}</span>
                     </div>
@@ -1537,7 +1538,7 @@ export function CalculatorSummary({
               )}
               {fundPostRaiseAmount > 0 && (
                 <div className="flex justify-between items-center mt-2">
-                  <span className="font-semibold text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                  <span className="font-semibold text-muted-foreground">{Math.round((1 - downPercent) * 100)}% due <u>after raise</u></span>
                   <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(fundPostRaiseAmount)}</span>
                 </div>
               )}
@@ -1548,7 +1549,7 @@ export function CalculatorSummary({
           ) : (
             <div className="flex justify-between items-center mt-2">
               <span className="font-semibold text-muted-foreground">
-                {balanceLabel({ crowdfunding: effectiveCrowdfundingEnabled, deferred: deferPayment, fundraising: false })}
+                {balanceLabel({ crowdfunding: effectiveCrowdfundingEnabled, deferred: deferPayment, fundraising: false, remainingPercent: Math.round((1 - downPercent) * 100) })}
               </span>
               <span className="font-display font-bold text-lg text-muted-foreground">{formatPrice(total - downAmount)}</span>
             </div>

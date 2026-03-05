@@ -640,7 +640,7 @@ export async function updateProposal(id: string, data: Record<string, unknown>) 
     .update({ ...data, updated_at: new Date().toISOString() } as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
+  // No revalidatePath — panel manages proposal state client-side
 }
 
 export async function deleteProposal(id: string) {
@@ -707,7 +707,6 @@ export async function addProposalSection(data: {
     .select('id')
     .single();
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
   return (row as { id: string }).id;
 }
 
@@ -718,14 +717,14 @@ export async function updateProposalSection(id: string, data: Record<string, unk
     .update(data as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
+  // No revalidatePath — panel manages section state client-side;
+  // revalidating here caused a render loop (auto-save fires every 600ms)
 }
 
 export async function deleteProposalSection(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('proposal_sections').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function reorderProposalSections(updates: { id: string; sort_order: number }[]) {
@@ -736,7 +735,6 @@ export async function reorderProposalSections(updates: { id: string; sort_order:
   const results = await Promise.all(promises);
   const failed = results.find((r) => r.error);
   if (failed?.error) throw new Error(failed.error.message);
-  revalidatePath('/admin/proposals');
 }
 
 // ── Proposal Videos ─────────────────────────────────────────────────────
@@ -765,7 +763,6 @@ export async function addProposalVideo(data: {
     .select('id')
     .single();
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
   return (row as { id: string }).id;
 }
 
@@ -773,7 +770,6 @@ export async function removeProposalVideo(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('proposal_videos').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function updateProposalVideoBlurb(id: string, blurb: string | null): Promise<void> {
@@ -783,7 +779,6 @@ export async function updateProposalVideoBlurb(id: string, blurb: string | null)
     .update({ proposal_blurb: blurb } as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function reorderProposalVideos(updates: { id: string; sort_order: number }[]): Promise<void> {
@@ -794,7 +789,6 @@ export async function reorderProposalVideos(updates: { id: string; sort_order: n
   const results = await Promise.all(promises);
   const failed = results.find((r) => r.error);
   if (failed?.error) throw new Error(failed.error.message);
-  revalidatePath('/admin/proposals');
 }
 
 // ── Proposal Projects ───────────────────────────────────────────────────
@@ -812,7 +806,6 @@ export async function addProposalProject(data: {
     .select('id')
     .single();
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
   return (row as { id: string }).id;
 }
 
@@ -820,7 +813,6 @@ export async function removeProposalProject(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('proposal_projects').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 // ── Video Library (all project videos for sidebar) ─────────────────────
@@ -882,7 +874,6 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
       .update({ ...quoteData, updated_at: new Date().toISOString() } as never)
       .eq('id', quoteId);
     if (error) throw new Error(error.message);
-    revalidatePath('/admin/proposals');
     return quoteId;
   } else {
     // Always create new
@@ -892,7 +883,6 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
       .select('id')
       .single();
     if (error) throw new Error(error.message);
-    revalidatePath('/admin/proposals');
     return (row as { id: string }).id;
   }
 }
@@ -913,7 +903,6 @@ export async function deleteProposalQuote(quoteId: string) {
     .update({ deleted_at: new Date().toISOString() } as never)
     .eq('id', quoteId);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 // ── Proposal Milestones ──────────────────────────────────────────────────
@@ -943,7 +932,6 @@ export async function addProposalMilestone(input: {
     .select('id')
     .single();
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
   return (data as { id: string }).id;
 }
 
@@ -959,7 +947,6 @@ export async function updateProposalMilestone(id: string, updates: {
     .update(updates as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function deleteProposalMilestone(id: string): Promise<void> {
@@ -969,7 +956,6 @@ export async function deleteProposalMilestone(id: string): Promise<void> {
     .delete()
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function deleteAllProposalMilestones(proposalId: string): Promise<void> {
@@ -979,7 +965,6 @@ export async function deleteAllProposalMilestones(proposalId: string): Promise<v
     .delete()
     .eq('proposal_id', proposalId);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function batchCreateProposalMilestones(
@@ -991,7 +976,6 @@ export async function batchCreateProposalMilestones(
     .insert(milestones as never)
     .select('id');
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
   return (data ?? []).map((r: { id: string }) => r.id);
 }
 
@@ -1152,7 +1136,6 @@ export async function addProposalContact(proposalId: string, contactId: string):
     .select('id')
     .single();
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
   return (row as { id: string }).id;
 }
 
@@ -1164,7 +1147,6 @@ export async function removeProposalContact(proposalId: string, contactId: strin
     .eq('proposal_id', proposalId)
     .eq('contact_id', contactId);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 // ── Roles ────────────────────────────────────────────────────────────────
@@ -1662,7 +1644,6 @@ export async function reorderProposalProjects(updates: { id: string; sort_order:
   const results = await Promise.all(promises);
   const failed = results.find((r) => r.error);
   if (failed?.error) throw new Error(failed.error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function updateProposalProjectBlurb(id: string, blurb: string | null): Promise<void> {
@@ -1672,7 +1653,6 @@ export async function updateProposalProjectBlurb(id: string, blurb: string | nul
     .update({ blurb } as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/proposals');
 }
 
 export async function getProjectsForBrowser(): Promise<import('@/types/proposal').BrowserProject[]> {

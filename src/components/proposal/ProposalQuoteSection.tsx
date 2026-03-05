@@ -231,7 +231,7 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
                 )}
                 {postRaise > 0 && (
                   <div className="flex items-baseline justify-between">
-                    <span className="text-sm text-muted-foreground">Balance due <u>after</u> fundraising</span>
+                    <span className="text-sm text-muted-foreground">{Math.round((1 - dp) * 100)}% due <u>after raise</u></span>
                     <span className="text-base font-display font-bold text-muted-foreground">${postRaise.toLocaleString()}</span>
                   </div>
                 )}
@@ -243,9 +243,12 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
           })() : (
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-muted-foreground">
-                {quote.crowdfunding_enabled && quote.defer_payment ? <>Balance due <u>after</u> crowdfunding raise</>
-                  : quote.crowdfunding_enabled ? <>Balance due <u>before</u> crowdfunding launch</>
-                  : 'Balance due upon delivery'}
+                {(() => {
+                  const rp = Math.round((1 - quote.down_amount! / quote.total_amount!) * 100);
+                  if (quote.crowdfunding_enabled && quote.defer_payment) return <>{rp}% due <u>after raise</u></>;
+                  if (quote.crowdfunding_enabled) return <>{rp}% due <u>before launch</u></>;
+                  return `${rp}% due upon delivery`;
+                })()}
               </span>
               <span className="text-base font-display font-bold text-muted-foreground">
                 ${(quote.total_amount - quote.down_amount).toLocaleString()}

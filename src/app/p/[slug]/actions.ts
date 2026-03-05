@@ -2,13 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { setProposalAuthCookie, verifyProposalPassword } from '@/lib/proposal/auth';
+import { notifySlack } from '@/lib/slack/notify';
 import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow, ProposalQuoteRow } from '@/types/proposal';
 
 export async function verifyProposalAccess(slug: string, email: string, password: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
   const { data: proposal } = await supabase
     .from('proposals')
-    .select('id, proposal_password, status')
+    .select('id, title, proposal_password, status, contact_company')
     .eq('slug', slug)
     .single();
 
@@ -16,7 +17,13 @@ export async function verifyProposalAccess(slug: string, email: string, password
     return { success: false, error: 'Proposal not found.' };
   }
 
-  const row = proposal as { id: string; proposal_password: string; status: string };
+  const row = proposal as {
+    id: string;
+    title: string;
+    proposal_password: string;
+    status: string;
+    contact_company: string | null;
+  };
 
   if (!verifyProposalPassword(password, row.proposal_password)) {
     return { success: false, error: 'Invalid access code.' };
@@ -38,6 +45,39 @@ export async function verifyProposalAccess(slug: string, email: string, password
       .update({ status: 'viewed', updated_at: new Date().toISOString() } as never)
       .eq('id', row.id);
   }
+
+  // Resolve viewer name from contacts + client Slack channel
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('first_name, last_name')
+    .eq('email', email)
+    .maybeSingle();
+  const ct = contact as { first_name: string; last_name: string } | null;
+  const viewerName = ct ? `${ct.first_name} ${ct.last_name}`.trim() : null;
+
+  // Look up client by company name for Slack channel routing
+  let slackChannelId: string | null = null;
+  if (row.contact_company) {
+    const { data: clientRow } = await supabase
+      .from('clients')
+      .select('slack_channel_id')
+      .eq('name', row.contact_company)
+      .maybeSingle();
+    slackChannelId = (clientRow as { slack_channel_id?: string } | null)?.slack_channel_id ?? null;
+  }
+
+  notifySlack({
+    type: 'proposal_viewed',
+    data: {
+      proposalId: row.id,
+      title: row.title,
+      slug,
+      viewerEmail: email,
+      viewerName,
+      companyName: row.contact_company,
+      slackChannelId,
+    },
+  });
 
   return { success: true };
 }

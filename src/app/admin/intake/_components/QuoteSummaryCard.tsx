@@ -166,7 +166,7 @@ export function QuoteSummaryCard({ quoteData, budgetInteracted }: {
           )}
           {computed.isFundraising && computed.fundPostRaiseAmount > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-admin-text-muted">Post-raise balance</span>
+              <span className="text-admin-text-muted">{Math.round((1 - computed.downPercent) * 100)}% due after raise</span>
               <span className="text-admin-text-secondary font-admin-mono">{fmt(computed.fundPostRaiseAmount)}</span>
             </div>
           )}

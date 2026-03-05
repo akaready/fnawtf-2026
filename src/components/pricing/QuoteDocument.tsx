@@ -13,12 +13,13 @@ import type { QuoteData, ContactInfo } from '@/lib/pdf/types';
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 function BalanceLabelPdf({ data }: { data: QuoteData }) {
-  if (data.specialProgram === 'fundraising') return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> fundraising</Text>;
+  const rp = Math.round((1 - data.downAmount / data.total) * 100);
+  if (data.specialProgram === 'fundraising') return <Text style={S.balanceLabel}>{rp}% due <Text style={{ textDecoration: 'underline' }}>after raise</Text></Text>;
   if (data.specialProgram === 'crowdfunding' && data.deferPayment)
-    return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</Text>;
+    return <Text style={S.balanceLabel}>{rp}% due <Text style={{ textDecoration: 'underline' }}>after raise</Text></Text>;
   if (data.specialProgram === 'crowdfunding')
-    return <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>before</Text> crowdfunding launch</Text>;
-  return <Text style={S.balanceLabel}>Balance due upon delivery</Text>;
+    return <Text style={S.balanceLabel}>{rp}% due <Text style={{ textDecoration: 'underline' }}>before launch</Text></Text>;
+  return <Text style={S.balanceLabel}>{rp}% due upon delivery</Text>;
 }
 
 function fmt(n: number) {
@@ -582,7 +583,7 @@ export function QuoteDocument({ data, contact }: QuoteDocumentProps) {
                 )}
                 {data.fundraisingPostRaiseAmount > 0 && (
                   <View style={[S.paymentRow, { marginTop: 4 }]}>
-                    <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> fundraising</Text>
+                    <Text style={S.balanceLabel}>{Math.round((1 - data.downAmount / data.total) * 100)}% due <Text style={{ textDecoration: 'underline' }}>after raise</Text></Text>
                     <Text style={S.balanceAmount}>{fmt(data.fundraisingPostRaiseAmount)}</Text>
                   </View>
                 )}

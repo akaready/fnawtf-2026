@@ -1,20 +1,19 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
 import type { LeadData } from './leadCookie';
+import { logPricingLeadServer } from './actions';
 
 export async function logPricingLead(
   data: LeadData,
   source: 'gate' | 'save_quote',
 ): Promise<void> {
   try {
-    const supabase = createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('pricing_leads').insert({
+    await logPricingLeadServer({
       name: data.name,
       email: data.email,
+      company: data.company,
       timeline: data.timeline,
-      timeline_date: data.timelineDate ?? null,
+      timelineDate: data.timelineDate,
       source,
     });
   } catch (err) {

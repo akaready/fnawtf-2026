@@ -54,6 +54,27 @@ export type SlackEvent =
       };
     }
   | {
+      type: 'contract_sent';
+      data: {
+        contractId: string;
+        title: string;
+        contractType: string;
+        signers: { name: string; email: string; role: string }[];
+        companyName?: string | null;
+        slackChannelId?: string | null;
+      };
+    }
+  | {
+      type: 'contract_voided';
+      data: {
+        contractId: string;
+        title: string;
+        reason?: string | null;
+        companyName?: string | null;
+        slackChannelId?: string | null;
+      };
+    }
+  | {
       type: 'transcript_ready';
       data: { meetingTitle: string };
     }
@@ -62,8 +83,42 @@ export type SlackEvent =
       data: { id: string; title: string; company: string; slug: string };
     }
   | {
+      type: 'proposal_viewed';
+      data: {
+        proposalId: string;
+        title: string;
+        slug: string;
+        viewerEmail: string;
+        viewerName?: string | null;
+        companyName?: string | null;
+        slackChannelId?: string | null;
+      };
+    }
+  | {
       type: 'project_published';
       data: { id: string; title: string; clientName: string };
+    }
+  | {
+      type: 'pricing_lead';
+      data: {
+        name: string;
+        email: string;
+        company?: string | null;
+        timeline: string;
+        source: string;
+      };
+    }
+  | {
+      type: 'portal_login';
+      data: {
+        proposalId: string;
+        slug: string;
+        proposalTitle: string;
+        viewerEmail: string;
+        viewerName?: string | null;
+        companyName?: string | null;
+        slackChannelId?: string | null;
+      };
     };
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -213,22 +268,23 @@ async function pinMessage(channelId: string, messageTs: string): Promise<void> {
   }
 }
 
-// ── Post to #fna-alerts ─────────────────────────────────────────────────────
+// ── Post to named channels ──────────────────────────────────────────────────
 
-const ALERTS_CHANNEL = 'fna-alerts';
-
-async function sendToAlerts(blocks: Block[]): Promise<void> {
+async function postToNamedChannel(channelName: string, blocks: Block[], text = 'FNA Dashboard notification'): Promise<void> {
   const client = getSlackClient();
   if (!client) return;
 
-  // Find the alerts channel by name
-  const channelId = await findChannelByName(ALERTS_CHANNEL);
+  const channelId = await findChannelByName(channelName);
   if (!channelId) {
-    console.warn(`[Slack] #${ALERTS_CHANNEL} channel not found`);
+    console.warn(`[Slack] #${channelName} channel not found`);
     return;
   }
 
-  await postToChannel(channelId, blocks, 'FNA Dashboard notification');
+  await postToChannel(channelId, blocks, text);
+}
+
+async function sendToAlerts(blocks: Block[]): Promise<void> {
+  await postToNamedChannel('fna-alerts', blocks);
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -363,6 +419,71 @@ function formatMessage(event: SlackEvent): Block[] {
       return blocks;
     }
 
+    case 'contract_sent': {
+      const { contractId, title, contractType, signers } = event.data;
+      const signerList = signers.map((s) => `${s.name} (${s.email})`).join('\n');
+      const blocks: Block[] = [
+        { type: 'header', text: { type: 'plain_text', text: ':outbox_tray:  Contract Sent for Signing', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${title}*` } },
+      ];
+      pushIf(blocks, fieldPair(['Type', contractType.toUpperCase()], ['Signers', String(signers.length)]));
+      blocks.push({
+        type: 'section',
+        text: { type: 'mrkdwn', text: `*Sent to:*\n${signerList}` },
+      });
+      blocks.push({ type: 'divider' }, linkBlock(adminUrl(`/admin/contracts?open=${contractId}`)), footerBlock());
+      return blocks;
+    }
+
+    case 'contract_voided': {
+      const { contractId, title, reason } = event.data;
+      const blocks: Block[] = [
+        { type: 'header', text: { type: 'plain_text', text: ':no_entry_sign:  Contract Voided', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${title}*` } },
+      ];
+      if (reason) {
+        blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Reason:*\n${reason}` } });
+      }
+      blocks.push({ type: 'divider' }, linkBlock(adminUrl(`/admin/contracts?open=${contractId}`)), footerBlock());
+      return blocks;
+    }
+
+    case 'proposal_viewed': {
+      const { proposalId, title, viewerEmail, viewerName } = event.data;
+      const viewer = viewerName ? `${viewerName} (${viewerEmail})` : viewerEmail;
+      const blocks: Block[] = [
+        { type: 'header', text: { type: 'plain_text', text: ':eyes:  Proposal Viewed', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${title}*` } },
+      ];
+      pushIf(blocks, fieldPair(['Viewed by', viewer]));
+      blocks.push({ type: 'divider' }, linkBlock(adminUrl(`/admin/proposals?open=${proposalId}`)), footerBlock());
+      return blocks;
+    }
+
+    case 'pricing_lead': {
+      const { name, email, company, timeline, source } = event.data;
+      const blocks: Block[] = [
+        { type: 'header', text: { type: 'plain_text', text: ':bar_chart:  New Pricing Lead', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${name}*${company ? ` — ${company}` : ''}` } },
+      ];
+      pushIf(blocks, fieldPair(['Email', email], ['Timeline', timeline]));
+      pushIf(blocks, fieldPair(['Source', source === 'gate' ? 'Calculator gate' : 'Save quote']));
+      blocks.push({ type: 'divider' }, footerBlock());
+      return blocks;
+    }
+
+    case 'portal_login': {
+      const { slug, proposalTitle, viewerEmail, viewerName } = event.data;
+      const viewer = viewerName ? `${viewerName} (${viewerEmail})` : viewerEmail;
+      const blocks: Block[] = [
+        { type: 'header', text: { type: 'plain_text', text: ':wave:  Client Portal Login', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${proposalTitle}*` } },
+      ];
+      pushIf(blocks, fieldPair(['Logged in as', viewer]));
+      blocks.push({ type: 'divider' }, linkBlock(adminUrl(`/p/${slug}`), 'View Proposal'), footerBlock());
+      return blocks;
+    }
+
     case 'transcript_ready': {
       return [
         { type: 'header', text: { type: 'plain_text', text: ':page_facing_up:  Meeting Transcript Ready', emoji: true } },
@@ -444,13 +565,26 @@ async function _send(event: SlackEvent): Promise<string | null> {
       return null;
     }
 
-    case 'contract_viewed':
-    case 'contract_signed':
-    case 'contract_declined': {
+    case 'contract_viewed': {
       const { slackChannelId, companyName } = event.data;
       const channelId = await resolveClientChannel(slackChannelId, companyName);
       if (channelId) {
-        await postToChannel(channelId, blocks, `Contract event: ${event.type}`);
+        await postToChannel(channelId, blocks, `Contract viewed`);
+      } else {
+        await sendToAlerts(blocks);
+      }
+      return null;
+    }
+
+    case 'contract_signed':
+    case 'contract_declined':
+    case 'contract_sent':
+    case 'contract_voided': {
+      const { slackChannelId, companyName } = event.data;
+      const channelId = await resolveClientChannel(slackChannelId, companyName);
+      if (channelId) {
+        const ts = await postToChannel(channelId, blocks, `Contract event: ${event.type}`);
+        if (ts) await pinMessage(channelId, ts);
       } else {
         await sendToAlerts(blocks);
       }
@@ -460,10 +594,38 @@ async function _send(event: SlackEvent): Promise<string | null> {
     case 'proposal_created': {
       const channelId = await resolveClientChannel(null, event.data.company);
       if (channelId) {
-        await postToChannel(channelId, blocks, `New proposal: ${event.data.title}`);
+        const ts = await postToChannel(channelId, blocks, `New proposal: ${event.data.title}`);
+        if (ts) await pinMessage(channelId, ts);
       } else {
         await sendToAlerts(blocks);
       }
+      return null;
+    }
+
+    case 'proposal_viewed': {
+      const { slackChannelId, companyName } = event.data;
+      const channelId = await resolveClientChannel(slackChannelId, companyName);
+      if (channelId) {
+        await postToChannel(channelId, blocks, `Proposal viewed by ${event.data.viewerEmail}`);
+      } else {
+        await sendToAlerts(blocks);
+      }
+      return null;
+    }
+
+    case 'portal_login': {
+      const { slackChannelId, companyName } = event.data;
+      const channelId = await resolveClientChannel(slackChannelId, companyName);
+      if (channelId) {
+        await postToChannel(channelId, blocks, `Portal login: ${event.data.viewerEmail}`);
+      } else {
+        await sendToAlerts(blocks);
+      }
+      return null;
+    }
+
+    case 'pricing_lead': {
+      await postToNamedChannel('alerts', blocks, `New pricing lead: ${event.data.name}`);
       return null;
     }
 

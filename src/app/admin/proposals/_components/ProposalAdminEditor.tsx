@@ -2,9 +2,8 @@
 
 import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save, Eye, ChevronDown } from 'lucide-react';
-import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
-import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import type { LucideIcon } from 'lucide-react';
 import { deleteProposal, updateProposal, type ClientRow } from '@/app/admin/actions';
 import { DetailsTab } from './tabs/DetailsTab';
@@ -78,16 +77,36 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const pricingRef = useRef<PricingTabHandle>(null);
   const [activeTab, setActiveTab] = useState<TabId>('details');
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmClose, setConfirmClose] = useState(false);
-  const autoSave = useAutoSave(async () => {
-    await Promise.all([
-      detailsRef.current?.save(),
-      welcomeRef.current?.save(),
-      approachRef.current?.save(),
-      pricingRef.current?.save(),
-    ]);
-  });
-  const handleDirty = useCallback(() => autoSave.trigger(), [autoSave]);
+  const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Tabs self-save on their own timers; this just tracks visual status for SaveDot
+  const handleDirty = useCallback(() => {
+    setSaveStatus('pending');
+    clearTimeout(savedTimerRef.current);
+    // Tabs auto-save after ~600ms; show "saved" after a reasonable delay
+    savedTimerRef.current = setTimeout(() => {
+      setSaveStatus('saved');
+      savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+    }, 1200);
+  }, []);
+
+  const handleFlush = useCallback(async () => {
+    setSaveStatus('saving');
+    try {
+      await Promise.all([
+        detailsRef.current?.save(),
+        welcomeRef.current?.save(),
+        approachRef.current?.save(),
+        pricingRef.current?.save(),
+      ].filter(Boolean));
+      setSaveStatus('saved');
+      clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('error');
+    }
+  }, []);
 
   const handleStatusChange = useCallback(async (newStatus: 'draft' | 'sent') => {
     setStatus(newStatus);
@@ -96,19 +115,14 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   }, [proposal.id]);
 
   const handleClose = useCallback(() => {
-    const dirty = autoSave.hasPending || [
-      detailsRef.current?.isDirty,
-      welcomeRef.current?.isDirty,
-      approachRef.current?.isDirty,
-      pricingRef.current?.isDirty,
-    ].some(Boolean);
-
-    if (dirty) {
-      setConfirmClose(true);
-    } else {
-      onClose?.();
-    }
-  }, [onClose, autoSave.hasPending]);
+    // Flush any pending tab saves, then close
+    void Promise.all([
+      detailsRef.current?.save(),
+      welcomeRef.current?.save(),
+      approachRef.current?.save(),
+      pricingRef.current?.save(),
+    ].filter(Boolean)).finally(() => onClose?.());
+  }, [onClose]);
 
   const handleTabChange = useCallback((tab: TabId) => {
     setActiveTab(tab);
@@ -134,12 +148,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
 
   return (
     <div className="flex flex-col h-full relative">
-      <DiscardChangesDialog
-        open={confirmClose}
-        onKeepEditing={() => setConfirmClose(false)}
-        onDiscard={() => { setConfirmClose(false); autoSave.reset(); onClose?.(); }}
-      />
-
       {/* Header: title + meta (left) | views + status + X (right) */}
       <div className="flex-shrink-0 px-8 pt-6 pb-4 border-b border-admin-border">
         <div className="flex items-start justify-between gap-4">
@@ -150,7 +158,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             </p>
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
-            <SaveDot status={autoSave.status} />
+            <SaveDot status={saveStatus} />
             <span className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs whitespace-nowrap ${
               viewCount > 0 ? 'bg-admin-bg-selected text-admin-text-dim' : 'bg-admin-bg-selected text-admin-text-ghost'
             }`}>
@@ -273,7 +281,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
       <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-admin-border bg-admin-bg-wash">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => void autoSave.flush()}
+            onClick={() => void handleFlush()}
             className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
           >
             <Save size={14} />

@@ -477,7 +477,7 @@ export function ProposalDocument({ data }: ProposalDocumentProps) {
                             )}
                             {postRaise > 0 && (
                               <View style={[S.paymentRow, { marginTop: 4 }]}>
-                                <Text style={S.balanceLabel}>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> fundraising</Text>
+                                <Text style={S.balanceLabel}>{Math.round((1 - fnaQuote.down_amount / fnaQuote.total_amount) * 100)}% due <Text style={{ textDecoration: 'underline' }}>after raise</Text></Text>
                                 <Text style={S.balanceAmount}>{fmt(postRaise)}</Text>
                               </View>
                             )}
@@ -489,9 +489,12 @@ export function ProposalDocument({ data }: ProposalDocumentProps) {
                       })() : fnaQuote.total_amount != null && (
                         <View style={[S.paymentRow, { marginTop: 6 }]}>
                           <Text style={S.balanceLabel}>
-                            {fnaQuote.crowdfunding_enabled && fnaQuote.defer_payment ? <>Balance due <Text style={{ textDecoration: 'underline' }}>after</Text> crowdfunding raise</>
-                              : fnaQuote.crowdfunding_enabled ? <>Balance due <Text style={{ textDecoration: 'underline' }}>before</Text> crowdfunding launch</>
-                              : 'Balance due upon delivery'}
+                            {(() => {
+                              const rp = Math.round((1 - fnaQuote.down_amount / fnaQuote.total_amount) * 100);
+                              if (fnaQuote.crowdfunding_enabled && fnaQuote.defer_payment) return <>{rp}% due <Text style={{ textDecoration: 'underline' }}>after raise</Text></>;
+                              if (fnaQuote.crowdfunding_enabled) return <>{rp}% due <Text style={{ textDecoration: 'underline' }}>before launch</Text></>;
+                              return `${rp}% due upon delivery`;
+                            })()}
                           </Text>
                           <Text style={S.balanceAmount}>{fmt(fnaQuote.total_amount - fnaQuote.down_amount)}</Text>
                         </View>

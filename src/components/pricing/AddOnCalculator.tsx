@@ -1072,7 +1072,7 @@ export function AddOnCalculator() {
       if (!isNaN(count)) {
         interactionCount.current = count;
         // If they left while the gate was showing, show it again immediately
-        if (count >= 10) {
+        if (count >= 5) {
           setShowGate(true);
         }
       }
@@ -1092,14 +1092,14 @@ export function AddOnCalculator() {
   }, []);
 
   const handleGateDismiss = useCallback(() => {
-    persistCount(9); // next interaction immediately re-triggers gate
+    persistCount(4); // next interaction immediately re-triggers gate
     setShowGate(false);
   }, []);
 
   // Returns true if the gate was triggered (caller should bail out)
   const checkGate = useCallback((): boolean => {
     persistCount(interactionCount.current + 1);
-    if (interactionCount.current >= 10 && !gateCleared) {
+    if (interactionCount.current >= 5 && !gateCleared) {
       setShowGate(true);
       return true;
     }

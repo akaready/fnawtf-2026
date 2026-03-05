@@ -243,6 +243,14 @@ export async function batchDeleteContracts(ids: string[]) {
 
 export async function voidContract(id: string, reason?: string) {
   const { supabase, userEmail } = await requireAuth();
+
+  // Fetch contract + client for Slack notification
+  const { data: contractData } = await supabase
+    .from('contracts')
+    .select('id, title, client:clients(company, slack_channel_id)')
+    .eq('id', id)
+    .single();
+
   const { error } = await supabase
     .from('contracts')
     .update({ status: 'voided', updated_at: new Date().toISOString() } as never)
@@ -255,6 +263,20 @@ export async function voidContract(id: string, reason?: string) {
     actor_email: userEmail,
     metadata: { reason: reason || null },
   } as never);
+
+  if (contractData) {
+    const cd = contractData as { id: string; title: string; client?: { company?: string; slack_channel_id?: string } | null };
+    notifySlack({
+      type: 'contract_voided',
+      data: {
+        contractId: id,
+        title: cd.title,
+        reason: reason || null,
+        companyName: cd.client?.company ?? null,
+        slackChannelId: cd.client?.slack_channel_id ?? null,
+      },
+    });
+  }
 
   revalidatePath('/admin/contracts');
 }
@@ -393,14 +415,14 @@ export async function getContractEvents(contractId: string): Promise<ContractEve
 export async function sendContractForSigning(contractId: string) {
   const { supabase, userEmail } = await requireAuth();
 
-  // Load contract + signers
+  // Load contract + signers + client (for Slack routing)
   const { data: contract, error: cErr } = await supabase
     .from('contracts')
-    .select('*, signers:contract_signers(*)')
+    .select('*, signers:contract_signers(*), client:clients(company, slack_channel_id)')
     .eq('id', contractId)
     .single();
   if (cErr) throw new Error(cErr.message);
-  const c = contract as ContractRow;
+  const c = contract as ContractRow & { client?: { company?: string; slack_channel_id?: string } | null };
   if (!c.signers || c.signers.length === 0) throw new Error('No signers added');
   if (!c.body) throw new Error('Contract body is empty');
 
@@ -454,6 +476,18 @@ export async function sendContractForSigning(contractId: string) {
     actor_email: userEmail,
     metadata: { signwell_document_id: result.documentId },
   } as never);
+
+  notifySlack({
+    type: 'contract_sent',
+    data: {
+      contractId,
+      title: c.title,
+      contractType: c.contract_type,
+      signers: c.signers.map((s) => ({ name: s.name, email: s.email, role: s.role || 'signer' })),
+      companyName: c.client?.company ?? null,
+      slackChannelId: c.client?.slack_channel_id ?? null,
+    },
+  });
 
   revalidatePath('/admin/contracts');
 }
