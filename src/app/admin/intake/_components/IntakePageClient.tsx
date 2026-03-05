@@ -106,6 +106,12 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatCurrency(value: string) {
+  const num = parseFloat(value.replace(/[^0-9.]/g, ''));
+  if (isNaN(num)) return value;
+  return num.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}
+
 /** Extract YouTube video ID from a URL */
 function extractYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
@@ -407,6 +413,8 @@ function IntakeDetailPanel({
   const [tab, setTab] = useState<DetailTab>('overview');
   const stakeholderEntries = s.stakeholders ? parseStakeholders(s.stakeholders) : [];
   const tl = TIMELINE_COLORS[s.timeline] || TIMELINE_COLORS.unsure;
+  const hasFiles = s.file_urls.length > 0;
+  const visibleTabs = hasFiles ? DETAIL_TABS : DETAIL_TABS.filter((t) => t.key !== 'files');
 
   return (
     <>
@@ -416,39 +424,37 @@ function IntakeDetailPanel({
           <Link2 size={16} className="text-admin-text-faint" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-admin-text-primary truncate">{s.project_name}</h2>
-            <SaveDot status={saveStatus} />
-          </div>
-          <div className="flex items-center gap-2 min-w-0">
-            {s.company_name && (
-              <span className="text-sm text-admin-text-muted truncate">{s.company_name}</span>
-            )}
-            {s.company_name && <span className="text-admin-text-dim">·</span>}
-            <AdminCombobox
-              value={s.status}
-              options={Object.entries(INTAKE_STATUSES).map(([val, { label }]) => ({ id: val, label }))}
-              onChange={(v) => { if (v) onStatusChange(v); }}
-              nullable={false}
-              searchable={false}
-            />
-          </div>
+          <h2 className="text-lg font-semibold text-admin-text-primary truncate">{s.project_name}</h2>
+          {s.company_name && (
+            <p className="text-sm text-admin-text-muted truncate">{s.company_name}</p>
+          )}
         </div>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0">
-          <X size={16} />
-        </button>
+        <AdminCombobox
+          value={s.status}
+          options={Object.entries(INTAKE_STATUSES).map(([val, { label }]) => ({ id: val, label }))}
+          onChange={(v) => { if (v) onStatusChange(v); }}
+          nullable={false}
+          searchable={false}
+        />
+        <div className="flex items-center flex-shrink-0">
+          <SaveDot status={saveStatus} />
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Tab strip */}
       <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-wash">
-        {DETAIL_TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.key}
+            type="button"
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
               tab === t.key
                 ? 'bg-admin-bg-active text-admin-text-primary'
-                : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'
+                : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover'
             }`}
           >
             {t.label}
@@ -510,10 +516,6 @@ function IntakeDetailPanel({
                 </div>
               </div>
             )}
-
-            <DetailBlock label="One-Liner" value={s.pitch} />
-            <DetailBlock label="What Excites Them" value={s.excitement} />
-            <DetailBlock label="Key Feature" value={s.key_feature} />
 
             <hr className="border-admin-border-subtle" />
 
@@ -603,6 +605,9 @@ function IntakeDetailPanel({
         {/* ════════ CREATIVE TAB ════════ */}
         {tab === 'creative' && (
           <>
+            <DetailBlock label="One-Liner" value={s.pitch} />
+            <DetailBlock label="What Excites Them" value={s.excitement} />
+            <DetailBlock label="Key Feature" value={s.key_feature} />
             <DetailBlock label="Vision" value={s.vision} />
             <DetailBlock label="What to Avoid" value={s.avoid} />
             <DetailBlock label="Target Audience" value={s.audience} />
@@ -709,7 +714,7 @@ function IntakeDetailPanel({
             )}
 
             {/* Empty state */}
-            {!s.vision && !s.avoid && !s.audience && !s.challenge && s.deliverables.length === 0 && !s.video_links && (!s.competitors || s.competitors.length === 0) && (
+            {!s.pitch && !s.excitement && !s.key_feature && !s.vision && !s.avoid && !s.audience && !s.challenge && s.deliverables.length === 0 && !s.video_links && (!s.competitors || s.competitors.length === 0) && (
               <p className="text-sm text-admin-text-dim text-center py-8">No creative details provided</p>
             )}
           </>
@@ -722,8 +727,8 @@ function IntakeDetailPanel({
             {s.phases?.includes('crowdfunding') && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <DetailBlock label="Public Goal" value={s.public_goal} />
-                  <DetailBlock label="Internal Goal" value={s.internal_goal} />
+                  <DetailBlock label="Public Goal" value={s.public_goal ? formatCurrency(s.public_goal) : null} />
+                  <DetailBlock label="Internal Goal" value={s.internal_goal ? formatCurrency(s.internal_goal) : null} />
                 </div>
                 <DetailBlock label="Email List Size" value={s.email_list_size} />
                 <hr className="border-admin-border-subtle" />
