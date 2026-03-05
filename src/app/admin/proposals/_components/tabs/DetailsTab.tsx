@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from 'react';
-import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { useState, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { RefreshCw, Plus, X, UserPlus, Mail, Building2, Copy, Check } from 'lucide-react';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
@@ -22,7 +21,6 @@ interface DetailsTabProps {
   proposalContacts: (ContactRow & { pivot_id: string })[];
   clients: ClientRow[];
   onUpdated: () => void;
-  onSaveStateChange?: (isPending: boolean, saved: boolean) => void;
   onProposalTypeChange?: (type: ProposalType) => void;
   onDirty?: () => void;
 }
@@ -62,7 +60,7 @@ const inputCls = 'admin-input w-full';
 const sectionHeadingCls = 'text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4';
 
 export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function DetailsTab(
-  { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onSaveStateChange, onProposalTypeChange, onDirty },
+  { proposal, contacts, proposalContacts: initialProposalContacts, clients: initialClients, onUpdated, onProposalTypeChange, onDirty },
   ref,
 ) {
   const contactName = proposal.contact_name;
@@ -76,12 +74,12 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   const [slugCopied, setSlugCopied] = useState(false);
   const [preparedDate, setPreparedDate] = useState(proposal.prepared_date ?? '');
 
-  // Auto-save state ref + hook
+  // Save state — no local autoSave; parent coordinates all saves
   const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate });
-  useEffect(() => { stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate }; });
+  stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate };
   const isDirtyRef = useRef(false);
 
-  const autoSave = useAutoSave(async () => {
+  const save = useCallback(async () => {
     const s = stateRef.current;
     await updateProposal(proposal.id, {
       contact_name: s.contactName.trim(),
@@ -97,8 +95,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
     isDirtyRef.current = false;
     onProposalTypeChange?.(s.proposalType);
     onUpdated();
-  });
-  const markDirty = useCallback(() => { isDirtyRef.current = true; autoSave.trigger(); onDirty?.(); }, [autoSave, onDirty]);
+  }, [proposal.id, onProposalTypeChange, onUpdated]);
+  const markDirty = useCallback(() => { isDirtyRef.current = true; onDirty?.(); }, [onDirty]);
 
   // Company search state
   const [clients, setClients] = useState(initialClients);
@@ -268,13 +266,9 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   }, [newFirstName, newLastName, newEmail, newPhone, newRole, newCompany, newType, newNotes, newWebsite, newLinkedin, newInstagram, newImdb, proposal.id, resetNewContactForm]);
 
   useImperativeHandle(ref, () => ({
-    save: () => autoSave.flush(),
+    save,
     get isDirty() { return isDirtyRef.current; },
-  }));
-
-  useEffect(() => {
-    onSaveStateChange?.(autoSave.status === 'saving', autoSave.status === 'saved');
-  }, [autoSave.status]);
+  }), [save]);
 
   return (
     <div className="px-8 py-8">
