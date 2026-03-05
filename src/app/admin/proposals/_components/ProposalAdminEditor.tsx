@@ -16,12 +16,14 @@ import { TimelineTab } from './tabs/TimelineTab';
 import { SamplesTab } from './tabs/SamplesTab';
 import { PricingTab } from './tabs/PricingTab';
 import type { PricingTabHandle } from './tabs/PricingTab';
+import { ViewsTab } from './tabs/ViewsTab';
+import type { ProposalViewRow } from '@/app/admin/actions';
 import type {
   ProposalRow, ContactRow, ContentSnippetRow, ProposalSectionRow,
   ProposalMilestoneRow, ProposalQuoteRow, BrowserProject, ProposalProjectWithProject,
 } from '@/types/proposal';
 
-const TABS = ['details', 'welcome', 'approach', 'timeline', 'samples', 'pricing'] as const;
+const TABS = ['details', 'welcome', 'approach', 'timeline', 'samples', 'pricing', 'views'] as const;
 type TabId = typeof TABS[number];
 
 const TAB_ICONS: Record<TabId, LucideIcon> = {
@@ -31,6 +33,7 @@ const TAB_ICONS: Record<TabId, LucideIcon> = {
   timeline: Calendar,
   samples: Play,
   pricing: DollarSign,
+  views: Eye,
 };
 
 export interface ProposalEditorHandle {
@@ -48,6 +51,7 @@ interface Props {
   quotes: ProposalQuoteRow[];
   allProjects: BrowserProject[];
   proposalProjects: ProposalProjectWithProject[];
+  views: ProposalViewRow[];
   viewCount?: number;
   onClose?: () => void;
   onDelete?: (id: string) => void;
@@ -63,7 +67,7 @@ const STATUS_BADGE: Record<string, string> = {
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
-  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated,
+  milestones, quotes, allProjects, proposalProjects, views, viewCount = 0, onClose, onDelete, onUpdated,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
@@ -113,7 +117,8 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
     setStatus(newStatus);
     setStatusOpen(false);
     await updateProposal(proposal.id, { status: newStatus });
-  }, [proposal.id]);
+    onUpdated?.({ status: newStatus });
+  }, [proposal.id, onUpdated]);
 
   const handleClose = useCallback(() => {
     // Flush any pending tab saves, then close
@@ -276,6 +281,9 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             onProposalTypeChange={(type) => setProposalType(type)}
             onDirty={handleDirty}
           />
+        </div>
+        <div className={activeTab === 'views' ? 'h-full overflow-y-auto admin-scrollbar' : 'hidden'}>
+          <ViewsTab views={views} />
         </div>
       </div>
 

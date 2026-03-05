@@ -14,6 +14,7 @@ import { ProcessSlide } from '@/components/proposal/slides/ProcessSlide';
 import { NextStepsSlide } from '@/components/proposal/slides/NextStepsSlide';
 import { ProposalProgressDots } from '@/components/proposal/ProposalProgressDots';
 import { ProposalNavArrows } from '@/components/proposal/ProposalNavArrows';
+import { startViewSession, updateViewDuration } from './actions';
 import type { ProposalRow, ProposalSectionRow, ProposalQuoteRow, ProposalMilestoneRow, ProposalVideo } from '@/types/proposal';
 
 interface Props {
@@ -38,6 +39,41 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   const hasQuotes   = quotes.length > 0;
 
   const [showExitOverlay, setShowExitOverlay] = useState(false);
+
+  // ── View duration heartbeat ────────────────────────────────
+  useEffect(() => {
+    let viewId: string | null = null;
+    let elapsed = 0;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let visible = true;
+
+    async function init() {
+      viewId = await startViewSession(proposal.id, viewerEmail);
+      if (!viewId) return;
+      timer = setInterval(() => {
+        if (!visible || !viewId) return;
+        elapsed += 30;
+        void updateViewDuration(viewId, elapsed);
+      }, 30_000);
+    }
+
+    function onVisibility() {
+      visible = document.visibilityState === 'visible';
+    }
+
+    document.addEventListener('visibilitychange', onVisibility);
+    void init();
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (timer) clearInterval(timer);
+      // Final update on unmount
+      if (viewId && elapsed > 0) {
+        void updateViewDuration(viewId, elapsed);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Exit handler ───────────────────────────────────────────
   const handleExit = useCallback(() => {
@@ -79,7 +115,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     'Title',
     ...(welcomeSection?.custom_content  ? ['Welcome']  : []),
     'Process',
-    ...(approachSection?.custom_content ? ['Approach'] : []),
+    ...(proposal.show_approach && approachSection?.custom_content ? ['Approach'] : []),
     ...(hasSchedule                     ? ['Timeline'] : []),
     ...(validVideos.length > 0          ? ['Samples']  : []),
     ...validVideos.map((v: ProposalVideo) => v.project_video?.project?.title ?? 'Project'),
@@ -96,7 +132,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
     titleRef,
     ...(welcomeSection?.custom_content  ? [welcomeRef]    : []),
     processRef,
-    ...(approachSection?.custom_content ? [approachRef]   : []),
+    ...(proposal.show_approach && approachSection?.custom_content ? [approachRef]   : []),
     ...(hasSchedule                     ? [scheduleRef]   : []),
     ...(validVideos.length > 0          ? [samplesIntroRef] : []),
     ...(videoSlideRefs as React.RefObject<HTMLElement>[]),
@@ -238,7 +274,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
 
         <ProcessSlide slideRef={processRef} />
 
-        {approachSection?.custom_content && (
+        {proposal.show_approach && approachSection?.custom_content && (
           <ApproachSlide section={approachSection} slideRef={approachRef} />
         )}
 

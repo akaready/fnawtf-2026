@@ -253,3 +253,24 @@ export async function updateMilestoneDate(milestoneId: string, newStartDate: str
     .eq('id', milestoneId);
   if (error) throw new Error(error.message);
 }
+
+export async function startViewSession(proposalId: string, viewerEmail: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('proposal_views')
+    .select('id')
+    .eq('proposal_id', proposalId)
+    .eq('viewer_email', viewerEmail)
+    .order('viewed_at', { ascending: false })
+    .limit(1)
+    .single();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+export async function updateViewDuration(viewId: string, durationSeconds: number) {
+  const supabase = await createClient();
+  await supabase
+    .from('proposal_views')
+    .update({ duration_seconds: durationSeconds } as never)
+    .eq('id', viewId);
+}

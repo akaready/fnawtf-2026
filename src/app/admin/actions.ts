@@ -1000,6 +1000,23 @@ export async function getProposalViewCounts(): Promise<Record<string, { views: n
   return result;
 }
 
+export interface ProposalViewRow {
+  id: string;
+  viewer_email: string | null;
+  viewed_at: string;
+  duration_seconds: number | null;
+}
+
+export async function getProposalViews(proposalId: string): Promise<ProposalViewRow[]> {
+  const { supabase } = await requireAuth();
+  const { data } = await supabase
+    .from('proposal_views')
+    .select('id, viewer_email, viewed_at, duration_seconds')
+    .eq('proposal_id', proposalId)
+    .order('viewed_at', { ascending: false });
+  return (data ?? []) as ProposalViewRow[];
+}
+
 // ── Contacts ─────────────────────────────────────────────────────────────
 
 export async function getContacts(): Promise<import('@/types/proposal').ContactRow[]> {
