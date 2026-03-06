@@ -150,7 +150,7 @@ function AdminShellInner({ children, userEmail }: Props) {
   ];
 
   return (
-    <div className={`admin-shell flex h-screen bg-admin-bg-base text-admin-text-primary overflow-hidden${theme === 'light' ? ' light-mode' : ''}`}>
+    <div className="admin-shell flex h-screen bg-admin-bg-base text-admin-text-primary overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${

@@ -247,15 +247,11 @@ html::-webkit-scrollbar {
 }
 
 /* ─── Admin light mode (CSS inversion) ──────────────────────────────────── */
-.admin-shell.light-mode,
 html[data-admin-light] .admin-shell {
   filter: invert(1) hue-rotate(180deg);
 }
 
 /* Counter-invert images, videos, and media so they render normally */
-.admin-shell.light-mode img,
-.admin-shell.light-mode video,
-.admin-shell.light-mode .no-invert,
 html[data-admin-light] .admin-shell img,
 html[data-admin-light] .admin-shell video,
 html[data-admin-light] .admin-shell .no-invert {
@@ -263,7 +259,6 @@ html[data-admin-light] .admin-shell .no-invert {
 }
 
 /* Client logos: stay inverted with the shell (white PNG → black in light mode) */
-.admin-shell.light-mode .admin-logo,
 html[data-admin-light] .admin-shell .admin-logo {
   filter: none;
 }
