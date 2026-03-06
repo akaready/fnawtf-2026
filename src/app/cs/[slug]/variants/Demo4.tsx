@@ -267,18 +267,29 @@ export function Demo4({ data }: { data: CallSheetData }) {
               <p className="text-sm uppercase tracking-wider font-bold text-[var(--admin-accent)] mb-3">
                 Set Contact
               </p>
-              <p className="font-[family-name:var(--font-display)] font-bold text-base">
-                {production.keyCrew.find(k => k.role === 'Producer')?.name || 'Production Office'}
-              </p>
-              <div className="flex flex-col gap-1.5 mt-3">
-                <a href="tel:+13105550102" className="flex items-center gap-2 text-base hover:text-[var(--admin-accent)] transition-colors">
-                  <Phone className="w-4 h-4 text-[var(--admin-accent)]" />
-                  <span>(310) 555-0102</span>
-                </a>
-                <a href="mailto:hi@fna.wtf" className="flex items-center gap-2 text-base hover:text-[var(--admin-accent)] transition-colors">
-                  <Mail className="w-4 h-4 text-[var(--admin-accent)]" />
-                  <span>hi@fna.wtf</span>
-                </a>
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <p className="font-[family-name:var(--font-display)] font-bold text-base">
+                    Ol&apos; Richie
+                  </p>
+                  <div className="flex flex-col gap-1.5 mt-3">
+                    <a href="tel:+13105550102" className="flex items-center gap-2 text-base hover:text-[var(--admin-accent)] transition-colors">
+                      <Phone className="w-4 h-4 text-[var(--admin-accent)]" />
+                      <span>(310) 555-0102</span>
+                    </a>
+                    <a href="mailto:hi@fna.wtf" className="flex items-center gap-2 text-base hover:text-[var(--admin-accent)] transition-colors">
+                      <Mail className="w-4 h-4 text-[var(--admin-accent)]" />
+                      <span>hi@fna.wtf</span>
+                    </a>
+                  </div>
+                </div>
+                <Image
+                  src="/images/about/richie.jpg"
+                  alt="Richie"
+                  width={56}
+                  height={56}
+                  className="w-14 h-14 rounded-full object-cover shrink-0"
+                />
               </div>
             </div>
           </div>
@@ -676,7 +687,7 @@ export function Demo4({ data }: { data: CallSheetData }) {
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-10">
               {[
-                { name: 'Richie', headshot: '/images/about/richie.jpg' },
+                { name: "Ol' Richie", headshot: '/images/about/richie.jpg' },
                 { name: 'Ready', headshot: '/images/about/ready.jpg' },
               ].map((person) => (
                 <div key={person.name} className="flex flex-col items-center gap-2">
