@@ -354,6 +354,26 @@ export function Demo4({ data }: { data: CallSheetData }) {
                       </a>
                     </div>
                   )}
+
+                  {/* Location photo gallery */}
+                  <div className="grid grid-cols-4 gap-1.5 mt-3">
+                    {[
+                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/000.webp', alt: 'Treehouse living room with wooden beams' },
+                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/001.webp', alt: 'Living room with green sofa and brick fireplace' },
+                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/002.webp', alt: 'Living room with fireplace and deck view' },
+                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/003.webp', alt: 'Fireplace with record player and wooden beams' },
+                    ].map((img) => (
+                      <div key={img.url} className="aspect-square rounded-md overflow-hidden">
+                        <Image
+                          src={img.url}
+                          alt={img.alt}
+                          width={120}
+                          height={120}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>
