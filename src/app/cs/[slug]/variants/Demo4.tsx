@@ -540,14 +540,14 @@ export function Demo4({ data }: { data: CallSheetData }) {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-3 shrink-0 pt-1">
+                    <div className="flex gap-5 shrink-0 pt-1">
                       {c.phone && (
-                        <a href={`tel:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary" title={c.phone}>
+                        <a href={`tel:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary p-1" title={c.phone}>
                           <Phone className="w-5 h-5" />
                         </a>
                       )}
                       {c.email && (
-                        <a href={`mailto:${c.email}`} className="text-admin-text-dim hover:text-admin-text-primary" title={c.email}>
+                        <a href={`mailto:${c.email}`} className="text-admin-text-dim hover:text-admin-text-primary p-1" title={c.email}>
                           <Mail className="w-5 h-5" />
                         </a>
                       )}
