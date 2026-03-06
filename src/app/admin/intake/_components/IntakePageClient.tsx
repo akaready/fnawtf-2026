@@ -2,10 +2,10 @@
 
 import { useState, useRef } from 'react';
 import {
-  ClipboardList, X, ExternalLink,
+  ClipboardList, X, ExternalLink, Download, Expand,
   Building2, User, FileText, Link2, UserPlus, Check,
   Hammer, Rocket, TrendingUp, Coins, BadgeDollarSign,
-  Send, Play,
+  Send, Play, Film, Table, File,
   // Deliverable icons
   Target, Type, Palette, Code, Globe, MailOpen, Megaphone,
   Star, Sparkles, Package, Eye, Heart, Briefcase, MessageSquare,
@@ -17,7 +17,10 @@ import {
 import { QuoteSummaryCard } from './QuoteSummaryCard';
 import { IntakeCompanyCard } from './IntakeCompanyCard';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
+import { AdminLightbox } from '../../_components/AdminLightbox';
+import { ImageActionButton } from '../../_components/ImageActionButton';
 import { AdminDataTable } from '../../_components/table/AdminDataTable';
+import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 import type { ColDef } from '../../_components/table/types';
 import { PanelDrawer } from '../../_components/PanelDrawer';
 import { SaveDot } from '../../_components/SaveDot';
@@ -158,6 +161,66 @@ function parseStakeholders(text: string): { name: string; email: string; title: 
     if (match) return { name: match[1].trim(), email: '', title: match[2].trim() };
     return { name: entry.trim(), email: '', title: '' };
   });
+}
+
+// ── File helpers ─────────────────────────────────────────────────────────────
+
+type FileCategory = 'image' | 'video' | 'document' | 'other';
+
+function categorizeFile(url: string): { category: FileCategory; ext: string } {
+  const ext = (url.split('.').pop() || '').toLowerCase().split('?')[0];
+  if (['jpg','jpeg','png','gif','webp','svg','heic'].includes(ext)) return { category: 'image', ext };
+  if (['mp4','mov','webm','avi','mkv'].includes(ext)) return { category: 'video', ext };
+  if (['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','rtf'].includes(ext)) return { category: 'document', ext };
+  return { category: 'other', ext };
+}
+
+function groupFiles(urls: string[]) {
+  const images: string[] = [];
+  const videos: string[] = [];
+  const documents: string[] = [];
+  const other: string[] = [];
+  for (const url of urls) {
+    const { category } = categorizeFile(url);
+    if (category === 'image') images.push(url);
+    else if (category === 'video') videos.push(url);
+    else if (category === 'document') documents.push(url);
+    else other.push(url);
+  }
+  return { images, videos, documents, other };
+}
+
+const DOC_ICONS: Record<string, React.ElementType> = {
+  pdf: FileText, doc: FileText, docx: FileText, txt: FileText, rtf: FileText,
+  xls: Table, xlsx: Table, csv: Table,
+  ppt: Briefcase, pptx: Briefcase,
+};
+
+async function downloadAllFiles(urls: string[], zipName: string) {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  const groups = groupFiles(urls);
+  let imgIdx = 0, vidIdx = 0, docIdx = 0, otherIdx = 0;
+  await Promise.all(urls.map(async (url) => {
+    const { category, ext } = categorizeFile(url);
+    let name: string;
+    if (category === 'image') name = `Image ${++imgIdx}.${ext}`;
+    else if (category === 'video') name = `Video ${++vidIdx}.${ext}`;
+    else if (category === 'document') name = `Document ${++docIdx}.${ext}`;
+    else name = `File ${++otherIdx}.${ext}`;
+    // Prefix with folder if multiple categories
+    const hasMultipleTypes = [groups.images, groups.videos, groups.documents, groups.other].filter(a => a.length > 0).length > 1;
+    const folder = hasMultipleTypes ? (category === 'image' ? 'Images/' : category === 'video' ? 'Videos/' : category === 'document' ? 'Documents/' : 'Other/') : '';
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    zip.file(`${folder}${name}`, blob);
+  }));
+  const content = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(content);
+  a.download = zipName;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -411,10 +474,15 @@ function IntakeDetailPanel({
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<DetailTab>('overview');
+  const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
+  const [downloading, setDownloading] = useState(false);
   const stakeholderEntries = s.stakeholders ? parseStakeholders(s.stakeholders) : [];
   const tl = TIMELINE_COLORS[s.timeline] || TIMELINE_COLORS.unsure;
   const hasFiles = s.file_urls.length > 0;
-  const visibleTabs = hasFiles ? DETAIL_TABS : DETAIL_TABS.filter((t) => t.key !== 'files');
+  const fileCount = s.file_urls.length;
+  const visibleTabs = hasFiles
+    ? DETAIL_TABS.map((t) => t.key === 'files' ? { ...t, label: `Files (${fileCount})` } : t)
+    : DETAIL_TABS.filter((t) => t.key !== 'files');
 
   return (
     <>
@@ -758,36 +826,138 @@ function IntakeDetailPanel({
         )}
 
         {/* ════════ FILES TAB ════════ */}
-        {tab === 'files' && (
-          <>
-            {s.file_urls.length > 0 ? (
-              <div>
-                <SectionLabel>Uploaded Files</SectionLabel>
-                <div className="space-y-1.5">
-                  {s.file_urls.map((url, i) => {
-                    const filename = url.split('/').pop() || `File ${i + 1}`;
-                    return (
-                      <a
-                        key={i}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-admin-border-subtle hover:bg-admin-bg-hover text-sm text-accent transition-colors"
-                      >
-                        <FileText className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate flex-1">{filename}</span>
-                        <ExternalLink className="w-3 h-3 text-admin-text-ghost" />
-                      </a>
-                    );
-                  })}
-                </div>
+        {tab === 'files' && (() => {
+          const grouped = groupFiles(s.file_urls);
+          const lightboxImages = grouped.images.map((url, i) => ({ url, label: `Image ${i + 1}` }));
+
+          return (
+            <>
+              {/* Header row with Download All */}
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-admin-text-muted">{s.file_urls.length} file{s.file_urls.length !== 1 ? 's' : ''}</p>
+                <button
+                  onClick={async () => {
+                    setDownloading(true);
+                    try {
+                      await downloadAllFiles(s.file_urls, `${s.project_name.replace(/[^a-zA-Z0-9]/g, '-')}-files.zip`);
+                    } finally { setDownloading(false); }
+                  }}
+                  disabled={downloading}
+                  className="btn-secondary px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
+                >
+                  <Download size={12} />
+                  {downloading ? 'Zipping...' : 'Download All'}
+                </button>
               </div>
-            ) : (
-              <p className="text-sm text-admin-text-dim text-center py-8">No files uploaded</p>
-            )}
-          </>
-        )}
+
+              {/* ── Images ── */}
+              {grouped.images.length > 0 && (
+                <div>
+                  <SectionLabel>Images ({grouped.images.length})</SectionLabel>
+                  <div className="grid grid-cols-3 gap-2">
+                    {grouped.images.map((url, i) => (
+                      <div
+                        key={url}
+                        className="group/img relative aspect-square rounded-admin-sm overflow-hidden bg-admin-bg-hover cursor-pointer"
+                        onClick={() => setLightbox({ images: lightboxImages, index: i })}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Image ${i + 1}`} className="w-full h-full object-cover" />
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100">
+                          <ImageActionButton icon={Expand} color="neutral" title="View fullscreen" onClick={() => setLightbox({ images: lightboxImages, index: i })} />
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <ImageActionButton icon={Download} color="info" title="Download" onClick={() => downloadSingleImage(url, `Image ${i + 1}.${categorizeFile(url).ext}`)} />
+                          </span>
+                        </div>
+                        {/* Extension badge */}
+                        <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-black/60 text-white/80">
+                          {categorizeFile(url).ext.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Videos ── */}
+              {grouped.videos.length > 0 && (
+                <div className={grouped.images.length > 0 ? 'mt-5' : ''}>
+                  <SectionLabel>Videos ({grouped.videos.length})</SectionLabel>
+                  <div className="space-y-1.5">
+                    {grouped.videos.map((url, i) => {
+                      const { ext } = categorizeFile(url);
+                      return (
+                        <div key={url} className="group/row flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-admin-border-subtle hover:bg-admin-bg-hover transition-colors">
+                          <Film className="w-4 h-4 text-admin-text-dim flex-shrink-0" />
+                          <span className="text-sm text-admin-text-primary flex-1">Video {i + 1}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-admin-bg-hover text-admin-text-dim">{ext.toUpperCase()}</span>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                            <ImageActionButton icon={ExternalLink} color="neutral" title="Open" variant="row" onClick={() => window.open(url, '_blank')} />
+                            <ImageActionButton icon={Download} color="info" title="Download" variant="row" onClick={() => downloadSingleImage(url, `Video ${i + 1}.${ext}`)} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Documents ── */}
+              {grouped.documents.length > 0 && (
+                <div className={(grouped.images.length > 0 || grouped.videos.length > 0) ? 'mt-5' : ''}>
+                  <SectionLabel>Documents ({grouped.documents.length})</SectionLabel>
+                  <div className="space-y-1.5">
+                    {grouped.documents.map((url, i) => {
+                      const { ext } = categorizeFile(url);
+                      const DocIcon = DOC_ICONS[ext] || FileText;
+                      return (
+                        <div key={url} className="group/row flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-admin-border-subtle hover:bg-admin-bg-hover transition-colors">
+                          <DocIcon className="w-4 h-4 text-admin-text-dim flex-shrink-0" />
+                          <span className="text-sm text-admin-text-primary flex-1">Document {i + 1}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-admin-bg-hover text-admin-text-dim">{ext.toUpperCase()}</span>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                            <ImageActionButton icon={ExternalLink} color="neutral" title="Open" variant="row" onClick={() => window.open(url, '_blank')} />
+                            <ImageActionButton icon={Download} color="info" title="Download" variant="row" onClick={() => downloadSingleImage(url, `Document ${i + 1}.${ext}`)} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Other ── */}
+              {grouped.other.length > 0 && (
+                <div className={(grouped.images.length > 0 || grouped.videos.length > 0 || grouped.documents.length > 0) ? 'mt-5' : ''}>
+                  <SectionLabel>Other ({grouped.other.length})</SectionLabel>
+                  <div className="space-y-1.5">
+                    {grouped.other.map((url, i) => {
+                      const { ext } = categorizeFile(url);
+                      return (
+                        <div key={url} className="group/row flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-admin-border-subtle hover:bg-admin-bg-hover transition-colors">
+                          <File className="w-4 h-4 text-admin-text-dim flex-shrink-0" />
+                          <span className="text-sm text-admin-text-primary flex-1">File {i + 1}</span>
+                          {ext && <span className="px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-admin-bg-hover text-admin-text-dim">{ext.toUpperCase()}</span>}
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                            <ImageActionButton icon={ExternalLink} color="neutral" title="Open" variant="row" onClick={() => window.open(url, '_blank')} />
+                            <ImageActionButton icon={Download} color="info" title="Download" variant="row" onClick={() => downloadSingleImage(url, `File ${i + 1}.${ext || 'bin'}`)} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <AdminLightbox images={lightbox.images} startIndex={lightbox.index} onClose={() => setLightbox(null)} />
+      )}
     </>
   );
 }
