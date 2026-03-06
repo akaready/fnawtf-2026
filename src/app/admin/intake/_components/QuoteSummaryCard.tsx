@@ -82,6 +82,7 @@ export function QuoteSummaryCard({ quoteData, budgetInteracted }: {
     created_at: '',
     updated_at: '',
     deleted_at: null,
+    viewer_email: null,
   };
 
   let computed: QuoteColumnData;

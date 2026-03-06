@@ -2,6 +2,9 @@
 // Creates dedicated channels for each client, posts rich Block Kit messages, pins intakes
 
 import { WebClient } from '@slack/web-api';
+import { calcTotalFromQuote } from '@/lib/pricing/calc';
+import type { ProposalQuoteRow } from '@/types/proposal';
+import { buildAddOns, launchAddOns, fundraisingIncluded, fundraisingAddOns } from '@/app/pricing/pricing-data';
 
 // ── Event Types ─────────────────────────────────────────────────────────────
 
@@ -11,15 +14,35 @@ export type SlackEvent =
       data: {
         name: string;
         email: string;
+        title?: string | null;
         company?: string | null;
+        companyUrl?: string | null;
         project: string;
         deliverables: string[];
         budget?: string | null;
         timeline?: string | null;
+        timelineDate?: string | null;
+        timelineNotes?: string | null;
         pitch?: string | null;
         phases?: string[] | null;
         experience?: string | null;
+        experienceNotes?: string | null;
         referral?: string | null;
+        excitement?: string | null;
+        keyFeature?: string | null;
+        vision?: string | null;
+        avoid?: string | null;
+        audience?: string | null;
+        challenge?: string | null;
+        priorityOrder?: string[] | null;
+        partners?: string[] | null;
+        partnerDetails?: string | null;
+        publicGoal?: string | null;
+        internalGoal?: string | null;
+        emailListSize?: string | null;
+        anythingElse?: string | null;
+        quoteData?: Record<string, unknown> | null;
+        budgetInteracted?: boolean;
       };
     }
   | {
@@ -340,40 +363,220 @@ function pushIf(blocks: Block[], block: Block | null): void {
 function formatMessage(event: SlackEvent): Block[] {
   switch (event.type) {
     case 'intake_submitted': {
-      const { name, email, company, project, deliverables, budget, timeline, pitch, phases, experience, referral } =
-        event.data;
+      const d = event.data;
+      const titleCase = (s: string) =>
+        s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
       const blocks: Block[] = [
         {
           type: 'header',
-          text: { type: 'plain_text', text: ':clipboard:  New Intake Submission', emoji: true },
+          text: { type: 'plain_text', text: ':inbox_tray:  New Intake Submission', emoji: true },
         },
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: `*${name}*${company ? ` — ${company}` : ''}` },
+          text: {
+            type: 'mrkdwn',
+            text: `*${d.name}*${d.title ? `, ${d.title}` : ''}${d.company ? `  \u2022  ${d.company}` : ''}`,
+          },
         },
       ];
-      pushIf(blocks, fieldPair(['Email', email], ['Project', project]));
-      pushIf(blocks, fieldPair(['Budget', budget], ['Timeline', timeline]));
+
+      // Contact + Project
       pushIf(blocks, fieldPair(
-        ['Phases', phases?.join(', ')],
-        ['Experience', experience],
+        [':email:  Email', d.email],
+        [':film_projector:  Project', d.project],
       ));
+
+      // Budget + Timeline
+      const timelineParts = [
+        d.timeline ? titleCase(d.timeline) : null,
+        d.timelineDate,
+        d.timelineNotes,
+      ].filter(Boolean);
+      const timelineDisplay = timelineParts.join(' \u2014 ') || null;
+      pushIf(blocks, fieldPair(
+        [':moneybag:  Budget', d.budget ? titleCase(d.budget) : null],
+        [':calendar:  Timeline', timelineDisplay],
+      ));
+
+      // Phases + Experience
+      pushIf(blocks, fieldPair(
+        [':dart:  Phases', d.phases?.map(titleCase).join(', ')],
+        [':bar_chart:  Experience', d.experience ? titleCase(d.experience) : null],
+      ));
+      if (d.experienceNotes) {
+        blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: d.experienceNotes }] });
+      }
+
+      // Deliverables
       blocks.push({
         type: 'section',
-        text: { type: 'mrkdwn', text: `*Deliverables:*\n${deliverables.map((d) => `  \u2022  ${d.replace(/_/g, ' ')}`).join('\n')}` },
+        text: {
+          type: 'mrkdwn',
+          text: `:package:  *Deliverables:*\n${d.deliverables.map((v) => `  \u2022  ${titleCase(v)}`).join('\n')}`,
+        },
       });
-      if (pitch) {
+
+      // Priority order
+      if (d.priorityOrder?.length) {
         blocks.push({
           type: 'section',
-          text: { type: 'mrkdwn', text: `*Pitch:*\n${pitch}` },
+          text: {
+            type: 'mrkdwn',
+            text: `:trophy:  *Priorities:*\n${d.priorityOrder.map((v, i) => `  ${i + 1}.  ${titleCase(v)}`).join('\n')}`,
+          },
         });
       }
-      if (referral) {
+
+      // Partners
+      if (d.partners?.length) {
+        pushIf(blocks, fieldPair(
+          [':handshake:  Partners', d.partners.map(titleCase).join(', ')],
+          d.partnerDetails ? [':memo:  Details', d.partnerDetails] : undefined,
+        ));
+      }
+
+      // Crowdfunding goals
+      if (d.publicGoal || d.internalGoal) {
+        pushIf(blocks, fieldPair(
+          [':loudspeaker:  Public Goal', d.publicGoal],
+          [':lock:  Internal Goal', d.internalGoal],
+        ));
+      }
+
+      // Email list + company URL
+      if (d.emailListSize || d.companyUrl) {
+        pushIf(blocks, fieldPair(
+          [':incoming_envelope:  Email List', d.emailListSize],
+          [':globe_with_meridians:  Website', d.companyUrl],
+        ));
+      }
+
+      blocks.push({ type: 'divider' });
+
+      // Pitch
+      if (d.pitch) {
         blocks.push({
           type: 'section',
-          text: { type: 'mrkdwn', text: `*Referral:*\n${referral}` },
+          text: { type: 'mrkdwn', text: `:speech_balloon:  *Pitch:*\n${d.pitch}` },
         });
       }
+
+      // Excitement / Key Feature / Vision / Avoid
+      if (d.excitement) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:fire:  *What Excites You Most?*\n${d.excitement}` },
+        });
+      }
+      if (d.keyFeature) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:key:  *Key Feature:*\n${d.keyFeature}` },
+        });
+      }
+      if (d.vision) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:crystal_ball:  *Vision:*\n${d.vision}` },
+        });
+      }
+      if (d.avoid) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:no_entry:  *Want to Avoid:*\n${d.avoid}` },
+        });
+      }
+      if (d.audience) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:busts_in_silhouette:  *Audience:*\n${d.audience}` },
+        });
+      }
+      if (d.challenge) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:warning:  *Biggest Challenge:*\n${d.challenge}` },
+        });
+      }
+
+      // Anything else + Referral
+      if (d.anythingElse) {
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:thought_balloon:  *Anything Else:*\n${d.anythingElse}` },
+        });
+      }
+      if (d.referral) {
+        pushIf(blocks, fieldPair([':wave:  Referral', d.referral]));
+      }
+
+      // Quote / Calculator data — compute real totals via pricing engine
+      if (d.quoteData && Object.keys(d.quoteData).length > 0) {
+        blocks.push({ type: 'divider' });
+        try {
+          const q = d.quoteData;
+          const stub: ProposalQuoteRow = {
+            id: '', proposal_id: '', label: 'Intake Quote',
+            is_locked: false, is_fna_quote: false,
+            quote_type: (q.quote_type as string) || 'build',
+            selected_addons: (q.selected_addons as Record<string, number>) || {},
+            slider_values: (q.slider_values as Record<string, number>) || {},
+            tier_selections: (q.tier_selections as Record<string, string>) || {},
+            location_days: (q.location_days as Record<string, number[]>) || {},
+            photo_count: (q.photo_count as number) || 0,
+            crowdfunding_enabled: (q.crowdfunding_enabled as boolean) || false,
+            crowdfunding_tier: (q.crowdfunding_tier as number) || 0,
+            fundraising_enabled: (q.fundraising_enabled as boolean) || false,
+            fundraising_tier: (q.fundraising_tier as number) || 0,
+            defer_payment: false,
+            friendly_discount_pct: (q.friendly_discount_pct as number) || 0,
+            total_amount: null, down_amount: null, sort_order: 0,
+            visible: true, description: null,
+            created_at: '', updated_at: '', deleted_at: null, viewer_email: null,
+          };
+          const allAddOns = [...buildAddOns, ...launchAddOns, ...fundraisingIncluded, ...fundraisingAddOns];
+          const c = calcTotalFromQuote(stub, allAddOns);
+          const fmt = (n: number) => '$' + n.toLocaleString('en-US');
+          const lines: string[] = [];
+          const tierLabel = titleCase(stub.quote_type);
+
+          // Tier breakdowns with line items
+          if (c.buildActive) {
+            lines.push(`${tierLabel.includes('Build') ? 'Build' : tierLabel} Base  ${fmt(c.buildBase)}`);
+            for (const item of c.buildItems) lines.push(`  ${item.name}  ${fmt(item.price)}`);
+          }
+          if (c.launchActive) {
+            lines.push(`Launch Base  ${fmt(c.launchBase)}`);
+            for (const item of c.launchItems) lines.push(`  ${item.name}  ${fmt(item.price)}`);
+          }
+          if (c.isFundraising) {
+            lines.push(`Fundraising Base  ${fmt(c.fundBase)}`);
+            for (const item of c.fundItems) lines.push(`  ${item.name}  ${fmt(item.price)}`);
+          }
+          if (c.overhead > 0) lines.push(`Overhead (10%)  ${fmt(c.overhead)}`);
+          if (c.crowdDiscount > 0) lines.push(`Crowdfunding discount  -${fmt(c.crowdDiscount)}`);
+          if (c.friendlyDiscount > 0) lines.push(`Friendly discount (${c.friendlyDiscountPct}%)  -${fmt(c.friendlyDiscount)}`);
+          lines.push(`*Total  ${fmt(c.total)}*`);
+          lines.push(`Down payment (${Math.round(c.downPercent * 100)}%)  ${fmt(c.downAmount)}`);
+
+          blocks.push({
+            type: 'section',
+            text: { type: 'mrkdwn', text: `:money_with_wings:  *Quote Builder  \u2022  ${tierLabel}:*\n${lines.join('\n')}` },
+          });
+        } catch {
+          blocks.push({
+            type: 'section',
+            text: { type: 'mrkdwn', text: `:money_with_wings:  *Quote Builder:*\nUnable to compute totals` },
+          });
+        }
+      } else if (d.budgetInteracted) {
+        blocks.push({ type: 'divider' });
+        blocks.push({
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:money_with_wings:  *Quote Builder:*\nInteracted with calculator but didn't save a quote` },
+        });
+      }
+
       blocks.push(
         { type: 'divider' },
         linkBlock(adminUrl('/admin/intake')),
