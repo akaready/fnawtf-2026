@@ -40,6 +40,8 @@ export function SeoManager({ initialSettings }: Props) {
       og_image_url: row.og_image_url,
       canonical_url: row.canonical_url,
       no_index: row.no_index,
+      detail_title_template: row.detail_title_template,
+      detail_description_template: row.detail_description_template,
     });
   });
 
@@ -138,6 +140,36 @@ export function SeoManager({ initialSettings }: Props) {
                 placeholder="Override canonical URL (optional)"
               />
             </div>
+
+            {/* Detail page templates — only for /work */}
+            {activeRow.page_slug === '/work' && (
+              <>
+                <div className="relative flex items-center gap-3 pt-3 pb-1">
+                  <div className="flex-1 border-t border-admin-border" />
+                  <span className="text-[10px] uppercase tracking-widest text-admin-text-ghost">Project Detail Pages</span>
+                  <div className="flex-1 border-t border-admin-border" />
+                </div>
+                <p className="text-[10px] text-admin-text-ghost -mt-2 mb-1">
+                  Template for all /work/[slug] pages. Variables: <code className="text-admin-text-faint">{'{client}'}</code>, <code className="text-admin-text-faint">{'{title}'}</code>, <code className="text-admin-text-faint">{'{description}'}</code>
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Field
+                    label="Detail Title Template"
+                    value={activeRow.detail_title_template ?? ''}
+                    onChange={(v) => handleChange(activeRow.id, 'detail_title_template', v)}
+                    placeholder="FNA.wtf • {client} — {title}"
+                    maxLength={70}
+                  />
+                  <Field
+                    label="Detail Description Template"
+                    value={activeRow.detail_description_template ?? ''}
+                    onChange={(v) => handleChange(activeRow.id, 'detail_description_template', v)}
+                    placeholder="{description}"
+                    maxLength={160}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex items-center justify-between pt-2">
               <label className="flex items-center gap-2 text-sm cursor-pointer">

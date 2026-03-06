@@ -5,9 +5,53 @@ import { ProjectPageClient } from '@/components/work/ProjectPageClient';
 import { FooterCTA } from '@/components/layout/FooterCTA';
 import type { FeaturedProject, ProjectVideo, ProjectCredit, ProjectBTSImage } from '@/types/project';
 import type { Database } from '@/types/database.types';
+import type { Metadata } from 'next';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+function interpolate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  const [{ data: raw }, { data: seoRow }] = await Promise.all([
+    supabase.from('projects').select('*').eq('slug', slug).eq('published', true).single(),
+    supabase.from('seo_settings').select('detail_title_template, detail_description_template, og_image_url').eq('page_slug', '/work').single(),
+  ]);
+
+  const project = raw as { title: string; client_name: string; description: string; thumbnail_url: string | null } | null;
+  if (!project) return { title: 'FNA.wtf' };
+
+  const seo = seoRow as { detail_title_template: string | null; detail_description_template: string | null; og_image_url: string | null } | null;
+  const vars = { client: project.client_name, title: project.title, description: project.description || '' };
+
+  const titleTemplate = seo?.detail_title_template || 'FNA.wtf \u2022 {client} \u2014 {title}';
+  const descTemplate = seo?.detail_description_template || '{description}';
+
+  const title = interpolate(titleTemplate, vars);
+  const description = interpolate(descTemplate, vars);
+  const ogImage = project.thumbnail_url || seo?.og_image_url || undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
+  };
 }
 
 export default async function WorkDetailPage({ params }: PageProps) {
