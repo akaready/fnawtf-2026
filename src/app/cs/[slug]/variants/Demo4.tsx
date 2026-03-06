@@ -7,8 +7,10 @@
  * No safety card. Hospital only on sidebar with embedded map.
  */
 
+import { useState } from 'react';
 import type { CallSheetData } from '@/components/callsheet/types';
 import Image from 'next/image';
+import { CallSheetLightbox } from './CallSheetLightbox';
 import {
   Sun,
   Sunrise,
@@ -126,16 +128,24 @@ function SectionHeader({
 
 /* ════════════════════════════════════════════════════════════ */
 
+const locationImages = [
+  { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/000.webp', alt: 'Treehouse living room with wooden beams' },
+  { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/001.webp', alt: 'Living room with green sofa and brick fireplace' },
+  { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/002.webp', alt: 'Living room with fireplace and deck view' },
+  { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/003.webp', alt: 'Fireplace with record player and wooden beams' },
+];
+
 export function Demo4({ data }: { data: CallSheetData }) {
   const { production, weather, schedule } = data;
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-admin-bg-base text-admin-text-primary">
       <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-12 py-10 space-y-8">
 
         {/* ═══ HEADER ═══ */}
-        <div className="flex flex-wrap items-center justify-between gap-6 pb-8 border-b border-admin-border">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between pb-8 border-b border-admin-border">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-5">
             <div className="flex items-center gap-4">
               {production.companyLogo && (
                 <Image
@@ -155,28 +165,28 @@ export function Demo4({ data }: { data: CallSheetData }) {
                 className="h-10 w-auto object-contain brightness-0 invert"
               />
             </div>
-            <div className="h-10 w-px bg-admin-border" />
-            <div>
-              <p className="font-[family-name:var(--font-display)] font-bold text-2xl tracking-tight">
+            <div className="hidden sm:block h-10 w-px bg-admin-border" />
+            <div className="text-center sm:text-left">
+              <p className="font-[family-name:var(--font-display)] font-bold text-xl sm:text-2xl tracking-tight">
                 {data.projectTitle}
               </p>
-              <p className="text-base text-admin-text-muted">
+              <p className="text-sm sm:text-base text-admin-text-muted">
                 {data.projectType}
                 <span className="font-[family-name:var(--font-mono)] ml-3 text-admin-text-dim">{data.jobId}</span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-5">
-            <div className="text-right">
-              <p className="text-base font-bold">Day {data.shootDay} of {data.totalDays}</p>
-              <p className="text-base text-admin-text-muted">{formatDate(data.date)}</p>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="text-center sm:text-right">
+              <p className="text-sm sm:text-base font-bold">Day {data.shootDay} of {data.totalDays}</p>
+              <p className="text-sm sm:text-base text-admin-text-muted">{formatDate(data.date)}</p>
             </div>
-            <div className="rounded-xl bg-admin-bg-raised border border-admin-border flex flex-col items-center justify-center px-5 py-3">
-              <span className="text-sm uppercase tracking-wider font-bold text-admin-text-muted leading-none">
+            <div className="rounded-xl bg-admin-bg-raised border border-admin-border flex flex-col items-center justify-center px-4 py-2.5 sm:px-5 sm:py-3">
+              <span className="text-xs sm:text-sm uppercase tracking-wider font-bold text-admin-text-muted leading-none">
                 {formatMonth(data.date)}
               </span>
-              <span className="font-[family-name:var(--font-display)] text-3xl font-bold leading-none mt-0.5">
+              <span className="font-[family-name:var(--font-display)] text-2xl sm:text-3xl font-bold leading-none mt-0.5">
                 {formatDay(data.date)}
               </span>
             </div>
@@ -313,7 +323,7 @@ export function Demo4({ data }: { data: CallSheetData }) {
             {/* Lunch Order CTA — bold yellow bar */}
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/15 px-7 py-5 flex items-center justify-between gap-4 flex-wrap">
               <p className="text-base font-[family-name:var(--font-display)] font-bold text-amber-200 uppercase tracking-wider">
-                Put your lunch order in before call time!
+                Please put your lunch order in before call!
               </p>
               <a
                 href="https://www.doordash.com"
@@ -375,13 +385,13 @@ export function Demo4({ data }: { data: CallSheetData }) {
 
                   {/* Location photo gallery */}
                   <div className="grid grid-cols-4 gap-1.5 mt-3">
-                    {[
-                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/000.webp', alt: 'Treehouse living room with wooden beams' },
-                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/001.webp', alt: 'Living room with green sofa and brick fireplace' },
-                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/002.webp', alt: 'Living room with fireplace and deck view' },
-                      { url: 'https://ipzfnpjkslormhbkkiys.supabase.co/storage/v1/object/public/location-images/6118bbf4-3a36-4334-a6cf-0decdac218c8/003.webp', alt: 'Fireplace with record player and wooden beams' },
-                    ].map((img) => (
-                      <div key={img.url} className="aspect-square rounded-md overflow-hidden">
+                    {locationImages.map((img, idx) => (
+                      <button
+                        key={img.url}
+                        type="button"
+                        className="aspect-square rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setLightboxIndex(idx)}
+                      >
                         <Image
                           src={img.url}
                           alt={img.alt}
@@ -389,7 +399,7 @@ export function Demo4({ data }: { data: CallSheetData }) {
                           height={120}
                           className="w-full h-full object-cover"
                         />
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -439,20 +449,22 @@ export function Demo4({ data }: { data: CallSheetData }) {
               </table>
               <div className="sm:hidden divide-y divide-admin-border">
                 {data.cast.map((c) => (
-                  <div key={c.id} className="bg-admin-bg-raised px-6 py-5">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <Headshot src={c.headshot} alt={c.name} size={40} />
+                  <div key={c.id} className="bg-admin-bg-raised px-5 py-4 flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-base truncate">{c.name}</p>
+                      <p className="text-sm text-admin-text-muted truncate">{c.role}</p>
+                      <div className="flex items-center gap-5 mt-2">
                         <div>
-                          <p className="font-semibold text-lg">{c.name}</p>
-                          <p className="text-base text-admin-text-muted">{c.role}</p>
+                          <span className="text-xs uppercase tracking-wider text-admin-text-dim">Call</span>
+                          <p className="font-[family-name:var(--font-mono)] text-sm font-semibold">{c.callTime}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs uppercase tracking-wider text-admin-text-dim">Wrap</span>
+                          <p className="font-[family-name:var(--font-mono)] text-sm text-admin-text-muted">{c.wrap || '—'}</p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-[family-name:var(--font-mono)] text-lg font-semibold whitespace-nowrap">{c.callTime}</p>
-                        <p className="font-[family-name:var(--font-mono)] text-base text-admin-text-muted whitespace-nowrap">Wrap {c.wrap || '—'}</p>
-                      </div>
                     </div>
+                    <Headshot src={c.headshot} alt={c.name} size={44} />
                   </div>
                 ))}
               </div>
@@ -513,30 +525,32 @@ export function Demo4({ data }: { data: CallSheetData }) {
               </table>
               <div className="sm:hidden divide-y divide-admin-border">
                 {data.crew.map((c, i) => (
-                  <div key={i} className="bg-admin-bg-raised px-6 py-5">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <div className="flex gap-2 shrink-0">
-                          {c.phone && (
-                            <a href={`tel:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary" title={c.phone}>
-                              <Phone className="w-5 h-5" />
-                            </a>
-                          )}
-                          {c.email && (
-                            <a href={`mailto:${c.email}`} className="text-admin-text-dim hover:text-admin-text-primary" title={c.email}>
-                              <Mail className="w-5 h-5" />
-                            </a>
-                          )}
+                  <div key={i} className="bg-admin-bg-raised px-5 py-4 flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-base truncate">{c.name}</p>
+                      <p className="text-sm text-admin-text-muted truncate">{c.title}</p>
+                      <div className="flex items-center gap-5 mt-2">
+                        <div>
+                          <span className="text-xs uppercase tracking-wider text-admin-text-dim">Call</span>
+                          <p className="font-[family-name:var(--font-mono)] text-sm font-semibold">{c.callTime}</p>
                         </div>
                         <div>
-                          <p className="font-semibold text-lg">{c.name}</p>
-                          <p className="text-base text-admin-text-muted">{c.title}</p>
+                          <span className="text-xs uppercase tracking-wider text-admin-text-dim">Wrap</span>
+                          <p className="font-[family-name:var(--font-mono)] text-sm text-admin-text-muted">{c.wrap || '—'}</p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-[family-name:var(--font-mono)] text-lg font-semibold whitespace-nowrap">{c.callTime}</p>
-                        <p className="font-[family-name:var(--font-mono)] text-base text-admin-text-muted whitespace-nowrap">Wrap {c.wrap || '—'}</p>
-                      </div>
+                    </div>
+                    <div className="flex gap-3 shrink-0 pt-1">
+                      {c.phone && (
+                        <a href={`tel:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary" title={c.phone}>
+                          <Phone className="w-5 h-5" />
+                        </a>
+                      )}
+                      {c.email && (
+                        <a href={`mailto:${c.email}`} className="text-admin-text-dim hover:text-admin-text-primary" title={c.email}>
+                          <Mail className="w-5 h-5" />
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -598,19 +612,25 @@ export function Demo4({ data }: { data: CallSheetData }) {
                     };
                     const { bg, icon } = colorMap[row.color];
                     return (
-                      <div key={`ms-${row.label}`} className={`${bg} py-4 flex items-center`}>
+                      <div key={`ms-${row.label}`} className={`${bg} py-3 sm:py-4 flex items-center`}>
                         {/* Icon in ID column */}
-                        <div className="w-[76px] shrink-0 pl-6 pr-2 flex justify-center">
+                        <div className="w-[52px] sm:w-[76px] shrink-0 pl-4 sm:pl-6 pr-2 flex justify-center">
                           {icon}
                         </div>
                         {/* Label aligned with Description */}
-                        <div className="flex-1 px-4">
-                          <span className="font-[family-name:var(--font-display)] font-bold text-base uppercase tracking-wider">
+                        <div className="flex-1 px-3 sm:px-4">
+                          <span className="font-[family-name:var(--font-display)] font-bold text-sm sm:text-base uppercase tracking-wider">
                             {row.label}
                           </span>
                         </div>
-                        {/* Start column */}
-                        <div className="w-[160px] shrink-0 text-right px-4">
+                        {/* Mobile: single compact time */}
+                        <div className="sm:hidden shrink-0 pr-4">
+                          <span className="font-[family-name:var(--font-mono)] text-sm font-semibold">
+                            {row.color === 'warning' && row.endTime ? `${row.time} – ${row.endTime}` : row.time}
+                          </span>
+                        </div>
+                        {/* Desktop: Start column */}
+                        <div className="hidden sm:block w-[160px] shrink-0 text-right px-4">
                           {(row.color === 'success' || row.color === 'warning') && (
                             <span className="font-[family-name:var(--font-mono)] text-base font-semibold">{row.time}</span>
                           )}
@@ -618,8 +638,8 @@ export function Demo4({ data }: { data: CallSheetData }) {
                             <span className="font-[family-name:var(--font-mono)] text-base font-semibold opacity-30">—</span>
                           )}
                         </div>
-                        {/* End column */}
-                        <div className="w-[160px] shrink-0 text-right px-4">
+                        {/* Desktop: End column */}
+                        <div className="hidden sm:block w-[160px] shrink-0 text-right px-4">
                           {row.color === 'danger' && (
                             <span className="font-[family-name:var(--font-mono)] text-base font-semibold">{row.time}</span>
                           )}
@@ -637,21 +657,33 @@ export function Demo4({ data }: { data: CallSheetData }) {
                   const s = row.scene;
                   const castMembers = s.cast.map(id => data.cast.find(c => c.id === id)).filter(Boolean);
                   return (
-                    <div key={s.sceneId} className="bg-admin-bg-raised py-7 flex flex-col sm:flex-row sm:items-start">
+                    <div key={s.sceneId} className="bg-admin-bg-raised py-5 sm:py-7 flex flex-col sm:flex-row sm:items-start">
                       {/* Scene ID — same 76px as cast/crew first column */}
-                      <div className="sm:w-[76px] shrink-0 pl-6 pr-2">
-                        <span className="font-[family-name:var(--font-mono)] text-2xl font-bold">{s.sceneId}</span>
+                      <div className="sm:w-[76px] shrink-0 pl-5 sm:pl-6 pr-2">
+                        <span className="font-[family-name:var(--font-mono)] text-xl sm:text-2xl font-bold">{s.sceneId}</span>
                       </div>
                       {/* Description + location + notes */}
-                      <div className="flex-1 min-w-0 px-4">
-                        <p className="text-sm font-bold uppercase tracking-wider text-admin-text-muted">
+                      <div className="flex-1 min-w-0 px-4 mt-2 sm:mt-0">
+                        <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-admin-text-muted">
                           {s.intExt}. {s.location} — {s.timeOfDay}
                         </p>
-                        <p className="text-base font-medium mt-1.5">{s.description}</p>
-                        {s.notes && <p className="text-sm text-admin-text-dim mt-2">{s.notes}</p>}
+                        <p className="text-sm sm:text-base font-medium mt-1.5">{s.description}</p>
+                        {s.notes && <p className="text-xs sm:text-sm text-admin-text-dim mt-2">{s.notes}</p>}
+                        {/* Mobile times — inline */}
+                        <div className="flex items-center gap-3 mt-3 sm:hidden">
+                          <div>
+                            <span className="text-xs uppercase tracking-wider text-admin-text-dim">Start</span>
+                            <p className="font-[family-name:var(--font-mono)] text-sm font-semibold">{s.estimatedStart}</p>
+                          </div>
+                          <span className="text-admin-text-dim">—</span>
+                          <div>
+                            <span className="text-xs uppercase tracking-wider text-admin-text-dim">End</span>
+                            <p className="font-[family-name:var(--font-mono)] text-sm text-admin-text-muted">{s.estimatedEnd}</p>
+                          </div>
+                        </div>
                         {/* Cast headshots */}
                         {castMembers.length > 0 && (
-                          <div className="flex items-center gap-3 mt-4">
+                          <div className="flex items-center gap-3 mt-4 flex-wrap">
                             {castMembers.map((c) => c && (
                               <div key={c.id} className="flex items-center gap-2">
                                 <Headshot src={c.headshot} alt={c.name} size={28} />
@@ -661,12 +693,12 @@ export function Demo4({ data }: { data: CallSheetData }) {
                           </div>
                         )}
                       </div>
-                      {/* Start */}
-                      <div className="w-[160px] shrink-0 text-right px-4">
+                      {/* Desktop: Start */}
+                      <div className="hidden sm:block w-[160px] shrink-0 text-right px-4">
                         <p className="font-[family-name:var(--font-mono)] text-base font-semibold whitespace-nowrap">{s.estimatedStart}</p>
                       </div>
-                      {/* End */}
-                      <div className="w-[160px] shrink-0 text-right px-4">
+                      {/* Desktop: End */}
+                      <div className="hidden sm:block w-[160px] shrink-0 text-right px-4">
                         <p className="font-[family-name:var(--font-mono)] text-base text-admin-text-muted whitespace-nowrap">{s.estimatedEnd}</p>
                       </div>
                     </div>
@@ -749,6 +781,15 @@ export function Demo4({ data }: { data: CallSheetData }) {
           </div>
         </footer>
       </div>
+
+      {/* Lightbox for location photos */}
+      {lightboxIndex !== null && (
+        <CallSheetLightbox
+          images={locationImages}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </div>
   );
 }
