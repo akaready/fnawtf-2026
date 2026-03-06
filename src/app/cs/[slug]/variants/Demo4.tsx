@@ -307,6 +307,21 @@ export function Demo4({ data }: { data: CallSheetData }) {
               </div>
             ))}
 
+            {/* Lunch Order CTA — bold yellow bar */}
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/15 px-7 py-5 flex items-center justify-between gap-4 flex-wrap">
+              <p className="text-base font-[family-name:var(--font-display)] font-bold text-amber-200 uppercase tracking-wider">
+                Put your lunch order in before call time!
+              </p>
+              <a
+                href="https://www.doordash.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-800 hover:bg-red-700 text-white hover:!text-white font-bold text-sm uppercase tracking-wider transition-colors shrink-0"
+              >
+                Order on DoorDash
+              </a>
+            </div>
+
             {/* Locations — stretches to fill sidebar height */}
             <section className="flex-1 flex flex-col">
               <SectionHeader icon={<Navigation className="w-6 h-6" />} title="Locations" count={data.locations.set ? 1 : 0} />
