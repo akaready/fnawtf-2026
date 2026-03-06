@@ -659,6 +659,28 @@ a[data-btn-hover]:hover {
 }
 .prose-snippet > *:first-child { margin-top: 0; }
 
+/* ─── Call Sheet Print Styles ──────────────────────────────────────── */
+@media print {
+  .call-sheet-no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .call-sheet-print {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .call-sheet-print * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color: #1a1a1a !important;
+    border-color: #e5e7eb !important;
+  }
+  .call-sheet-print section { break-inside: avoid; }
+  .call-sheet-print table { break-inside: avoid; }
+  .call-sheet-print [class*="bg-[var(--surface"] { background: white !important; }
+  .call-sheet-print [class*="bg-[var(--muted"] { background: #f3f4f6 !important; }
+  .call-sheet-print [class*="text-[var(--muted-foreground"] { color: #6b7280 !important; }
+  .call-sheet-print [class*="text-[var(--accent"] { color: #7c3aed !important; }
+}
+
 /* Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *,
