@@ -49,8 +49,7 @@ export async function logPricingLeadServer(data: {
             name: data.company,
             email: data.email,
             company_types: ['lead'],
-            status: 'prospect',
-            pipeline_stage: 'new',
+            status: 'lead',
           });
         }
       } catch {

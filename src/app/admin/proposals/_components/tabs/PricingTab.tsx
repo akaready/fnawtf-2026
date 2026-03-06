@@ -201,7 +201,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         crowdfunding_tier: 0, fundraising_enabled: false, fundraising_tier: 0, defer_payment: false,
         friendly_discount_pct: 0, total_amount: null, down_amount: null,
         sort_order: 0, visible: true, description: null,
-        created_at: now, updated_at: now, deleted_at: null,
+        created_at: now, updated_at: now, deleted_at: null, viewer_email: null,
       }]);
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -275,7 +275,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         crowdfunding_tier: 0, fundraising_enabled: false, fundraising_tier: 0, defer_payment: false,
         friendly_discount_pct: 0, total_amount: null, down_amount: null,
         sort_order: i, visible: true, description: null,
-        created_at: now, updated_at: now, deleted_at: null,
+        created_at: now, updated_at: now, deleted_at: null, viewer_email: null,
       },
     ]);
     setActiveQuoteIndex(i);

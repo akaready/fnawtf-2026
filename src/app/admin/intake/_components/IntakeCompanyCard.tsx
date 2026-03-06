@@ -2,27 +2,31 @@
 
 import { useState } from 'react';
 import {
-  Building2, Globe, ExternalLink, RefreshCw, Pencil, X,
+  Building2, Globe, ExternalLink, RefreshCw, Pencil, X, Expand,
   Linkedin, Twitter, Instagram,
 } from 'lucide-react';
 import { AdminCombobox } from '../../_components/AdminCombobox';
+import { CompanyPanel } from '../../_components/CompanyPanel';
 import { updateClientRecord, scrapeCompanyInfo } from '../../actions';
 import type { ClientRow, IntakeSubmission } from '../../actions';
 import type { ScrapedCompanyInfo } from '../../actions';
+import type { ContactRow } from '@/types/proposal';
 
 interface Props {
   submission: IntakeSubmission;
   clients: ClientRow[];
+  contacts: ContactRow[];
   onLinkClient: (id: string | null) => void;
 }
 
-export function IntakeCompanyCard({ submission, clients, onLinkClient }: Props) {
+export function IntakeCompanyCard({ submission, clients, contacts, onLinkClient }: Props) {
   const initial = submission.client_id ? clients.find((c) => c.id === submission.client_id) ?? null : null;
   const [client, setClient] = useState<ClientRow | null>(initial);
   const [isEditing, setIsEditing] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showCompanyPanel, setShowCompanyPanel] = useState(false);
 
   // Edit fields
   const [editName, setEditName] = useState('');
@@ -131,6 +135,7 @@ export function IntakeCompanyCard({ submission, clients, onLinkClient }: Props) 
   ].filter((s) => s.url);
 
   return (
+    <>
     <div className="rounded-xl border border-admin-border bg-admin-bg-raised overflow-hidden">
       {/* Auto-fetched banner */}
       {wasScraped && !isEditing && (
@@ -187,6 +192,9 @@ export function IntakeCompanyCard({ submission, clients, onLinkClient }: Props) 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-admin-text-primary truncate">{client.name}</p>
               </div>
+              <button onClick={() => setShowCompanyPanel(true)} className="btn-ghost w-8 h-8 flex items-center justify-center" title="Open full panel">
+                <Expand size={14} />
+              </button>
               <button onClick={startEdit} className="btn-ghost w-8 h-8 flex items-center justify-center" title="Edit company">
                 <Pencil size={14} />
               </button>
@@ -268,5 +276,21 @@ export function IntakeCompanyCard({ submission, clients, onLinkClient }: Props) 
         </div>
       )}
     </div>
+
+    {/* Company Panel */}
+    {showCompanyPanel && client && (
+      <CompanyPanel
+        company={client}
+        contacts={contacts.filter((c) => c.client_id === client.id)}
+        projects={[]}
+        testimonials={[]}
+        onClose={() => setShowCompanyPanel(false)}
+        onCompanyUpdated={(updated) => setClient(updated)}
+        onCompanyDeleted={() => { setShowCompanyPanel(false); handleChangeCompany(null); }}
+        onContactLinked={() => {}}
+        onContactUnlinked={() => {}}
+      />
+    )}
+    </>
   );
 }

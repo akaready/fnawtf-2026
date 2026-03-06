@@ -6,6 +6,7 @@ import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { type SeoRow, updateSeoSetting } from '../actions';
 import { AdminTabBar } from './AdminTabBar';
+import { AdminPageHeader } from './AdminPageHeader';
 
 const PAGE_META: Record<string, { label: string; icon: typeof Globe; description: string }> = {
   _global: { label: 'Global', icon: Globe, description: 'Fallback meta used when a page doesn\'t define its own' },
@@ -70,6 +71,24 @@ export function SeoManager({ initialSettings }: Props) {
 
   return (
     <>
+      <AdminPageHeader
+        title="SEO Settings"
+        icon={Globe}
+        subtitle="Manage meta titles, descriptions, and Open Graph data for each page."
+        actions={
+          <>
+            <SaveDot status={autoSave.status} />
+            <button onClick={() => autoSave.flush()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+              <Save size={14} /> Save
+            </button>
+          </>
+        }
+        mobileActions={
+          <button onClick={() => autoSave.flush()} className="btn-primary p-2.5">
+            <Save size={14} />
+          </button>
+        }
+      />
       <AdminTabBar
         tabs={sorted.map((row) => {
           const meta = PAGE_META[row.page_slug] ?? { label: row.page_slug, icon: Globe };
@@ -171,7 +190,7 @@ export function SeoManager({ initialSettings }: Props) {
               </>
             )}
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="pt-2">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
                   type="checkbox"
@@ -183,12 +202,6 @@ export function SeoManager({ initialSettings }: Props) {
                   No Index <span className="text-admin-text-ghost">(hide from search engines)</span>
                 </span>
               </label>
-
-              <SaveDot status={autoSave.status} />
-              <button onClick={() => autoSave.flush()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-                <Save size={14} />
-                Save
-              </button>
             </div>
           </div>
         )}

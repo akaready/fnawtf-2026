@@ -5,7 +5,7 @@ import { RefreshCw, Plus, X, UserPlus, Mail, Building2, Copy, Check } from 'luci
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import {
   updateProposal, createContact, addProposalContact, removeProposalContact,
-  createClientRecord, type ClientRow,
+  createClientRecord, tagClientAsLead, type ClientRow,
 } from '@/app/admin/actions';
 import type { ProposalRow, ContactRow, ProposalType, ContactType } from '@/types/proposal';
 import { contactFullName } from '@/lib/contacts';
@@ -40,14 +40,6 @@ function generatePassword(): string {
   return pw;
 }
 
-const PROPOSAL_TYPES: { value: ProposalType; label: string }[] = [
-  { value: 'build', label: 'Build' },
-  { value: 'launch', label: 'Launch' },
-  { value: 'scale', label: 'Scale' },
-  { value: 'build-launch', label: 'Build + Launch' },
-  { value: 'fundraising', label: 'Fundraising' },
-];
-
 const CONTACT_TYPES: { value: ContactType; label: string }[] = [
   { value: 'contact', label: 'Contact' },
   { value: 'crew', label: 'Crew' },
@@ -79,11 +71,22 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   const [password, setPassword] = useState(proposal.proposal_password);
   const [slugCopied, setSlugCopied] = useState(false);
   const [preparedDate, setPreparedDate] = useState(proposal.prepared_date ?? '');
-  const [showApproach, setShowApproach] = useState(proposal.show_approach);
+
+  // Auto-generate title and slug from company name
+  useEffect(() => {
+    if (contactCompany.trim()) {
+      setTitle(`${contactCompany.trim()} ⤫ FNA`);
+      setSlug(slugify(contactCompany));
+    }
+  }, [contactCompany]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save state — no local autoSave; parent coordinates all saves
-  const stateRef = useRef({ contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate, showApproach });
-  stateRef.current = { contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate, showApproach };
+  const stateRef = useRef({
+    contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate,
+  });
+  stateRef.current = {
+    contactName, contactEmail, contactCompany, proposalType, title, subtitle, slug, password, preparedDate,
+  };
   const isDirtyRef = useRef(false);
 
   const save = useCallback(async () => {
@@ -98,7 +101,6 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
       slug: s.slug.trim(),
       proposal_password: s.password.trim(),
       prepared_date: s.preparedDate || null,
-      show_approach: s.showApproach,
     });
     isDirtyRef.current = false;
     onProposalTypeChange?.(s.proposalType);
@@ -139,6 +141,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   const handleSelectCompany = useCallback((client: ClientRow) => {
     setContactCompany(client.name);
     markDirty();
+    // Tag existing company as a lead if not already
+    void tagClientAsLead(client.id);
   }, [markDirty]);
 
   const handleAddNewCompany = useCallback(async () => {
@@ -149,6 +153,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         name: newCompanyName.trim(),
         email: newCompanyEmail.trim() || `${slugify(newCompanyName)}@placeholder.com`,
         notes: newCompanyNotes.trim() || null,
+        company_types: ['lead'],
+        status: 'pitching',
       });
       const newClient: ClientRow = {
         id: clientId,
@@ -157,9 +163,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         email: newCompanyEmail.trim() || `${slugify(newCompanyName)}@placeholder.com`,
         notes: newCompanyNotes.trim() || null,
         logo_url: null,
-        company_types: [],
-        status: 'lead',
-        pipeline_stage: 'new',
+        company_types: ['lead'],
+        status: 'pitching',
         website_url: newCompanyWebsite.trim() || null,
         linkedin_url: null,
         description: null,
@@ -336,7 +341,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               </div>
             )}
 
-            {/* Add new company — right below the company field */}
+            {/* Add new company */}
             {showAddCompany ? (
               <div className="mt-2 p-4 bg-admin-bg-subtle border border-admin-border rounded-lg space-y-3">
                 <p className="text-xs text-admin-text-dim font-medium">New Company</p>
@@ -411,13 +416,13 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
                   <button
                     onClick={handleAddNewCompany}
                     disabled={!newCompanyName.trim() || addingCompany}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-admin-bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
                   >
                     {addingCompany ? 'Adding…' : 'Add Company'}
                   </button>
                   <button
                     onClick={() => { setShowAddCompany(false); setNewCompanyName(''); setNewCompanyEmail(''); setNewCompanyWebsite(''); setNewCompanyIndustry(''); setNewCompanyLocation(''); setNewCompanyNotes(''); }}
-                    className="px-3 py-1.5 text-xs text-admin-text-dim hover:text-admin-text-secondary transition-colors"
+                    className="btn-secondary inline-flex items-center px-3 py-1.5 text-xs"
                   >
                     Cancel
                   </button>
@@ -426,7 +431,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             ) : (
               <button
                 onClick={() => setShowAddCompany(true)}
-                className="btn-ghost-add mt-1.5 px-3 py-1.5 text-xs font-medium gap-1.5"
+                className="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs mt-1.5"
               >
                 <Plus size={12} />
                 Add new company
@@ -434,29 +439,16 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
             )}
           </div>
 
-          {/* Title + Type share a row */}
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_160px] gap-4">
-            <div>
-              <label className={labelCls}>Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => { setTitle(e.target.value); markDirty(); }}
-                placeholder="Acme Corp Proposal"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Type</label>
-              <AdminCombobox
-                value={proposalType}
-                options={PROPOSAL_TYPES.map((t) => ({ id: t.value, label: t.label }))}
-                onChange={(v) => { if (v) { setProposalType(v as ProposalType); markDirty(); } }}
-                nullable={false}
-                searchable={false}
-                placeholder="Select type"
-              />
-            </div>
+          {/* Title — full width (auto-generated from company) */}
+          <div>
+            <label className={labelCls}>Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); markDirty(); }}
+              placeholder="Acme Corp ⤫ FNA"
+              className={inputCls}
+            />
           </div>
 
           {/* Subtitle — full width */}
@@ -469,20 +461,6 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               placeholder="Elevating your brand through story-driven video"
               className={inputCls}
             />
-          </div>
-
-          {/* Slide visibility */}
-          <div className="flex items-center gap-3 pt-2">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showApproach}
-                onChange={(e) => { setShowApproach(e.target.checked); markDirty(); }}
-                className="sr-only peer"
-              />
-              <div className="w-8 h-[18px] bg-admin-bg-hover peer-checked:bg-admin-success rounded-full transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[14px] after:w-[14px] after:transition-transform peer-checked:after:translate-x-[14px]" />
-            </label>
-            <span className="text-sm text-admin-text-secondary">Show Approach slide</span>
           </div>
         </div>
       </section>
@@ -547,38 +525,9 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         </div>
       </section>
 
-      {/* Contacts */}
+      {/* Prepared for */}
       <section>
-        <p className={sectionHeadingCls}>Contacts</p>
-        <p className="text-xs text-admin-text-faint -mt-2 mb-4">
-          Contacts associated with this proposal.
-        </p>
-
-        {/* Prepared for preview */}
-        {propContacts.length > 0 && (
-          <div className="mb-4 px-3 py-2.5 bg-admin-bg-subtle border border-admin-border rounded-lg">
-            <p className="text-xs text-admin-text-dim">
-              Prepared for{' '}
-              <span className="text-admin-text-primary font-medium">
-                {propContacts.map((c) => c.first_name).filter(Boolean).join(' & ') || 'Unknown'}
-              </span>
-              {preparedDate && (
-                <span className="text-admin-text-ghost">{' '}· {new Date(preparedDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* Prepared date */}
-        <div className="mb-4">
-          <label className={labelCls}>Prepared date</label>
-          <input
-            type="date"
-            value={preparedDate}
-            onChange={(e) => { setPreparedDate(e.target.value); markDirty(); }}
-            className={inputCls + ' max-w-[200px]'}
-          />
-        </div>
+        <p className={sectionHeadingCls}>Prepared for</p>
 
         {/* Existing proposal contacts */}
         {propContacts.length > 0 && (
@@ -615,15 +564,16 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
           </div>
         )}
 
-        {/* Search existing contacts */}
-        <div className="relative">
-          <input
-            type="text"
-            value={contactSearch}
-            onChange={(e) => setContactSearch(e.target.value)}
-            placeholder="Search contacts…"
-            className={inputCls}
-          />
+        {/* Search existing contacts + prepared date */}
+        <div className="flex items-stretch gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              placeholder="Search contacts…"
+              className={inputCls + ' h-full'}
+            />
           {filteredContacts.length > 0 && (
             <div className="absolute z-50 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto admin-scrollbar bg-admin-bg-raised border border-admin-border-muted rounded-lg shadow-xl">
               {filteredContacts.map((c) => (
@@ -639,9 +589,16 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               ))}
             </div>
           )}
+          </div>
+          <input
+            type="date"
+            value={preparedDate}
+            onChange={(e) => { setPreparedDate(e.target.value); markDirty(); }}
+            className={inputCls + ' max-w-[160px] flex-shrink-0 h-full'}
+          />
         </div>
 
-        {/* Add new contact inline — expanded with all fields */}
+        {/* Add new contact inline */}
         {showAddNew ? (
           <div className="mt-3 p-4 bg-admin-bg-subtle border border-admin-border rounded-lg space-y-3">
             <p className="text-xs text-admin-text-dim font-medium">New Contact</p>
@@ -792,13 +749,13 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
               <button
                 onClick={handleAddNewContact}
                 disabled={!newFirstName.trim() || addingContact}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-admin-bg-active text-admin-text-primary hover:bg-admin-bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
               >
                 {addingContact ? 'Adding…' : 'Add Contact'}
               </button>
               <button
                 onClick={() => { setShowAddNew(false); resetNewContactForm(); }}
-                className="px-3 py-1.5 text-xs text-admin-text-dim hover:text-admin-text-secondary transition-colors"
+                className="btn-secondary inline-flex items-center px-3 py-1.5 text-xs"
               >
                 Cancel
               </button>
@@ -807,7 +764,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         ) : (
           <button
             onClick={() => setShowAddNew(true)}
-            className="btn-ghost-add mt-3 px-3 py-1.5 text-xs font-medium gap-1.5"
+            className="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs mt-3"
           >
             <Plus size={12} />
             Add new contact

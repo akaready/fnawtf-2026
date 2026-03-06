@@ -11,7 +11,6 @@ export interface Client {
   notes?: string;
   company_types?: string[];
   status?: string;
-  pipeline_stage?: string;
   created_at: string;
 }
 

@@ -684,18 +684,18 @@ function DroppedZone({
   const { setNodeRef, isOver } = useDroppable({ id: 'dropped' });
 
   return (
-    <div className={`flex flex-col flex-shrink-0 rounded-xl border transition-colors border-admin-border ${
-      isOver ? 'bg-admin-bg-selected' : 'bg-admin-bg-wash'
+    <div className={`flex flex-col flex-shrink-0 rounded-xl border transition-colors border-red-900/30 ${
+      isOver ? 'bg-red-500/[0.08]' : 'bg-admin-bg-wash'
     }`}>
       <div
         ref={setNodeRef}
         onClick={binLeads.length > 0 ? onToggle : undefined}
         className={`px-3 py-2.5 flex items-center justify-between ${binLeads.length > 0 ? 'cursor-pointer' : ''}`}
       >
-        <span className="text-xs font-semibold text-admin-text-muted/40">Dropped</span>
+        <span className="text-xs font-semibold text-red-500/60">Dropped</span>
         <span className={`text-[10px] rounded px-1.5 py-0.5 ${
           binLeads.length > 0
-            ? 'text-admin-text-faint bg-admin-bg-hover'
+            ? 'text-admin-danger/70 bg-admin-danger-bg'
             : 'text-admin-text-placeholder bg-admin-bg-hover'
         }`}>
           {binLeads.length}
@@ -703,9 +703,9 @@ function DroppedZone({
       </div>
 
       {show && binLeads.length > 0 && (
-        <div className="border-t border-admin-border p-2 space-y-1.5 max-h-[180px] overflow-y-auto admin-scrollbar">
+        <div className="border-t border-red-900/20 p-2 space-y-1.5 max-h-[180px] overflow-y-auto admin-scrollbar">
           {binLeads.map((c) => (
-            <DraggableBinCard key={c.id} company={c} onRestore={onRestore} colorScheme="neutral" />
+            <DraggableBinCard key={c.id} company={c} onRestore={onRestore} colorScheme="red" />
           ))}
         </div>
       )}

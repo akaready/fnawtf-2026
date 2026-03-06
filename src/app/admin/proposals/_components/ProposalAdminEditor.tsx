@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save, Eye, ChevronDown } from 'lucide-react';
+import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import type { LucideIcon } from 'lucide-react';
@@ -16,14 +16,12 @@ import { TimelineTab } from './tabs/TimelineTab';
 import { SamplesTab } from './tabs/SamplesTab';
 import { PricingTab } from './tabs/PricingTab';
 import type { PricingTabHandle } from './tabs/PricingTab';
-import { ViewsTab } from './tabs/ViewsTab';
-import type { ProposalViewRow } from '@/app/admin/actions';
 import type {
   ProposalRow, ContactRow, ContentSnippetRow, ProposalSectionRow,
   ProposalMilestoneRow, ProposalQuoteRow, BrowserProject, ProposalProjectWithProject,
 } from '@/types/proposal';
 
-const TABS = ['details', 'welcome', 'approach', 'timeline', 'samples', 'pricing', 'views'] as const;
+const TABS = ['details', 'welcome', 'approach', 'timeline', 'samples', 'pricing'] as const;
 type TabId = typeof TABS[number];
 
 const TAB_ICONS: Record<TabId, LucideIcon> = {
@@ -33,7 +31,6 @@ const TAB_ICONS: Record<TabId, LucideIcon> = {
   timeline: Calendar,
   samples: Play,
   pricing: DollarSign,
-  views: Eye,
 };
 
 export interface ProposalEditorHandle {
@@ -51,7 +48,6 @@ interface Props {
   quotes: ProposalQuoteRow[];
   allProjects: BrowserProject[];
   proposalProjects: ProposalProjectWithProject[];
-  views: ProposalViewRow[];
   viewCount?: number;
   onClose?: () => void;
   onDelete?: (id: string) => void;
@@ -67,12 +63,29 @@ const STATUS_BADGE: Record<string, string> = {
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
-  milestones, quotes, allProjects, proposalProjects, views, viewCount = 0, onClose, onDelete, onUpdated,
+  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
   const [sections, setSections] = useState(initialSections);
   const [status, setStatus] = useState(initialProposal.status);
+
+  // Track slide visibility for tab dimming (updated when DetailsTab saves)
+  const [slideVisibility, setSlideVisibility] = useState({
+    show_welcome: initialProposal.show_welcome,
+    show_process: initialProposal.show_process,
+    show_approach: initialProposal.show_approach,
+    show_timeline: initialProposal.show_timeline,
+    show_samples: initialProposal.show_samples,
+    show_pricing: initialProposal.show_pricing,
+  });
+  const TAB_VISIBILITY_MAP: Partial<Record<TabId, keyof typeof slideVisibility>> = {
+    welcome: 'show_welcome',
+    approach: 'show_approach',
+    timeline: 'show_timeline',
+    samples: 'show_samples',
+    pricing: 'show_pricing',
+  };
   const [statusOpen, setStatusOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const [isDeleting, startDelete] = useTransition();
@@ -134,6 +147,13 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
     setActiveTab(tab);
   }, []);
 
+  const handleVisibilityToggle = useCallback((visKey: keyof typeof slideVisibility) => {
+    const newValue = !slideVisibility[visKey];
+    setSlideVisibility(prev => ({ ...prev, [visKey]: newValue }));
+    void updateProposal(proposal.id, { [visKey]: newValue });
+    onUpdated?.({ [visKey]: newValue } as Partial<ProposalRow>);
+  }, [slideVisibility, proposal.id, onUpdated]);
+
   useImperativeHandle(editorRef, () => ({ tryClose: handleClose }), [handleClose]);
 
   function handleDelete() {
@@ -190,18 +210,31 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         <nav className="inline-flex flex-wrap gap-1.5">
           {TABS.map(tab => {
             const Icon = TAB_ICONS[tab];
+            const visKey = TAB_VISIBILITY_MAP[tab];
+            const isHidden = visKey ? !slideVisibility[visKey] : false;
             return (
               <Fragment key={tab}>
                 <button
                   onClick={() => handleTabChange(tab)}
                   title={tab}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
                     activeTab === tab
                       ? 'bg-admin-bg-active text-admin-text-primary'
                       : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary/80'
-                  }`}
+                  } ${isHidden ? 'opacity-30' : ''}`}
                 >
-                  <Icon size={13} className="flex-shrink-0" />
+                  {visKey ? (
+                    <span className="group/ico flex-shrink-0 relative w-[13px] h-[13px]" onClick={(e) => { e.stopPropagation(); handleVisibilityToggle(visKey); }}>
+                      <span className="absolute inset-0 group-hover/ico:hidden">
+                        <Icon size={13} />
+                      </span>
+                      <span className="absolute inset-0 hidden group-hover/ico:block">
+                        {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                      </span>
+                    </span>
+                  ) : (
+                    <Icon size={13} className="flex-shrink-0" />
+                  )}
                   <span className="hidden md:inline">{tab}</span>
                 </button>
                 {tab === 'details' && (
@@ -281,9 +314,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             onProposalTypeChange={(type) => setProposalType(type)}
             onDirty={handleDirty}
           />
-        </div>
-        <div className={activeTab === 'views' ? 'h-full overflow-y-auto admin-scrollbar' : 'hidden'}>
-          <ViewsTab views={views} />
         </div>
       </div>
 

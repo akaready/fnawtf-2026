@@ -56,7 +56,12 @@ export interface ProposalRow {
   schedule_end_date: string | null;
   crowdfunding_approved: boolean;
   crowdfunding_deferred: boolean;
+  show_welcome: boolean;
+  show_process: boolean;
   show_approach: boolean;
+  show_timeline: boolean;
+  show_samples: boolean;
+  show_pricing: boolean;
   prepared_date: string | null;
   created_by: string | null;
   created_at: string;
@@ -181,6 +186,7 @@ export interface ProposalQuoteRow {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  viewer_email: string | null;
 }
 
 export interface ProposalMilestoneRow {

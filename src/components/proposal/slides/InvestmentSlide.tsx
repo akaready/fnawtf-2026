@@ -42,6 +42,7 @@ interface Props {
   crowdfundingDeferred?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
+  viewerEmail?: string | null;
 }
 
 export function InvestmentSlide({
@@ -52,6 +53,7 @@ export function InvestmentSlide({
   crowdfundingDeferred,
   slideRef,
   viewerName,
+  viewerEmail,
 }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -81,7 +83,7 @@ export function InvestmentSlide({
   const allActive = quotes.filter((q) => !q.deleted_at && q.visible !== false);
   const recommendedQuote = allActive.find((q) => q.is_fna_quote) ?? null; // First FNA = recommended
   const comparisonQuotes = allActive.filter((q) => q !== recommendedQuote); // Everything else
-  const clientQuotes = comparisonQuotes.filter((q) => !q.is_fna_quote);
+  const clientQuotes = comparisonQuotes.filter((q) => !q.is_fna_quote && (!viewerEmail || q.viewer_email === viewerEmail));
 
   // ID-based tab system
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(
@@ -182,7 +184,7 @@ export function InvestmentSlide({
         defer_payment: false,
         total_amount: null,
         down_amount: null,
-      });
+      }, viewerEmail ?? undefined);
       setQuotes((prev) => [...prev, newQuote]);
       setActiveQuoteId(newQuote.id);
       setJustUnlocked(true);
@@ -192,7 +194,7 @@ export function InvestmentSlide({
     } finally {
       setSavingQuote(false);
     }
-  }, [viewerName, proposalId, clientQuotes.length]);
+  }, [viewerName, viewerEmail, proposalId, clientQuotes.length]);
 
   // ── Delete handler ──
   const handleDelete = useCallback(async (quoteId: string) => {

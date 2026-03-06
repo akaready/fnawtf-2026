@@ -15,9 +15,7 @@ import {
   getProjectsForBrowser,
   getProposalContacts,
   getClients,
-  getProposalViews,
   type ClientRow,
-  type ProposalViewRow,
 } from '@/app/admin/actions';
 import type {
   ProposalRow,
@@ -41,7 +39,6 @@ interface PanelData {
   quotes: ProposalQuoteRow[];
   allProjects: BrowserProject[];
   proposalProjects: ProposalProjectWithProject[];
-  views: ProposalViewRow[];
 }
 
 interface ProposalPanelProps {
@@ -82,8 +79,7 @@ export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposal
       getProjectsForBrowser(),
       getProposalContacts(proposalId),
       getClients(),
-      getProposalViews(proposalId),
-    ]).then(([proposal, sections, milestones, quotes, proposalProjects, snippets, contacts, allProjects, proposalContacts, clients, views]) => {
+    ]).then(([proposal, sections, milestones, quotes, proposalProjects, snippets, contacts, allProjects, proposalContacts, clients]) => {
       setData({
         proposal,
         sections,
@@ -95,7 +91,6 @@ export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposal
         allProjects,
         proposalContacts,
         clients,
-        views,
       });
       setLoadedFor(proposalId);
     }).finally(() => setLoading(false));
@@ -129,7 +124,6 @@ export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposal
           quotes={data.quotes}
           allProjects={data.allProjects}
           proposalProjects={data.proposalProjects}
-          views={data.views}
           viewCount={viewCount}
           onClose={onClose}
           onDelete={onProposalDeleted}

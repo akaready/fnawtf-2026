@@ -42,16 +42,18 @@ type ClientTestimonial = {
 
 type CompanyType = 'client' | 'lead' | 'partner';
 type TabName = 'info' | 'contacts' | 'projects' | 'testimonials';
-type CompanyStatus = 'active' | 'prospect' | 'on hold' | 'past';
-type PipelineStage = 'new' | 'qualified' | 'proposal' | 'negotiating' | 'closed';
+type CompanyStatus = 'lead' | 'pitching' | 'stalled' | 'active' | 'inactive' | 'lost' | 'dropped';
 
-const ALL_STATUSES: CompanyStatus[] = ['active', 'prospect', 'on hold', 'past'];
+const ALL_STATUSES: CompanyStatus[] = ['lead', 'pitching', 'stalled', 'active', 'inactive', 'lost', 'dropped'];
 
 const STATUS_CONFIG: Record<CompanyStatus, { label: string; color: string; dot: string }> = {
-  active:    { label: 'Active',   color: 'text-admin-success',            dot: 'bg-emerald-500' },
-  prospect:  { label: 'Prospect', color: 'text-admin-warning',              dot: 'bg-amber-500' },
-  'on hold': { label: 'On Hold',  color: 'text-slate-400',              dot: 'bg-slate-500' },
-  past:      { label: 'Past',     color: 'text-admin-text-ghost',    dot: 'bg-admin-bg-active' },
+  lead:     { label: 'Lead',     color: 'text-admin-warning',        dot: 'bg-amber-500' },
+  pitching: { label: 'Pitching', color: 'text-admin-info',           dot: 'bg-sky-500' },
+  stalled:  { label: 'Stalled',  color: 'text-slate-400',            dot: 'bg-slate-500' },
+  active:   { label: 'Active',   color: 'text-admin-success',        dot: 'bg-emerald-500' },
+  inactive: { label: 'Inactive', color: 'text-admin-text-ghost',     dot: 'bg-admin-bg-active' },
+  lost:     { label: 'Lost',     color: 'text-red-500/60',           dot: 'bg-red-500' },
+  dropped:  { label: 'Dropped',  color: 'text-admin-text-muted/40',  dot: 'bg-white/20' },
 };
 
 const TYPE_CONFIG: Record<CompanyType, {
@@ -61,13 +63,13 @@ const TYPE_CONFIG: Record<CompanyType, {
   activeText: string;
   activeBorder: string;
 }> = {
-  client: {
-    label: 'Client', Icon: Building2,
-    activeBg: 'bg-admin-success-bg', activeText: 'text-admin-success', activeBorder: 'border-admin-success-border',
-  },
   lead: {
     label: 'Lead', Icon: Target,
     activeBg: 'bg-admin-warning-bg', activeText: 'text-admin-warning', activeBorder: 'border-admin-warning-border',
+  },
+  client: {
+    label: 'Client', Icon: Building2,
+    activeBg: 'bg-admin-success-bg', activeText: 'text-admin-success', activeBorder: 'border-admin-success-border',
   },
   partner: {
     label: 'Partner', Icon: Link2,
@@ -75,15 +77,7 @@ const TYPE_CONFIG: Record<CompanyType, {
   },
 };
 
-const PIPELINE_STAGES: { value: PipelineStage; label: string; color: string }[] = [
-  { value: 'new',         label: 'New',         color: 'text-admin-text-dim' },
-  { value: 'qualified',   label: 'Qualified',   color: 'text-admin-warning' },
-  { value: 'proposal',    label: 'Proposal',    color: 'text-admin-info' },
-  { value: 'negotiating', label: 'Negotiating', color: 'text-violet-400' },
-  { value: 'closed',      label: 'Won',         color: 'text-admin-success' },
-];
-
-const ALL_TYPES: CompanyType[] = ['client', 'lead', 'partner'];
+const ALL_TYPES: CompanyType[] = ['lead', 'client', 'partner'];
 
 export interface CompanyPanelProps {
   company: ClientRow | null;
@@ -138,8 +132,7 @@ export function CompanyPanel({
       notes: c.notes,
       logo_url: c.logo_url,
       company_types: c.company_types ?? [],
-      status: c.status ?? 'active',
-      pipeline_stage: c.pipeline_stage ?? 'new',
+      status: c.status ?? 'lead',
       website_url: c.website_url,
       linkedin_url: c.linkedin_url,
       description: c.description,
@@ -228,7 +221,6 @@ export function CompanyPanel({
   if (!localCompany) return <PanelDrawer open={false} onClose={onClose}>{null}</PanelDrawer>;
 
   const companyTypes = (localCompany.company_types ?? []) as CompanyType[];
-  const isLead = companyTypes.includes('lead');
 
   const clientContacts = contacts.filter((ct) => ct.client_id === localCompany.id);
   const clientProjects = projects.filter((p) => p.client_id === localCompany.id);
@@ -318,8 +310,7 @@ export function CompanyPanel({
     }
   };
 
-  const status = (localCompany.status ?? 'active') as CompanyStatus;
-  const pipelineStage = (localCompany.pipeline_stage ?? 'new') as PipelineStage;
+  const status = (localCompany.status ?? 'lead') as CompanyStatus;
   const statusCfg = STATUS_CONFIG[status];
 
   const inputCls = 'admin-input w-full';
@@ -357,13 +348,13 @@ export function CompanyPanel({
               </p>
             )}
           </div>
-          {/* Status pill — read-only */}
-          <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap bg-admin-bg-selected flex-shrink-0 ${statusCfg.color}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-            {statusCfg.label}
-          </span>
-          <div className="flex items-center flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <SaveDot status={autoSave.status} />
+            {/* Status pill — read-only */}
+            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap bg-admin-bg-selected flex-shrink-0 ${statusCfg.color}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+              {statusCfg.label}
+            </span>
             <button
               onClick={handleClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
@@ -421,9 +412,10 @@ export function CompanyPanel({
         <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-5">
           {activeTab === 'info' && (
             <div className="space-y-4">
-              {/* Type + status controls */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Type */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Type</label>
+                <div className="flex items-center gap-2">
                   {ALL_TYPES.map((type) => {
                     const cfg = TYPE_CONFIG[type];
                     const isActive = companyTypes.includes(type);
@@ -433,61 +425,49 @@ export function CompanyPanel({
                         key={type}
                         type="button"
                         onClick={() => toggleCompanyType(type)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
                           isActive
                             ? `${cfg.activeBg} ${cfg.activeText} ${cfg.activeBorder}`
                             : 'border-admin-border-subtle bg-transparent text-admin-text-placeholder hover:text-admin-text-faint hover:border-admin-border'
                         }`}
                       >
-                        <Icon size={11} />
+                        <Icon size={14} />
                         {cfg.label}
                       </button>
                     );
                   })}
-                  <div className="ml-auto flex items-center gap-1.5">
-                    {ALL_STATUSES.map((s) => {
-                      const scfg = STATUS_CONFIG[s];
-                      const isActive = status === s;
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => handleChange('status', s)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
-                            isActive
-                              ? `bg-admin-bg-hover border-admin-border-emphasis ${scfg.color}`
-                              : 'border-admin-border-subtle bg-transparent text-admin-text-muted/25 hover:text-admin-text-faint hover:border-admin-border'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-admin-bg-active'}`} />
-                          {scfg.label}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
-                {isLead && (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs text-admin-text-placeholder mr-1">Stage</span>
-                    {PIPELINE_STAGES.map((stage) => {
-                      const isActive = pipelineStage === stage.value;
-                      return (
-                        <button
-                          key={stage.value}
-                          type="button"
-                          onClick={() => handleChange('pipeline_stage', stage.value)}
-                          className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
-                            isActive
-                              ? `bg-admin-bg-hover border-admin-border-emphasis ${stage.color}`
-                              : 'border-admin-border-subtle bg-transparent text-admin-text-muted/25 hover:text-admin-text-faint hover:border-admin-border'
-                          }`}
-                        >
-                          {stage.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+              </div>
+
+              {/* Stage */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Stage</label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {ALL_STATUSES.map((s) => {
+                    const scfg = STATUS_CONFIG[s];
+                    const isActive = status === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          handleChange('status', s);
+                          if (s === 'active' && !companyTypes.includes('client')) {
+                            handleChange('company_types', [...companyTypes, 'client']);
+                          }
+                        }}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                          isActive
+                            ? `bg-admin-bg-hover border-admin-border-emphasis ${scfg.color}`
+                            : 'border-admin-border-subtle bg-transparent text-admin-text-muted/25 hover:text-admin-text-faint hover:border-admin-border'
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? scfg.dot : 'bg-admin-bg-active'}`} />
+                        {scfg.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Description */}

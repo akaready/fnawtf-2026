@@ -142,13 +142,14 @@ export function AdminSelect({
       >
         <span className="flex-1 truncate">{displayText}</span>
         {multi && hasValue && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onChange([]); }}
-            className="text-admin-text-faint hover:text-admin-text-primary"
+          <span
+            role="button"
+            tabIndex={-1}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange([]); }}
+            className="text-admin-text-faint hover:text-admin-text-primary cursor-pointer"
           >
             <X size={12} />
-          </button>
+          </span>
         )}
         <ChevronDown
           size={14}

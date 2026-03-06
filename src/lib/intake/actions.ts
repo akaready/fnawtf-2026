@@ -86,8 +86,7 @@ async function createCompanyServiceRole(
       email,
       website_url: websiteUrl ?? null,
       company_types: ['lead'],
-      status: 'prospect',
-      pipeline_stage: 'new',
+      status: 'lead',
     })
     .select('id')
     .single();

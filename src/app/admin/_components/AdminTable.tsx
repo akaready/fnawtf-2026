@@ -64,9 +64,12 @@ export const STATUS_COLORS: Record<string, string> = {
   featured:      'bg-amber-500/20 text-admin-warning',
   // Companies
   active:        'bg-admin-success-bg text-admin-success',
-  prospect:      'bg-amber-500/20 text-admin-warning',
-  'on hold':     'bg-slate-500/20 text-slate-400',
-  past:          'bg-admin-bg-hover text-admin-text-faint',
+  lead:          'bg-amber-500/20 text-admin-warning',
+  pitching:      'bg-admin-info-bg text-admin-info',
+  stalled:       'bg-slate-500/20 text-slate-400',
+  inactive:      'bg-admin-bg-hover text-admin-text-faint',
+  lost:          'bg-red-500/20 text-red-400',
+  dropped:       'bg-admin-bg-hover text-admin-text-muted/40',
   // Meetings
   upcoming:       'bg-admin-info-bg text-admin-info',
   bot_scheduled:  'bg-indigo-500/20 text-indigo-300',

@@ -8,7 +8,6 @@ import {
   getContacts,
   getProposalContacts,
   getClients,
-  getProposalViews,
 } from '../../actions';
 import {
   getProposalProjects,
@@ -24,7 +23,7 @@ export default async function ProposalEditorPage({ params }: Props) {
   const { id } = await params;
 
   try {
-    const [proposal, sections, milestones, quotesRaw, proposalProjects, snippets, contacts, allProjects, proposalContacts, clients, views] =
+    const [proposal, sections, milestones, quotesRaw, proposalProjects, snippets, contacts, allProjects, proposalContacts, clients] =
       await Promise.all([
         getProposal(id),
         getProposalSections(id),
@@ -36,7 +35,6 @@ export default async function ProposalEditorPage({ params }: Props) {
         getProjectsForBrowser(),
         getProposalContacts(id),
         getClients(),
-        getProposalViews(id),
       ]);
 
     const quotes = quotesRaw.filter(q => !q.deleted_at);
@@ -53,7 +51,6 @@ export default async function ProposalEditorPage({ params }: Props) {
         quotes={quotes}
         allProjects={allProjects}
         proposalProjects={proposalProjects}
-        views={views}
       />
     );
   } catch {

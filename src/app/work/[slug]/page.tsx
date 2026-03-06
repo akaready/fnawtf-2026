@@ -17,7 +17,11 @@ function interpolate(template: string, vars: Record<string, string>): string {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  // Use anon client — cookies() may be unavailable during static generation
+  const supabase = createAnonClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+  );
 
   const [{ data: raw }, { data: seoRow }] = await Promise.all([
     supabase.from('projects').select('*').eq('slug', slug).eq('published', true).single(),

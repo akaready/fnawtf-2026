@@ -113,13 +113,13 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   // Slide order: Title → Welcome → Process → Approach → Timeline → Samples → Projects... → Investment → Next Steps
   const slideNames = [
     'Title',
-    ...(welcomeSection?.custom_content  ? ['Welcome']  : []),
-    'Process',
+    ...(proposal.show_welcome && welcomeSection?.custom_content  ? ['Welcome']  : []),
+    ...(proposal.show_process                                    ? ['Process']  : []),
     ...(proposal.show_approach && approachSection?.custom_content ? ['Approach'] : []),
-    ...(hasSchedule                     ? ['Timeline'] : []),
-    ...(validVideos.length > 0          ? ['Samples']  : []),
-    ...validVideos.map((v: ProposalVideo) => v.project_video?.project?.title ?? 'Project'),
-    ...(hasQuotes                       ? ['Investment'] : []),
+    ...(proposal.show_timeline && hasSchedule                    ? ['Timeline'] : []),
+    ...(proposal.show_samples && validVideos.length > 0          ? ['Samples']  : []),
+    ...(proposal.show_samples ? validVideos.map((v: ProposalVideo) => v.project_video?.project?.title ?? 'Project') : []),
+    ...(proposal.show_pricing && hasQuotes                       ? ['Investment'] : []),
     'Next Steps',
   ];
 
@@ -130,13 +130,13 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
 
   const slideRefs = [
     titleRef,
-    ...(welcomeSection?.custom_content  ? [welcomeRef]    : []),
-    processRef,
+    ...(proposal.show_welcome && welcomeSection?.custom_content  ? [welcomeRef]    : []),
+    ...(proposal.show_process                                    ? [processRef]    : []),
     ...(proposal.show_approach && approachSection?.custom_content ? [approachRef]   : []),
-    ...(hasSchedule                     ? [scheduleRef]   : []),
-    ...(validVideos.length > 0          ? [samplesIntroRef] : []),
-    ...(videoSlideRefs as React.RefObject<HTMLElement>[]),
-    ...(hasQuotes                       ? [investmentRef] : []),
+    ...(proposal.show_timeline && hasSchedule                    ? [scheduleRef]   : []),
+    ...(proposal.show_samples && validVideos.length > 0          ? [samplesIntroRef] : []),
+    ...(proposal.show_samples ? (videoSlideRefs as React.RefObject<HTMLElement>[]) : []),
+    ...(proposal.show_pricing && hasQuotes                       ? [investmentRef] : []),
     nextStepsRef,
   ] as React.RefObject<HTMLElement>[];
 
@@ -268,17 +268,17 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
       >
         <TitleSlide proposal={proposal} slideRef={titleRef} onNext={() => navigateTo(1)} />
 
-        {welcomeSection?.custom_content && (
+        {proposal.show_welcome && welcomeSection?.custom_content && (
           <WelcomeSlide section={welcomeSection} slideRef={welcomeRef} />
         )}
 
-        <ProcessSlide slideRef={processRef} />
+        {proposal.show_process && <ProcessSlide slideRef={processRef} />}
 
         {proposal.show_approach && approachSection?.custom_content && (
           <ApproachSlide section={approachSection} slideRef={approachRef} />
         )}
 
-        {hasSchedule && (
+        {proposal.show_timeline && hasSchedule && (
           <ScheduleSlide
             milestones={milestones}
             startDate={proposal.schedule_start_date}
@@ -287,20 +287,18 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
           />
         )}
 
-        {validVideos.length > 0 && (
+        {proposal.show_samples && validVideos.length > 0 && (
           <SamplesIntroSlide
             videos={validVideos}
             slideRef={samplesIntroRef}
             onViewProject={(videoIndex: number) => {
-              // Samples intro slide is at a certain position in slideRefs
-              // Video slides come after it, so find the right index
               const samplesIdx = slideRefs.findIndex((r) => r === samplesIntroRef);
               if (samplesIdx >= 0) navigateTo(samplesIdx + 1 + videoIndex);
             }}
           />
         )}
 
-        {validVideos.map((v: ProposalVideo, i: number) => (
+        {proposal.show_samples && validVideos.map((v: ProposalVideo, i: number) => (
           <ProjectSlide
             key={v.id}
             video={v}
@@ -309,7 +307,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
           />
         ))}
 
-        {hasQuotes && (
+        {proposal.show_pricing && hasQuotes && (
           <InvestmentSlide
             proposalId={proposal.id}
             proposalType={proposal.proposal_type}
@@ -318,6 +316,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             crowdfundingDeferred={proposal.crowdfunding_deferred}
             slideRef={investmentRef}
             viewerName={viewerName}
+            viewerEmail={viewerEmail}
           />
         )}
 

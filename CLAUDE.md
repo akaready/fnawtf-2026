@@ -215,3 +215,17 @@ After any admin UI changes, run:
 - `npx tsc --noEmit` — must pass clean (pre-existing errors in scripts/intake are OK)
 - Check the style guide at `/admin/styleguide` for visual consistency
 - Use `/review-admin` skill to check design system compliance
+
+---
+
+## GitHub Operations
+
+Use `gh` CLI for all GitHub API operations (PRs, issues, reviews, comments, checks). Never use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single `gh` command can do the job.
+
+Examples:
+- `gh pr create` — not manual push + API call
+- `gh pr view 123` — not `curl` to the API
+- `gh issue list` — not scraping the web UI
+- `gh api repos/owner/repo/pulls/123/comments` — for anything `gh` doesn't have a direct subcommand for
+
+When GitHub MCP tools (`mcp__github__*`) are available, prefer those for structured operations (creating PRs with labels/reviewers, searching issues). Fall back to `gh` CLI when MCP tools are unavailable.

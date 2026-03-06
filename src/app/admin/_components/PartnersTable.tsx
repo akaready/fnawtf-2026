@@ -180,7 +180,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
             {types.map((type) => (
               <span
                 key={type}
-                className={`w-2 h-2 rounded-full ${TYPE_CONFIG[type].dotBg}`}
+                className={`w-2.5 h-2.5 rounded-full ${TYPE_CONFIG[type].dotBg}`}
                 title={TYPE_CONFIG[type].label}
               />
             ))}

@@ -25,15 +25,20 @@ export type ClientTestimonial = {
 };
 
 export type CompanyType = 'client' | 'lead' | 'partner';
-export type CompanyStatus = 'active' | 'prospect' | 'on hold' | 'past';
+export type CompanyStatus = 'lead' | 'pitching' | 'stalled' | 'active' | 'inactive' | 'lost' | 'dropped';
 
-export const ALL_STATUSES: CompanyStatus[] = ['active', 'prospect', 'on hold', 'past'];
+export const ALL_STATUSES: CompanyStatus[] = ['lead', 'pitching', 'stalled', 'active', 'inactive', 'lost', 'dropped'];
+
+export const KANBAN_STATUSES: CompanyStatus[] = ['lead', 'pitching', 'stalled', 'active'];
 
 export const STATUS_CONFIG: Record<CompanyStatus, { label: string; color: string; dot: string }> = {
-  active:    { label: 'Active',   color: 'text-admin-success',          dot: 'bg-emerald-500' },
-  prospect:  { label: 'Prospect', color: 'text-admin-warning',          dot: 'bg-amber-500' },
-  'on hold': { label: 'On Hold',  color: 'text-slate-400',              dot: 'bg-slate-500' },
-  past:      { label: 'Past',     color: 'text-admin-text-muted/40',    dot: 'bg-white/20' },
+  lead:     { label: 'Lead',     color: 'text-admin-warning',        dot: 'bg-amber-500' },
+  pitching: { label: 'Pitching', color: 'text-admin-info',           dot: 'bg-sky-500' },
+  stalled:  { label: 'Stalled',  color: 'text-slate-400',            dot: 'bg-slate-500' },
+  active:   { label: 'Active',   color: 'text-admin-success',        dot: 'bg-emerald-500' },
+  inactive: { label: 'Inactive', color: 'text-admin-text-ghost',     dot: 'bg-admin-bg-active' },
+  lost:     { label: 'Lost',     color: 'text-red-500/60',           dot: 'bg-red-500' },
+  dropped:  { label: 'Dropped',  color: 'text-admin-text-muted/40',  dot: 'bg-white/20' },
 };
 
 import { Building2, Target, Link2 } from 'lucide-react';

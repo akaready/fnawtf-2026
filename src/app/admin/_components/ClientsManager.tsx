@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   Plus, Download, Building2, LayoutGrid, Table2,
   Eye, ListFilter, ArrowUpAZ, Rows,
-  Loader2, Trash2, Check, GitMerge,
+  Loader2, Trash2, Check, GitMerge, ChevronRight,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { MergeDialog } from './MergeDialog';
@@ -576,7 +576,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                   onClick={() => setActiveId(c.id)}
                   className={`p-[1px] rounded-xl cursor-pointer transition-all ${getCardBorderBg(companyTypes, isFocused)}`}
                 >
-                  <div className={`rounded-[11px] ${sz.padding} flex items-start gap-3 h-full transition-colors ${isFocused ? 'bg-admin-bg-raised' : 'bg-admin-bg-raised hover:bg-admin-bg-hover'}`}>
+                  <div className={`group/card rounded-[11px] ${sz.padding} flex items-start gap-3 h-full transition-colors ${isFocused ? 'bg-admin-bg-raised' : 'bg-admin-bg-raised hover:bg-admin-bg-hover'}`}>
                     {cardVisibleFields.has('logo_url') && (
                       <GalleryLogoDropzone
                         logoUrl={c.logo_url}
@@ -639,17 +639,20 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                         </>
                       )}
                     </div>
-                    {cardVisibleFields.has('company_types') && companyTypes.length > 0 && (
-                      <div className="flex flex-col gap-1 flex-shrink-0">
-                        {companyTypes.map((type) => (
-                          <span
-                            key={type}
-                            className={`w-2 h-2 rounded-full ${TYPE_CONFIG[type].dotBg}`}
-                            title={TYPE_CONFIG[type].label}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {cardVisibleFields.has('company_types') && companyTypes.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          {companyTypes.map((type) => (
+                            <span
+                              key={type}
+                              className={`w-2.5 h-2.5 rounded-full ${TYPE_CONFIG[type].dotBg}`}
+                              title={TYPE_CONFIG[type].label}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <ChevronRight size={14} className="opacity-0 group-hover/card:opacity-40 transition-opacity flex-shrink-0 text-admin-text-muted" />
+                    </div>
                   </div>
                 </div>
               );

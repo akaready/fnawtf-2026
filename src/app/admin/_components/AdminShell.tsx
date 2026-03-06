@@ -3,7 +3,7 @@
 import React, { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Rocket, LogOut, ChevronRight, ChevronDown, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Building2, Target, AppWindow, Clapperboard, GitFork, Video, Sun, Moon, Palette, ClipboardList, ScrollText, Settings, PanelLeftOpen, FileSignature, Layers, MapPin } from 'lucide-react';
+import { Rocket, LogOut, ChevronRight, ChevronDown, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Building2, Target, AppWindow, Clapperboard, GitFork, Video, Sun, Moon, Palette, Inbox, ScrollText, Settings, PanelLeftOpen, FileSignature, Layers, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
@@ -130,7 +130,7 @@ function AdminShellInner({ children, userEmail }: Props) {
     // --- Incoming ---
     { href: '/admin/partners',     label: 'Pipelines',    icon: GitFork },
     { href: '/admin/leads',        label: 'Leads',        icon: Target },
-    { href: '/admin/intake',       label: 'Intake',       icon: ClipboardList },
+    { href: '/admin/intake',       label: 'Intake',       icon: Inbox },
     { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },
     // --- Library ---
     { href: '/admin/contacts',     label: 'People',       icon: Users },
