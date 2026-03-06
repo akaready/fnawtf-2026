@@ -191,11 +191,14 @@ export function Demo4({ data }: { data: CallSheetData }) {
 
             {/* Call Time */}
             <div className="rounded-xl bg-white p-8 text-center">
-              <p className="text-base uppercase tracking-[0.25em] font-bold text-neutral-500">
-                General Crew Call
+              <p className="text-base uppercase tracking-[0.25em] font-extrabold text-neutral-800">
+                General Call
               </p>
-              <p className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tighter text-black mt-2 whitespace-nowrap">
+              <p className="font-[family-name:var(--font-display)] text-6xl font-bold tracking-tighter text-black mt-2 whitespace-nowrap">
                 {data.callTime}
+              </p>
+              <p className="text-xs uppercase tracking-wider text-neutral-400 mt-2 font-semibold">
+                See specific times below
               </p>
             </div>
 
