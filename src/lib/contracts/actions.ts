@@ -266,7 +266,7 @@ export async function voidContract(id: string, reason?: string) {
 
   if (contractData) {
     const cd = contractData as { id: string; title: string; client?: { company?: string; slack_channel_id?: string } | null };
-    notifySlack({
+    await notifySlack({
       type: 'contract_voided',
       data: {
         contractId: id,
@@ -477,7 +477,7 @@ export async function sendContractForSigning(contractId: string) {
     metadata: { signwell_document_id: result.documentId },
   } as never);
 
-  notifySlack({
+  await notifySlack({
     type: 'contract_sent',
     data: {
       contractId,
@@ -579,7 +579,7 @@ export async function handleSignWellWebhook(event: {
       signer_email: event.signer.email,
     } as never);
 
-    notifySlack({
+    await notifySlack({
       type: 'contract_viewed',
       data: { contractId, title: contractTitle, signerEmail: event.signer.email, companyName, slackChannelId },
     });
@@ -617,7 +617,7 @@ export async function handleSignWellWebhook(event: {
         .eq('id', contractId);
     }
 
-    notifySlack({
+    await notifySlack({
       type: 'contract_signed',
       data: {
         contractId,
@@ -648,7 +648,7 @@ export async function handleSignWellWebhook(event: {
       signer_email: event.signer.email,
     } as never);
 
-    notifySlack({
+    await notifySlack({
       type: 'contract_declined',
       data: { contractId, title: contractTitle, signerEmail: event.signer.email, companyName, slackChannelId },
     });

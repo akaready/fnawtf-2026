@@ -66,7 +66,7 @@ export async function verifyProposalAccess(slug: string, email: string, password
     slackChannelId = (clientRow as { slack_channel_id?: string } | null)?.slack_channel_id ?? null;
   }
 
-  notifySlack({
+  await notifySlack({
     type: 'proposal_viewed',
     data: {
       proposalId: row.id,
@@ -181,7 +181,7 @@ export async function saveClientQuote(proposalId: string, quoteData: {
   friendly_discount_pct: number;
   total_amount: number | null;
   down_amount: number | null;
-}): Promise<ProposalQuoteRow> {
+}, viewerEmail?: string): Promise<ProposalQuoteRow> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('proposal_quotes')
@@ -189,6 +189,7 @@ export async function saveClientQuote(proposalId: string, quoteData: {
       proposal_id: proposalId,
       is_fna_quote: false,
       is_locked: false,
+      viewer_email: viewerEmail ?? null,
       ...quoteData,
     } as never)
     .select()

@@ -69,7 +69,7 @@ export async function loginByAccessCode(
     slackChannelId = (clientRow as { slack_channel_id?: string } | null)?.slack_channel_id ?? null;
   }
 
-  notifySlack({
+  await notifySlack({
     type: 'portal_login',
     data: {
       proposalId: match.id,

@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`Transcript stored for meeting ${meeting.id}`);
 
-      notifySlack({
+      await notifySlack({
         type: 'transcript_ready',
         data: { meetingTitle: (meeting as { title?: string }).title || 'Untitled meeting' },
       });

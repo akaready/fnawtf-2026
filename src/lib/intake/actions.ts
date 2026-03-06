@@ -95,6 +95,61 @@ async function createCompanyServiceRole(
   return (row as { id: string }).id;
 }
 
+async function createContactServiceRole(contact: {
+  first_name: string;
+  last_name: string;
+  email?: string;
+  role?: string;
+  company?: string;
+  client_id?: string;
+  type?: string;
+}): Promise<string> {
+  const supabase = createServiceClient();
+  const { data: row, error } = await supabase
+    .from('contacts')
+    .insert({
+      first_name: contact.first_name,
+      last_name: contact.last_name,
+      email: contact.email ?? null,
+      role: contact.role ?? null,
+      company: contact.company ?? null,
+      client_id: contact.client_id ?? null,
+      type: contact.type ?? 'contact',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as { id: string }).id;
+}
+
+function parseStakeholderEntries(raw: string): Array<{ firstName: string; lastName: string; email?: string; title?: string }> {
+  const entries: Array<{ firstName: string; lastName: string; email?: string; title?: string }> = [];
+  // Split by newlines or semicolons
+  const lines = raw.split(/[;\n]+/).map(s => s.trim()).filter(Boolean);
+  for (const line of lines) {
+    // Try to extract email
+    const emailMatch = line.match(/[\w.+-]+@[\w.-]+\.\w+/);
+    const email = emailMatch?.[0];
+    // Remove email from the line for name/title parsing
+    const rest = line.replace(emailMatch?.[0] ?? '', '').replace(/[<>(),]/g, ' ').trim();
+    const parts = rest.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) continue;
+    // Try to detect a title after a dash or comma
+    const dashIdx = rest.indexOf(' - ');
+    let namePart = rest;
+    let title: string | undefined;
+    if (dashIdx > 0) {
+      namePart = rest.substring(0, dashIdx).trim();
+      title = rest.substring(dashIdx + 3).trim() || undefined;
+    }
+    const nameParts = namePart.split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || 'Unknown';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    entries.push({ firstName, lastName, email, title });
+  }
+  return entries;
+}
+
 async function scrapeAndUpdateCompany(clientId: string, websiteUrl?: string): Promise<void> {
   if (!websiteUrl) return;
   try {
@@ -186,6 +241,7 @@ export async function submitIntakeForm(data: IntakeFormData) {
   if (error) throw new Error(error.message);
 
   // Auto-create company record and link it
+  let linkedClientId: string | undefined;
   if (data.company_name) {
     try {
       const clientId = await createCompanyServiceRole(
@@ -193,6 +249,7 @@ export async function submitIntakeForm(data: IntakeFormData) {
         data.email,
         data.company_url,
       );
+      linkedClientId = clientId;
       // Link the intake submission to the new company
       await supabase
         .from('intake_submissions')
@@ -206,7 +263,42 @@ export async function submitIntakeForm(data: IntakeFormData) {
     } catch { /* company creation failed — don't block submission */ }
   }
 
-  notifySlack({
+  // Auto-create primary contact record and link it
+  try {
+    const contactId = await createContactServiceRole({
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      role: data.title,
+      company: data.company_name,
+      client_id: linkedClientId,
+      type: 'contact',
+    });
+    await supabase
+      .from('intake_submissions')
+      .update({ contact_id: contactId })
+      .eq('id', inserted.id);
+
+    // Auto-create stakeholder contacts (fire-and-forget)
+    if (data.stakeholders) {
+      const entries = parseStakeholderEntries(data.stakeholders);
+      for (const entry of entries) {
+        try {
+          await createContactServiceRole({
+            first_name: entry.firstName,
+            last_name: entry.lastName,
+            email: entry.email,
+            role: entry.title,
+            company: data.company_name,
+            client_id: linkedClientId,
+            type: 'contact',
+          });
+        } catch { /* skip failed stakeholder creation */ }
+      }
+    }
+  } catch { /* contact creation failed — don't block submission */ }
+
+  await notifySlack({
     type: 'intake_submitted',
     data: {
       name: `${data.first_name} ${data.last_name}`.trim(),

@@ -61,7 +61,7 @@ export async function batchSetPublished(ids: string[], published: boolean) {
       .select('id, title, client_name')
       .in('id', ids);
     for (const p of (projects as { id: string; title: string; client_name: string }[]) ?? []) {
-      notifySlack({
+      await notifySlack({
         type: 'project_published',
         data: { id: p.id, title: p.title, clientName: p.client_name },
       });
@@ -424,6 +424,9 @@ export async function createClientRecord(data: {
   email: string;
   notes?: string | null;
   logo_url?: string | null;
+  company_types?: string[];
+  status?: string;
+  pipeline_stage?: string;
 }): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: row, error } = await supabase
@@ -434,6 +437,29 @@ export async function createClientRecord(data: {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/companies');
   return (row as { id: string }).id;
+}
+
+export async function tagClientAsLead(clientId: string) {
+  const { supabase } = await requireAuth();
+  // Fetch current company_types, then add 'lead' if missing and set pipeline_stage to 'proposal'
+  const { data: client, error: fetchErr } = await supabase
+    .from('clients')
+    .select('company_types, pipeline_stage')
+    .eq('id', clientId)
+    .single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  const types: string[] = (client as { company_types: string[] }).company_types ?? [];
+  if (types.includes('lead')) return; // already a lead
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      company_types: [...types, 'lead'],
+      pipeline_stage: 'proposal',
+    } as never)
+    .eq('id', clientId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/companies');
+  revalidatePath('/admin/leads');
 }
 
 export async function updateClientRecord(id: string, data: Record<string, unknown>) {
@@ -625,7 +651,7 @@ export async function createProposal(data: {
   revalidatePath('/admin/proposals');
 
   const proposalId = (row as { id: string }).id;
-  notifySlack({
+  await notifySlack({
     type: 'proposal_created',
     data: { id: proposalId, title: data.title, company: data.contact_company, slug: data.slug },
   });
@@ -653,7 +679,7 @@ export async function deleteProposal(id: string) {
 export async function createProposalDraft(): Promise<string> {
   const { supabase, userId } = await requireAuth();
   const slug = `proposal-${Date.now()}`;
-  const password = Math.random().toString(36).slice(2, 10);
+  const password = 'welcome';
   const { data: row, error } = await supabase
     .from('proposals')
     .insert({

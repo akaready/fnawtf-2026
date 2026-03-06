@@ -23,7 +23,7 @@ export async function logPricingLeadServer(data: {
       source: data.source,
     });
 
-    notifySlack({
+    await notifySlack({
       type: 'pricing_lead',
       data: {
         name: data.name,
