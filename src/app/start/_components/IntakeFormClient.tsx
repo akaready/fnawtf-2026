@@ -1171,69 +1171,47 @@ function IntakeProgressDots({ count, activeIndex, onNavigate, onHome, onExit, sk
 function IntakeNavArrows({ onPrev, onNext, isFirst, isLast, onExit }: {
   onPrev: () => void; onNext: () => void; isFirst: boolean; isLast: boolean; onExit: () => void;
 }) {
-  const leftRef = useRef<HTMLButtonElement>(null);
-  const rightRef = useRef<HTMLButtonElement>(null);
-  const hasEnteredRef = useRef(false);
-
-  const BRIGHT = { backgroundColor: '#ffffff', color: '#000000', borderColor: 'rgba(255,255,255,0)' };
-  const DIM = { backgroundColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.55)', borderColor: 'rgba(255,255,255,0.18)' };
+  const [hasEntered, setHasEntered] = useState(false);
+  const showLeft = hasEntered && !isFirst;
+  const showRight = hasEntered;
 
   useEffect(() => {
-    if (leftRef.current) gsap.set(leftRef.current, { x: -150, opacity: 0, ...BRIGHT });
-    if (rightRef.current) gsap.set(rightRef.current, { x: 150, opacity: 0, ...BRIGHT });
-  }, []);
+    if (!isFirst && !hasEntered) setHasEntered(true);
+  }, [isFirst, hasEntered]);
 
-  useEffect(() => {
-    if (isFirst) {
-      if (!hasEnteredRef.current) return;
-      // Only hide prev arrow on intro — right arrow stays visible
-      if (leftRef.current) gsap.to(leftRef.current, { x: -150, opacity: 0, duration: 0.45, ease: 'power3.in' });
-    } else {
-      const isFirstEntry = !hasEnteredRef.current;
-      hasEnteredRef.current = true;
-      const delay = isFirstEntry ? 1.5 : 0.05;
-      if (leftRef.current) { gsap.set(leftRef.current, { x: -150, opacity: 0 }); gsap.to(leftRef.current, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay }); }
-      if (rightRef.current) { gsap.set(rightRef.current, { x: 150, opacity: 0 }); gsap.to(rightRef.current, { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', delay: delay + 0.2 }); }
-    }
-  }, [isFirst]);
-
-  // After first entry, go to DIM state
-  useEffect(() => {
-    if (!hasEnteredRef.current) return;
-    const targets = [leftRef.current, rightRef.current].filter(Boolean);
-    if (!targets.length) return;
-    gsap.to(targets, { ...DIM, duration: 0.45, ease: 'power2.out', delay: 2 });
-  }, [isFirst]);
-
-  const handleEnter = (ref: React.RefObject<HTMLButtonElement>) => {
-    if (ref.current) gsap.to(ref.current, { backgroundColor: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.85)', duration: 0.18 });
-  };
-  const handleLeave = (ref: React.RefObject<HTMLButtonElement>) => {
-    if (ref.current) gsap.to(ref.current, { ...DIM, duration: 0.2 });
-  };
-
-  const baseClass = 'fixed top-1/2 -translate-y-1/2 z-[150] hidden lg:flex flex-col items-center justify-center gap-1 py-3 w-12 rounded-xl border backdrop-blur-lg';
+  const baseClass = 'fixed top-1/2 -translate-y-1/2 z-[150] hidden lg:flex flex-col items-center justify-center gap-1 py-3 w-12 rounded-xl border backdrop-blur-lg bg-white/10 text-white/55 border-white/[0.18] hover:bg-white/[0.18] hover:text-white/85 transition-colors duration-150';
   const arrowLabelClass = 'text-[8px] font-mono tracking-[0.3em] uppercase';
+
+  const hidden = { x: 0, opacity: 0, pointerEvents: 'none' as const };
+  const visible = { x: 0, opacity: 1, pointerEvents: 'auto' as const };
 
   return (
     <>
-      <button ref={leftRef} onClick={onPrev} aria-label="Previous" className={`${baseClass} left-5`}
-        style={{ pointerEvents: isFirst ? 'none' : 'auto' }} disabled={isFirst}
-        onMouseEnter={() => handleEnter(leftRef)} onMouseLeave={() => handleLeave(leftRef)}
+      <motion.button
+        onClick={onPrev}
+        aria-label="Previous"
+        className={`${baseClass} left-5`}
+        initial={hidden}
+        animate={showLeft ? visible : hidden}
+        transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
       >
         <ChevronLeft size={20} strokeWidth={1.5} />
         <span className={arrowLabelClass}>PREV</span>
-      </button>
-      <button ref={rightRef} onClick={isLast ? onExit : onNext} aria-label={isLast ? 'Save and exit' : 'Next'}
-        className={`${baseClass} right-5`} style={{ pointerEvents: hasEnteredRef.current ? 'auto' : 'none' }}
-        onMouseEnter={() => handleEnter(rightRef)} onMouseLeave={() => handleLeave(rightRef)}
+      </motion.button>
+      <motion.button
+        onClick={isLast ? onExit : onNext}
+        aria-label={isLast ? 'Save and exit' : 'Next'}
+        className={`${baseClass} right-5`}
+        initial={hidden}
+        animate={showRight ? visible : hidden}
+        transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1], delay: showRight && !showLeft ? 0.2 : 0 }}
       >
         {isLast ? (
           <><LogOut size={20} strokeWidth={1.5} /><span className={arrowLabelClass}>EXIT</span></>
         ) : (
           <><ChevronRight size={20} strokeWidth={1.5} /><span className={arrowLabelClass}>NEXT</span></>
         )}
-      </button>
+      </motion.button>
     </>
   );
 }
@@ -1266,6 +1244,17 @@ function SuccessScreen() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 export function IntakeFormClient() {
+  // Hide scrollbar gutter — slides handle their own scrolling
+  // Hide any body/html scrollbar gutter — slides handle their own scrolling
+  useEffect(() => {
+    document.documentElement.style.scrollbarWidth = 'none';
+    document.body.style.scrollbarWidth = 'none';
+    return () => {
+      document.documentElement.style.scrollbarWidth = '';
+      document.body.style.scrollbarWidth = '';
+    };
+  }, []);
+
   // ── State ────────────────────────────────────────────
   const [started, setStarted] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -1956,7 +1945,7 @@ export function IntakeFormClient() {
             Swipe left or right to advance.
           </p>
           <p data-instructions className="hidden sm:block text-sm text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
-            Navigate with arrow keys, page dots below, or the left/right buttons.
+            Navigate with arrow keys, page dots, or left/right buttons.
           </p>
         </div>
       </section>
