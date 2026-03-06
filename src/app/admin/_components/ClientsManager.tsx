@@ -5,9 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import {
   Plus, Download, Building2, LayoutGrid, Table2,
   Eye, ListFilter, ArrowUpAZ, Rows,
-  Loader2, Trash2, Check,
+  Loader2, Trash2, Check, GitMerge,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
+import { MergeDialog } from './MergeDialog';
 import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
 import { useViewMode } from '../_hooks/useViewMode';
 import { ToolbarButton, ToolbarPopover } from './table/TableToolbar';
@@ -25,6 +26,7 @@ import {
   updateProject,
   uploadLogo,
   batchDeleteClients,
+  mergeCompanies,
 } from '../actions';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
@@ -52,15 +54,22 @@ const CARD_SIZE_CONFIG = {
   4: { logoSize: 96, padding: 'px-6 py-6', nameSize: 'text-2xl', detailSize: 'text-lg', metaSize: 'text-base', gridCols: 'grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2' },
 } as const;
 
+interface CompanyProposal {
+  id: string;
+  title: string;
+  contact_company: string | null;
+}
+
 interface Props {
   initialClients: ClientRow[];
   projects: ClientProject[];
   testimonials: ClientTestimonial[];
   contacts: ContactRow[];
   industryTags: string[];
+  proposals: CompanyProposal[];
 }
 
-export function ClientsManager({ initialClients, projects, testimonials, contacts: initialContacts, industryTags }: Props) {
+export function ClientsManager({ initialClients, projects, testimonials, contacts: initialContacts, industryTags, proposals }: Props) {
   const [clients, setClients] = useState(initialClients);
   const [localContacts, setLocalContacts] = useState(initialContacts);
   const [localTestimonials, setLocalTestimonials] = useState(testimonials);
@@ -71,6 +80,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
   const [activeId, setActiveId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useViewMode<ViewMode>('fna-clients-viewMode', 'cards');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   // ── Card view state (persisted) ─────────────────────────────────────────
   type CardSize = 1 | 2 | 3 | 4;
@@ -124,13 +134,15 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     { key: 'twitter_url', label: 'Twitter', type: 'text' },
     { key: 'instagram_url', label: 'Instagram', type: 'text' },
     {
-      key: 'pipeline_stage', label: 'Pipeline', type: 'select', sortable: true,
+      key: 'status', label: 'Status', type: 'select', sortable: true,
       options: [
-        { value: 'new', label: 'New' },
-        { value: 'qualified', label: 'Qualified' },
-        { value: 'proposal', label: 'Proposal' },
-        { value: 'negotiating', label: 'Negotiating' },
-        { value: 'closed', label: 'Closed' },
+        { value: 'lead', label: 'Lead' },
+        { value: 'pitching', label: 'Pitching' },
+        { value: 'stalled', label: 'Stalled' },
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'lost', label: 'Lost' },
+        { value: 'dropped', label: 'Dropped' },
       ],
     },
   ], [localContacts, localProjects]);
@@ -203,8 +215,7 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         notes: null,
         logo_url: null,
         company_types: ['client'],
-        status: 'prospect',
-        pipeline_stage: 'new',
+        status: 'active',
         website_url: null,
         linkedin_url: null,
         description: null,
@@ -230,6 +241,23 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
     setClients((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
   }, [activeId]);
+
+  const handleMerge = useCallback((sourceIds: string[], targetId: string) => {
+    setClients((prev) => {
+      const target = prev.find((c) => c.id === targetId);
+      if (!target) return prev;
+      return prev.filter((c) => !sourceIds.includes(c.id));
+    });
+    setMergeState(null);
+    startSave(async () => {
+      try {
+        await mergeCompanies(sourceIds, targetId);
+      } catch (e) {
+        console.error(e);
+        setClients(initialClients);
+      }
+    });
+  }, [initialClients, startSave]);
 
   const handleContactLinked = useCallback(async (contactId: string, companyId: string, companyName: string) => {
     await updateContact(contactId, { client_id: companyId, company: companyName });
@@ -584,8 +612,8 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
                           {cardVisibleFields.has('founded_year') && c.founded_year && (
                             <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate`}>Est. {c.founded_year}</p>
                           )}
-                          {cardVisibleFields.has('pipeline_stage') && c.pipeline_stage && c.pipeline_stage !== 'new' && (
-                            <p className={`${sz.detailSize} mt-0.5 text-amber-400/60 truncate capitalize`}>{c.pipeline_stage}</p>
+                          {cardVisibleFields.has('status') && c.status && (
+                            <p className={`${sz.detailSize} mt-0.5 text-admin-text-faint truncate capitalize`}>{c.status}</p>
                           )}
                           {cardVisibleFields.has('description') && c.description && (
                             <p className={`${sz.metaSize} mt-0.5 text-admin-text-ghost line-clamp-2`}>{c.description}</p>
@@ -650,10 +678,25 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
           selectable
           freezePanes
           exportCsv
-          onBatchDelete={async (ids) => {
-            await batchDeleteClients(ids);
-            setClients((prev) => prev.filter((c) => !ids.includes(c.id)));
-          }}
+          batchActions={[
+            {
+              label: 'Merge',
+              icon: <GitMerge size={13} />,
+              onClick: (ids: string[]) => {
+                if (ids.length < 2) return;
+                setMergeState({ sourceIds: ids });
+              },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              onClick: async (ids: string[]) => {
+                await batchDeleteClients(ids);
+                setClients((prev) => prev.filter((c) => !ids.includes(c.id)));
+              },
+            },
+          ]}
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
           emptyMessage="No clients yet."
@@ -677,6 +720,27 @@ export function ClientsManager({ initialClients, projects, testimonials, contact
         onProjectLinked={handleProjectLinked}
         onProjectUnlinked={handleProjectUnlinked}
       />
+
+      {mergeState && (() => {
+        const sourceCompanies = clients.filter((c) => mergeState.sourceIds.includes(c.id));
+        return (
+          <MergeDialog
+            items={sourceCompanies.map((c) => {
+              const parts = [
+                localContacts.filter((ct) => ct.client_id === c.id).length > 0 && `${localContacts.filter((ct) => ct.client_id === c.id).length} contacts`,
+                localProjects.filter((p) => p.client_id === c.id).length > 0 && `${localProjects.filter((p) => p.client_id === c.id).length} projects`,
+                localTestimonials.filter((t) => t.client_id === c.id).length > 0 && `${localTestimonials.filter((t) => t.client_id === c.id).length} testimonials`,
+                proposals.filter((p) => p.contact_company === c.name).length > 0 && `${proposals.filter((p) => p.contact_company === c.name).length} proposals`,
+              ].filter(Boolean);
+              return { id: c.id, label: c.name, detail: parts.join(', ') || undefined, createdAt: c.created_at };
+            })}
+            title="Merge Companies"
+            consequenceText="All contacts, projects, testimonials, and proposals will be transferred to the kept company."
+            onClose={() => setMergeState(null)}
+            onMerge={handleMerge}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
 import {
   Plus, Building2, RotateCcw, Table2, Columns, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Target,
+  GitMerge, Trash2,
 } from 'lucide-react';
 import {
   DndContext,
@@ -29,7 +30,8 @@ import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
 import { useViewMode } from '../_hooks/useViewMode';
 import { AdminDataTable, type ColDef } from './table';
 import { ToolbarButton } from './table/TableToolbar';
-import { type ClientRow, createClientRecord, updateClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients } from '../actions';
+import { type ClientRow, createClientRecord, updateClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients, mergeCompanies } from '../actions';
+import { MergeDialog } from './MergeDialog';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
 import {
@@ -39,14 +41,11 @@ import {
   STATUS_CONFIG,
 } from './companyUtils';
 
-type PipelineStage = 'new' | 'qualified' | 'proposal' | 'negotiating' | 'closed' | 'lost';
-
-const PIPELINE_COLUMNS: { value: PipelineStage; label: string; accent: string; headerColor: string; overColor: string; cardBg: string; cardBgFocused: string; cardBorder: string; cardBorderFocused: string }[] = [
-  { value: 'new',         label: 'New Lead',    accent: 'border-admin-border',      headerColor: 'text-admin-text-dim',    overColor: 'bg-admin-bg-selected',       cardBg: '#0e0e0e',   cardBgFocused: '#141414',   cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
-  { value: 'qualified',   label: 'Qualified',   accent: 'border-admin-warning-border',   headerColor: 'text-admin-warning',   overColor: 'bg-amber-500/[0.06]',   cardBg: '#1a1408',   cardBgFocused: '#251c0c',   cardBorder: 'bg-amber-800/50',   cardBorderFocused: 'bg-amber-600/70' },
-  { value: 'proposal',    label: 'Proposal',    accent: 'border-admin-info-border',     headerColor: 'text-admin-info',     overColor: 'bg-sky-500/[0.06]',     cardBg: '#0a1520',   cardBgFocused: '#0d1e2e',   cardBorder: 'bg-sky-800/50',     cardBorderFocused: 'bg-sky-600/70' },
-  { value: 'negotiating', label: 'Negotiating', accent: 'border-violet-500/30',  headerColor: 'text-violet-400',  overColor: 'bg-violet-500/[0.06]',  cardBg: '#150f1e',   cardBgFocused: '#1d1528',   cardBorder: 'bg-violet-800/50',  cardBorderFocused: 'bg-violet-600/70' },
-  { value: 'closed',      label: 'Won',         accent: 'border-admin-success-border', headerColor: 'text-admin-success', overColor: 'bg-emerald-500/[0.06]', cardBg: '#0a1810',   cardBgFocused: '#0e2018',   cardBorder: 'bg-emerald-800/50', cardBorderFocused: 'bg-emerald-600/70' },
+const KANBAN_COLUMNS: { value: CompanyStatus; label: string; accent: string; headerColor: string; overColor: string; cardBg: string; cardBgFocused: string; cardBorder: string; cardBorderFocused: string }[] = [
+  { value: 'lead',     label: 'Lead',     accent: 'border-admin-warning-border', headerColor: 'text-admin-warning', overColor: 'bg-amber-500/[0.06]',   cardBg: '#1a1408', cardBgFocused: '#251c0c', cardBorder: 'bg-amber-800/50',   cardBorderFocused: 'bg-amber-600/70' },
+  { value: 'pitching', label: 'Pitching', accent: 'border-admin-info-border',    headerColor: 'text-admin-info',    overColor: 'bg-sky-500/[0.06]',     cardBg: '#0a1520', cardBgFocused: '#0d1e2e', cardBorder: 'bg-sky-800/50',     cardBorderFocused: 'bg-sky-600/70' },
+  { value: 'stalled',  label: 'Stalled',  accent: 'border-admin-border',         headerColor: 'text-slate-400',     overColor: 'bg-admin-bg-selected',  cardBg: '#0e0e0e', cardBgFocused: '#141414', cardBorder: 'bg-[#2a2a2a]',      cardBorderFocused: 'bg-white/20' },
+  { value: 'active',   label: 'Active',   accent: 'border-admin-success-border', headerColor: 'text-admin-success', overColor: 'bg-emerald-500/[0.06]', cardBg: '#0a1810', cardBgFocused: '#0e2018', cardBorder: 'bg-emerald-800/50', cardBorderFocused: 'bg-emerald-600/70' },
 ];
 
 type LeadsView = 'kanban' | 'table';
@@ -56,14 +55,21 @@ const LEADS_VIEWS: ViewDef<LeadsView>[] = [
   { key: 'table', icon: Table2, label: 'Table view' },
 ];
 
+interface CompanyProposal {
+  id: string;
+  title: string;
+  contact_company: string | null;
+}
+
 interface Props {
   initialLeads: ClientRow[];
   projects: ClientProject[];
   testimonials: ClientTestimonial[];
   contacts: ContactRow[];
+  proposals: CompanyProposal[];
 }
 
-export function LeadsKanban({ initialLeads, projects, testimonials, contacts: initialContacts }: Props) {
+export function LeadsKanban({ initialLeads, projects, testimonials, contacts: initialContacts, proposals }: Props) {
   const [leads, setLeads] = useState(initialLeads);
   const [localContacts, setLocalContacts] = useState(initialContacts);
   const [localTestimonials, setLocalTestimonials] = useState(testimonials);
@@ -76,6 +82,8 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [animatingCard, setAnimatingCard] = useState<ClientRow | null>(null);
   const [showLost, setShowLost] = useState(false);
+  const [showDropped, setShowDropped] = useState(false);
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -96,8 +104,7 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
         notes: null,
         logo_url: null,
         company_types: ['lead'],
-        status: 'prospect',
-        pipeline_stage: 'new',
+        status: 'lead',
         website_url: null,
         linkedin_url: null,
         description: null,
@@ -131,26 +138,28 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
     const x = (activator.clientX + event.delta.x) / window.innerWidth;
     const y = (activator.clientY + event.delta.y) / window.innerHeight;
 
-    // Lost zone — move card there immediately, animate at drop target
-    if (over.id === 'lost') {
-      if (lead.pipeline_stage === 'lost') return;
+    const BIN_IDS = new Set(['lost', 'dropped']);
+    const STAGE_IDS = new Set(['lead', 'pitching', 'stalled', 'active']);
+
+    // Lost / Dropped bin — move card there immediately, animate at drop target
+    if (BIN_IDS.has(over.id as string)) {
+      const targetBin = over.id as CompanyStatus;
+      if (lead.status === targetBin) return;
       if (activeId === leadId) setActiveId(null);
-      setLeads((prev) => prev.map((c) => c.id === leadId ? { ...c, pipeline_stage: 'lost' as PipelineStage } : c));
+      setLeads((prev) => prev.map((c) => c.id === leadId ? { ...c, status: targetBin } : c));
       setAnimatingCard(lead);
       setTimeout(() => {
         setAnimatingCard(null);
-        updateClientRecord(leadId, { pipeline_stage: 'lost' }).catch(console.error);
+        updateClientRecord(leadId, { status: targetBin }).catch(console.error);
       }, 520);
       return;
     }
-
-    const STAGE_IDS = new Set(['new', 'qualified', 'proposal', 'negotiating', 'closed']);
 
     // Card-on-card drop → reorder within the same column
     if (!STAGE_IDS.has(over.id as string)) {
       const overId = over.id as string;
       const overCard = leads.find((c) => c.id === overId);
-      if (!overCard || lead.pipeline_stage !== overCard.pipeline_stage) return;
+      if (!overCard || lead.status !== overCard.status) return;
       setLeads((prev) => {
         const fromIndex = prev.findIndex((c) => c.id === leadId);
         const toIndex = prev.findIndex((c) => c.id === overId);
@@ -159,18 +168,27 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
       return;
     }
 
-    const targetStage = over.id as PipelineStage;
-    if (lead.pipeline_stage === targetStage) return;
+    const targetStage = over.id as CompanyStatus;
+    if (lead.status === targetStage) return;
 
-    // Optimistic update — stage change
-    setLeads((prev) => prev.map((c) => (c.id === leadId ? { ...c, pipeline_stage: targetStage } : c)));
+    // Auto-add 'client' type when moving to Active
+    const updates: Record<string, unknown> = { status: targetStage };
+    if (targetStage === 'active') {
+      const types = lead.company_types ?? [];
+      if (!types.includes('client')) {
+        updates.company_types = [...types, 'client'];
+      }
+    }
+
+    // Optimistic update
+    setLeads((prev) => prev.map((c) => (c.id === leadId ? { ...c, ...updates } : c)));
 
     // Persist
-    updateClientRecord(leadId, { pipeline_stage: targetStage }).catch(console.error);
+    updateClientRecord(leadId, updates).catch(console.error);
 
     // Confetti only when moving forward (right) in the pipeline
-    const stageOrder: PipelineStage[] = ['new', 'qualified', 'proposal', 'negotiating', 'closed'];
-    const movingForward = stageOrder.indexOf(targetStage) > stageOrder.indexOf(lead.pipeline_stage as PipelineStage);
+    const stageOrder: CompanyStatus[] = ['lead', 'pitching', 'stalled', 'active'];
+    const movingForward = stageOrder.indexOf(targetStage) > stageOrder.indexOf(lead.status as CompanyStatus);
     if (movingForward) {
       confetti({ particleCount: 38, spread: 55, startVelocity: 22, origin: { x, y }, scalar: 0.75, ticks: 90 });
     }
@@ -234,31 +252,37 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
   );
 
   const lostLeads = useMemo(() =>
-    leadsOnly.filter((c) => c.pipeline_stage === 'lost'),
+    leadsOnly.filter((c) => c.status === 'lost'),
+    [leadsOnly]
+  );
+
+  const droppedLeads = useMemo(() =>
+    leadsOnly.filter((c) => c.status === 'dropped'),
     [leadsOnly]
   );
 
   const handleRestore = useCallback((id: string) => {
-    setLeads((prev) => prev.map((c) => c.id === id ? { ...c, pipeline_stage: 'new' as PipelineStage } : c));
-    updateClientRecord(id, { pipeline_stage: 'new' }).catch(console.error);
+    setLeads((prev) => prev.map((c) => c.id === id ? { ...c, status: 'lead' } : c));
+    updateClientRecord(id, { status: 'lead' }).catch(console.error);
   }, []);
 
   const filtered = useMemo(() => {
-    const active = leadsOnly.filter((c) => c.pipeline_stage !== 'lost');
-    if (!search.trim()) return active;
+    const HIDDEN: Set<string> = new Set(['lost', 'dropped', 'inactive']);
+    const visible = leadsOnly.filter((c) => !HIDDEN.has(c.status));
+    if (!search.trim()) return visible;
     const q = search.toLowerCase();
-    return active.filter((c) =>
+    return visible.filter((c) =>
       c.name.toLowerCase().includes(q) || c.notes?.toLowerCase().includes(q)
     );
   }, [leadsOnly, search]);
 
   const byStage = useMemo(() => {
-    const map: Record<PipelineStage, ClientRow[]> = {
-      new: [], qualified: [], proposal: [], negotiating: [], closed: [], lost: [],
+    const map: Record<string, ClientRow[]> = {
+      lead: [], pitching: [], stalled: [], active: [],
     };
     for (const lead of filtered) {
-      const stage = (lead.pipeline_stage ?? 'new') as PipelineStage;
-      (map[stage] ?? map.new).push(lead);
+      const stage = lead.status ?? 'lead';
+      (map[stage] ?? map.lead).push(lead);
     }
     return map;
   }, [filtered]);
@@ -288,19 +312,11 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
       render: (row) => <span className="font-medium text-admin-text-primary/80">{row.name}</span>,
     },
     {
-      key: 'pipeline_stage', label: 'Stage', sortable: true, groupable: true,
+      key: 'status', label: 'Stage', sortable: true, groupable: true,
       type: 'select' as const,
-      options: [...PIPELINE_COLUMNS.map((c) => ({ value: c.value, label: c.label })), { value: 'lost', label: 'Lost' }],
+      options: [...KANBAN_COLUMNS.map((c) => ({ value: c.value, label: c.label })), { value: 'lost', label: 'Lost' }, { value: 'dropped', label: 'Dropped' }],
       render: (row) => {
-        const stage = (row.pipeline_stage ?? 'new') as PipelineStage;
-        const col = PIPELINE_COLUMNS.find((c) => c.value === stage);
-        return <span className={`text-xs ${col?.headerColor ?? 'text-red-500/60'}`}>{col?.label ?? 'Lost'}</span>;
-      },
-    },
-    {
-      key: 'status', label: 'Status', sortable: true,
-      render: (row) => {
-        const cfg = STATUS_CONFIG[(row.status ?? 'prospect') as CompanyStatus] ?? STATUS_CONFIG['prospect'];
+        const cfg = STATUS_CONFIG[(row.status ?? 'lead') as CompanyStatus] ?? STATUS_CONFIG['lead'];
         return <span className={`text-xs ${cfg.color}`}>{cfg.label}</span>;
       },
     },
@@ -373,10 +389,23 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
           selectable
           freezePanes
           exportCsv
-          onBatchDelete={async (ids) => {
-            await batchDeleteClients(ids);
-            setLeads((prev) => prev.filter((l) => !ids.includes(l.id)));
-          }}
+          batchActions={[
+            {
+              label: 'Merge',
+              icon: <GitMerge size={13} />,
+              onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              requireConfirm: true,
+              onClick: async (ids: string[]) => {
+                await batchDeleteClients(ids);
+                setLeads((prev) => prev.filter((l) => !ids.includes(l.id)));
+              },
+            },
+          ]}
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
           emptyMessage={leadsOnly.length === 0 ? 'No leads yet.' : 'No matching leads.'}
@@ -401,7 +430,7 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
       <div className="flex-1 min-h-0 overflow-y-hidden admin-scrollbar px-8 pt-4 pb-8">
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="flex gap-4 h-full">
-            {PIPELINE_COLUMNS.map((col) => {
+            {KANBAN_COLUMNS.map((col) => {
               const cards = byStage[col.value];
               const column = (
                 <KanbanColumn
@@ -418,15 +447,21 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
                   onCardClick={(id) => setActiveId(id)}
                 />
               );
-              if (col.value === 'closed') {
+              if (col.value === 'active') {
                 return (
                   <div key={col.value} className="flex flex-col gap-3 flex-1 min-w-0 h-full">
                     <div className="flex-1 min-h-0 flex flex-col">{column}</div>
                     <LostZone
                       animatingCard={animatingCard}
-                      lostLeads={lostLeads}
-                      showLost={showLost}
+                      leads={lostLeads}
+                      show={showLost}
                       onToggle={() => setShowLost((v) => !v)}
+                      onRestore={handleRestore}
+                    />
+                    <DroppedZone
+                      leads={droppedLeads}
+                      show={showDropped}
+                      onToggle={() => setShowDropped((v) => !v)}
                       onRestore={handleRestore}
                     />
                   </div>
@@ -453,6 +488,36 @@ export function LeadsKanban({ initialLeads, projects, testimonials, contacts: in
       </div>
       </>
       )}
+
+      {mergeState && (() => {
+        const sources = leads.filter((c) => mergeState.sourceIds.includes(c.id));
+        return (
+          <MergeDialog
+            items={sources.map((c) => ({
+              id: c.id,
+              label: c.name,
+              detail: (() => {
+                const parts = [
+                  localContacts.filter((ct) => ct.client_id === c.id).length > 0 && `${localContacts.filter((ct) => ct.client_id === c.id).length} contacts`,
+                  localProjects.filter((p) => p.client_id === c.id).length > 0 && `${localProjects.filter((p) => p.client_id === c.id).length} projects`,
+                  localTestimonials.filter((t) => t.client_id === c.id).length > 0 && `${localTestimonials.filter((t) => t.client_id === c.id).length} testimonials`,
+                  proposals.filter((p) => p.contact_company === c.name).length > 0 && `${proposals.filter((p) => p.contact_company === c.name).length} proposals`,
+                ].filter(Boolean);
+                return parts.join(', ') || undefined;
+              })(),
+              createdAt: c.created_at,
+            }))}
+            title="Merge Companies"
+            consequenceText="All contacts, projects, testimonials, and proposals will be transferred to the kept company."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeCompanies(sourceIds, targetId);
+              setLeads((prev) => prev.filter((c) => !sourceIds.includes(c.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       <CompanyPanel
         company={activeCompany}
@@ -487,7 +552,7 @@ function KanbanColumn({
   cardBorderFocused,
   onCardClick,
 }: {
-  col: typeof PIPELINE_COLUMNS[number];
+  col: typeof KANBAN_COLUMNS[number];
   cards: ClientRow[];
   contacts: ContactRow[];
   projects: ClientProject[];
@@ -539,18 +604,18 @@ function KanbanColumn({
   );
 }
 
-/* ── Lost zone (droppable column, below Won) ─────────────────────────── */
+/* ── Lost zone (droppable bin, below Active) ─────────────────────────── */
 
 function LostZone({
   animatingCard,
-  lostLeads,
-  showLost,
+  leads: binLeads,
+  show,
   onToggle,
   onRestore,
 }: {
   animatingCard: ClientRow | null;
-  lostLeads: ClientRow[];
-  showLost: boolean;
+  leads: ClientRow[];
+  show: boolean;
   onToggle: () => void;
   onRestore: (id: string) => void;
 }) {
@@ -560,24 +625,22 @@ function LostZone({
     <div className={`flex flex-col flex-shrink-0 rounded-xl border transition-colors border-red-900/30 ${
       isOver ? 'bg-red-500/[0.08]' : 'bg-admin-bg-wash'
     }`}>
-      {/* Header — is both the drop zone and the expand toggle */}
       <div
         ref={setNodeRef}
-        onClick={lostLeads.length > 0 ? onToggle : undefined}
-        className={`px-3 py-2.5 flex items-center justify-between ${lostLeads.length > 0 ? 'cursor-pointer' : ''}`}
+        onClick={binLeads.length > 0 ? onToggle : undefined}
+        className={`px-3 py-2.5 flex items-center justify-between ${binLeads.length > 0 ? 'cursor-pointer' : ''}`}
       >
         <span className="text-xs font-semibold text-red-500/60">Lost</span>
         <span className={`text-[10px] rounded px-1.5 py-0.5 ${
-          lostLeads.length > 0
+          binLeads.length > 0
             ? 'text-admin-danger/70 bg-admin-danger-bg'
             : 'text-admin-text-placeholder bg-admin-bg-hover'
         }`}>
-          {lostLeads.length}
+          {binLeads.length}
         </span>
       </div>
 
-      {/* Inline animation when a card is dropped */}
-      {animatingCard && (
+      {animatingCard && animatingCard.status !== 'dropped' && (
         <div className="px-2 pb-2 -mt-1">
           <div className="card-remove p-[1px] rounded-xl bg-red-900/40">
             <div className="rounded-[11px] px-3 py-2 flex items-center gap-2.5" style={{ backgroundColor: '#1a0808' }}>
@@ -594,11 +657,10 @@ function LostZone({
         </div>
       )}
 
-      {/* Expanded lost leads — draggable back to any column */}
-      {showLost && lostLeads.length > 0 && (
-        <div className="border-t border-red-900/20 p-2 space-y-1.5 max-h-[260px] overflow-y-auto admin-scrollbar">
-          {lostLeads.map((c) => (
-            <DraggableLostCard key={c.id} company={c} onRestore={onRestore} />
+      {show && binLeads.length > 0 && (
+        <div className="border-t border-red-900/20 p-2 space-y-1.5 max-h-[180px] overflow-y-auto admin-scrollbar">
+          {binLeads.map((c) => (
+            <DraggableBinCard key={c.id} company={c} onRestore={onRestore} colorScheme="red" />
           ))}
         </div>
       )}
@@ -606,9 +668,58 @@ function LostZone({
   );
 }
 
-function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRestore: (id: string) => void }) {
+/* ── Dropped zone (droppable bin, below Active) ──────────────────────── */
+
+function DroppedZone({
+  leads: binLeads,
+  show,
+  onToggle,
+  onRestore,
+}: {
+  leads: ClientRow[];
+  show: boolean;
+  onToggle: () => void;
+  onRestore: (id: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: 'dropped' });
+
+  return (
+    <div className={`flex flex-col flex-shrink-0 rounded-xl border transition-colors border-admin-border ${
+      isOver ? 'bg-admin-bg-selected' : 'bg-admin-bg-wash'
+    }`}>
+      <div
+        ref={setNodeRef}
+        onClick={binLeads.length > 0 ? onToggle : undefined}
+        className={`px-3 py-2.5 flex items-center justify-between ${binLeads.length > 0 ? 'cursor-pointer' : ''}`}
+      >
+        <span className="text-xs font-semibold text-admin-text-muted/40">Dropped</span>
+        <span className={`text-[10px] rounded px-1.5 py-0.5 ${
+          binLeads.length > 0
+            ? 'text-admin-text-faint bg-admin-bg-hover'
+            : 'text-admin-text-placeholder bg-admin-bg-hover'
+        }`}>
+          {binLeads.length}
+        </span>
+      </div>
+
+      {show && binLeads.length > 0 && (
+        <div className="border-t border-admin-border p-2 space-y-1.5 max-h-[180px] overflow-y-auto admin-scrollbar">
+          {binLeads.map((c) => (
+            <DraggableBinCard key={c.id} company={c} onRestore={onRestore} colorScheme="neutral" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DraggableBinCard({ company: c, onRestore, colorScheme }: { company: ClientRow; onRestore: (id: string) => void; colorScheme: 'red' | 'neutral' }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: c.id });
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
+
+  const borderBg = colorScheme === 'red' ? 'bg-red-900/20' : 'bg-admin-bg-hover';
+  const cardBg = colorScheme === 'red' ? 'bg-[#120808]' : 'bg-admin-bg-base';
+  const textColor = colorScheme === 'red' ? 'text-red-200/40' : 'text-admin-text-muted/40';
 
   return (
     <div
@@ -616,9 +727,9 @@ function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRe
       style={style}
       {...listeners}
       {...attributes}
-      className={`p-[1px] rounded-xl bg-red-900/20 group cursor-grab active:cursor-grabbing select-none transition-opacity ${isDragging ? 'opacity-30' : ''}`}
+      className={`p-[1px] rounded-xl ${borderBg} group cursor-grab active:cursor-grabbing select-none transition-opacity ${isDragging ? 'opacity-30' : ''}`}
     >
-      <div className="rounded-[11px] px-2.5 py-2 flex items-center gap-2 bg-[#120808]">
+      <div className={`rounded-[11px] px-2.5 py-2 flex items-center gap-2 ${cardBg}`}>
         {c.logo_url ? (
           <img src={c.logo_url} alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0 opacity-50" />
         ) : (
@@ -626,11 +737,11 @@ function DraggableLostCard({ company: c, onRestore }: { company: ClientRow; onRe
             <Building2 size={10} className="text-admin-text-placeholder" />
           </div>
         )}
-        <p className="text-[11px] text-red-200/40 truncate flex-1">{c.name}</p>
+        <p className={`text-[11px] ${textColor} truncate flex-1`}>{c.name}</p>
         <button
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onRestore(c.id); }}
-          title="Restore to New Lead"
+          title="Restore to Lead"
           className="opacity-0 group-hover:opacity-100 transition-opacity text-admin-text-ghost hover:text-admin-text-secondary flex-shrink-0"
         >
           <RotateCcw size={11} />
@@ -703,7 +814,7 @@ function LeadCard({
 }) {
   const contactCount = contacts.filter((ct) => ct.client_id === c.id).length;
   const projectCount = projects.filter((p) => p.client_id === c.id).length;
-  const statusCfg = STATUS_CONFIG[(c.status ?? 'prospect') as CompanyStatus] ?? STATUS_CONFIG['prospect'];
+  const statusCfg = STATUS_CONFIG[(c.status ?? 'lead') as CompanyStatus] ?? STATUS_CONFIG['lead'];
 
   return (
     <div

@@ -4,12 +4,13 @@ import { useState, useMemo } from 'react';
 import {
   Plus, Trash2, Download,
   Table2, CreditCard,
-  MessageSquare, GitMerge, X,
+  MessageSquare, GitMerge,
 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { ViewSwitcher, type ViewDef } from './ViewSwitcher';
 import { useViewMode } from '../_hooks/useViewMode';
 import { AdminDataTable, type ColDef } from './table';
+import { MergeDialog } from './MergeDialog';
 import { TestimonialPanel } from './TestimonialPanel';
 import {
   type TestimonialRow,
@@ -25,85 +26,6 @@ const TESTIMONIALS_VIEWS: ViewDef<TestimonialsView>[] = [
   { key: 'table', icon: Table2, label: 'Table view' },
   { key: 'cards', icon: CreditCard, label: 'Card view' },
 ];
-
-/* ── Merge Dialog ──────────────────────────────────────────────────────── */
-
-function MergeTestimonialsDialog({
-  testimonials,
-  onClose,
-  onMerge,
-  isPending,
-}: {
-  testimonials: TestimonialRow[];
-  onClose: () => void;
-  onMerge: (sourceIds: string[], targetId: string) => void;
-  isPending: boolean;
-}) {
-  const [targetId, setTargetId] = useState<string>(testimonials[0]?.id ?? '');
-
-  const getName = (t: TestimonialRow) =>
-    t.contact ? `${t.contact.first_name} ${t.contact.last_name}`.trim() : t.person_name ?? 'Anonymous';
-
-  return (
-    <div className="relative z-10 bg-[#0f0f0f] border border-admin-border rounded-xl w-full max-w-md mx-4 shadow-2xl">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border-subtle">
-        <h2 className="text-lg font-semibold text-admin-text-primary">Merge Testimonials</h2>
-        <button onClick={onClose} className="text-admin-text-muted hover:text-admin-text-primary transition-colors">
-          <X size={16} />
-        </button>
-      </div>
-
-      <div className="px-6 py-5 space-y-5">
-        <div>
-          <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Merging</p>
-          <div className="flex flex-wrap gap-1.5">
-            {testimonials.map((t) => (
-              <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-admin-bg-hover border border-admin-border text-sm text-admin-text-primary">
-                {getName(t)}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Keep as</p>
-          <div className="space-y-1.5">
-            {testimonials.map((t) => (
-              <label key={t.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-admin-bg-hover transition-colors">
-                <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${targetId === t.id ? 'border-admin-text-primary bg-admin-text-primary' : 'border-admin-border'}`}>
-                  {targetId === t.id && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
-                </div>
-                <input type="radio" className="sr-only" value={t.id} checked={targetId === t.id} onChange={() => setTargetId(t.id)} />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-admin-text-primary block">{getName(t)}</span>
-                  <span className="text-xs text-admin-text-muted block truncate">{t.quote.length > 60 ? t.quote.slice(0, 60) + '...' : t.quote}</span>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-xs text-admin-text-muted px-3 py-2 rounded-lg bg-admin-bg-subtle border border-admin-border">
-          The kept testimonial will be preserved. All others will be deleted.
-        </p>
-      </div>
-
-      <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-admin-border-subtle">
-        <button onClick={onClose} disabled={isPending} className="btn-secondary px-4 py-2 text-sm font-medium">
-          Cancel
-        </button>
-        <button
-          disabled={isPending || !targetId}
-          onClick={() => onMerge(testimonials.map((t) => t.id).filter((id) => id !== targetId), targetId)}
-          className="btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed"
-        >
-          <GitMerge size={13} />
-          {isPending ? 'Merging...' : 'Merge'}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /* ── TestimonialsManager ────────────────────────────────────────────────── */
 
@@ -292,25 +214,32 @@ export function TestimonialsManager({ initialTestimonials, clients, projects, co
 
       {mergeState && (() => {
         const sourceTestimonials = testimonials.filter((t) => mergeState.sourceIds.includes(t.id));
+        const getName = (t: TestimonialRow) =>
+          t.contact ? `${t.contact.first_name} ${t.contact.last_name}`.trim() : t.person_name ?? 'Anonymous';
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMergeState(null)} />
-            <MergeTestimonialsDialog
-              testimonials={sourceTestimonials}
-              onClose={() => setMergeState(null)}
-              onMerge={async (sourceIds, targetId) => {
-                setMerging(true);
-                try {
-                  await mergeTestimonials(sourceIds, targetId);
-                  setTestimonials((prev) => prev.filter((t) => !sourceIds.includes(t.id)));
-                  setMergeState(null);
-                } finally {
-                  setMerging(false);
-                }
-              }}
-              isPending={merging}
-            />
-          </div>
+          <MergeDialog
+            items={sourceTestimonials.map((t) => {
+              const parts = [
+                t.company,
+                t.quote.length > 50 ? t.quote.slice(0, 50) + '\u2026' : t.quote,
+              ].filter(Boolean);
+              return { id: t.id, label: getName(t), detail: parts.join(' · ') || undefined, createdAt: t.created_at };
+            })}
+            title="Merge Testimonials"
+            consequenceText="The kept testimonial will be preserved. All others will be deleted."
+            onClose={() => setMergeState(null)}
+            isPending={merging}
+            onMerge={async (sourceIds, targetId) => {
+              setMerging(true);
+              try {
+                await mergeTestimonials(sourceIds, targetId);
+                setTestimonials((prev) => prev.filter((t) => !sourceIds.includes(t.id)));
+                setMergeState(null);
+              } finally {
+                setMerging(false);
+              }
+            }}
+          />
         );
       })()}
 

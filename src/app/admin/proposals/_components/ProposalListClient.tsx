@@ -2,8 +2,9 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, ExternalLink, Trash2, Loader2, FileText } from 'lucide-react';
-import { deleteProposal, createProposalDraft, batchDeleteProposals } from '@/app/admin/actions';
+import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge } from 'lucide-react';
+import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals } from '@/app/admin/actions';
+import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
   AdminDeleteModal,
@@ -13,6 +14,7 @@ import { StatusBadge } from '../../_components/StatusBadge';
 import { PROPOSAL_STATUSES } from '../../_components/statusConfigs';
 import { AdminDataTable, type ColDef, type RowAction } from '@/app/admin/_components/table';
 import { ProposalPanel } from './ProposalPanel';
+import { ProposalViewsPanel } from './ProposalViewsPanel';
 import type { ProposalRow, ProposalStatus } from '@/types/proposal';
 
 interface ProposalListClientProps {
@@ -43,7 +45,9 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
   const [deleteTarget, setDeleteTarget] = useState<ProposalRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [viewsPanelId, setViewsPanelId] = useState<string | null>(null);
   const [isCreating, startCreate] = useTransition();
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -220,6 +224,14 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
 
   const rowActions: RowAction<ProposalRow>[] = [
     {
+      icon: <Eye size={13} />,
+      label: 'Views',
+      onClick: (row, e) => {
+        e.stopPropagation();
+        setViewsPanelId(row.id);
+      },
+    },
+    {
       icon: <ExternalLink size={13} />,
       label: 'View proposal',
       onClick: (row, e) => {
@@ -311,10 +323,23 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             ))}
           </>
         }
-        onBatchDelete={async (ids) => {
-          await batchDeleteProposals(ids);
-          setProposals((prev) => prev.filter((p) => !ids.includes(p.id)));
-        }}
+        batchActions={[
+          {
+            label: 'Merge',
+            icon: <GitMerge size={13} />,
+            onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={13} />,
+            variant: 'danger' as const,
+            requireConfirm: true,
+            onClick: async (ids: string[]) => {
+              await batchDeleteProposals(ids);
+              setProposals((prev) => prev.filter((p) => !ids.includes(p.id)));
+            },
+          },
+        ]}
         emptyMessage={
           search || statusFilter !== 'all'
             ? 'No proposals match your filters.'
@@ -326,6 +351,31 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             : undefined
         }
       />
+
+      {mergeState && (() => {
+        const sources = proposals.filter((p) => mergeState.sourceIds.includes(p.id));
+        return (
+          <MergeDialog
+            items={sources.map((p) => {
+              const parts = [
+                p.contact_company,
+                p.contact_name,
+                TYPE_LABELS[p.proposal_type] ?? p.proposal_type,
+                p.status,
+              ].filter(Boolean);
+              return { id: p.id, label: p.title, detail: parts.join(' · ') || undefined, createdAt: p.created_at };
+            })}
+            title="Merge Proposals"
+            consequenceText="All contacts, projects, sections, quotes, and milestones will be transferred to the kept proposal."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeProposals(sourceIds, targetId);
+              setProposals((prev) => prev.filter((p) => !sourceIds.includes(p.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       {deleteTarget && (
         <AdminDeleteModal
@@ -354,6 +404,13 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         onProposalUpdated={(updated) =>
           setProposals((prev) => prev.map((p) => p.id === updated.id ? { ...p, ...updated } : p))
         }
+      />
+
+      <ProposalViewsPanel
+        proposalId={viewsPanelId}
+        proposalTitle={viewsPanelId ? proposals.find(p => p.id === viewsPanelId)?.title : undefined}
+        open={viewsPanelId !== null}
+        onClose={() => setViewsPanelId(null)}
       />
     </div>
   );

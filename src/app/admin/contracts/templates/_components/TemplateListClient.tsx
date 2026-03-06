@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Layers } from 'lucide-react';
+import { Plus, Trash2, Layers, GitMerge } from 'lucide-react';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { AdminDataTable } from '@/app/admin/_components/table/AdminDataTable';
 import type { ColDef, RowAction } from '@/app/admin/_components/table/types';
@@ -12,7 +12,9 @@ import {
   createContractTemplate,
   deleteContractTemplate,
   updateContractTemplate,
+  mergeContractTemplates,
 } from '@/lib/contracts/actions';
+import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { TemplatePanel } from './TemplatePanel';
 
 const TYPE_LABELS: Record<ContractType, string> = {
@@ -47,6 +49,7 @@ export function TemplateListClient({ templates: initial }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<ContractTemplateRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreating, startCreate] = useTransition();
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   const filtered = items.filter((t) => {
     if (typeFilter !== 'all' && t.contract_type !== typeFilter) return false;
@@ -186,10 +189,23 @@ export function TemplateListClient({ templates: initial }: Props) {
         rowActions={rowActions}
         onRowClick={(row) => setActiveId(row.id)}
         selectedId={activeId ?? undefined}
-        onBatchDelete={async (ids) => {
-          for (const id of ids) await deleteContractTemplate(id);
-          setItems((prev) => prev.filter((t) => !ids.includes(t.id)));
-        }}
+        batchActions={[
+          {
+            label: 'Merge',
+            icon: <GitMerge size={13} />,
+            onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={13} />,
+            variant: 'danger' as const,
+            requireConfirm: true,
+            onClick: async (ids: string[]) => {
+              for (const id of ids) await deleteContractTemplate(id);
+              setItems((prev) => prev.filter((t) => !ids.includes(t.id)));
+            },
+          },
+        ]}
         selectable
         toolbarSlot={
           <>
@@ -222,6 +238,30 @@ export function TemplateListClient({ templates: initial }: Props) {
         emptyMessage="No contract templates yet"
         emptyAction={{ label: 'Create Template', onClick: handleCreate }}
       />
+      {mergeState && (() => {
+        const sources = items.filter((t) => mergeState.sourceIds.includes(t.id));
+        return (
+          <MergeDialog
+            items={sources.map((t) => {
+              const parts = [
+                TYPE_LABELS[t.contract_type] ?? t.contract_type,
+                Array.isArray(t.merge_fields) && t.merge_fields.length > 0 && `${t.merge_fields.length} fields`,
+                t.is_active ? 'Active' : 'Inactive',
+              ].filter(Boolean);
+              return { id: t.id, label: t.name, detail: parts.join(' · ') || undefined, createdAt: t.created_at };
+            })}
+            title="Merge Templates"
+            consequenceText="The kept template will be preserved. All others will be deleted."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeContractTemplates(sourceIds, targetId);
+              setItems((prev) => prev.filter((t) => !sourceIds.includes(t.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
+
       {deleteTarget && (
         <AdminDeleteModal
           title={`Delete "${deleteTarget.name}"?`}

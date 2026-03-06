@@ -656,3 +656,29 @@ export async function handleSignWellWebhook(event: {
 
   revalidatePath('/admin/contracts');
 }
+
+/* ── Merge: Contracts ──────────────────────────────────────────────────── */
+
+export async function mergeContracts(sourceIds: string[], _targetId: string) {
+  'use server';
+  const supabase = await createClient();
+
+  for (const sourceId of sourceIds) {
+    await supabase.from('contracts').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/contracts');
+}
+
+/* ── Merge: Contract Templates ─────────────────────────────────────────── */
+
+export async function mergeContractTemplates(sourceIds: string[], _targetId: string) {
+  'use server';
+  const supabase = await createClient();
+
+  for (const sourceId of sourceIds) {
+    await supabase.from('contract_templates').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/contracts/templates');
+}

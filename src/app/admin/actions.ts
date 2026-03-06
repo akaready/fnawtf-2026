@@ -395,7 +395,6 @@ export type ClientRow = {
   logo_url: string | null;
   company_types: string[];
   status: string;
-  pipeline_stage: string;
   website_url: string | null;
   linkedin_url: string | null;
   description: string | null;
@@ -426,7 +425,6 @@ export async function createClientRecord(data: {
   logo_url?: string | null;
   company_types?: string[];
   status?: string;
-  pipeline_stage?: string;
 }): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: row, error } = await supabase
@@ -441,22 +439,19 @@ export async function createClientRecord(data: {
 
 export async function tagClientAsLead(clientId: string) {
   const { supabase } = await requireAuth();
-  // Fetch current company_types, then add 'lead' if missing and set pipeline_stage to 'proposal'
   const { data: client, error: fetchErr } = await supabase
     .from('clients')
-    .select('company_types, pipeline_stage')
+    .select('company_types, status')
     .eq('id', clientId)
     .single();
   if (fetchErr) throw new Error(fetchErr.message);
   const types: string[] = (client as { company_types: string[] }).company_types ?? [];
-  if (types.includes('lead')) return; // already a lead
-  const { error } = await supabase
-    .from('clients')
-    .update({
-      company_types: [...types, 'lead'],
-      pipeline_stage: 'proposal',
-    } as never)
-    .eq('id', clientId);
+  const updates: Record<string, unknown> = {};
+  if (!types.includes('lead')) updates.company_types = [...types, 'lead'];
+  const currentStatus = (client as { status: string }).status;
+  if (currentStatus === 'lead') updates.status = 'pitching';
+  if (Object.keys(updates).length === 0) return;
+  const { error } = await supabase.from('clients').update(updates as never).eq('id', clientId);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/companies');
   revalidatePath('/admin/leads');
@@ -3942,4 +3937,248 @@ export async function createModeVersion(scriptId: string, targetMode: ContentMod
     is_published: false,
     version: ((s.version as number) ?? 1) + 1,
   });
+}
+
+// ── Merge: Companies ──────────────────────────────────────────────────────
+
+export async function mergeCompanies(sourceIds: string[], targetId: string) {
+  const { supabase } = await requireAuth();
+
+  const { data: targetRaw } = await supabase.from('clients').select('name, company_types').eq('id', targetId).single();
+  const target = targetRaw as { name: string; company_types: string[] } | null;
+  if (!target) throw new Error('Target company not found');
+
+  for (const sourceId of sourceIds) {
+    if (sourceId === targetId) continue;
+
+    const { data: sourceRaw } = await supabase.from('clients').select('name, company_types').eq('id', sourceId).single();
+    const source = sourceRaw as { name: string; company_types: string[] } | null;
+    if (!source) continue;
+
+    // Re-point contacts from source → target
+    await supabase
+      .from('contacts')
+      .update({ client_id: targetId, company: target.name } as never)
+      .eq('client_id', sourceId);
+
+    // Re-point projects from source → target
+    await supabase
+      .from('projects')
+      .update({ client_id: targetId, client_name: target.name } as never)
+      .eq('client_id', sourceId);
+
+    // Re-point testimonials from source → target
+    await supabase
+      .from('testimonials')
+      .update({ client_id: targetId } as never)
+      .eq('client_id', sourceId);
+
+    // Update proposals referencing source company name
+    await supabase
+      .from('proposals')
+      .update({ contact_company: target.name } as never)
+      .eq('contact_company', source.name);
+
+    // Merge company_types arrays (union)
+    const mergedTypes = [...new Set([...(target.company_types ?? []), ...(source.company_types ?? [])])];
+    await supabase.from('clients').update({ company_types: mergedTypes } as never).eq('id', targetId);
+
+    // Delete source company
+    await supabase.from('clients').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/companies');
+  revalidatePath('/admin/leads');
+  revalidatePath('/admin/contacts');
+  revalidatePath('/admin/projects');
+}
+
+// ── Merge: Contacts ───────────────────────────────────────────────────────
+
+export async function mergeContacts(sourceIds: string[], targetId: string) {
+  const { supabase } = await requireAuth();
+
+  for (const sourceId of sourceIds) {
+    if (sourceId === targetId) continue;
+
+    // Re-point proposal_contacts (upsert to handle dupes)
+    const { data: existingPC } = await supabase
+      .from('proposal_contacts')
+      .select('proposal_id')
+      .eq('contact_id', sourceId);
+    for (const pc of (existingPC ?? []) as Array<{ proposal_id: string }>) {
+      await supabase
+        .from('proposal_contacts')
+        .upsert({ proposal_id: pc.proposal_id, contact_id: targetId } as never, { onConflict: 'proposal_id,contact_id' });
+    }
+    await supabase.from('proposal_contacts').delete().eq('contact_id', sourceId);
+
+    // Re-point project_credits
+    await supabase
+      .from('project_credits')
+      .update({ contact_id: targetId } as never)
+      .eq('contact_id', sourceId);
+
+    // Re-point contact_roles (upsert to handle dupes)
+    const { data: existingCR } = await supabase
+      .from('contact_roles')
+      .select('role_id')
+      .eq('contact_id', sourceId);
+    for (const cr of (existingCR ?? []) as Array<{ role_id: string }>) {
+      await supabase
+        .from('contact_roles')
+        .upsert({ contact_id: targetId, role_id: cr.role_id } as never, { onConflict: 'contact_id,role_id' });
+    }
+    await supabase.from('contact_roles').delete().eq('contact_id', sourceId);
+
+    // Delete source contact
+    await supabase.from('contacts').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/contacts');
+  revalidatePath('/admin/roles');
+}
+
+// ── Merge: Projects ───────────────────────────────────────────────────────
+
+export async function mergeProjects(sourceIds: string[], targetId: string) {
+  const { supabase } = await requireAuth();
+
+  for (const sourceId of sourceIds) {
+    if (sourceId === targetId) continue;
+
+    // Re-point project_credits
+    await supabase
+      .from('project_credits')
+      .update({ project_id: targetId } as never)
+      .eq('project_id', sourceId);
+
+    // Re-point project_videos
+    await supabase
+      .from('project_videos')
+      .update({ project_id: targetId } as never)
+      .eq('project_id', sourceId);
+
+    // Re-point proposal_projects
+    await supabase
+      .from('proposal_projects')
+      .update({ project_id: targetId } as never)
+      .eq('project_id', sourceId);
+
+    // Re-point testimonials
+    await supabase
+      .from('testimonials')
+      .update({ project_id: targetId } as never)
+      .eq('project_id', sourceId);
+
+    // Delete source project
+    await supabase.from('projects').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/projects');
+  revalidatePath('/work');
+  revalidatePath('/');
+}
+
+/* ── Merge: Locations ──────────────────────────────────────────────────── */
+
+export async function mergeLocations(sourceIds: string[], targetId: string) {
+  'use server';
+  const supabase = await createClient();
+
+  for (const sourceId of sourceIds) {
+    await supabase
+      .from('location_images')
+      .update({ location_id: targetId } as never)
+      .eq('location_id', sourceId);
+
+    await supabase
+      .from('location_projects')
+      .update({ location_id: targetId } as never)
+      .eq('location_id', sourceId);
+
+    await supabase.from('locations').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/locations');
+}
+
+/* ── Merge: Scripts ────────────────────────────────────────────────────── */
+
+export async function mergeScripts(sourceIds: string[], _targetId: string) {
+  'use server';
+  const supabase = await createClient();
+
+  for (const sourceId of sourceIds) {
+    await supabase.from('scripts').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/scripts');
+}
+
+/* ── Merge: Proposals ──────────────────────────────────────────────────── */
+
+export async function mergeProposals(sourceIds: string[], targetId: string) {
+  'use server';
+  const supabase = await createClient();
+
+  for (const sourceId of sourceIds) {
+    const { data: contacts } = await supabase
+      .from('proposal_contacts')
+      .select('contact_id')
+      .eq('proposal_id', sourceId) as { data: { contact_id: string }[] | null };
+    if (contacts?.length) {
+      for (const c of contacts) {
+        await supabase
+          .from('proposal_contacts')
+          .upsert({ proposal_id: targetId, contact_id: c.contact_id } as never, { onConflict: 'proposal_id,contact_id' });
+      }
+      await supabase.from('proposal_contacts').delete().eq('proposal_id', sourceId);
+    }
+
+    const { data: projects } = await supabase
+      .from('proposal_projects')
+      .select('project_id')
+      .eq('proposal_id', sourceId) as { data: { project_id: string }[] | null };
+    if (projects?.length) {
+      for (const p of projects) {
+        await supabase
+          .from('proposal_projects')
+          .upsert({ proposal_id: targetId, project_id: p.project_id } as never, { onConflict: 'proposal_id,project_id' });
+      }
+      await supabase.from('proposal_projects').delete().eq('proposal_id', sourceId);
+    }
+
+    await supabase
+      .from('proposal_sections')
+      .update({ proposal_id: targetId } as never)
+      .eq('proposal_id', sourceId);
+
+    await supabase
+      .from('proposal_quotes')
+      .update({ proposal_id: targetId } as never)
+      .eq('proposal_id', sourceId);
+
+    await supabase
+      .from('proposal_milestones')
+      .update({ proposal_id: targetId } as never)
+      .eq('proposal_id', sourceId);
+
+    await supabase.from('proposals').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/proposals');
+}
+
+/* ── Merge: Intake Submissions ─────────────────────────────────────────── */
+
+export async function mergeIntakeSubmissions(sourceIds: string[], _targetId: string) {
+  'use server';
+  const supabase = await createClient();
+
+  for (const sourceId of sourceIds) {
+    await supabase.from('intake_submissions').delete().eq('id', sourceId);
+  }
+
+  revalidatePath('/admin/intake');
 }

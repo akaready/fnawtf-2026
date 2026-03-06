@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Trash2, Table2, Columns, Clock, Eye, CheckCircle2, XCircle, AlertCircle, Send, FileSignature } from 'lucide-react';
+import { Plus, Trash2, Table2, Columns, Clock, Eye, CheckCircle2, XCircle, AlertCircle, Send, FileSignature, GitMerge } from 'lucide-react';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { AdminDataTable } from '@/app/admin/_components/table/AdminDataTable';
 import type { ColDef, RowAction } from '@/app/admin/_components/table/types';
@@ -10,7 +10,8 @@ import { AdminDeleteModal } from '@/app/admin/_components/AdminTable';
 import { ViewSwitcher, type ViewDef } from '@/app/admin/_components/ViewSwitcher';
 import { useViewMode } from '@/app/admin/_hooks/useViewMode';
 import type { ContractRow, ContractStatus, ContractType } from '@/types/contracts';
-import { deleteContract, batchDeleteContracts } from '@/lib/contracts/actions';
+import { deleteContract, batchDeleteContracts, mergeContracts } from '@/lib/contracts/actions';
+import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { ContractPanel } from './ContractPanel';
 import { CreateContractModal } from './CreateContractModal';
 
@@ -95,6 +96,7 @@ export function ContractListClient({ contracts: initial }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewMode, setViewMode] = useViewMode<ContractsView>('fna-contracts-viewMode', 'table');
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   // Open panel from URL param
   useState(() => {
@@ -317,10 +319,23 @@ export function ContractListClient({ contracts: initial }: Props) {
           rowActions={rowActions}
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
-          onBatchDelete={async (ids) => {
-            await batchDeleteContracts(ids);
-            setItems((prev) => prev.filter((c) => !ids.includes(c.id)));
-          }}
+          batchActions={[
+            {
+              label: 'Merge',
+              icon: <GitMerge size={13} />,
+              onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              requireConfirm: true,
+              onClick: async (ids: string[]) => {
+                await batchDeleteContracts(ids);
+                setItems((prev) => prev.filter((c) => !ids.includes(c.id)));
+              },
+            },
+          ]}
           toolbarSlot={
             <>
               {STATUS_TABS.map((tab) => (
@@ -462,6 +477,31 @@ export function ContractListClient({ contracts: initial }: Props) {
           </div>
         </div>
       )}
+
+      {mergeState && (() => {
+        const sources = items.filter((c) => mergeState.sourceIds.includes(c.id));
+        return (
+          <MergeDialog
+            items={sources.map((c) => {
+              const parts = [
+                c.client?.name,
+                c.contract_type?.toUpperCase(),
+                STATUS_LABELS[c.status as ContractStatus] ?? c.status,
+                Array.isArray(c.signers) && c.signers.length > 0 && `${c.signers.length} signers`,
+              ].filter(Boolean);
+              return { id: c.id, label: c.title, detail: parts.join(' · ') || undefined, createdAt: c.created_at };
+            })}
+            title="Merge Contracts"
+            consequenceText="The kept contract will be preserved. All others will be deleted."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeContracts(sourceIds, targetId);
+              setItems((prev) => prev.filter((c) => !sourceIds.includes(c.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       {deleteTarget && (
         <AdminDeleteModal

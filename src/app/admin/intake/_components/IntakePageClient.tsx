@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react';
 import {
-  ClipboardList, X, ExternalLink, Download, Expand,
-  Building2, User, FileText, Link2, UserPlus, Check,
+  Inbox, X, ExternalLink, Download, Expand,
+  Building2, User, FileText, Link2, Check,
   Hammer, Rocket, TrendingUp, Coins, BadgeDollarSign,
   Send, Play, Film, Table, File,
   // Deliverable icons
@@ -13,6 +13,7 @@ import {
   Home, Flame, Trophy,
   // Partner icons
   BarChart3, PenTool, Camera, Share2, Search as SearchIcon, HeartHandshake,
+  GitMerge, Trash2,
 } from 'lucide-react';
 import { QuoteSummaryCard } from './QuoteSummaryCard';
 import { IntakeCompanyCard } from './IntakeCompanyCard';
@@ -27,7 +28,9 @@ import { SaveDot } from '../../_components/SaveDot';
 import type { AutoSaveStatus } from '../../_hooks/useAutoSave';
 import { StatusBadge } from '../../_components/StatusBadge';
 import { INTAKE_STATUSES } from '../../_components/statusConfigs';
-import { updateIntakeSubmission, batchDeleteIntakeSubmissions } from '../../actions';
+import { PersonPanel } from '../../_components/PersonPanel';
+import { updateIntakeSubmission, batchDeleteIntakeSubmissions, mergeIntakeSubmissions, updateContact, deleteContact } from '../../actions';
+import { MergeDialog } from '../../_components/MergeDialog';
 import type { IntakeSubmission, ClientRow } from '../../actions';
 import type { ContactRow } from '@/types/proposal';
 
@@ -233,10 +236,11 @@ interface Props {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function IntakePageClient({ submissions: initialSubmissions, clients, contacts: _contacts }: Props) {
+export function IntakePageClient({ submissions: initialSubmissions, clients, contacts }: Props) {
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<IntakeSubmission | null>(null);
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
   const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -361,7 +365,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
     <div className="flex flex-col h-full overflow-hidden">
       <AdminPageHeader
         title="Intake Submissions"
-        icon={ClipboardList}
+        icon={Inbox}
         subtitle={`${submissions.length} submission${submissions.length !== 1 ? 's' : ''}`}
         search={search}
         onSearchChange={setSearch}
@@ -380,15 +384,59 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
         columnResize
         selectable
         search={search}
-        onBatchDelete={async (ids) => {
-          await batchDeleteIntakeSubmissions(ids);
-          setSubmissions((prev) => prev.filter((s) => !ids.includes(s.id)));
-          if (selected && ids.includes(selected.id)) setSelected(null);
-        }}
+        batchActions={[
+          {
+            label: 'Merge',
+            icon: <GitMerge size={13} />,
+            onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={13} />,
+            variant: 'danger' as const,
+            requireConfirm: true,
+            onClick: async (ids: string[]) => {
+              await batchDeleteIntakeSubmissions(ids);
+              setSubmissions((prev) => prev.filter((s) => !ids.includes(s.id)));
+              if (selected && ids.includes(selected.id)) setSelected(null);
+            },
+          },
+        ]}
         onRowClick={(row) => setSelected(row)}
         selectedId={selected?.id}
         emptyMessage={search ? 'No submissions match your search.' : 'No intake submissions yet.'}
       />
+
+      {mergeState && (() => {
+        const sources = submissions.filter((s) => mergeState.sourceIds.includes(s.id));
+        return (
+          <MergeDialog
+            items={sources.map((s) => {
+              const parts = [
+                s.company_name,
+                s.email,
+                s.budget,
+                s.timeline && TIMELINE_LABELS[s.timeline],
+              ].filter(Boolean);
+              return {
+                id: s.id,
+                label: [s.first_name, s.last_name].filter(Boolean).join(' ') || s.email || 'Unnamed',
+                detail: parts.join(' · ') || undefined,
+                createdAt: s.created_at,
+              };
+            })}
+            title="Merge Submissions"
+            consequenceText="The kept submission will be preserved. All others will be deleted."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeIntakeSubmissions(sourceIds, targetId);
+              setSubmissions((prev) => prev.filter((s) => !sourceIds.includes(s.id)));
+              if (selected && sourceIds.includes(selected.id)) setSelected(null);
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       {/* Detail Drawer */}
       <PanelDrawer open={!!selected} onClose={() => setSelected(null)} width="w-[560px]">
@@ -396,6 +444,7 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
           <IntakeDetailPanel
             submission={selected}
             clients={clients}
+            contacts={contacts}
             saveStatus={saveStatus}
             onStatusChange={(status) => handleStatusChange(selected.id, status)}
             onLinkClient={(id) => handleLink(selected.id, 'client_id', id)}
@@ -409,11 +458,12 @@ export function IntakePageClient({ submissions: initialSubmissions, clients, con
 
 // ── Contact Card ─────────────────────────────────────────────────────────────
 
-function ContactCard({ name, email, title, nickname }: {
+function ContactCard({ name, email, title, nickname, onView }: {
   name: string;
   email: string;
   title?: string;
   nickname?: string;
+  onView?: () => void;
 }) {
   return (
     <div className="flex items-center gap-4 px-5 py-4 rounded-xl bg-admin-bg-raised border border-admin-border-subtle">
@@ -439,10 +489,15 @@ function ContactCard({ name, email, title, nickname }: {
             <Send size={14} />
           </a>
         )}
-        <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors">
-          <UserPlus size={14} />
-          Add
-        </button>
+        {onView && (
+          <button
+            onClick={onView}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors"
+          >
+            <Eye size={14} />
+            View
+          </button>
+        )}
       </div>
     </div>
   );
@@ -461,6 +516,7 @@ const DETAIL_TABS: { key: DetailTab; label: string }[] = [
 function IntakeDetailPanel({
   submission: s,
   clients,
+  contacts,
   saveStatus,
   onStatusChange,
   onLinkClient,
@@ -468,12 +524,14 @@ function IntakeDetailPanel({
 }: {
   submission: IntakeSubmission;
   clients: ClientRow[];
+  contacts: ContactRow[];
   saveStatus: AutoSaveStatus;
   onStatusChange: (status: string) => void;
   onLinkClient: (id: string | null) => void;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<DetailTab>('overview');
+  const [viewContact, setViewContact] = useState<ContactRow | null>(null);
   const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
   const [downloading, setDownloading] = useState(false);
   const stakeholderEntries = s.stakeholders ? parseStakeholders(s.stakeholders) : [];
@@ -539,9 +597,24 @@ function IntakeDetailPanel({
                   email={s.email}
                   title={s.title || undefined}
                   nickname={s.nickname || undefined}
+                  onView={() => {
+                    const match = s.contact_id
+                      ? contacts.find((c) => c.id === s.contact_id)
+                      : contacts.find((c) => c.email === s.email);
+                    if (match) setViewContact(match);
+                  }}
                 />
                 {stakeholderEntries.map((sh, i) => (
-                  <ContactCard key={i} name={sh.name} email={sh.email} title={sh.title || undefined} />
+                  <ContactCard
+                    key={i}
+                    name={sh.name}
+                    email={sh.email}
+                    title={sh.title || undefined}
+                    onView={() => {
+                      const match = contacts.find((c) => c.email === sh.email);
+                      if (match) setViewContact(match);
+                    }}
+                  />
                 ))}
               </div>
             </div>
@@ -549,7 +622,7 @@ function IntakeDetailPanel({
             {/* Company */}
             <div>
               <SectionLabel>Company</SectionLabel>
-              <IntakeCompanyCard submission={s} clients={clients} onLinkClient={onLinkClient} />
+              <IntakeCompanyCard submission={s} clients={clients} contacts={contacts} onLinkClient={onLinkClient} />
             </div>
 
             {/* Status */}
@@ -958,6 +1031,16 @@ function IntakeDetailPanel({
       {lightbox && (
         <AdminLightbox images={lightbox.images} startIndex={lightbox.index} onClose={() => setLightbox(null)} />
       )}
+
+      {/* Person Panel */}
+      <PersonPanel
+        person={viewContact}
+        open={!!viewContact}
+        onClose={() => setViewContact(null)}
+        companies={clients}
+        onSave={async (row) => { await updateContact(row.id, { first_name: row.first_name, last_name: row.last_name, email: row.email, phone: row.phone, role: row.role, company: row.company, client_id: row.client_id, type: row.type, notes: row.notes, linkedin_url: row.linkedin_url, instagram_url: row.instagram_url, imdb_url: row.imdb_url, website_url: row.website_url, headshot_url: row.headshot_url }); }}
+        onDelete={(id) => { deleteContact(id); setViewContact(null); }}
+      />
     </>
   );
 }

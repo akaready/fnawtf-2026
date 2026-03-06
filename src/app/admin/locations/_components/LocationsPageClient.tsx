@@ -4,6 +4,7 @@ import { useState, useMemo, useTransition } from 'react';
 import {
   Plus, MapPin, LayoutGrid, Table2,
   Loader2, ExternalLink, Image as ImageIcon,
+  GitMerge, Trash2,
 } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
 import { ViewSwitcher, type ViewDef } from '../../_components/ViewSwitcher';
@@ -13,7 +14,9 @@ import {
   createLocationRecord,
   updateLocationRecord,
   batchDeleteLocations,
+  mergeLocations,
 } from '../../actions';
+import { MergeDialog } from '../../_components/MergeDialog';
 import type { LocationWithImages } from '@/types/locations';
 import { LocationCard } from './LocationCard';
 import { LocationDetailPanel } from './LocationDetailPanel';
@@ -39,6 +42,7 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   // Column definitions for table view
   const columns: ColDef<LocationWithImages>[] = useMemo(() => [
@@ -258,7 +262,20 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
           selectable
           onRowClick={(row) => setActiveId(row.id)}
           selectedId={activeId ?? undefined}
-          onBatchDelete={handleBatchDelete}
+          batchActions={[
+            {
+              label: 'Merge',
+              icon: <GitMerge size={13} />,
+              onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 size={13} />,
+              variant: 'danger' as const,
+              requireConfirm: true,
+              onClick: handleBatchDelete,
+            },
+          ]}
           search={search}
           emptyMessage="No locations yet. Add one or import from Peerspace."
         />
@@ -290,6 +307,30 @@ export function LocationsPageClient({ initialLocations, projects }: Props) {
           </div>
         </>
       )}
+
+      {mergeState && (() => {
+        const sources = locations.filter((l) => mergeState.sourceIds.includes(l.id));
+        return (
+          <MergeDialog
+            items={sources.map((l) => {
+              const parts = [
+                [l.city, l.state].filter(Boolean).join(', '),
+                l.location_images.length > 0 && `${l.location_images.length} images`,
+                l.status !== 'active' && l.status,
+              ].filter(Boolean);
+              return { id: l.id, label: l.name, detail: parts.join(' · ') || undefined, createdAt: l.created_at };
+            })}
+            title="Merge Locations"
+            consequenceText="All images and project associations will be transferred to the kept location."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeLocations(sourceIds, targetId);
+              setLocations((prev) => prev.filter((l) => !sourceIds.includes(l.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       {/* Detail panel */}
       <LocationDetailPanel

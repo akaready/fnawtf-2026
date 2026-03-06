@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
   const supabase = await createClient();
-  const [clients, { data: projects }, testimonials, contacts, industryTags] = await Promise.all([
+  const [clients, { data: projects }, testimonials, contacts, industryTags, { data: proposals }] = await Promise.all([
     getClients(),
     supabase
       .from('projects')
@@ -15,6 +15,10 @@ export default async function ClientsPage() {
     getTestimonials(),
     getContacts(),
     getTagsByCategory('industry'),
+    supabase
+      .from('proposals')
+      .select('id, title, contact_company')
+      .order('title'),
   ]);
 
   return (
@@ -40,6 +44,10 @@ export default async function ClientsPage() {
       }))}
       contacts={contacts}
       industryTags={industryTags}
+      proposals={(proposals ?? []).map((p) => {
+        const r = p as Record<string, unknown>;
+        return { id: r.id as string, title: r.title as string, contact_company: (r.contact_company as string) ?? null };
+      })}
     />
   );
 }

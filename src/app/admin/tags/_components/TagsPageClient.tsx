@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, X, Pencil, Trash2, Plus, GitMerge, ArrowUpRight, ChevronRight, LayoutGrid, Table2, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows, Tag } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
+import { MergeDialog } from '../../_components/MergeDialog';
 import { ViewSwitcher, type ViewDef } from '../../_components/ViewSwitcher';
 import { useViewMode } from '../../_hooks/useViewMode';
 import { AdminDataTable, type ColDef } from '../../_components/table';
 import { ToolbarButton } from '../../_components/table/TableToolbar';
 import { createTag, renameTag, deleteTag, mergeTags, getProjectsForTag, batchDeleteTags } from '../../actions';
 import type { TagWithCount } from '../../actions';
+import { TagPanel } from './TagPanel';
 
 type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type' | 'industry';
 type ProjectRef = { id: string; title: string; published: boolean; client_name: string };
@@ -25,87 +27,6 @@ const CATEGORY_CONFIG: Record<TagCategory, { label: string; description: string 
 };
 
 const CATEGORIES: TagCategory[] = ['project_type', 'deliverable', 'style', 'addon', 'technique', 'industry'];
-
-interface MergeDialogProps {
-  tags: TagWithCount[];
-  sourceIds: string[];
-  category: TagCategory;
-  onClose: () => void;
-  onMerge: (sourceIds: string[], targetId: string) => void;
-  isPending: boolean;
-}
-
-function MergeDialog({ tags, sourceIds, category, onClose, onMerge, isPending }: MergeDialogProps) {
-  const categoryTags = tags.filter((t) => t.category === category);
-  const sourceTags = categoryTags.filter((t) => sourceIds.includes(t.id));
-  const [targetId, setTargetId] = useState<string>(sourceIds[0] ?? '');
-
-  const totalProjects = sourceTags.reduce((sum, t) => sum + t.projectCount, 0);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[#0f0f0f] border border-admin-border rounded-xl w-full max-w-md mx-4 shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border-subtle">
-          <div>
-            <h2 className="text-lg font-semibold text-admin-text-primary">Merge {CATEGORY_CONFIG[category].label}</h2>
-          </div>
-          <button onClick={onClose} className="text-admin-text-muted hover:text-admin-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-6 py-5 space-y-5">
-          <div>
-            <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Merging</p>
-            <div className="flex flex-wrap gap-1.5">
-              {sourceTags.map((t) => (
-                <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-admin-bg-hover border border-admin-border text-sm text-admin-text-primary">
-                  {t.name}
-                  <span className="text-xs text-admin-text-muted">{t.projectCount}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Keep as</p>
-            <div className="space-y-1.5">
-              {sourceTags.map((t) => (
-                <label key={t.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-admin-bg-selected transition-colors">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${targetId === t.id ? 'border-admin-text-primary bg-admin-text-primary' : 'border-admin-border'}`}>
-                    {targetId === t.id && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
-                  </div>
-                  <input type="radio" className="sr-only" value={t.id} checked={targetId === t.id} onChange={() => setTargetId(t.id)} />
-                  <span className="text-sm text-admin-text-primary flex-1">{t.name}</span>
-                  <span className="text-xs text-admin-text-muted">{t.projectCount} projects</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <p className="text-xs text-admin-text-muted px-3 py-2 rounded-lg bg-admin-bg-subtle border border-admin-border">
-            Up to <strong className="text-admin-text-primary">{totalProjects} projects</strong> will be updated. All uses of the removed tags will be replaced with the kept tag.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-admin-border-subtle">
-          <button onClick={onClose} disabled={isPending} className="btn-secondary px-4 py-2 text-sm font-medium">
-            Cancel
-          </button>
-          <button
-            disabled={isPending || !targetId}
-            onClick={() => onMerge(sourceIds.filter((id) => id !== targetId), targetId)}
-            className="btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed"
-          >
-            <GitMerge size={13} />
-            {isPending ? 'Merging…' : 'Merge'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface InlineEditProps {
   value: string;
@@ -428,6 +349,7 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [mergeState, setMergeState] = useState<{ sourceIds: string[]; category: TagCategory } | null>(null);
   const [viewMode, setViewMode] = useViewMode<TagsView>('fna-tags-viewMode', 'table');
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // Sync state when server delivers fresh data after router.refresh()
   useEffect(() => {
@@ -523,6 +445,16 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search tags…"
+        actions={
+          <button onClick={() => setActiveId('__new__')} className="btn-primary px-5 py-2.5 text-sm">
+            <Plus size={16} /> Add Tag
+          </button>
+        }
+        mobileActions={
+          <button onClick={() => setActiveId('__new__')} className="btn-primary p-2.5 text-sm" title="Add Tag">
+            <Plus size={16} />
+          </button>
+        }
       />
 
       {viewMode === 'table' ? (
@@ -647,16 +579,34 @@ export function TagsPageClient({ initialTags }: { initialTags: TagWithCount[] })
         </>
       )}
 
-      {mergeState && (
-        <MergeDialog
-          tags={tags}
-          sourceIds={mergeState.sourceIds}
-          category={mergeState.category}
-          onClose={() => setMergeState(null)}
-          onMerge={handleMerge}
-          isPending={isPending}
-        />
-      )}
+      <TagPanel
+        tag={activeId && activeId !== '__new__' ? tags.find((t) => t.id === activeId) ?? null : null}
+        open={activeId !== null}
+        onClose={() => setActiveId(null)}
+        onCreated={(newTag) => {
+          setTags((prev) => [...prev, newTag]);
+          refresh();
+        }}
+        onRenamed={(id, newName) => {
+          setTags((prev) => prev.map((t) => (t.id === id ? { ...t, name: newName } : t)));
+          refresh();
+        }}
+      />
+
+      {mergeState && (() => {
+        const sourceTags = tags.filter((t) => mergeState.sourceIds.includes(t.id));
+        const totalProjects = sourceTags.reduce((sum, t) => sum + t.projectCount, 0);
+        return (
+          <MergeDialog
+            items={sourceTags.map((t) => ({ id: t.id, label: t.name, detail: `${t.projectCount} projects` }))}
+            title={`Merge ${CATEGORY_CONFIG[mergeState.category].label}`}
+            consequenceText={`Up to ${totalProjects} projects will be updated. All uses of the removed tags will be replaced with the kept tag.`}
+            onClose={() => setMergeState(null)}
+            onMerge={handleMerge}
+            isPending={isPending}
+          />
+        );
+      })()}
     </div>
   );
 }

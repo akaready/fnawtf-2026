@@ -4,6 +4,7 @@ import React, { useState, useTransition, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Pencil, Trash2, Plus, GitMerge, ChevronRight, Users, Clapperboard, List, Table2, Snowflake, Eye, ListFilter, Layers, ArrowUpAZ, Palette, Rows } from 'lucide-react';
 import { AdminPageHeader } from '../../_components/AdminPageHeader';
+import { MergeDialog } from '../../_components/MergeDialog';
 import { ViewSwitcher, type ViewDef } from '../../_components/ViewSwitcher';
 import { useViewMode } from '../../_hooks/useViewMode';
 import { AdminDataTable, type ColDef } from '../../_components/table';
@@ -12,83 +13,6 @@ import { createRole, renameRole, deleteRole, mergeRoles, getPeopleForRole, batch
 import type { RoleWithCounts } from '../../actions';
 
 type PersonRef = { id: string; first_name: string; last_name: string; type: string };
-
-/* ── Merge Dialog ───────────────────────────────────────────────────────── */
-
-function MergeDialog({
-  roles,
-  sourceIds,
-  onClose,
-  onMerge,
-  isPending,
-}: {
-  roles: RoleWithCounts[];
-  sourceIds: string[];
-  onClose: () => void;
-  onMerge: (sourceIds: string[], targetId: string) => void;
-  isPending: boolean;
-}) {
-  const sourceTags = roles.filter((r) => sourceIds.includes(r.id));
-  const [targetId, setTargetId] = useState<string>(sourceIds[0] ?? '');
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-[#0f0f0f] border border-admin-border rounded-xl w-full max-w-md mx-4 shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border-subtle">
-          <h2 className="text-lg font-semibold text-admin-text-primary">Merge Roles</h2>
-          <button onClick={onClose} className="text-admin-text-muted hover:text-admin-text-primary transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-6 py-5 space-y-5">
-          <div>
-            <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Merging</p>
-            <div className="flex flex-wrap gap-1.5">
-              {sourceTags.map((r) => (
-                <span key={r.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-admin-bg-hover border border-admin-border text-sm text-admin-text-primary">
-                  {r.name}
-                  <span className="text-xs text-admin-text-muted">{r.projectCount}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs text-admin-text-faint uppercase tracking-wider mb-2">Keep as</p>
-            <div className="space-y-1.5">
-              {sourceTags.map((r) => (
-                <label key={r.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-admin-bg-hover transition-colors">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${targetId === r.id ? 'border-admin-text-primary bg-admin-text-primary' : 'border-admin-border'}`}>
-                    {targetId === r.id && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
-                  </div>
-                  <input type="radio" className="sr-only" value={r.id} checked={targetId === r.id} onChange={() => setTargetId(r.id)} />
-                  <span className="text-sm text-admin-text-primary flex-1">{r.name}</span>
-                  <span className="text-xs text-admin-text-muted">{r.projectCount} projects</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2.5 px-6 py-4 border-t border-admin-border-subtle">
-          <button onClick={onClose} disabled={isPending} className="btn-secondary px-4 py-2 text-sm font-medium">
-            Cancel
-          </button>
-          <button
-            disabled={isPending || !targetId}
-            onClick={() => onMerge(sourceIds.filter((id) => id !== targetId), targetId)}
-            className="btn-primary px-4 py-2 text-sm disabled:cursor-not-allowed"
-          >
-            <GitMerge size={13} />
-            {isPending ? 'Merging...' : 'Merge'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ── Inline Edit ────────────────────────────────────────────────────────── */
 
@@ -530,15 +454,18 @@ export function RolesPageClient({ initialRoles }: { initialRoles: RoleWithCounts
       </>
       )}
 
-      {mergeState && (
-        <MergeDialog
-          roles={roles}
-          sourceIds={mergeState.sourceIds}
-          onClose={() => setMergeState(null)}
-          onMerge={handleMerge}
-          isPending={isPending}
-        />
-      )}
+      {mergeState && (() => {
+        const sourceRoles = roles.filter((r) => mergeState.sourceIds.includes(r.id));
+        return (
+          <MergeDialog
+            items={sourceRoles.map((r) => ({ id: r.id, label: r.name, detail: `${r.projectCount} projects` }))}
+            title="Merge Roles"
+            onClose={() => setMergeState(null)}
+            onMerge={handleMerge}
+            isPending={isPending}
+          />
+        );
+      })()}
     </div>
   );
 }

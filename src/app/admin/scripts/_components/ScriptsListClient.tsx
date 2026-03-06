@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, Loader2, ScrollText } from 'lucide-react';
-import { createScript, deleteScript, batchDeleteScripts } from '@/app/admin/actions';
+import { Plus, Trash2, Loader2, ScrollText, GitMerge } from 'lucide-react';
+import { createScript, deleteScript, batchDeleteScripts, mergeScripts } from '@/app/admin/actions';
+import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
   AdminDeleteModal,
@@ -34,6 +35,7 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<ScriptWithProject | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreating, startCreate] = useTransition();
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   // Collapse versions: show only the latest version per script_group_id
   const { latestScripts, versionCounts } = useMemo(() => {
@@ -250,10 +252,23 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
             ))}
           </>
         }
-        onBatchDelete={async (ids) => {
-          await batchDeleteScripts(ids);
-          setScripts((prev) => prev.filter((s) => !ids.includes(s.id)));
-        }}
+        batchActions={[
+          {
+            label: 'Merge',
+            icon: <GitMerge size={13} />,
+            onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={13} />,
+            variant: 'danger' as const,
+            requireConfirm: true,
+            onClick: async (ids: string[]) => {
+              await batchDeleteScripts(ids);
+              setScripts((prev) => prev.filter((s) => !ids.includes(s.id)));
+            },
+          },
+        ]}
         emptyMessage={
           search || statusFilter !== 'all'
             ? 'No scripts match your filters.'
@@ -272,6 +287,30 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
             : undefined
         }
       />
+
+      {mergeState && (() => {
+        const sources = scripts.filter((s) => mergeState.sourceIds.includes(s.id));
+        return (
+          <MergeDialog
+            items={sources.map((s) => {
+              const parts = [
+                s.project?.title,
+                s.status,
+                `v${formatScriptVersion(s.major_version, s.minor_version, s.is_published)}`,
+              ].filter(Boolean);
+              return { id: s.id, label: s.title, detail: parts.join(' · ') || undefined, createdAt: s.updated_at };
+            })}
+            title="Merge Scripts"
+            consequenceText="The kept script will be preserved. All others will be deleted."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeScripts(sourceIds, targetId);
+              setScripts((prev) => prev.filter((s) => !sourceIds.includes(s.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       {deleteTarget && (
         <AdminDeleteModal

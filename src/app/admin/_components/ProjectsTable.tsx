@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Trash2, GitMerge } from 'lucide-react';
 import {
-  batchSetPublished, batchDeleteProjects,
+  batchSetPublished, batchDeleteProjects, mergeProjects,
 } from '../actions';
 import { AdminDataTable, type ColDef, type BatchAction } from './table';
+import { MergeDialog } from './MergeDialog';
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
 
@@ -54,6 +55,7 @@ export function ProjectsTable({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   const columns: ColDef<ProjectRow>[] = [
     { key: 'thumbnail', label: 'Thumb', type: 'thumbnail', defaultWidth: 44 },
@@ -85,6 +87,14 @@ export function ProjectsTable({
   ];
 
   const batchActions: BatchAction<ProjectRow>[] = [
+    {
+      label: 'Merge',
+      icon: <GitMerge size={13} />,
+      onClick: (ids) => {
+        if (ids.length < 2) return;
+        setMergeState({ sourceIds: ids });
+      },
+    },
     {
       label: 'Publish',
       icon: <Eye size={13} />,
@@ -120,25 +130,53 @@ export function ProjectsTable({
   ];
 
   return (
-    <AdminDataTable
-      columns={columns}
-      data={projects}
-      storageKey="fna-table-projects"
-      toolbar
-      sortable
-      filterable
-      groupable
-      columnVisibility
-      columnReorder
-      columnResize
-      selectable
-      freezePanes
-      exportCsv
-      search={search}
-      exportRef={exportRef}
-      batchActions={batchActions}
-      onRowClick={onRowClick}
-      emptyMessage="No projects yet."
-    />
+    <>
+      <AdminDataTable
+        columns={columns}
+        data={projects}
+        storageKey="fna-table-projects"
+        toolbar
+        sortable
+        filterable
+        groupable
+        columnVisibility
+        columnReorder
+        columnResize
+        selectable
+        freezePanes
+        exportCsv
+        search={search}
+        exportRef={exportRef}
+        batchActions={batchActions}
+        onRowClick={onRowClick}
+        emptyMessage="No projects yet."
+      />
+
+      {mergeState && (() => {
+        const sourceProjects = projects.filter((p) => mergeState.sourceIds.includes(p.id));
+        return (
+          <MergeDialog
+            items={sourceProjects.map((p) => {
+              const parts = [
+                p.client_name,
+                p.category,
+                p.published ? 'Published' : 'Unpublished',
+              ].filter(Boolean);
+              return { id: p.id, label: p.title, detail: parts.join(' · ') || undefined, createdAt: p.created_at };
+            })}
+            title="Merge Projects"
+            consequenceText="All credits, videos, proposal references, and testimonials will be transferred to the kept project."
+            onClose={() => setMergeState(null)}
+            onMerge={(sourceIds, targetId) => {
+              setMergeState(null);
+              startTransition(async () => {
+                await mergeProjects(sourceIds, targetId);
+                router.refresh();
+              });
+            }}
+          />
+        );
+      })()}
+    </>
   );
 }

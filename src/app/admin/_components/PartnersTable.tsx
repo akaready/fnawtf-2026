@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useTransition } from 'react';
-import { Plus, Building2, GitFork } from 'lucide-react';
+import { Plus, Building2, GitFork, GitMerge, Trash2 } from 'lucide-react';
 import { AdminPageHeader } from './AdminPageHeader';
 import { AdminDataTable, type ColDef } from './table';
-import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients } from '../actions';
+import { type ClientRow, createClientRecord, updateContact, updateTestimonial, updateProject, batchDeleteClients, mergeCompanies } from '../actions';
+import { MergeDialog } from './MergeDialog';
 import type { ContactRow } from '@/types/proposal';
 import { CompanyPanel } from './CompanyPanel';
 import {
@@ -17,14 +18,21 @@ import {
   TYPE_CONFIG,
 } from './companyUtils';
 
+interface CompanyProposal {
+  id: string;
+  title: string;
+  contact_company: string | null;
+}
+
 interface Props {
   initialPartners: ClientRow[];
   projects: ClientProject[];
   testimonials: ClientTestimonial[];
   contacts: ContactRow[];
+  proposals: CompanyProposal[];
 }
 
-export function PartnersTable({ initialPartners, projects, testimonials, contacts: initialContacts }: Props) {
+export function PartnersTable({ initialPartners, projects, testimonials, contacts: initialContacts, proposals }: Props) {
   const [partners, setPartners] = useState(initialPartners);
   const [localContacts, setLocalContacts] = useState(initialContacts);
   const [localTestimonials, setLocalTestimonials] = useState(testimonials);
@@ -33,6 +41,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
 
   const activeCompany = partners.find((c) => c.id === activeId) ?? null;
 
@@ -49,7 +58,6 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
         logo_url: null,
         company_types: ['partner'],
         status: 'active',
-        pipeline_stage: 'new',
         website_url: null,
         linkedin_url: null,
         description: null,
@@ -254,15 +262,58 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
         selectable
         freezePanes
         exportCsv
-        onBatchDelete={async (ids) => {
-          await batchDeleteClients(ids);
-          setPartners((prev) => prev.filter((p) => !ids.includes(p.id)));
-        }}
+        batchActions={[
+          {
+            label: 'Merge',
+            icon: <GitMerge size={13} />,
+            onClick: (ids: string[]) => { if (ids.length >= 2) setMergeState({ sourceIds: ids }); },
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 size={13} />,
+            variant: 'danger' as const,
+            requireConfirm: true,
+            onClick: async (ids: string[]) => {
+              await batchDeleteClients(ids);
+              setPartners((prev) => prev.filter((p) => !ids.includes(p.id)));
+            },
+          },
+        ]}
         onRowClick={(row) => setActiveId(row.id)}
         selectedId={activeId ?? undefined}
         emptyMessage="No partners yet."
         emptyAction={{ label: 'Add your first partner', onClick: handleCreate }}
       />
+
+      {mergeState && (() => {
+        const sources = partners.filter((c) => mergeState.sourceIds.includes(c.id));
+        return (
+          <MergeDialog
+            items={sources.map((c) => ({
+              id: c.id,
+              label: c.name,
+              detail: (() => {
+                const parts = [
+                  localContacts.filter((ct) => ct.client_id === c.id).length > 0 && `${localContacts.filter((ct) => ct.client_id === c.id).length} contacts`,
+                  localProjects.filter((p) => p.client_id === c.id).length > 0 && `${localProjects.filter((p) => p.client_id === c.id).length} projects`,
+                  localTestimonials.filter((t) => t.client_id === c.id).length > 0 && `${localTestimonials.filter((t) => t.client_id === c.id).length} testimonials`,
+                  proposals.filter((p) => p.contact_company === c.name).length > 0 && `${proposals.filter((p) => p.contact_company === c.name).length} proposals`,
+                ].filter(Boolean);
+                return parts.join(', ') || undefined;
+              })(),
+              createdAt: c.created_at,
+            }))}
+            title="Merge Companies"
+            consequenceText="All contacts, projects, testimonials, and proposals will be transferred to the kept company."
+            onClose={() => setMergeState(null)}
+            onMerge={async (sourceIds, targetId) => {
+              await mergeCompanies(sourceIds, targetId);
+              setPartners((prev) => prev.filter((c) => !sourceIds.includes(c.id)));
+              setMergeState(null);
+            }}
+          />
+        );
+      })()}
 
       <CompanyPanel
         company={activeCompany}

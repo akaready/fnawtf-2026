@@ -52,7 +52,7 @@ export function VideoDimmingOverlay() {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 opacity-0 pointer-events-none"
+      className="fixed inset-0 z-40 opacity-0 pointer-events-none"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0)' }}
       aria-hidden="true"
       onClick={handleClick}
