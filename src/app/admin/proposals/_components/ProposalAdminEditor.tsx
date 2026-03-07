@@ -413,7 +413,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
             >
               <Trash2 size={14} />
             </button>
