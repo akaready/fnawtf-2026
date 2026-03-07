@@ -21,7 +21,7 @@ export const CONTACT_TYPES: Record<string, StatusConfig> = {
 /** Proposal statuses */
 export const PROPOSAL_STATUSES: Record<string, StatusConfig> = {
   draft:    { label: 'Draft',    className: 'bg-admin-bg-active text-admin-text-secondary' },
-  sent:     { label: 'Sent',     className: 'bg-admin-info-bg text-admin-info' },
+  sent:     { label: 'Sent',     className: 'bg-admin-success-bg text-admin-success' },
   viewed:   { label: 'Viewed',   className: 'bg-admin-warning-bg text-admin-warning' },
   accepted: { label: 'Accepted', className: 'bg-admin-success-bg text-admin-success' },
   declined: { label: 'Declined', className: 'bg-admin-danger-bg text-admin-danger' },

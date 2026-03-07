@@ -48,9 +48,10 @@ interface ProposalPanelProps {
   onClose: () => void;
   onProposalDeleted?: (id: string) => void;
   onProposalUpdated?: (fields: Partial<ProposalRow> & { id: string }) => void;
+  onViewsClick?: () => void;
 }
 
-export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalDeleted, onProposalUpdated }: ProposalPanelProps) {
+export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalDeleted, onProposalUpdated, onViewsClick }: ProposalPanelProps) {
   const editorRef = useRef<ProposalEditorHandle>(null);
   const [data, setData] = useState<PanelData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -127,6 +128,7 @@ export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposal
           viewCount={viewCount}
           onClose={onClose}
           onDelete={onProposalDeleted}
+          onViewsClick={onViewsClick}
           onUpdated={onProposalUpdated && proposalId ? (fields) => onProposalUpdated({ ...fields, id: proposalId }) : undefined}
         />
       )}

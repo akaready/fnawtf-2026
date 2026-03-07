@@ -52,18 +52,19 @@ interface Props {
   onClose?: () => void;
   onDelete?: (id: string) => void;
   onUpdated?: (fields: Partial<ProposalRow>) => void;
+  onViewsClick?: () => void;
 }
 
 const STATUS_BADGE: Record<string, string> = {
   draft: 'bg-admin-bg-active text-admin-text-dim',
-  sent: 'bg-admin-info-bg text-admin-info',
+  sent: 'bg-admin-success-bg text-admin-success',
   viewed: 'bg-admin-warning-bg text-admin-warning',
   accepted: 'bg-admin-success-bg text-admin-success',
 };
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
-  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated,
+  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated, onViewsClick,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
@@ -185,14 +186,14 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
             <SaveDot status={saveStatus} />
+            <span className={`px-4 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
+              {status}
+            </span>
             <span className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs whitespace-nowrap ${
-              viewCount > 0 ? 'bg-admin-bg-selected text-admin-text-dim' : 'bg-admin-bg-selected text-admin-text-ghost'
+              viewCount > 0 ? 'bg-admin-info-bg text-admin-info' : 'bg-admin-bg-selected text-admin-text-ghost'
             }`}>
               <Eye size={11} />
               {viewCount} {viewCount === 1 ? 'view' : 'views'}
-            </span>
-            <span className={`px-4 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
-              {status}
             </span>
             <button
               onClick={handleClose}
@@ -327,6 +328,15 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             <Save size={14} />
             Save
           </button>
+          <a
+            href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-warning px-4 py-2.5 text-sm"
+          >
+            <ExternalLink size={13} />
+            Preview
+          </a>
           {/* Status toggle — Draft / Sent */}
           <div ref={statusRef} className="relative">
             <button
@@ -371,15 +381,13 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               </>
             )}
           </div>
-          <a
-            href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary px-4 py-2.5 text-sm"
+          <button
+            onClick={onViewsClick}
+            className="btn-info px-4 py-2.5 text-sm"
           >
-            <ExternalLink size={13} />
-            View
-          </a>
+            <Eye size={13} />
+            Views
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -405,7 +413,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/50 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
             >
               <Trash2 size={14} />
             </button>

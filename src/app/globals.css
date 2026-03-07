@@ -146,6 +146,46 @@
   --admin-letter-spacing-wide:   0.05em;
 }
 
+/* ─── Call Sheet Light Mode Override ──────────────────────────────────── */
+.cs-light {
+  --admin-bg-base:           #ffffff;
+  --admin-bg-inset:          #f5f5f5;
+  --admin-bg-sidebar:        #f5f5f5;
+  --admin-bg-raised:         #fafafa;
+  --admin-bg-overlay:        #f0f0f0;
+  --admin-bg-wash:           rgba(0, 0, 0, 0.02);
+  --admin-bg-hover:          rgba(0, 0, 0, 0.05);
+  --admin-bg-hover-strong:   rgba(0, 0, 0, 0.08);
+  --admin-bg-active:         rgba(0, 0, 0, 0.08);
+  --admin-bg-selected:       rgba(0, 0, 0, 0.04);
+  --admin-border-subtle:     #e5e5e5;
+  --admin-border:            #d4d4d4;
+  --admin-border-muted:      rgba(0, 0, 0, 0.10);
+  --admin-border-emphasis:   rgba(0, 0, 0, 0.20);
+  --admin-text-primary:      #171717;
+  --admin-text-secondary:    #404040;
+  --admin-text-muted:        #525252;
+  --admin-text-dim:          #737373;
+  --admin-text-faint:        #a3a3a3;
+  --admin-text-ghost:        #d4d4d4;
+  --admin-danger:            #dc2626;
+  --admin-danger-bg:         rgba(220, 38, 38, 0.08);
+  --admin-danger-border:     rgba(220, 38, 38, 0.25);
+  --admin-success:           #059669;
+  --admin-success-bg:        rgba(5, 150, 105, 0.08);
+  --admin-success-border:    rgba(5, 150, 105, 0.25);
+  --admin-warning:           #d97706;
+  --admin-warning-bg:        rgba(217, 119, 6, 0.08);
+  --admin-warning-border:    rgba(217, 119, 6, 0.25);
+  --admin-info:              #0284c7;
+  --admin-info-bg:           rgba(2, 132, 199, 0.08);
+  --admin-info-border:       rgba(2, 132, 199, 0.25);
+  --admin-accent:            #7c3aed;
+  --admin-accent-hover:      #6d28d9;
+  --admin-accent-bg:         rgba(124, 58, 237, 0.08);
+  --admin-accent-border:     rgba(124, 58, 237, 0.25);
+}
+
 html {
   @apply scroll-smooth;
   scrollbar-width: none; /* Firefox */
@@ -275,6 +315,16 @@ html[data-admin-light] .admin-shell .admin-logo {
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 border border-admin-border-subtle text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors disabled:opacity-40 whitespace-nowrap;
     border-radius: var(--admin-radius-md);
+  }
+
+  /* Warning: preview / caution actions — amber tint */
+  .btn-warning {
+    @apply inline-flex items-center justify-center gap-2 bg-admin-warning-bg text-admin-warning border border-admin-warning-border transition-colors disabled:opacity-50 whitespace-nowrap;
+    border-radius: var(--admin-radius-md);
+  }
+  .btn-warning:hover {
+    @apply bg-admin-warning-bg-strong;
+    color: #fcd34d !important;
   }
 
   /* Info: off-site / external links — blue tint, text brightens on hover */

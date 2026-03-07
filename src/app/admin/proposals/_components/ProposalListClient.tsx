@@ -233,7 +233,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     },
     {
       icon: <ExternalLink size={13} />,
-      label: 'View proposal',
+      label: 'Preview',
       onClick: (row, e) => {
         e.stopPropagation();
         window.open(`/p/${row.slug}`, '_blank');
@@ -241,7 +241,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     },
     {
       icon: <Trash2 size={13} />,
-      label: 'Delete proposal',
+      label: 'Delete',
       variant: 'danger',
       onClick: (row) => setDeleteTarget(row),
     },
@@ -404,6 +404,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         onProposalUpdated={(updated) =>
           setProposals((prev) => prev.map((p) => p.id === updated.id ? { ...p, ...updated } : p))
         }
+        onViewsClick={() => { if (activeId) setViewsPanelId(activeId); }}
       />
 
       <ProposalViewsPanel
