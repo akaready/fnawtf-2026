@@ -2213,6 +2213,17 @@ export async function getScripts() {
   return data ?? [];
 }
 
+export async function getScriptList(): Promise<Array<{ id: string; title: string; major_version: number; minor_version: number; is_published: boolean }>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('scripts')
+    .select('id, title, major_version, minor_version, is_published, content_mode')
+    .eq('content_mode', 'table')
+    .order('title');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Array<{ id: string; title: string; major_version: number; minor_version: number; is_published: boolean }>;
+}
+
 export async function getScriptById(id: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
@@ -4181,4 +4192,350 @@ export async function mergeIntakeSubmissions(sourceIds: string[], _targetId: str
   }
 
   revalidatePath('/admin/intake');
+}
+
+// ── Call Sheets ──────────────────────────────────────────────────────────────
+
+export async function getCallSheets() {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('call_sheets' as never)
+    .select('*, projects(title), locations(name), call_sheet_crew(id)')
+    .order('date', { ascending: false });
+  if (error) throw new Error((error as { message: string }).message);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data as any[]) ?? []).map((cs) => ({
+    ...cs,
+    project_title: cs.projects?.title ?? null,
+    location_name: cs.locations?.name ?? null,
+    crew_count: Array.isArray(cs.call_sheet_crew) ? cs.call_sheet_crew.length : 0,
+    projects: undefined,
+    locations: undefined,
+    call_sheet_crew: undefined,
+  }));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCallSheet(id: string): Promise<any> {
+  const { supabase } = await requireAuth();
+
+  const { data: cs, error } = await supabase
+    .from('call_sheets' as never)
+    .select('*, projects(title), locations(name, address, google_maps_url)')
+    .eq('id', id)
+    .single();
+  if (error) throw new Error((error as { message: string }).message);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { locations: locJoin, projects: projJoin, ...row } = cs as any;
+
+  const [bulletins, csLocations, locationImages, cast, crew, scenes, vendors, deptNotes] = await Promise.all([
+    supabase.from('call_sheet_bulletins' as never).select('*').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_locations' as never).select('*, locations(name, address)').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_location_images' as never).select('*, location_images(image_url, alt_text)').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_cast' as never).select('*, contacts(first_name, last_name, headshot_url), script_characters(name)').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_crew' as never).select('*, contacts(first_name, last_name, role, phone, email, headshot_url)').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_scenes' as never).select('*, script_scenes(sort_order, location_name, int_ext, time_of_day, scene_notes, script_beats(id, audio_content, visual_content))').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_vendors' as never).select('*, clients(name, phone)').eq('call_sheet_id', id).order('sort_order'),
+    supabase.from('call_sheet_dept_notes' as never).select('*').eq('call_sheet_id', id).order('sort_order'),
+  ]);
+
+  return {
+    ...row,
+    project_title: projJoin?.title ?? null,
+    location_name: locJoin?.name ?? null,
+    location_address: locJoin?.address ?? null,
+    location_google_maps_url: locJoin?.google_maps_url ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    bulletins: ((bulletins as any).data ?? []),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    locations: (((csLocations as any).data) ?? []).map((l: any) => ({
+      ...l,
+      location_name: l.locations?.name ?? '',
+      location_address: l.locations?.address ?? null,
+      locations: undefined,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    location_images: (((locationImages as any).data) ?? []).map((li: any) => ({
+      ...li, image_url: li.location_images?.image_url ?? '', alt_text: li.location_images?.alt_text ?? null, location_images: undefined,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cast: (((cast as any).data) ?? []).map((c: any) => ({
+      ...c,
+      contact_name: c.contacts ? `${c.contacts.first_name ?? ''} ${c.contacts.last_name ?? ''}`.trim() : '',
+      headshot_url: c.contacts?.headshot_url ?? null,
+      character_name: c.script_characters?.name ?? null,
+      contacts: undefined, script_characters: undefined,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    crew: (((crew as any).data) ?? []).map((c: any) => ({
+      ...c,
+      contact_name: c.contacts ? `${c.contacts.first_name ?? ''} ${c.contacts.last_name ?? ''}`.trim() : '',
+      contact_role: c.contacts?.role ?? null,
+      phone: c.contacts?.phone ?? null,
+      email: c.contacts?.email ?? null,
+      headshot_url: c.contacts?.headshot_url ?? null,
+      contacts: undefined,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    scenes: (((scenes as any).data) ?? []).map((s: any) => ({
+      ...s,
+      scene_sort_order: s.script_scenes?.sort_order ?? 0,
+      location_name: s.script_scenes?.location_name ?? null,
+      int_ext: s.script_scenes?.int_ext ?? null,
+      time_of_day: s.script_scenes?.time_of_day ?? null,
+      scene_notes: s.script_scenes?.scene_notes ?? null,
+      beats: Array.isArray(s.script_scenes?.script_beats) ? s.script_scenes.script_beats : [],
+      characters: [],
+      script_scenes: undefined,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vendors: (((vendors as any).data) ?? []).map((v: any) => ({
+      ...v,
+      company_name: v.clients?.name ?? '',
+      company_phone: v.clients?.phone ?? null,
+      clients: undefined,
+    })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dept_notes: ((deptNotes as any).data) ?? [],
+  };
+}
+
+export async function createCallSheet(data: Record<string, unknown>): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+  const { data: cs, error } = await supabase
+    .from('call_sheets' as never)
+    .insert({ ...data, created_by: userId, updated_by: userId } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error((error as { message: string }).message);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const csId = (cs as any).id as string;
+  // Auto-create PRODUCTION dept note
+  await supabase.from('call_sheet_dept_notes' as never).insert({
+    call_sheet_id: csId,
+    department: 'PRODUCTION',
+    sort_order: 0,
+  } as never);
+  revalidatePath('/admin/call-sheets');
+  return csId;
+}
+
+export async function updateCallSheet(id: string, data: Record<string, unknown>) {
+  const { supabase, userId } = await requireAuth();
+  const { error } = await supabase
+    .from('call_sheets' as never)
+    .update({ ...data, updated_by: userId, updated_at: new Date().toISOString() } as never)
+    .eq('id', id);
+  if (error) throw new Error((error as { message: string }).message);
+  revalidatePath('/admin/call-sheets');
+}
+
+export async function deleteCallSheet(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheets' as never).delete().eq('id', id);
+  if (error) throw new Error((error as { message: string }).message);
+  revalidatePath('/admin/call-sheets');
+}
+
+export async function batchDeleteCallSheets(ids: string[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheets' as never).delete().in('id', ids);
+  if (error) throw new Error((error as { message: string }).message);
+  revalidatePath('/admin/call-sheets');
+}
+
+// ── Call Sheet Bulletins ─────────────────────────────────────────────────────
+
+export async function upsertCallSheetBulletin(callSheetId: string, data: { id?: string; text: string; pinned?: boolean; visible?: boolean; sort_order?: number }) {
+  const { supabase } = await requireAuth();
+  const payload = { text: data.text, pinned: data.pinned ?? false, visible: data.visible ?? true, sort_order: data.sort_order ?? 0 };
+  if (data.id) {
+    const { error } = await supabase.from('call_sheet_bulletins' as never).update(payload as never).eq('id', data.id);
+    if (error) throw new Error(error.message);
+    return data.id;
+  } else {
+    const { data: row, error } = await supabase.from('call_sheet_bulletins' as never).insert({ call_sheet_id: callSheetId, ...payload } as never).select('id').single();
+    if (error) throw new Error(error.message);
+    return (row as any).id as string;
+  }
+}
+
+export async function deleteCallSheetBulletin(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_bulletins' as never).delete().eq('id', id);
+}
+
+// ── Call Sheet Location Images ───────────────────────────────────────────────
+
+export async function setCallSheetLocationImages(callSheetId: string, images: { location_image_id: string; source: string; sort_order: number }[]) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_location_images' as never).delete().eq('call_sheet_id', callSheetId);
+  if (images.length > 0) {
+    const { error } = await supabase.from('call_sheet_location_images' as never).insert(
+      images.map((img) => ({ call_sheet_id: callSheetId, ...img })) as never[]
+    );
+    if (error) throw new Error(error.message);
+  }
+}
+
+// ── Call Sheet Cast ──────────────────────────────────────────────────────────
+
+export async function addCallSheetCast(callSheetId: string, contactId: string, data: Record<string, unknown> = {}) {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('call_sheet_cast' as never)
+    .insert({ call_sheet_id: callSheetId, contact_id: contactId, ...data } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as any).id as string;
+}
+
+export async function updateCallSheetCast(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheet_cast' as never).update(data as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removeCallSheetCast(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_cast' as never).delete().eq('id', id);
+}
+
+// ── Call Sheet Crew ──────────────────────────────────────────────────────────
+
+export async function addCallSheetCrew(callSheetId: string, contactId: string, data: Record<string, unknown> = {}) {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('call_sheet_crew' as never)
+    .insert({ call_sheet_id: callSheetId, contact_id: contactId, ...data } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as any).id as string;
+}
+
+export async function updateCallSheetCrew(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheet_crew' as never).update(data as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removeCallSheetCrew(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_crew' as never).delete().eq('id', id);
+}
+
+// ── Call Sheet Scenes ────────────────────────────────────────────────────────
+
+export async function importScenesFromScript(callSheetId: string, scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data: scenes, error } = await supabase
+    .from('script_scenes')
+    .select('id, sort_order')
+    .eq('script_id', scriptId)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+  if (!scenes?.length) return;
+
+  // Upsert: skip scenes already linked
+  const { data: existing } = await supabase
+    .from('call_sheet_scenes' as never)
+    .select('scene_id')
+    .eq('call_sheet_id', callSheetId);
+  const existingIds = new Set((existing ?? []).map((e: Record<string, unknown>) => e.scene_id));
+
+  const newRows = scenes
+    .filter((s: Record<string, unknown>) => !existingIds.has(s.id as string))
+    .map((s: Record<string, unknown>, i: number) => ({
+      call_sheet_id: callSheetId,
+      scene_id: s.id,
+      sort_order: (existing?.length ?? 0) + i,
+    }));
+
+  if (newRows.length > 0) {
+    const { error: insertError } = await supabase.from('call_sheet_scenes' as never).insert(newRows as never[]);
+    if (insertError) throw new Error(insertError.message);
+  }
+}
+
+export async function updateCallSheetScene(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheet_scenes' as never).update(data as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removeCallSheetScene(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_scenes' as never).delete().eq('id', id);
+}
+
+// ── Call Sheet Vendors ───────────────────────────────────────────────────────
+
+export async function addCallSheetVendor(callSheetId: string, companyId: string, data: Record<string, unknown> = {}) {
+  const { supabase } = await requireAuth();
+  const { data: row, error } = await supabase
+    .from('call_sheet_vendors' as never)
+    .insert({ call_sheet_id: callSheetId, company_id: companyId, ...data } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as any).id as string;
+}
+
+export async function updateCallSheetVendor(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheet_vendors' as never).update(data as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removeCallSheetVendor(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_vendors' as never).delete().eq('id', id);
+}
+
+// ── Call Sheet Dept Notes ────────────────────────────────────────────────────
+
+export async function upsertCallSheetDeptNote(callSheetId: string, data: { id?: string; department: string; notes: string; visible?: boolean; sort_order?: number }) {
+  const { supabase } = await requireAuth();
+  if (data.id) {
+    const { error } = await supabase.from('call_sheet_dept_notes' as never).update({ department: data.department, notes: data.notes, visible: data.visible ?? true, sort_order: data.sort_order ?? 0 } as never).eq('id', data.id);
+    if (error) throw new Error(error.message);
+    return data.id;
+  } else {
+    const { data: row, error } = await supabase.from('call_sheet_dept_notes' as never).insert({ call_sheet_id: callSheetId, department: data.department, notes: data.notes, visible: data.visible ?? true, sort_order: data.sort_order ?? 0 } as never).select('id').single();
+    if (error) throw new Error(error.message);
+    return (row as any).id as string;
+  }
+}
+
+export async function deleteCallSheetDeptNote(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_dept_notes' as never).delete().eq('id', id);
+}
+
+// ── Call Sheet Locations ────────────────────────────────────────────────────
+
+export async function addCallSheetLocation(callSheetId: string, locationId: string, data: Record<string, unknown> = {}) {
+  const { supabase } = await requireAuth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: row, error } = await supabase
+    .from('call_sheet_locations' as never)
+    .insert({ call_sheet_id: callSheetId, location_id: locationId, ...data } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (row as any).id as string;
+}
+
+export async function updateCallSheetLocation(id: string, data: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('call_sheet_locations' as never).update(data as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function removeCallSheetLocation(id: string) {
+  const { supabase } = await requireAuth();
+  await supabase.from('call_sheet_locations' as never).delete().eq('id', id);
 }

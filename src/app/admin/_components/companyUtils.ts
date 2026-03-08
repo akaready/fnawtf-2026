@@ -24,7 +24,7 @@ export type ClientTestimonial = {
   client_id: string | null;
 };
 
-export type CompanyType = 'client' | 'lead' | 'partner';
+export type CompanyType = 'client' | 'lead' | 'vendor';
 export type CompanyStatus = 'lead' | 'pitching' | 'stalled' | 'active' | 'inactive' | 'lost' | 'dropped';
 
 export const ALL_STATUSES: CompanyStatus[] = ['lead', 'pitching', 'stalled', 'active', 'inactive', 'lost', 'dropped'];
@@ -66,15 +66,15 @@ export const TYPE_CONFIG: Record<CompanyType, {
     activeBg: 'bg-admin-warning-bg-strong', activeText: 'text-admin-warning', activeBorder: 'border-admin-warning-border',
     filterActiveBg: 'bg-admin-warning-bg', filterActiveBorder: 'border-amber-500/40', filterActiveText: 'text-admin-warning',
   },
-  partner: {
-    label: 'Partner', Icon: Link2,
+  vendor: {
+    label: 'Vendor', Icon: Link2,
     dotBg: 'bg-sky-500',
     activeBg: 'bg-admin-info-bg-strong', activeText: 'text-admin-info', activeBorder: 'border-admin-info-border',
     filterActiveBg: 'bg-admin-info-bg', filterActiveBorder: 'border-sky-500/40', filterActiveText: 'text-admin-info',
   },
 };
 
-export const ALL_TYPES: CompanyType[] = ['client', 'lead', 'partner'];
+export const ALL_TYPES: CompanyType[] = ['client', 'lead', 'vendor'];
 
 /**
  * Returns a Tailwind bg class for the 1px gradient-border wrapper.
@@ -83,7 +83,7 @@ export const ALL_TYPES: CompanyType[] = ['client', 'lead', 'partner'];
 export function getCardBorderBg(types: CompanyType[], focused: boolean): string {
   const c = types.includes('client');
   const l = types.includes('lead');
-  const p = types.includes('partner');
+  const p = types.includes('vendor');
 
   if (!c && !l && !p) return focused ? 'bg-white/20' : 'bg-white/[0.08]';
 

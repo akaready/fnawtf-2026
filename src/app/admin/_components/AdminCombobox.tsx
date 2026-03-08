@@ -11,8 +11,8 @@ const inputClsCompact =
 interface AdminComboboxProps {
   /** Selected option ID (null = nothing selected) */
   value: string | null;
-  /** Available options */
-  options: Array<{ id: string; label: string }>;
+  /** Available options. Optional `suffix` renders right-aligned in mono/muted style. */
+  options: Array<{ id: string; label: string; suffix?: string }>;
   /** Called when selection changes */
   onChange: (id: string | null) => void;
   /** Placeholder text shown when empty */
@@ -29,6 +29,8 @@ interface AdminComboboxProps {
   searchable?: boolean;
   /** Compact sizing (h-7, text-xs) for inline/row contexts like scene headers */
   compact?: boolean;
+  /** Auto-focus the input on mount */
+  autoFocus?: boolean;
 }
 
 export function AdminCombobox({
@@ -42,6 +44,7 @@ export function AdminCombobox({
   disabled = false,
   searchable = true,
   compact = false,
+  autoFocus = false,
 }: AdminComboboxProps) {
   const cls = compact ? inputClsCompact : inputCls;
   const itemCls = compact ? 'px-2 py-1.5 text-xs' : 'px-3 py-2 text-sm';
@@ -51,6 +54,7 @@ export function AdminCombobox({
   const [highlightIdx, setHighlightIdx] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync query when selected option changes externally
   useEffect(() => { setQuery(selected?.label ?? ''); }, [selected]);
@@ -79,6 +83,13 @@ export function AdminCombobox({
 
   // Reset highlight on filter change
   useEffect(() => { setHighlightIdx(0); }, [query]);
+
+  // Auto-focus input on mount when requested
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -140,6 +151,7 @@ export function AdminCombobox({
     <div ref={ref} className="relative">
       {searchable ? (
         <input
+          ref={inputRef}
           type="text"
           value={query}
           disabled={disabled}
@@ -219,7 +231,8 @@ export function AdminCombobox({
                       : 'text-admin-text-primary hover:bg-admin-bg-hover'
                 }`}
               >
-                {opt.label}
+                <span className="truncate">{opt.label}</span>
+                {opt.suffix && <span className="ml-auto pl-2 font-admin-mono text-admin-text-faint flex-shrink-0">{opt.suffix}</span>}
               </button>
             );
           })}

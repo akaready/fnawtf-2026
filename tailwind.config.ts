@@ -9,6 +9,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      boxShadow: {
+        'panel': '-8px 0 24px -4px rgba(0, 0, 0, 0.25)',
+      },
       zIndex: {
         '0': '0',
         '10': '10',

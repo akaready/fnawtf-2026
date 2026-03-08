@@ -6,7 +6,7 @@ export type ProposalType = 'build' | 'launch' | 'scale' | 'build-launch' | 'fund
 export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'accepted';
 export type SectionType = 'text' | 'video' | 'projects' | 'quote' | 'calendar' | 'custom_text';
 
-export type ContactType = 'contact' | 'crew' | 'staff' | 'partner' | 'cast';
+export type ContactType = 'contact' | 'crew' | 'staff' | 'vendor' | 'cast';
 
 export interface ContactRow {
   id: string;

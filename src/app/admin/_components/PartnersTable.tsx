@@ -56,7 +56,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
         email: '',
         notes: null,
         logo_url: null,
-        company_types: ['partner'],
+        company_types: ['vendor'],
         status: 'active',
         website_url: null,
         linkedin_url: null,
@@ -127,7 +127,7 @@ export function PartnersTable({ initialPartners, projects, testimonials, contact
   }, []);
 
   const partnersOnly = useMemo(
-    () => partners.filter((c) => (c.company_types ?? []).includes('partner')),
+    () => partners.filter((c) => (c.company_types ?? []).includes('vendor')),
     [partners],
   );
 

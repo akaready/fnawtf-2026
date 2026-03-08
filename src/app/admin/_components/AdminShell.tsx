@@ -3,7 +3,8 @@
 import React, { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Rocket, LogOut, ChevronRight, ChevronDown, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Building2, Target, AppWindow, Clapperboard, GitFork, Video, Sun, Moon, Palette, Inbox, ScrollText, Settings, PanelLeftOpen, FileSignature, Layers, MapPin } from 'lucide-react';
+import { Rocket, LogOut, ChevronRight, ChevronDown, FileText, Search, MessageSquare, BookOpen, Users, Tag, Globe, Building2, Target, AppWindow, Clapperboard, ClipboardList, GitFork, Video, Sun, Moon, Palette, Inbox, ScrollText, Settings, PanelLeftOpen, FileSignature, Layers, MapPin, Library } from 'lucide-react';
+import { motion, LayoutGroup } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
@@ -122,25 +123,38 @@ function AdminShellInner({ children, userEmail }: Props) {
 
   const navItems: { href: string; label: string; icon: typeof Building2; children?: { href: string; label: string; icon: typeof Building2 }[] }[] = [
     // --- Active ---
-    { href: '/admin/clients',      label: 'Clients',      icon: Building2 },
-    { href: '/admin/projects',     label: 'Projects',     icon: Rocket },
-    { href: '/admin/scripts',      label: 'Scripts',      icon: ScrollText },
-    { href: '/admin/meetings',     label: 'Meetings',     icon: Video },
-    { href: '/admin/contracts',    label: 'Contracts',    icon: FileSignature },
+    { href: '/admin/clients',   label: 'Clients',   icon: Building2 },
+    { href: '/admin/projects',  label: 'Projects',  icon: Rocket, children: [
+      { href: '/admin/scripts',     label: 'Scripts',     icon: ScrollText },
+      { href: '/admin/call-sheets', label: 'Call Sheets', icon: ClipboardList },
+    ]},
+    { href: '/admin/meetings',  label: 'Meetings',  icon: Video },
+    { href: '/admin/contracts', label: 'Contracts', icon: FileSignature, children: [
+      { href: '/admin/contracts/templates', label: 'Templates', icon: Layers },
+    ]},
     // --- Incoming ---
-    { href: '/admin/partners',     label: 'Pipelines',    icon: GitFork },
-    { href: '/admin/leads',        label: 'Leads',        icon: Target },
-    { href: '/admin/intake',       label: 'Intake',       icon: Inbox },
-    { href: '/admin/proposals',    label: 'Proposals',    icon: FileText },
+    { href: '/admin/vendors',   label: 'Vendors',   icon: GitFork },
+    { href: '/admin/leads',     label: 'Leads',     icon: Target },
+    { href: '/admin/intake',    label: 'Intake',    icon: Inbox },
+    { href: '/admin/proposals', label: 'Proposals', icon: FileText },
     // --- Library ---
-    { href: '/admin/contacts',     label: 'People',       icon: Users },
-    { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
-    { href: '/admin/tags',         label: 'Tags',         icon: Tag },
-    { href: '/admin/roles',        label: 'Roles',        icon: Clapperboard },
-    { href: '/admin/locations',    label: 'Locations',    icon: MapPin },
-    { href: '/admin/snippets',     label: 'Snippets',     icon: BookOpen },
-    { href: '/admin/contracts/templates', label: 'Templates', icon: Layers },
+    { href: '/admin/contacts',  label: 'People',    icon: Users },
+    { href: '',                 label: 'Library',   icon: Library, children: [
+      { href: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
+      { href: '/admin/tags',         label: 'Tags',         icon: Tag },
+      { href: '/admin/roles',        label: 'Roles',        icon: Clapperboard },
+      { href: '/admin/locations',    label: 'Locations',    icon: MapPin },
+      { href: '/admin/snippets',     label: 'Snippets',     icon: BookOpen },
+    ]},
   ];
+
+  // Auto-open the submenu whose child matches the current path
+  useEffect(() => {
+    const parent = navItems.find(item =>
+      item.children?.some(c => pathname.startsWith(c.href))
+    );
+    if (parent) setNavSubmenuOpen(parent.href || parent.label);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Admin-only settings menu items (SEO, Website, Style Guide)
   const settingsItems = [
@@ -187,45 +201,67 @@ function AdminShellInner({ children, userEmail }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 pt-2 pb-3 space-y-1 px-2 overflow-y-auto overflow-x-hidden admin-scrollbar-auto">
+          <LayoutGroup>
           {navItems.map(({ href, label, icon: Icon, children }, i) => {
-            // Active if this is the most-specific nav item that matches the current path
-            const active = pathname.startsWith(href) && !navItems.some(
-              other => other.href !== href && other.href.startsWith(href) && pathname.startsWith(other.href)
-            );
+            const key = href || label;
+            const isAccordion = href === ''; // pure toggle, no navigation
+            const active = isAccordion
+              ? (children?.some(c => pathname.startsWith(c.href)) ?? false)
+              : pathname.startsWith(href) && !navItems.some(
+                  other => other.href !== href && other.href.startsWith(href) && pathname.startsWith(other.href)
+                );
             const hasChildren = children && children.length > 0;
-            const submenuOpen = navSubmenuOpen === href;
+            const submenuOpen = navSubmenuOpen === key;
+            const toggleSubmenu = () => setNavSubmenuOpen(submenuOpen ? null : key);
+            const rowClass = `flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
+              active
+                ? 'text-admin-text-primary bg-admin-bg-active'
+                : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'
+            }`;
             return (
-              <React.Fragment key={href}>
-                {(i === 5 || i === 9) && <div className="border-t border-admin-border -mx-2 !mt-2 !mb-2" />}
-                <div className="relative">
-                  <Link
-                    href={href}
-                    data-btn-hover
-                    onMouseEnter={(e) => {
-                      if (!collapsed) return;
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setNavTooltip({ label, top: rect.top + rect.height / 2 });
-                    }}
-                    onMouseLeave={() => setNavTooltip(null)}
-                    className={`flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
-                      active
-                        ? 'text-admin-text-primary bg-admin-bg-active'
-                        : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'
-                    }`}
-                  >
-                    <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
-                      <Icon size={15} strokeWidth={1.75} />
-                    </span>
-                    <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
-                    {active && !hasChildren && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
-                  </Link>
-                  {/* Submenu chevron toggle — shown when expanded and item has children */}
-                  {hasChildren && !collapsed && (
+              <React.Fragment key={key}>
+                {(i === 4 || i === 8) && <div className="border-t border-admin-border -mx-2 !mt-2 !mb-2" />}
+                <motion.div layout="position" className="relative">
+                  {isAccordion ? (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNavSubmenuOpen(submenuOpen ? null : href);
+                      onClick={(e) => { e.stopPropagation(); toggleSubmenu(); }}
+                      onMouseEnter={(e) => {
+                        if (!collapsed) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setNavTooltip({ label, top: rect.top + rect.height / 2 });
                       }}
+                      onMouseLeave={() => setNavTooltip(null)}
+                      className={`w-full ${rowClass}`}
+                    >
+                      <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
+                        <Icon size={15} strokeWidth={1.75} />
+                      </span>
+                      <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      href={href}
+                      data-btn-hover
+                      onClick={hasChildren ? () => toggleSubmenu() : undefined}
+                      onMouseEnter={(e) => {
+                        if (!collapsed) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setNavTooltip({ label, top: rect.top + rect.height / 2 });
+                      }}
+                      onMouseLeave={() => setNavTooltip(null)}
+                      className={rowClass}
+                    >
+                      <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
+                        <Icon size={15} strokeWidth={1.75} />
+                      </span>
+                      <span className={`transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-100'}`}>{label}</span>
+                      {active && !hasChildren && <ChevronRight size={12} className={`ml-auto transition-opacity duration-200 ${collapsed ? 'opacity-0' : 'opacity-40'}`} />}
+                    </Link>
+                  )}
+                  {/* Submenu chevron toggle — shown when expanded and item has children */}
+                  {hasChildren && !collapsed && !isAccordion && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSubmenu(); }}
                       className={`absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-md transition-colors ${
                         submenuOpen
                           ? 'text-admin-text-primary bg-admin-bg-active'
@@ -235,32 +271,56 @@ function AdminShellInner({ children, userEmail }: Props) {
                       <ChevronDown size={12} className={`transition-transform duration-150 ${submenuOpen ? 'rotate-180' : ''}`} />
                     </button>
                   )}
-                </div>
-                {/* Submenu items */}
-                {hasChildren && submenuOpen && !collapsed && children.map((child) => {
-                  const childActive = pathname.startsWith(child.href);
-                  const ChildIcon = child.icon;
-                  return (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className={`flex items-center gap-2.5 h-9 pl-[30px] pr-[7px] rounded-lg text-sm whitespace-nowrap transition-colors ${
-                        childActive
-                          ? 'text-admin-text-primary bg-admin-bg-active'
-                          : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'
-                      }`}
-                    >
-                      <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-md">
-                        <ChildIcon size={13} strokeWidth={1.75} />
-                      </span>
-                      <span>{child.label}</span>
-                    </Link>
-                  );
-                })}
+                  {/* Accordion items always show chevron inline (not absolute, since button fills row) */}
+                  {isAccordion && !collapsed && (
+                    <ChevronDown size={12} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-150 text-admin-text-faint ${submenuOpen ? 'rotate-180' : ''}`} />
+                  )}
+                </motion.div>
+                {/* Submenu items — always mounted, height animated in/out */}
+                {hasChildren && (
+                  <motion.div
+                    animate={{
+                      height: submenuOpen ? 'auto' : 0,
+                      opacity: submenuOpen ? 1 : 0,
+                    }}
+                    initial={false}
+                    transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="overflow-hidden"
+                  >
+                      {children.map((child) => {
+                        const childActive = pathname.startsWith(child.href);
+                        const ChildIcon = child.icon;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onMouseEnter={(e) => {
+                              if (!collapsed) return;
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setNavTooltip({ label: child.label, top: rect.top + rect.height / 2 });
+                            }}
+                            onMouseLeave={() => setNavTooltip(null)}
+                            className={`flex items-center gap-2.5 h-10 pr-[7px] rounded-lg text-sm whitespace-nowrap transition-[padding-left,color,background-color] duration-[200ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] ${
+                              collapsed ? 'pl-[13px]' : 'pl-[18px]'
+                            } ${
+                              childActive
+                                ? 'text-admin-text-primary bg-admin-bg-active'
+                                : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'
+                            }`}
+                          >
+                            <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1.5 rounded-md">
+                              <ChildIcon size={15} strokeWidth={1.75} />
+                            </span>
+                            {!collapsed && <span>{child.label}</span>}
+                          </Link>
+                        );
+                      })}
+                  </motion.div>
+                )}
               </React.Fragment>
             );
           })}
-
+          </LayoutGroup>
         </nav>
 
         {/* Footer — collapsed: expand button only; expanded: full controls */}
@@ -284,7 +344,7 @@ function AdminShellInner({ children, userEmail }: Props) {
                 <span>{signingOut ? 'Signing out…' : 'Sign Out'}</span>
               </button>
               {userEmail === 'ready@fna.wtf' && (
-                <div className="relative">
+                <motion.div layout="position" className="relative">
                   <button
                     ref={settingsBtnRef}
                     onClick={() => setSettingsOpen(!settingsOpen)}
@@ -297,7 +357,7 @@ function AdminShellInner({ children, userEmail }: Props) {
                   >
                     <Settings size={15} strokeWidth={1.75} />
                   </button>
-                </div>
+                </motion.div>
               )}
               <button
                 onClick={toggleTheme}

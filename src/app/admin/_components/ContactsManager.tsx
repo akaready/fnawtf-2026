@@ -33,7 +33,7 @@ const TYPE_ICON_COLORS: Record<string, string> = {
   cast: 'text-pink-400',
   contact: 'text-admin-success',
   staff: 'text-admin-warning',
-  partner: 'text-orange-400',
+  vendor: 'text-orange-400',
 };
 
 const TYPE_ACTIVE_CLASSES: Record<string, string> = {
@@ -42,7 +42,7 @@ const TYPE_ACTIVE_CLASSES: Record<string, string> = {
   cast: 'bg-pink-500/15 text-pink-300 border-pink-500/30',
   contact: 'bg-admin-success-bg text-admin-success border-admin-success-border',
   staff: 'bg-admin-warning-bg text-admin-warning border-admin-warning-border',
-  partner: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+  vendor: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
 };
 
 const TYPE_CIRCLE_BG: Record<ContactType, string> = {
@@ -50,7 +50,7 @@ const TYPE_CIRCLE_BG: Record<ContactType, string> = {
   cast: 'bg-pink-500/10',
   contact: 'bg-admin-success-bg',
   staff: 'bg-admin-warning-bg',
-  partner: 'bg-orange-500/10',
+  vendor: 'bg-orange-500/10',
 };
 
 const CONTACT_COLUMNS: ColDef<ContactRow>[] = [
@@ -107,7 +107,7 @@ const TYPE_ICONS: Record<string, typeof Users> = {
   cast: Sparkles,
   contact: Contact,
   staff: Star,
-  partner: HeartHandshake,
+  vendor: HeartHandshake,
 };
 
 type ContactViewMode = 'table' | 'gallery';
@@ -321,7 +321,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
             <ViewSwitcher views={CONTACT_VIEWS} activeView={viewMode} onChange={setViewMode} />
             {/* Type tabs — full buttons on lg+, dropdown on smaller */}
             <div className="hidden 2xl:flex items-center gap-1 flex-shrink-0">
-              {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
+              {(['all', 'crew', 'cast', 'contact', 'staff', 'vendor'] as const).map((t) => {
                 const Icon = TYPE_ICONS[t];
                 return (
                   <button
@@ -352,7 +352,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                   { id: 'cast', name: 'Cast' },
                   { id: 'contact', name: 'Contact' },
                   { id: 'staff', name: 'Staff' },
-                  { id: 'partner', name: 'Partner' },
+                  { id: 'vendor', name: 'Partner' },
                 ]}
                 value={typeFilter as string === 'all' ? null : typeFilter}
                 onChange={(v) => setTypeFilter((v as ContactType) ?? 'all')}
@@ -509,7 +509,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
               <ViewSwitcher views={CONTACT_VIEWS} activeView={viewMode} onChange={setViewMode} />
               {/* Type tabs — full buttons on lg+, dropdown on smaller */}
               <div className="hidden 2xl:flex items-center gap-1">
-                {(['all', 'crew', 'cast', 'contact', 'staff', 'partner'] as const).map((t) => {
+                {(['all', 'crew', 'cast', 'contact', 'staff', 'vendor'] as const).map((t) => {
                   const Icon = TYPE_ICONS[t];
                   return (
                     <button
@@ -540,7 +540,7 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
                     { id: 'cast', name: 'Cast' },
                     { id: 'contact', name: 'Contact' },
                     { id: 'staff', name: 'Staff' },
-                    { id: 'partner', name: 'Partner' },
+                    { id: 'vendor', name: 'Partner' },
                   ]}
                   value={typeFilter === 'all' ? null : typeFilter}
                   onChange={(v) => setTypeFilter((v as ContactType) ?? 'all')}

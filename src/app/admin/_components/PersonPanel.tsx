@@ -31,7 +31,7 @@ export const TYPE_COLORS: Record<ContactType, string> = {
   cast: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
   contact: 'bg-admin-success-bg text-admin-success border-admin-success-border',
   staff: 'bg-admin-warning-bg text-admin-warning border-admin-warning-border',
-  partner: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  vendor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
 export interface PersonPanelProps {
@@ -41,6 +41,8 @@ export interface PersonPanelProps {
   companies: ClientRow[];
   onSave: (row: ContactRow) => Promise<void>;
   onDelete: (id: string) => void;
+  /** Panel stacking level (default 1). Use 2 when rendering over another panel. */
+  level?: 1 | 2;
 }
 
 export function PersonPanel({
@@ -50,6 +52,7 @@ export function PersonPanel({
   companies,
   onSave,
   onDelete,
+  level = 1,
 }: PersonPanelProps) {
   const [draft, setDraft] = useState<ContactRow | null>(person);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -126,7 +129,7 @@ export function PersonPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personId]);
 
-  if (!draft) return <PanelDrawer open={open} onClose={onClose} width="w-[520px]"><div /></PanelDrawer>;
+  if (!draft) return <PanelDrawer open={open} onClose={onClose} width="w-[520px]" level={level}><div /></PanelDrawer>;
 
   const handleChange = (field: string, value: unknown) => {
     setDraft((prev) => prev ? { ...prev, [field]: value } : prev);
@@ -250,7 +253,7 @@ export function PersonPanel({
   const inputClass = 'w-full rounded-lg border border-admin-border-subtle bg-admin-bg-base px-3 py-2.5 text-sm text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:ring-1 focus:ring-admin-border-emphasis';
 
   return (
-    <PanelDrawer open={open} onClose={handleClose} width="w-[520px]">
+    <PanelDrawer open={open} onClose={handleClose} width="w-[520px]" level={level}>
       <DiscardChangesDialog
         open={confirmClose}
         onKeepEditing={() => setConfirmClose(false)}
@@ -326,7 +329,7 @@ export function PersonPanel({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-admin-text-muted">Type</label>
               <div className="flex gap-1.5 flex-wrap">
-                {(['contact', 'crew', 'cast', 'staff', 'partner'] as ContactType[]).map((t) => (
+                {(['contact', 'crew', 'cast', 'staff', 'vendor'] as ContactType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => handleChange('type', t)}

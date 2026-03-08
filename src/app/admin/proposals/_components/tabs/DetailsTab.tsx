@@ -44,7 +44,7 @@ const CONTACT_TYPES: { value: ContactType; label: string }[] = [
   { value: 'contact', label: 'Contact' },
   { value: 'crew', label: 'Crew' },
   { value: 'staff', label: 'Staff' },
-  { value: 'partner', label: 'Partner' },
+  { value: 'vendor', label: 'Vendor' },
   { value: 'cast', label: 'Cast' },
 ];
 

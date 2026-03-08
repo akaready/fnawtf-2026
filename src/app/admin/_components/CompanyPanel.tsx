@@ -40,7 +40,7 @@ type ClientTestimonial = {
   client_id: string | null;
 };
 
-type CompanyType = 'client' | 'lead' | 'partner';
+type CompanyType = 'client' | 'lead' | 'vendor';
 type TabName = 'info' | 'contacts' | 'projects' | 'testimonials';
 type CompanyStatus = 'lead' | 'pitching' | 'stalled' | 'active' | 'inactive' | 'lost' | 'dropped';
 
@@ -71,13 +71,13 @@ const TYPE_CONFIG: Record<CompanyType, {
     label: 'Client', Icon: Building2,
     activeBg: 'bg-admin-success-bg', activeText: 'text-admin-success', activeBorder: 'border-admin-success-border',
   },
-  partner: {
-    label: 'Partner', Icon: Link2,
+  vendor: {
+    label: 'Vendor', Icon: Link2,
     activeBg: 'bg-admin-info-bg', activeText: 'text-admin-info', activeBorder: 'border-admin-info-border',
   },
 };
 
-const ALL_TYPES: CompanyType[] = ['lead', 'client', 'partner'];
+const ALL_TYPES: CompanyType[] = ['lead', 'client', 'vendor'];
 
 export interface CompanyPanelProps {
   company: ClientRow | null;

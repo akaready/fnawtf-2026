@@ -56,18 +56,18 @@ export function TwoStateDeleteButton({
 
   if (isConfirming) {
     return (
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center">
         <button
           onClick={() => onConfirmDelete(itemId)}
           disabled={disabled}
-          className="p-2 text-admin-danger hover:text-red-300 transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-admin-danger hover:text-red-300 transition-colors"
           title="Confirm delete"
         >
           <Check size={size} />
         </button>
         <button
           onClick={onCancel}
-          className="p-2 text-admin-text-faint hover:text-admin-text-primary transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-admin-text-faint hover:text-admin-text-primary transition-colors"
           title="Cancel"
         >
           <X size={size} />

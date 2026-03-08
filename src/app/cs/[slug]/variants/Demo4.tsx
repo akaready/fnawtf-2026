@@ -13,10 +13,12 @@ import Image from 'next/image';
 import { CallSheetLightbox } from './CallSheetLightbox';
 import {
   Sun,
+  Moon,
   Sunrise,
   Sunset,
   MapPin,
   Phone,
+  MessageSquare,
   Mail,
   Navigation,
   Users,
@@ -138,13 +140,14 @@ const locationImages = [
 export function Demo4({ data }: { data: CallSheetData }) {
   const { production, weather, schedule } = data;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightMode, setLightMode] = useState(false);
 
   return (
-    <div className="min-h-screen bg-admin-bg-base text-admin-text-primary">
+    <div className={`min-h-screen bg-admin-bg-base text-admin-text-primary ${lightMode ? 'cs-light' : ''}`}>
       <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-12 py-10 space-y-8">
 
         {/* ═══ HEADER ═══ */}
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between pb-8 border-b border-admin-border">
+        <div className="flex flex-col items-center gap-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between pb-8 border-b border-admin-border">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-5">
             <div className="flex items-center gap-4">
               {production.companyLogo && (
@@ -167,20 +170,21 @@ export function Demo4({ data }: { data: CallSheetData }) {
             </div>
             <div className="hidden sm:block h-10 w-px bg-admin-border" />
             <div className="text-center sm:text-left">
-              <p className="font-[family-name:var(--font-display)] font-bold text-xl sm:text-2xl tracking-tight">
+              <p className="font-[family-name:var(--font-display)] font-bold text-xl sm:text-2xl tracking-tight leading-tight">
                 {data.projectTitle}
               </p>
-              <p className="text-sm sm:text-base text-admin-text-muted">
+              <p className="text-sm sm:text-base text-admin-text-muted leading-tight mt-0.5">
                 {data.projectType}
-                <span className="font-[family-name:var(--font-mono)] ml-3 text-admin-text-dim">{data.jobId}</span>
+                <span className="text-admin-text-dim mx-2">&bull;</span>
+                <span className="font-[family-name:var(--font-mono)] text-admin-text-dim">{data.jobId}</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-5">
-            <div className="text-center sm:text-right">
-              <p className="text-sm sm:text-base font-bold">Day {data.shootDay} of {data.totalDays}</p>
-              <p className="text-sm sm:text-base text-admin-text-muted">{formatDate(data.date)}</p>
+            <div className="text-right">
+              <p className="text-sm sm:text-base font-bold leading-tight">Day {data.shootDay} of {data.totalDays}</p>
+              <p className="text-sm sm:text-base text-admin-text-muted leading-tight mt-0.5">{formatDate(data.date)}</p>
             </div>
             <div className="rounded-xl bg-admin-bg-raised border border-admin-border flex flex-col items-center justify-center px-4 py-2.5 sm:px-5 sm:py-3">
               <span className="text-xs sm:text-sm uppercase tracking-wider font-bold text-admin-text-muted leading-none">
@@ -190,6 +194,13 @@ export function Demo4({ data }: { data: CallSheetData }) {
                 {formatDay(data.date)}
               </span>
             </div>
+            <button
+              onClick={() => setLightMode(!lightMode)}
+              className="w-10 h-10 rounded-xl border border-admin-border bg-admin-bg-raised flex items-center justify-center text-admin-text-dim hover:text-admin-text-primary transition-colors"
+              title={lightMode ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {lightMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 
@@ -498,10 +509,15 @@ export function Demo4({ data }: { data: CallSheetData }) {
                   {data.crew.map((c, i) => (
                     <tr key={i} className="bg-admin-bg-raised hover:bg-admin-bg-hover transition-colors">
                       <td className="pl-6 pr-2 py-4">
-                        <div className="flex items-center justify-center gap-4">
+                        <div className="flex items-center justify-center gap-2.5">
                           {c.phone && (
                             <a href={`tel:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary transition-colors" title={c.phone}>
                               <Phone className="w-4 h-4" />
+                            </a>
+                          )}
+                          {c.phone && (
+                            <a href={`sms:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary transition-colors" title={`Text ${c.phone}`}>
+                              <MessageSquare className="w-4 h-4" />
                             </a>
                           )}
                           {c.email && (
@@ -540,10 +556,15 @@ export function Demo4({ data }: { data: CallSheetData }) {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-5 shrink-0 pt-1">
+                    <div className="flex gap-3 shrink-0 pt-1">
                       {c.phone && (
                         <a href={`tel:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary p-1" title={c.phone}>
                           <Phone className="w-5 h-5" />
+                        </a>
+                      )}
+                      {c.phone && (
+                        <a href={`sms:${c.phone}`} className="text-admin-text-dim hover:text-admin-text-primary p-1" title={`Text ${c.phone}`}>
+                          <MessageSquare className="w-5 h-5" />
                         </a>
                       )}
                       {c.email && (

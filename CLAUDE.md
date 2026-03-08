@@ -1,7 +1,27 @@
 # FNA Admin Dashboard — Development Guidelines
 
-## Consistency First
-NEVER invent new UI patterns when an existing convention covers the use case. Before adding any UI element, check how other admin pages handle the same interaction. Match exactly. When in doubt, copy an existing page's approach rather than designing something new.
+## Consistency First — ABSOLUTE RULE
+
+**ZERO new UI patterns.** Every UI element MUST reuse an existing pattern from the codebase. Before writing ANY UI code, find an existing instance of the same interaction in another admin page and copy it exactly. If you cannot find a precedent, ASK the user before inventing anything.
+
+This is not a suggestion — it is the highest-priority rule in this file. Violations include:
+- Custom text links ("Remove", "Delete", "Clear") instead of `TwoStateDeleteButton`
+- Custom inline styles, one-off hover effects, or ad-hoc button classes
+- Placing controls in non-standard positions (e.g., delete in a header instead of next to the item)
+- Using `text-admin-xs` for any user-visible text (minimum is `text-admin-sm`)
+- Building a new component when an existing shared component does the job
+
+### Mandatory Pre-Flight Checklist (before every UI change)
+1. **Delete/remove action?** → `TwoStateDeleteButton`, positioned next to the item it deletes. Never in headers, never as text links.
+2. **Button?** → Must be `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-ghost-danger`, or `btn-ghost-add`. No custom button styles.
+3. **Dropdown/select?** → `AdminCombobox`. Never native `<select>` or custom dropdowns.
+4. **Text size?** → `text-admin-sm` minimum for all visible text. Never `text-admin-xs` or bare Tailwind `text-xs`.
+5. **Color?** → Must use `admin-*` design tokens. Never raw hex, `text-gray-*`, or `bg-white/N`.
+6. **Icon button?** → `w-8 h-8 flex items-center justify-center`. Always.
+7. **Drag handle?** → `GripVertical`, `text-admin-text-muted hover:text-admin-text-primary`, spread `listeners` on the grip `<span>` only.
+8. **Show/hide toggle?** → `Eye`/`EyeOff` icons with standard visibility button styling.
+9. **Side panel?** → `PanelDrawer` with standard header/tab-strip/body/footer structure.
+10. **New interaction I haven't seen before?** → STOP. Ask the user.
 
 ## Admin Design Tokens
 
@@ -220,12 +240,9 @@ After any admin UI changes, run:
 
 ## GitHub Operations
 
-Use `gh` CLI for all GitHub API operations (PRs, issues, reviews, comments, checks). Never use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single `gh` command can do the job.
+For ANY GitHub operation (PRs, issues, reviews, comments, checks), ALWAYS load the GitHub MCP tools first by calling `ToolSearch` with query `+github` before falling back to `gh` CLI. The GitHub MCP tools are deferred and must be loaded each session.
 
-Examples:
-- `gh pr create` — not manual push + API call
-- `gh pr view 123` — not `curl` to the API
-- `gh issue list` — not scraping the web UI
-- `gh api repos/owner/repo/pulls/123/comments` — for anything `gh` doesn't have a direct subcommand for
-
-When GitHub MCP tools (`mcp__github__*`) are available, prefer those for structured operations (creating PRs with labels/reviewers, searching issues). Fall back to `gh` CLI when MCP tools are unavailable.
+Preference order:
+1. **GitHub MCP tools** (`mcp__plugin_github_github__*`) — use `ToolSearch` query `+github` to load them, then use for creating PRs, listing issues, adding comments, searching code, etc.
+2. **`gh` CLI** — fallback only if MCP tools fail or for local git operations (push, pull, branch)
+3. **Never** use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single tool or `gh` command can do the job
