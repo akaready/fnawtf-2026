@@ -18,9 +18,12 @@ function interpolate(template: string, vars: Record<string, string>): string {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   // Use anon client — cookies() may be unavailable during static generation
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { title: 'FNA.wtf' };
+  }
   const supabase = createAnonClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 
   const [{ data: raw }, { data: seoRow }] = await Promise.all([
@@ -122,10 +125,15 @@ export default async function WorkDetailPage({ params }: PageProps) {
 }
 
 export async function generateStaticParams() {
+  // Skip static generation when Supabase env vars are unavailable (e.g. Vercel build without env)
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return [];
+  }
+
   // Use bare anon client — cookies() is unavailable outside request scope
   const supabase = createAnonClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 
   const { data: projects } = await supabase
