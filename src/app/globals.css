@@ -712,6 +712,7 @@ a[data-btn-hover]:hover {
 /* ─── Call Sheet Print Styles ──────────────────────────────────────── */
 @media print {
   .call-sheet-no-print { display: none !important; }
+  .invoice-no-print    { display: none !important; }
   body { background: white !important; color: black !important; }
   .call-sheet-print {
     max-width: 100% !important;
