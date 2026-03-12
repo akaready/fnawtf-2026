@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Check, Star, User } from 'lucide-react';
+import { Plus, Trash2, Check, User } from 'lucide-react';
 import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot, PricingType } from '@/components/proposal/ProposalCalculatorEmbed';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
@@ -81,13 +81,13 @@ export function InvestmentSlide({
 
   // Derived quote lists — apply admin visibility filter
   const allActive = quotes.filter((q) => !q.deleted_at && q.visible !== false);
-  const recommendedQuote = allActive.find((q) => q.is_fna_quote) ?? null; // First FNA = recommended
-  const comparisonQuotes = allActive.filter((q) => q !== recommendedQuote); // Everything else
-  const clientQuotes = comparisonQuotes.filter((q) => !q.is_fna_quote && (!viewerEmail || q.viewer_email === viewerEmail));
+  const fnaQuotes = allActive.filter((q) => q.is_fna_quote);
+  const comparisonQuotes = allActive.filter((q) => !q.is_fna_quote);
+  const clientQuotes = comparisonQuotes.filter((q) => !viewerEmail || q.viewer_email === viewerEmail);
 
   // ID-based tab system
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(
-    recommendedQuote?.id ?? comparisonQuotes[0]?.id ?? null
+    fnaQuotes[0]?.id ?? comparisonQuotes[0]?.id ?? null
   );
 
   const activeQuote = quotes.find((q) => q.id === activeQuoteId) ?? null;
@@ -205,12 +205,12 @@ export function InvestmentSlide({
       );
       setDeletingQuoteId(null);
       if (activeQuoteId === quoteId) {
-        setActiveQuoteId(recommendedQuote?.id ?? null);
+        setActiveQuoteId(fnaQuotes[0]?.id ?? null);
       }
     } catch (err) {
       console.error('Failed to delete quote:', err);
     }
-  }, [activeQuoteId, recommendedQuote]);
+  }, [activeQuoteId, fnaQuotes]);
 
 
   return (
@@ -236,33 +236,34 @@ export function InvestmentSlide({
 
         {/* Quote tabs + content */}
         <div data-content>
-          {/* ── Recommended quote card (single purple card) ── */}
-          {recommendedQuote && (
-            <div className={`rounded-lg border overflow-hidden mb-4 transition-all duration-300 ${
-              activeQuoteId === recommendedQuote.id ? 'border-purple-400 opacity-100' : 'border-purple-500/50 opacity-60'
+          {/* ── FNA quote cards (purple grid) ── */}
+          {fnaQuotes.length > 0 && (
+            <div className={`mb-4 grid gap-3 ${
+              fnaQuotes.length === 1 ? 'grid-cols-1' : fnaQuotes.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
             }`}>
-              <button
-                onClick={() => setActiveQuoteId(recommendedQuote.id)}
-                className={`w-full flex items-center gap-2 px-4 py-4 transition-colors duration-300 cursor-pointer text-left ${
-                  activeQuoteId === recommendedQuote.id
-                    ? 'bg-purple-950 text-white'
-                    : 'bg-purple-950/30 text-purple-300/70 hover:text-white hover:bg-purple-950/60'
-                }`}
-              >
-                <Star size={16} fill="currentColor" className={`flex-shrink-0 ${
-                  activeQuoteId === recommendedQuote.id ? 'text-purple-400' : 'text-purple-500/50'
-                }`} />
-                <div className="min-w-0 flex-1">
-                  <span className="font-display text-base font-semibold block truncate">
-                    {recommendedQuote.label}
-                  </span>
-                  {recommendedQuote.description && (
-                    <p className="text-sm leading-relaxed text-white/40 mt-1">
-                      {recommendedQuote.description}
-                    </p>
-                  )}
+              {fnaQuotes.map((fq) => (
+                <div key={fq.id} className={`rounded-lg border overflow-hidden transition-all duration-300 ${
+                  activeQuoteId === fq.id ? 'border-purple-400 opacity-100' : 'border-purple-500/50 opacity-60'
+                }`}>
+                  <button
+                    onClick={() => setActiveQuoteId(fq.id)}
+                    className={`w-full px-4 py-4 transition-colors duration-300 cursor-pointer text-left ${
+                      activeQuoteId === fq.id
+                        ? 'bg-purple-950 text-white'
+                        : 'bg-purple-950/30 text-purple-300/70 hover:text-white hover:bg-purple-950/60'
+                    }`}
+                  >
+                    <span className="font-display text-base font-semibold block truncate">
+                      {fq.label}
+                    </span>
+                    {fq.description && (
+                      <p className="text-sm leading-relaxed text-white/40 mt-1">
+                        {fq.description}
+                      </p>
+                    )}
+                  </button>
                 </div>
-              </button>
+              ))}
             </div>
           )}
 
@@ -271,7 +272,7 @@ export function InvestmentSlide({
             {comparisonQuotes.length > 0 && (
               <div className="inline-flex rounded-lg border border-cyan-700/60 overflow-hidden">
                 {comparisonQuotes.map((q, idx) => {
-                  const isFna = q.is_fna_quote;
+                  const isOwn = !q.is_fna_quote && viewerEmail && q.viewer_email === viewerEmail;
                   const isActive = activeQuoteId === q.id;
                   const isThisDeleting = deletingQuoteId === q.id;
                   const isIconHovered = hoveredIconId === q.id;
@@ -281,7 +282,7 @@ export function InvestmentSlide({
                     <button
                       key={q.id}
                       onClick={() => setActiveQuoteId(q.id)}
-                      onMouseEnter={() => !isFna && setHoveredIconId(q.id)}
+                      onMouseEnter={() => isOwn && setHoveredIconId(q.id)}
                       onMouseLeave={() => setHoveredIconId(null)}
                       className={`flex items-center gap-2 pl-3 pr-4 py-2.5 text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         isActive
@@ -289,11 +290,7 @@ export function InvestmentSlide({
                           : 'bg-cyan-950/40 text-cyan-300/60 hover:text-white/80 hover:bg-cyan-900/40'
                       } ${idx > 0 ? 'border-l border-cyan-700/30' : ''}`}
                     >
-                      {isFna ? (
-                        <span className="flex-shrink-0 p-1 rounded">
-                          <Star size={16} className="text-current opacity-70" />
-                        </span>
-                      ) : (
+                      {isOwn ? (
                         <span
                           ref={isThisDeleting ? deletingIconRef : null}
                           onMouseEnter={() => setDimmedIconId(q.id)}
@@ -310,6 +307,10 @@ export function InvestmentSlide({
                             : isIconHovered
                               ? <Trash2 size={16} />
                               : <User size={16} className="opacity-70" />}
+                        </span>
+                      ) : (
+                        <span className="flex-shrink-0 p-1 rounded">
+                          <User size={16} className="text-current opacity-70" />
                         </span>
                       )}
                       {q.label}
@@ -356,7 +357,7 @@ export function InvestmentSlide({
               proposalType={proposalType}
               typeOverride={proposalType as PricingType}
               initialQuote={activeQuote ?? undefined}
-              prefillQuote={recommendedQuote ?? undefined}
+              prefillQuote={fnaQuotes[0] ?? undefined}
               crowdfundingApproved={crowdfundingApproved}
               crowdfundingDeferred={crowdfundingDeferred}
               activeQuoteId={activeQuoteId ?? undefined}

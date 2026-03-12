@@ -11,12 +11,14 @@ interface Props {
 }
 
 export function ProposalLoginForm({ slug, title, company }: Props) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
-  const canSubmit = email.trim() && password.trim();
+  const canSubmit = firstName.trim() && lastName.trim() && email.trim() && password.trim();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
     if (!canSubmit) return;
 
     startTransition(async () => {
-      const result = await verifyProposalAccess(slug, email.trim(), password.trim());
+      const result = await verifyProposalAccess(slug, email.trim(), password.trim(), firstName.trim(), lastName.trim());
       if (!result.success) {
         setError(result.error ?? 'Unable to verify access.');
         return;
@@ -58,6 +60,37 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="firstName" className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                First Name
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First"
+                autoComplete="given-name"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label htmlFor="lastName" className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last"
+                autoComplete="family-name"
+                className={inputCls}
+              />
+            </div>
+          </div>
+
           <div>
             <label htmlFor="email" className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Your Email

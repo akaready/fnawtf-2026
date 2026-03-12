@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { Star, TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, type LucideIcon } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, ArrowUpDown, type LucideIcon } from 'lucide-react';
 import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
@@ -62,19 +62,8 @@ const QUOTE_CONFIG = [
   { defaultLabel: 'Recommended', canHide: false },
   { defaultLabel: 'Option A',    canHide: true  },
   { defaultLabel: 'Option B',    canHide: true  },
-  { defaultLabel: 'Option C',    canHide: true  },
-  { defaultLabel: 'Option D',    canHide: true  },
 ] as const;
 
-function QuoteIcon({ index, className }: { index: number; className?: string }) {
-  if (index === 0) return <Star size={12} className={className} />;
-  const letter = String.fromCharCode(64 + index); // 1→A, 2→B, 3→C, 4→D
-  return (
-    <span className={`text-[10px] font-bold leading-none select-none ${className ?? ''}`}>
-      {letter}
-    </span>
-  );
-}
 
 const labelCls = 'admin-label';
 const inputCls = 'admin-input w-full';
@@ -236,7 +225,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
   // ── Add quote ───────────────────────────────────────────────────────────
   const handleAddQuote = async () => {
-    if (quotes.length >= 5) return;
+    if (quotes.length >= 3) return;
     const i = quotes.length;
     const config = QUOTE_CONFIG[i];
     const id = await saveProposalQuote(proposalId, {
@@ -289,6 +278,25 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     setConfirmDeleteId(null);
   };
 
+  // ── Swap the two non-recommended quotes ────────────────────────────────
+  const handleSwapQuotes = async () => {
+    if (quotes.length < 3) return;
+    const a = quotes[1];
+    const b = quotes[2];
+    await Promise.all([
+      saveProposalQuote(proposalId, { ...a, sort_order: b.sort_order }),
+      saveProposalQuote(proposalId, { ...b, sort_order: a.sort_order }),
+    ]);
+    setQuotes((prev) => {
+      const next = [...prev];
+      next[1] = { ...b, sort_order: a.sort_order };
+      next[2] = { ...a, sort_order: b.sort_order };
+      return next;
+    });
+    if (activeQuoteIndex === 1) setActiveQuoteIndex(2);
+    else if (activeQuoteIndex === 2) setActiveQuoteIndex(1);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Phase selector — multi-select with compatibility rules */}
@@ -319,52 +327,20 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
       {/* Quote tabs nav — hidden for Scale (custom quotes) */}
       {selectedType === 'scale' ? null : <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
         {quotes.map((q, i) => {
-          const canHide = i > 0;
           const isHidden = q.visible === false;
           return (
             <div
               key={q.id}
               onClick={() => handleQuoteSwitch(i)}
-              className={`group/tab flex items-center rounded-lg cursor-pointer transition-colors ${
+              className={`flex items-center rounded-lg cursor-pointer transition-colors ${
                 i === activeQuoteIndex ? 'bg-admin-bg-active' : 'hover:bg-admin-bg-hover'
               }`}
             >
-              {/* Icon → eye toggle on hover (hideable quotes only) */}
-              <div className="ml-3 w-3 flex items-center justify-center flex-shrink-0">
-                {canHide ? (
-                  <>
-                    <QuoteIcon
-                      index={i}
-                      className={`group-hover/tab:hidden transition-colors ${
-                        isHidden
-                          ? i === activeQuoteIndex ? 'text-admin-text-faint' : 'text-white/15'
-                          : i === activeQuoteIndex ? 'text-admin-text-secondary' : 'text-admin-text-ghost'
-                      }`}
-                    />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleVisibilityToggle(q); }}
-                      className="hidden group-hover/tab:flex items-center justify-center text-admin-text-faint hover:text-admin-text-secondary transition-colors"
-                      title={isHidden ? 'Show quote' : 'Hide quote'}
-                    >
-                      {isHidden
-                        ? <EyeOff size={12} />
-                        : <Eye size={12} />
-                      }
-                    </button>
-                  </>
-                ) : (
-                  <QuoteIcon
-                    index={i}
-                    className={i === activeQuoteIndex ? 'text-admin-text-secondary' : 'text-admin-text-ghost'}
-                  />
-                )}
-              </div>
-
               <span
-                className={`pl-1.5 pr-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                   isHidden
                     ? i === activeQuoteIndex ? 'text-admin-text-dim' : 'text-admin-text-ghost'
-                    : i === activeQuoteIndex ? 'text-admin-text-primary' : 'text-admin-text-dim group-hover/tab:text-admin-text-secondary'
+                    : i === activeQuoteIndex ? 'text-admin-text-primary' : 'text-admin-text-dim hover:text-admin-text-secondary'
                 }`}
               >
                 {q.label || QUOTE_CONFIG[i]?.defaultLabel || `Option ${i + 1}`}
@@ -373,8 +349,34 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
           );
         })}
 
-        {/* Right: Delete + Add */}
+        {/* Right: Swap + Eye + Delete + Add */}
         <div className="ml-auto flex items-center gap-1">
+          {/* Swap button — only when 2 non-recommended quotes exist */}
+          {quotes.length === 3 && (
+            <button
+              onClick={handleSwapQuotes}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
+              title="Swap quote order"
+            >
+              <ArrowUpDown size={13} />
+            </button>
+          )}
+
+          {/* Eye toggle — for non-recommended quotes */}
+          {activeQuoteIndex > 0 && activeQuote && (
+            <button
+              onClick={() => handleVisibilityToggle(activeQuote)}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                activeQuote.visible === false
+                  ? 'text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover'
+                  : 'text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover'
+              }`}
+              title={activeQuote.visible === false ? 'Show quote to client' : 'Hide quote from client'}
+            >
+              {activeQuote.visible === false ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
+          )}
+
           {activeQuoteIndex > 0 && activeQuote && (
             <>
               {confirmDeleteId === activeQuote.id ? (
@@ -408,10 +410,10 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
           <button
             onClick={handleAddQuote}
-            disabled={quotes.length >= 5}
-            title={quotes.length >= 5 ? 'Maximum 5 quotes' : 'Add a quote option'}
+            disabled={quotes.length >= 3}
+            title={quotes.length >= 3 ? 'Maximum 3 quotes' : 'Add a quote option'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-              quotes.length >= 5
+              quotes.length >= 3
                 ? 'border border-admin-border-emphasis text-admin-text-faint'
                 : 'bg-white text-black hover:bg-white/90'
             }`}
@@ -447,22 +449,20 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               />
             </div>
 
-            {/* Description — Recommended only */}
-            {activeQuoteIndex === 0 && (
-              <div>
-                <label className={labelCls}>
-                  Recommended quote description (shown to client)
-                </label>
-                <textarea
-                  key={`desc-${activeQuote.id}`}
-                  defaultValue={activeQuote.description ?? ''}
-                  onBlur={(e) => handleDescSave(activeQuote, e.target.value)}
-                  placeholder="Describe this recommended package..."
-                  rows={3}
-                  className={inputCls + ' resize-none leading-relaxed'}
-                />
-              </div>
-            )}
+            {/* Description — all FNA quotes */}
+            <div>
+              <label className={labelCls}>
+                Quote description (shown to client)
+              </label>
+              <textarea
+                key={`desc-${activeQuote.id}`}
+                defaultValue={activeQuote.description ?? ''}
+                onBlur={(e) => handleDescSave(activeQuote, e.target.value)}
+                placeholder="Describe this package..."
+                rows={3}
+                className={inputCls + ' resize-none leading-relaxed'}
+              />
+            </div>
 
             {/* Calculator */}
             <ProposalCalculatorEmbed

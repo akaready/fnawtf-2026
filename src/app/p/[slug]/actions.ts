@@ -5,7 +5,7 @@ import { setProposalAuthCookie, verifyProposalPassword } from '@/lib/proposal/au
 import { notifySlack } from '@/lib/slack/notify';
 import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow, ProposalQuoteRow } from '@/types/proposal';
 
-export async function verifyProposalAccess(slug: string, email: string, password: string): Promise<{ success: boolean; error?: string }> {
+export async function verifyProposalAccess(slug: string, email: string, password: string, firstName?: string, lastName?: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
   const { data: proposal } = await supabase
     .from('proposals')
@@ -29,13 +29,28 @@ export async function verifyProposalAccess(slug: string, email: string, password
     return { success: false, error: 'Invalid access code.' };
   }
 
-  // Set auth cookie
-  await setProposalAuthCookie(slug, email);
+  // Resolve viewer name — prefer login form input, fall back to contacts table
+  let viewerName: string | null = null;
+  if (firstName) {
+    viewerName = `${firstName}${lastName ? ` ${lastName}` : ''}`.trim();
+  } else {
+    const { data: contact } = await supabase
+      .from('contacts')
+      .select('first_name, last_name')
+      .eq('email', email)
+      .maybeSingle();
+    const ct = contact as { first_name: string; last_name: string } | null;
+    viewerName = ct ? `${ct.first_name} ${ct.last_name}`.trim() : null;
+  }
+
+  // Set auth cookie (store first name for quote labels)
+  await setProposalAuthCookie(slug, email, firstName || viewerName?.split(' ')[0] || undefined);
 
   // Log view
   await supabase.from('proposal_views').insert({
     proposal_id: row.id,
     viewer_email: email,
+    viewer_name: viewerName,
   } as never);
 
   // Auto-update status from 'sent' to 'viewed' on first view
@@ -45,15 +60,6 @@ export async function verifyProposalAccess(slug: string, email: string, password
       .update({ status: 'viewed', updated_at: new Date().toISOString() } as never)
       .eq('id', row.id);
   }
-
-  // Resolve viewer name from contacts + client Slack channel
-  const { data: contact } = await supabase
-    .from('contacts')
-    .select('first_name, last_name')
-    .eq('email', email)
-    .maybeSingle();
-  const ct = contact as { first_name: string; last_name: string } | null;
-  const viewerName = ct ? `${ct.first_name} ${ct.last_name}`.trim() : null;
 
   // Look up client by company name for Slack channel routing
   let slackChannelId: string | null = null;
