@@ -168,7 +168,7 @@ function AdminShellInner({ children, userEmail }: Props) {
       {/* Sidebar */}
       <aside
         className={`${
-          collapsed ? 'w-14' : 'w-52'
+          collapsed ? 'w-14' : 'w-48'
         } flex-shrink-0 flex flex-col border-r border-admin-border bg-admin-bg-nav h-full transition-[width] duration-200 overflow-hidden hover:bg-admin-bg-nav-hover cursor-pointer`}
         onClick={(e) => {
           // Don't toggle if clicking a link, button, or the logo
