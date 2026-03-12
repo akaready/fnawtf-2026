@@ -33,7 +33,7 @@ export function ProposalViewsPanel({ proposalId, proposalTitle, open, onClose }:
   }, [proposalId, open]);
 
   return (
-    <PanelDrawer open={open} onClose={onClose} width="w-[480px]">
+    <PanelDrawer open={open} onClose={onClose} width="w-[640px]" level={2}>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">

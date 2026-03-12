@@ -55,12 +55,7 @@ interface Props {
   onViewsClick?: () => void;
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-admin-bg-active text-admin-text-dim',
-  sent: 'bg-admin-success-bg text-admin-success',
-  viewed: 'bg-admin-warning-bg text-admin-warning',
-  accepted: 'bg-admin-success-bg text-admin-success',
-};
+
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
@@ -186,15 +181,17 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
           </div>
           <div className="flex items-center gap-2.5 flex-shrink-0 pt-0.5">
             <SaveDot status={saveStatus} />
-            <span className={`px-4 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap ${STATUS_BADGE[status] ?? STATUS_BADGE.draft}`}>
-              {status}
-            </span>
-            <span className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs whitespace-nowrap ${
-              viewCount > 0 ? 'bg-admin-info-bg text-admin-info' : 'bg-admin-bg-selected text-admin-text-ghost'
-            }`}>
+            <button
+              onClick={onViewsClick}
+              className={`flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-colors cursor-pointer ${
+                viewCount > 0
+                  ? 'bg-admin-info-bg text-admin-info border-admin-info-border hover:bg-admin-info-bg-strong'
+                  : 'bg-admin-bg-selected text-admin-text-ghost border-admin-border hover:bg-admin-bg-hover hover:text-admin-text-muted'
+              }`}
+            >
               <Eye size={11} />
               {viewCount} {viewCount === 1 ? 'view' : 'views'}
-            </span>
+            </button>
             <button
               onClick={handleClose}
               className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-dim hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
@@ -344,7 +341,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               onClick={() => setStatusOpen((o) => !o)}
               className={`${status !== 'draft' ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
             >
-              {status === 'draft' ? 'Draft' : status === 'sent' ? 'Sent' : status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === 'draft' ? 'Draft' : 'Sent'}
               <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
             </button>
             {statusOpen && (
@@ -381,13 +378,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               </>
             )}
           </div>
-          <button
-            onClick={onViewsClick}
-            className="btn-info px-4 py-2.5 text-sm"
-          >
-            <Eye size={13} />
-            Views
-          </button>
         </div>
 
         <div className="flex items-center gap-2">

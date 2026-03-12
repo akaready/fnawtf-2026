@@ -333,7 +333,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
           return (
             <motion.div
               key={q.id}
-              layout
+              layout="position"
               transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               onClick={() => handleQuoteSwitch(i)}
               className={`flex items-center rounded-lg cursor-pointer transition-colors ${

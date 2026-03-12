@@ -19,7 +19,7 @@ export function PanelDrawer({ open, onClose, width = 'w-[480px]', level = 1, chi
   const backdropZ = level === 2 ? 'z-[110]' : 'z-[100]';
   const drawerZ = level === 2 ? 'z-[111]' : 'z-[101]';
   const backdropStyle = level === 2
-    ? 'bg-black/20 backdrop-blur-[2px]'
+    ? 'bg-black/20 backdrop-blur-sm'
     : 'bg-black/40 backdrop-blur-sm';
 
   return (

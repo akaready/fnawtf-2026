@@ -53,13 +53,6 @@ export async function verifyProposalAccess(slug: string, email: string, password
     viewer_name: viewerName,
   } as never);
 
-  // Auto-update status from 'sent' to 'viewed' on first view
-  if (row.status === 'sent') {
-    await supabase
-      .from('proposals')
-      .update({ status: 'viewed', updated_at: new Date().toISOString() } as never)
-      .eq('id', row.id);
-  }
 
   // Look up client by company name for Slack channel routing
   let slackChannelId: string | null = null;
