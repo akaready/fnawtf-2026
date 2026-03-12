@@ -269,9 +269,9 @@ export function InvestmentSlide({
 
           {/* ── Comparison quotes section (all other FNA + client quotes) ── */}
           <div className="flex items-center gap-3 mb-4 flex-shrink-0" style={{ minHeight: 40 }}>
-            {comparisonQuotes.length > 0 && (
+            {clientQuotes.length > 0 && (
               <div className="inline-flex rounded-lg border border-cyan-700/60 overflow-hidden">
-                {comparisonQuotes.map((q, idx) => {
+                {clientQuotes.map((q, idx) => {
                   const isOwn = !q.is_fna_quote && viewerEmail && q.viewer_email === viewerEmail;
                   const isActive = activeQuoteId === q.id;
                   const isThisDeleting = deletingQuoteId === q.id;
