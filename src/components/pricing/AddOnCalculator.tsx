@@ -1456,7 +1456,7 @@ export function AddOnCalculator() {
           </div>
 
           {/* Right column: sticky estimate sidebar */}
-          <div>
+          <div className="h-full">
             <CalculatorSummary
               selectedAddOns={selectedAddOns}
               sliderValues={sliderValues}
@@ -1477,6 +1477,7 @@ export function AddOnCalculator() {
               locationDays={locationDays}
               prefillData={leadData ?? undefined}
               onInteraction={checkGate}
+              stickyTop="top-[105px]"
             />
           </div>
         </div>

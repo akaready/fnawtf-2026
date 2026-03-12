@@ -53,6 +53,8 @@ interface CalculatorSummaryProps {
   onFriendlyDiscountChange?: (pct: number) => void;
   /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
   onActiveQuoteChange?: (quoteId: string) => void;
+  /** Tailwind top offset class for sticky positioning (default: top-[121px] for proposal context) */
+  stickyTop?: string;
 }
 
 function formatPrice(amount: number): string {
@@ -668,6 +670,7 @@ export function CalculatorSummary({
   activeQuoteId,
   onFriendlyDiscountChange,
   onActiveQuoteChange,
+  stickyTop = 'top-[121px]',
 }: CalculatorSummaryProps) {
   const [deferPayment, setDeferPayment] = useState(false);
   const [friendlyDiscountPercent, setFriendlyDiscountPercent] = useState(initialFriendlyDiscountPct ?? 0);
@@ -870,8 +873,8 @@ export function CalculatorSummary({
   const isComparing = showComparison && !!fnaColumnData;
 
   return (
-    <div>
-    <div className="sticky top-[121px]">
+    <div className="h-full">
+    <div className={`sticky ${stickyTop}`}>
       {/* Collapsible Offer section — shown when fundraising enabled */}
       {fundraisingEnabled && (
         <div className="mb-4 rounded-lg border border-purple-800 overflow-hidden bg-purple-900/20">
