@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, ArrowUpDown, type LucideIcon } from 'lucide-react';
+import { motion, LayoutGroup } from 'framer-motion';
+import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, ArrowLeftRight, type LucideIcon } from 'lucide-react';
 import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
@@ -284,8 +285,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     const a = quotes[1];
     const b = quotes[2];
     await Promise.all([
-      saveProposalQuote(proposalId, { ...a, sort_order: b.sort_order }),
-      saveProposalQuote(proposalId, { ...b, sort_order: a.sort_order }),
+      saveProposalQuote(proposalId, { ...a, sort_order: b.sort_order }, a.id),
+      saveProposalQuote(proposalId, { ...b, sort_order: a.sort_order }, b.id),
     ]);
     setQuotes((prev) => {
       const next = [...prev];
@@ -326,11 +327,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
       {/* Quote tabs nav — hidden for Scale (custom quotes) */}
       {selectedType === 'scale' ? null : <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <LayoutGroup>
         {quotes.map((q, i) => {
           const isHidden = q.visible === false;
           return (
-            <div
+            <motion.div
               key={q.id}
+              layout
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               onClick={() => handleQuoteSwitch(i)}
               className={`flex items-center rounded-lg cursor-pointer transition-colors ${
                 i === activeQuoteIndex ? 'bg-admin-bg-active' : 'hover:bg-admin-bg-hover'
@@ -345,9 +349,10 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               >
                 {q.label || QUOTE_CONFIG[i]?.defaultLabel || `Option ${i + 1}`}
               </span>
-            </div>
+            </motion.div>
           );
         })}
+        </LayoutGroup>
 
         {/* Right: Swap + Eye + Delete + Add */}
         <div className="ml-auto flex items-center gap-1">
@@ -358,7 +363,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
               title="Swap quote order"
             >
-              <ArrowUpDown size={13} />
+              <ArrowLeftRight size={13} />
             </button>
           )}
 
