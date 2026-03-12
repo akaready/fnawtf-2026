@@ -47,7 +47,7 @@ export function ProjectMetaGrid({
           {cameraTechniques.length > 0 && <LinkedTagZone label="Techniques" items={cameraTechniques} param="techniques" />}
           {scopeTags.length > 0 && (
             <div>
-              <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-6">
+              <p className="section-eyebrow mb-6">
                 Scope
               </p>
               <div className="flex flex-wrap gap-2">
@@ -80,7 +80,7 @@ function LinkedTagZone({
 }) {
   return (
     <div>
-      <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-6">{label}</p>
+      <p className="section-eyebrow mb-6">{label}</p>
       {items.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {items.map((item) => (

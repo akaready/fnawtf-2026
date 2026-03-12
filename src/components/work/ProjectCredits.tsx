@@ -54,7 +54,7 @@ export function ProjectCredits({ credits, compact }: ProjectCreditsProps) {
         {/* Creative Team (crew) */}
         {crew.length > 0 && (
           <>
-            <p className="text-xs tracking-[0.4em] uppercase font-mono text-muted-foreground mb-3">
+            <p className="section-eyebrow mb-3">
               creative team
             </p>
             <div className="w-8 border-t border-white/20 mx-auto mb-4" />
@@ -77,7 +77,7 @@ export function ProjectCredits({ credits, compact }: ProjectCreditsProps) {
         {/* Cast + Narrator + Vocalist */}
         {hasTalent && (
           <>
-            <p className="text-xs tracking-[0.4em] uppercase font-mono text-muted-foreground mb-3">
+            <p className="section-eyebrow mb-3">
               cast
             </p>
             <div className="w-8 border-t border-white/20 mx-auto mb-4" />

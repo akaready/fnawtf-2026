@@ -23,7 +23,7 @@ export function ProjectDeliveryAndDescription({
           {/* Left — Assets Delivered */}
           {hasDeliverables && (
             <div>
-              <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-6">
+              <p className="section-eyebrow mb-6">
                 Deliverables
               </p>
               <div className="flex flex-wrap gap-2">
@@ -43,7 +43,7 @@ export function ProjectDeliveryAndDescription({
           {/* Right — Description */}
           {hasDescription && (
             <div>
-              <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-6">
+              <p className="section-eyebrow mb-6">
                 Description
               </p>
               {description.split('\n\n').map((para, i) => (

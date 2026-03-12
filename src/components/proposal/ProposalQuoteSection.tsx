@@ -151,7 +151,7 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
       {/* Add-ons list */}
       {addons.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs tracking-[0.4em] uppercase font-mono text-white/30">
+          <h4 className="section-eyebrow">
             Included Services
           </h4>
           <div className="grid gap-1">

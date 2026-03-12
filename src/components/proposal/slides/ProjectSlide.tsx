@@ -143,7 +143,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
         {/* "What to look for" blurb */}
         {video.proposal_blurb && (
           <div data-blurb className="rounded-xl px-6 py-5 mb-8 bg-white/[0.04] border border-white/[0.12]">
-            <p className="text-sm tracking-[0.3em] uppercase font-mono text-white/40 mb-2">What to look for</p>
+            <p className="section-eyebrow mb-2">What to look for</p>
             <p className="text-white/80 leading-relaxed text-base">
               {video.proposal_blurb}
             </p>

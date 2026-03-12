@@ -73,7 +73,7 @@ export function ProjectVideoSection({ videos, projectThumbnailUrl }: ProjectVide
                   {cutdowns.map((video) => (
                     <div key={video.id}>
                       {cutdowns.length > 1 && (
-                        <p className="text-xs tracking-[0.4em] uppercase font-mono text-white/30 mb-2">
+                        <p className="section-eyebrow mb-2">
                           {video.title || videoTypeLabel(video.video_type)}
                         </p>
                       )}

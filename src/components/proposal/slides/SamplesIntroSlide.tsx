@@ -105,7 +105,7 @@ function SampleCard({
       {/* Text content — right on desktop, below on mobile */}
       <div className="flex flex-col justify-center">
         {project?.client_name && (
-          <p className="text-xs tracking-[0.25em] uppercase font-mono text-white/40 mb-2">
+          <p className="section-eyebrow mb-2">
             {project.client_name}
           </p>
         )}
@@ -128,25 +128,25 @@ function SampleCard({
           <div className="flex gap-6 mb-4">
             {project?.production_days && (
               <div>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mb-0.5">Days</p>
+                <p className="text-[10px] tracking-[0.25em] uppercase font-mono text-white/40 mb-0.5">Days</p>
                 <p className="text-white/70 font-display font-bold text-base">{project.production_days}</p>
               </div>
             )}
             {project?.crew_count && (
               <div>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mb-0.5">Crew</p>
+                <p className="text-[10px] tracking-[0.25em] uppercase font-mono text-white/40 mb-0.5">Crew</p>
                 <p className="text-white/70 font-display font-bold text-base">{project.crew_count}</p>
               </div>
             )}
             {project?.talent_count && (
               <div>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mb-0.5">Talent</p>
+                <p className="text-[10px] tracking-[0.25em] uppercase font-mono text-white/40 mb-0.5">Talent</p>
                 <p className="text-white/70 font-display font-bold text-base">{project.talent_count}</p>
               </div>
             )}
             {project?.location_count && (
               <div>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest mb-0.5">Locations</p>
+                <p className="text-[10px] tracking-[0.25em] uppercase font-mono text-white/40 mb-0.5">Locations</p>
                 <p className="text-white/70 font-display font-bold text-base">{project.location_count}</p>
               </div>
             )}
@@ -170,8 +170,8 @@ function SampleCard({
         {/* Relevance blurb */}
         {v.proposal_blurb && (
           <>
-            <p className="text-[10px] tracking-[0.25em] uppercase font-mono text-white/40 mb-2">What to look for</p>
-            <p className="text-sm text-white/50 leading-relaxed">
+            <p className="section-eyebrow mb-2">What to look for</p>
+            <p className="text-sm text-white/60 leading-relaxed">
               {v.proposal_blurb}
             </p>
           </>
