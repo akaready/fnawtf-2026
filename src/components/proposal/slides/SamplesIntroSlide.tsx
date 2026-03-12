@@ -62,10 +62,10 @@ function SampleCard({
   }, []);
 
   return (
-    <div data-card>
-      {/* Thumbnail with hover video preview */}
+    <div data-card className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6 lg:gap-8">
+      {/* Video — left on desktop, top on mobile */}
       <div
-        className="relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[2.2/1] group cursor-pointer mb-8"
+        className="relative rounded-2xl overflow-hidden aspect-[4/3] sm:aspect-[2.8/1] lg:aspect-[16/10] group cursor-pointer"
         onClick={() => onViewProject?.(index)}
         onMouseEnter={handleHover}
         onMouseLeave={handleUnhover}
@@ -102,85 +102,79 @@ function SampleCard({
         </div>
       </div>
 
-      {/* Text content */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-8 lg:gap-10">
-        {/* Left — project info */}
-        <div>
-          {project?.client_name && (
-            <p className="text-sm tracking-[0.3em] uppercase font-mono text-white/30 mb-3">
-              {project.client_name}
-            </p>
-          )}
+      {/* Text content — right on desktop, below on mobile */}
+      <div className="flex flex-col justify-center">
+        {project?.client_name && (
+          <p className="text-xs tracking-[0.25em] uppercase font-mono text-white/30 mb-2">
+            {project.client_name}
+          </p>
+        )}
 
-          <h3
-            className="font-display font-bold text-white leading-[0.92] mb-2"
-            style={{ fontSize: 'clamp(1.8rem, 3.2vw, 2.6rem)' }}
-          >
-            {title}
-          </h3>
+        <h3
+          className="font-display font-bold text-white leading-[0.92] mb-1.5"
+          style={{ fontSize: 'clamp(1.25rem, 2vw, 1.75rem)' }}
+        >
+          {title}
+        </h3>
 
-          {project?.subtitle && (
-            <p className="text-lg text-white/35 mb-6 leading-relaxed">
-              {project.subtitle}
-            </p>
-          )}
+        {project?.subtitle && (
+          <p className="text-sm text-white/35 mb-4 leading-relaxed">
+            {project.subtitle}
+          </p>
+        )}
 
-          {/* Stats — compact row */}
-          {(project?.production_days || project?.crew_count || project?.talent_count || project?.location_count) && (
-            <div className="flex gap-8 mb-5">
-              {project?.production_days && (
-                <div>
-                  <p className="text-xs text-white/20 uppercase tracking-widest mb-1">Days</p>
-                  <p className="text-white/70 font-display font-bold text-xl">{project.production_days}</p>
-                </div>
-              )}
-              {project?.crew_count && (
-                <div>
-                  <p className="text-xs text-white/20 uppercase tracking-widest mb-1">Crew</p>
-                  <p className="text-white/70 font-display font-bold text-xl">{project.crew_count}</p>
-                </div>
-              )}
-              {project?.talent_count && (
-                <div>
-                  <p className="text-xs text-white/20 uppercase tracking-widest mb-1">Talent</p>
-                  <p className="text-white/70 font-display font-bold text-xl">{project.talent_count}</p>
-                </div>
-              )}
-              {project?.location_count && (
-                <div>
-                  <p className="text-xs text-white/20 uppercase tracking-widest mb-1">Locations</p>
-                  <p className="text-white/70 font-display font-bold text-xl">{project.location_count}</p>
-                </div>
-              )}
-            </div>
-          )}
+        {/* Stats — compact row */}
+        {(project?.production_days || project?.crew_count || project?.talent_count || project?.location_count) && (
+          <div className="flex gap-6 mb-4">
+            {project?.production_days && (
+              <div>
+                <p className="text-[10px] text-white/20 uppercase tracking-widest mb-0.5">Days</p>
+                <p className="text-white/70 font-display font-bold text-base">{project.production_days}</p>
+              </div>
+            )}
+            {project?.crew_count && (
+              <div>
+                <p className="text-[10px] text-white/20 uppercase tracking-widest mb-0.5">Crew</p>
+                <p className="text-white/70 font-display font-bold text-base">{project.crew_count}</p>
+              </div>
+            )}
+            {project?.talent_count && (
+              <div>
+                <p className="text-[10px] text-white/20 uppercase tracking-widest mb-0.5">Talent</p>
+                <p className="text-white/70 font-display font-bold text-base">{project.talent_count}</p>
+              </div>
+            )}
+            {project?.location_count && (
+              <div>
+                <p className="text-[10px] text-white/20 uppercase tracking-widest mb-0.5">Locations</p>
+                <p className="text-white/70 font-display font-bold text-base">{project.location_count}</p>
+              </div>
+            )}
+          </div>
+        )}
 
-          {/* Style tags */}
-          {styleTags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {styleTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5 text-sm text-white/35 leading-none"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Style tags */}
+        {styleTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {styleTags.map((tag) => (
+              <span
+                key={tag}
+                className="bg-white/[0.04] border border-white/[0.08] rounded-full px-2.5 py-1 text-xs text-white/35 leading-none"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
-        {/* Divider */}
-        <div className="hidden lg:block bg-white/[0.06]" />
-
-        {/* Right — relevance blurb */}
+        {/* Relevance blurb */}
         {v.proposal_blurb && (
-          <div className="flex flex-col justify-center">
-            <p className="text-sm tracking-[0.3em] uppercase font-mono text-white/20 mb-3">What to look for</p>
-            <p className="text-lg text-white/50 leading-relaxed">
+          <>
+            <p className="text-[10px] tracking-[0.25em] uppercase font-mono text-white/20 mb-2">What to look for</p>
+            <p className="text-sm text-white/50 leading-relaxed">
               {v.proposal_blurb}
             </p>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -241,15 +235,15 @@ export function SamplesIntroSlide({ videos, slideRef, onViewProject }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
       </div>
 
-      <div ref={innerRef} className="max-w-5xl mx-auto px-6 sm:px-12 lg:px-20 pb-10" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
+      <div ref={innerRef} className="max-w-5xl mx-auto px-6 sm:px-12 lg:px-20 pb-56" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         <SlideHeader
-          eyebrow="samples"
+          eyebrow={`${validVideos.length} samples`}
           titleWords={titleWords}
           description="A curated look at recent work relevant to your vision."
           className="mb-12"
         />
 
-        <div className="flex flex-col gap-28">
+        <div className="flex flex-col gap-12">
           {validVideos.map((v, i) => (
             <SampleCard
               key={v.id}
