@@ -146,6 +146,7 @@ function AdminShellInner({ children, userEmail }: Props) {
       { href: '/admin/locations',    label: 'Locations',    icon: MapPin },
       { href: '/admin/snippets',     label: 'Snippets',     icon: BookOpen },
     ]},
+    { href: '/admin/website',    label: 'Website',      icon: AppWindow },
   ];
 
   // Auto-open the submenu whose child matches the current path
@@ -159,7 +160,6 @@ function AdminShellInner({ children, userEmail }: Props) {
   // Admin-only settings menu items (SEO, Website, Style Guide)
   const settingsItems = [
     { href: '/admin/seo',        label: 'SEO',         icon: Globe },
-    { href: '/admin/website',    label: 'Website',     icon: AppWindow },
     { href: '/admin/styleguide', label: 'Style Guide', icon: Palette },
   ];
 
