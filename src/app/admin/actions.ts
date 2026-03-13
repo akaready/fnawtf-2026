@@ -1707,7 +1707,7 @@ export async function getProjectsForBrowser(): Promise<import('@/types/proposal'
 
 // ── Website Project Placements ─────────────────────────────────────────────────
 
-import type { PlacementPage, PlacementWithProject } from '@/types/placement';
+import type { PlacementPage, PlacementWithProject, LayoutSnapshot, SnapshotPlacement } from '@/types/placement';
 
 export async function getPlacementsForPage(page: PlacementPage): Promise<PlacementWithProject[]> {
   const { supabase } = await requireAuth();
@@ -1783,6 +1783,99 @@ function revalidatePlacements(page: PlacementPage) {
   if (page === 'homepage') revalidatePath('/');
   else if (page === 'work') revalidatePath('/work');
   else revalidatePath('/services');
+}
+
+function revalidateAllPlacements() {
+  revalidatePath('/admin/website');
+  revalidatePath('/');
+  revalidatePath('/work');
+  revalidatePath('/services');
+}
+
+// ── Layout Snapshots ──────────────────────────────────────────────────────
+
+export async function saveLayoutSnapshot(label?: string): Promise<string> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  // Grab all current placements (all pages)
+  const { data: placements, error: fetchErr } = await supabase
+    .from('website_project_placements')
+    .select('project_id, page, sort_order, full_width');
+  if (fetchErr) throw new Error(fetchErr.message);
+
+  const { data, error } = await supabase
+    .from('website_layout_snapshots')
+    .insert({
+      label: label || null,
+      created_by: user.email ?? user.id,
+      placements: placements ?? [],
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (data as { id: string }).id;
+}
+
+export async function getLayoutSnapshots(): Promise<LayoutSnapshot[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('website_layout_snapshots')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as LayoutSnapshot[];
+}
+
+export async function restoreLayoutSnapshot(id: string) {
+  const { supabase } = await requireAuth();
+
+  // Fetch snapshot
+  const { data: snapshot, error: fetchErr } = await supabase
+    .from('website_layout_snapshots')
+    .select('placements')
+    .eq('id', id)
+    .single();
+  if (fetchErr) throw new Error(fetchErr.message);
+
+  const placements = (snapshot as { placements: SnapshotPlacement[] }).placements;
+
+  // Delete all current placements
+  const { error: delErr } = await supabase
+    .from('website_project_placements')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000'); // delete all rows
+  if (delErr) throw new Error(delErr.message);
+
+  // Insert snapshot placements
+  if (placements.length > 0) {
+    const { error: insErr } = await supabase
+      .from('website_project_placements')
+      .insert(placements as never[]);
+    if (insErr) throw new Error(insErr.message);
+  }
+
+  revalidateAllPlacements();
+}
+
+export async function updateSnapshotLabel(id: string, label: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('website_layout_snapshots')
+    .update({ label } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteLayoutSnapshot(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('website_layout_snapshots')
+    .delete()
+    .eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 // ── Headshots ──────────────────────────────────────────────────────────────

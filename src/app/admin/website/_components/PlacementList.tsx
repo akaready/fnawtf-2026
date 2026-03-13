@@ -30,6 +30,8 @@ interface PlacementListProps {
   showFullWidth?: boolean;
   /** Called when a placement is removed from within the list */
   onRemove?: (id: string) => void;
+  /** Called when placements change (reorder, remove, toggle) */
+  onChange?: () => void;
 }
 
 export function PlacementList({
@@ -38,6 +40,7 @@ export function PlacementList({
   layout = 'list',
   showFullWidth = false,
   onRemove: onRemoveExternal,
+  onChange,
 }: PlacementListProps) {
   const [placements, setPlacements] = useState(initialPlacements);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -64,8 +67,9 @@ export function PlacementList({
         newOrder.map((p, i) => ({ id: p.id, sort_order: i })),
         page,
       ).catch(console.error);
+      onChange?.();
     },
-    [page, placements],
+    [page, placements, onChange],
   );
 
   const handleDragCancel = useCallback(() => {
@@ -77,8 +81,9 @@ export function PlacementList({
       setPlacements((prev) => prev.filter((p) => p.id !== id));
       removePlacement(id, page).catch(console.error);
       onRemoveExternal?.(id);
+      onChange?.();
     },
-    [page, onRemoveExternal],
+    [page, onRemoveExternal, onChange],
   );
 
   const handleToggleFullWidth = useCallback(
@@ -87,8 +92,9 @@ export function PlacementList({
         prev.map((p) => (p.id === id ? { ...p, full_width: value } : p)),
       );
       updatePlacement(id, { full_width: value }, page).catch(console.error);
+      onChange?.();
     },
-    [page],
+    [page, onChange],
   );
 
   if (placements.length === 0) {

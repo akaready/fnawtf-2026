@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { FeaturedProject } from '@/types/project';
 import { getBunnyVideoMp4Url } from '@/lib/bunny/client';
@@ -79,10 +80,12 @@ export function FeaturedWorkCard({ project, index: _index = 0, className }: Feat
       >
         {/* Background Thumbnail */}
         {project.thumbnail_url && (
-          <img
+          <Image
             src={project.thumbnail_url}
             alt={project.title}
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover"
           />
         )}
 

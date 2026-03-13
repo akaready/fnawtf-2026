@@ -78,7 +78,7 @@ function PhaseSection({ phase, projects, index }: { phase: typeof PHASES[number]
                   calLink="fnawtf/introduction"
                 />
               ) : (
-                <NavButton href="/pricing" iconName="dollar-sign" inverted size="lg">
+                <NavButton href="/pricing" iconName="dollar-sign" inverted>
                   See pricing
                 </NavButton>
               )}

@@ -26,3 +26,18 @@ export interface PlacementWithProject extends PlacementRow {
     published: boolean;
   };
 }
+
+export interface SnapshotPlacement {
+  project_id: string;
+  page: PlacementPage;
+  sort_order: number;
+  full_width: boolean;
+}
+
+export interface LayoutSnapshot {
+  id: string;
+  label: string | null;
+  created_by: string;
+  placements: SnapshotPlacement[];
+  created_at: string;
+}

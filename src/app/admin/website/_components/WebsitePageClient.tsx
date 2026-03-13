@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { Search, Plus, Check, Loader2, X, PanelRightOpen, PanelRightClose, Home, Play, ClipboardList, AppWindow } from 'lucide-react';
+import { Search, Plus, Check, Loader2, X, PanelRightOpen, PanelRightClose, Home, Play, ClipboardList, AppWindow, Save, History } from 'lucide-react';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
-import { addPlacement, removePlacement } from '@/app/admin/actions';
+import { addPlacement, removePlacement, saveLayoutSnapshot, getPlacementsForPage as fetchPlacements } from '@/app/admin/actions';
 import type { PlacementPage, PlacementWithProject } from '@/types/placement';
 import type { BrowserProject } from '@/types/proposal';
 import { PlacementList, type PlacementLayout } from './PlacementList';
+import { LayoutHistoryPanel } from './LayoutHistoryPanel';
 
 type Tab = 'homepage' | 'work' | 'services';
 
@@ -46,6 +47,9 @@ export function WebsitePageClient({
   const [sidebarFilter, setSidebarFilter] = useState<'all' | 'used' | 'unused'>('all');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [saving, setSaving] = useState<'idle' | 'saving' | 'done'>('idle');
+  const [isDirty, setIsDirty] = useState(false);
 
   // Track placements per page in parent so we can update after add
   const [homepage, setHomepage] = useState(initialHomepage);
@@ -133,6 +137,7 @@ export function WebsitePageClient({
 
         setPlacementsForPage(activePage, [...currentPlacements, newPlacement]);
         listRefsUpdated.current += 1;
+        setIsDirty(true);
       } finally {
         setLoadingIds((prev) => {
           const next = new Set(prev);
@@ -151,6 +156,7 @@ export function WebsitePageClient({
       if (!placement) return;
       setPlacementsForPage(activePage, activePlacements.filter((p) => p.id !== placement.id));
       listRefsUpdated.current += 1;
+      setIsDirty(true);
       removePlacement(placement.id, activePage).catch(console.error);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,12 +166,70 @@ export function WebsitePageClient({
   const totalCount = homepage.length + work.length +
     Object.values(services).reduce((sum, arr) => sum + arr.length, 0);
 
+  const handleSaveSnapshot = useCallback(async () => {
+    setSaving('saving');
+    try {
+      await saveLayoutSnapshot();
+      setSaving('done');
+      setIsDirty(false);
+      setTimeout(() => setSaving('idle'), 1500);
+    } catch (err) {
+      console.error(err);
+      setSaving('idle');
+    }
+  }, []);
+
+  const handleRestoreComplete = useCallback(async () => {
+    // Re-fetch all placements from server after a restore
+    try {
+      const [hp, wk, sb, sl, ss, sc, sf] = await Promise.all([
+        fetchPlacements('homepage'),
+        fetchPlacements('work'),
+        fetchPlacements('services_build'),
+        fetchPlacements('services_launch'),
+        fetchPlacements('services_scale'),
+        fetchPlacements('services_crowdfunding'),
+        fetchPlacements('services_fundraising'),
+      ]);
+      setHomepage(hp);
+      setWork(wk);
+      setServices({ build: sb, launch: sl, scale: ss, crowdfunding: sc, fundraising: sf });
+      listRefsUpdated.current += 1;
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       <AdminPageHeader
         title="Website"
         icon={AppWindow}
         subtitle={`${totalCount} placements across ${3 + SERVICE_SECTIONS.length} pages`}
+        actions={
+          <>
+            <button
+              onClick={() => setHistoryOpen(true)}
+              className="btn-secondary px-4 py-2.5 text-sm"
+            >
+              <History size={14} /> History
+            </button>
+            <button
+              onClick={handleSaveSnapshot}
+              disabled={saving === 'saving' || (!isDirty && saving === 'idle')}
+              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {saving === 'saving' ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : saving === 'done' ? (
+                <Check size={14} />
+              ) : (
+                <Save size={14} />
+              )}
+              Save All Layouts
+            </button>
+          </>
+        }
       />
 
       <AdminTabBar
@@ -202,6 +266,7 @@ export function WebsitePageClient({
                 layout="grid"
                 showFullWidth
                 onRemove={(id) => setHomepage((prev) => prev.filter((p) => p.id !== id))}
+                onChange={() => setIsDirty(true)}
               />
             </div>
           )}
@@ -221,6 +286,7 @@ export function WebsitePageClient({
                 layout="grid"
                 showFullWidth
                 onRemove={(id) => setWork((prev) => prev.filter((p) => p.id !== id))}
+                onChange={() => setIsDirty(true)}
               />
             </div>
           )}
@@ -268,6 +334,7 @@ export function WebsitePageClient({
                       onRemove={(id) => {
                         setPlacementsForPage(section.page, placements.filter((p) => p.id !== id));
                       }}
+                      onChange={() => setIsDirty(true)}
                     />
                   </div>
                 );
@@ -393,6 +460,12 @@ export function WebsitePageClient({
         </div>
         )}
       </div>
+
+      <LayoutHistoryPanel
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        onRestore={handleRestoreComplete}
+      />
     </div>
   );
 }
