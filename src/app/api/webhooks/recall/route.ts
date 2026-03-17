@@ -161,13 +161,19 @@ export async function POST(request: NextRequest) {
       const allWords = segmentArray.flatMap(
         (s: { words?: { text: string }[] }) => s.words || [],
       );
+      // Recall uses `participant.name` for speaker identity
       const speakers = new Set(
-        segmentArray.map((s: { speaker: string }) => s.speaker),
+        segmentArray.map(
+          (s: { participant?: { name: string }; speaker?: string }) =>
+            s.participant?.name || s.speaker || 'Speaker',
+        ),
       );
       const formatted = segmentArray
         .map(
-          (s: { speaker: string; words?: { text: string }[] }) =>
-            `${s.speaker}: ${(s.words || []).map((w) => w.text).join(' ')}`,
+          (s: { participant?: { name: string }; speaker?: string; words?: { text: string }[] }) => {
+            const name = s.participant?.name || s.speaker || 'Speaker';
+            return `${name}: ${(s.words || []).map((w) => w.text).join(' ')}`;
+          },
         )
         .join('\n\n');
 

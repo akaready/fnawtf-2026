@@ -56,6 +56,21 @@ export function MeetingsManager({
   const [icalUrl, setIcalUrl] = useState('');
   const [saving, startSave] = useTransition();
 
+  // Avoid hydration mismatch — toLocaleString differs server vs client timezone
+  const [lastSyncLabel, setLastSyncLabel] = useState('');
+  useEffect(() => {
+    if (config?.last_synced_at) {
+      setLastSyncLabel(
+        `Last synced ${new Date(config.last_synced_at).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        })} · Auto-syncs hourly`
+      );
+    }
+  }, [config?.last_synced_at]);
+
   const handleSync = useCallback(() => {
     startSync(async () => {
       try {
@@ -192,7 +207,7 @@ export function MeetingsManager({
     {
       key: 'transcript',
       label: 'Transcript',
-      defaultWidth: 112,
+      defaultWidth: 80,
       render: (row) => (
         <span
           className={`inline-flex items-center gap-1 text-xs ${
@@ -206,7 +221,13 @@ export function MeetingsManager({
           }`}
         >
           <FileText size={12} />
-          {row.transcript_status === 'none' ? '—' : row.transcript_status}
+          {row.transcript_status === 'none'
+            ? '—'
+            : row.transcript_status === 'ready'
+              ? 'Available'
+              : row.transcript_status === 'pending'
+                ? 'Processing'
+                : 'Failed'}
         </span>
       ),
     },
@@ -295,16 +316,7 @@ export function MeetingsManager({
       <AdminPageHeader
         title="Meetings"
         icon={Video}
-        subtitle={
-          config.last_synced_at
-            ? `Last synced ${new Date(config.last_synced_at).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })} · Auto-syncs hourly`
-            : 'Calendar connected · Auto-syncs hourly'
-        }
+        subtitle={lastSyncLabel || 'Calendar connected · Auto-syncs hourly'}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search meetings…"

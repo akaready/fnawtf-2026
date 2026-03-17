@@ -38,15 +38,41 @@ export interface MeetingAttendeeRow {
   is_organizer: boolean;
 }
 
+export interface TranscriptTimestamp {
+  relative: number | null;
+  absolute: string | null;
+}
+
 export interface TranscriptWord {
   text: string;
-  start_time: number;
-  end_time: number;
+  start_timestamp?: TranscriptTimestamp;
+  end_timestamp?: TranscriptTimestamp;
+  // Legacy flat fields (kept for backwards compat)
+  start_time?: number;
+  end_time?: number;
+}
+
+export interface TranscriptParticipant {
+  id: number;
+  name: string;
+  is_host?: boolean;
+  platform?: string;
+  email?: string | null;
 }
 
 export interface TranscriptSegment {
-  speaker: string;
+  // Recall uses `participant` object, not flat `speaker` string
+  participant?: TranscriptParticipant;
+  speaker?: string;
   words: TranscriptWord[];
+}
+
+export type InsightsStatus = 'none' | 'pending' | 'ready' | 'failed';
+
+export interface ActionItem {
+  text: string;
+  assignee: string | null;
+  done: boolean;
 }
 
 export interface MeetingTranscriptRow {
@@ -57,6 +83,10 @@ export interface MeetingTranscriptRow {
   duration_seconds: number | null;
   word_count: number | null;
   speaker_count: number | null;
+  summary: string | null;
+  action_items: ActionItem[];
+  insights_status: InsightsStatus;
+  insights_generated_at: string | null;
   created_at: string;
 }
 
