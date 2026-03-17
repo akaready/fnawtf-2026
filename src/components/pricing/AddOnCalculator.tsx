@@ -115,12 +115,12 @@ function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: A
       {hasQuantity ? (
         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity - step) * 100) / 100); } }}
             className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-purple-500'}`}
           >-</button>
-          <span className={`text-sm w-4 text-center ${isLocked ? 'text-muted-foreground/40' : 'text-foreground'}`}>{quantity}</span>
+          <span className={`text-sm w-8 text-center ${isLocked ? 'text-muted-foreground/40' : 'text-foreground'}`}>{quantity}</span>
           <button
-            onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) onQuantityChange(addOn.id, quantity + 1); }}
+            onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity + step) * 100) / 100); } }}
             className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-purple-500'}`}
           >+</button>
         </div>
@@ -657,12 +657,12 @@ function AddOnRow({
         {addOn.quantity && (
           <div className={`flex items-center gap-2 ${selected && !isLocked ? 'visible' : 'invisible'}`} onClick={(e) => e.stopPropagation()}>
             <button
-              onClick={(e) => { e.stopPropagation(); if (isLocked) return; if (quantity > addOn.quantity!.min) onQuantityChange(addOn.id, quantity - 1); else onToggle(addOn.id); }}
+              onClick={(e) => { e.stopPropagation(); if (isLocked) return; const step = addOn.quantity!.step ?? 1; if (quantity > addOn.quantity!.min) onQuantityChange(addOn.id, Math.round((quantity - step) * 100) / 100); else onToggle(addOn.id); }}
               className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
             >-</button>
-            <span className="text-sm text-foreground w-4 text-center">{quantity}</span>
+            <span className="text-sm text-foreground w-8 text-center">{quantity}</span>
             <button
-              onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) onQuantityChange(addOn.id, quantity + 1); }}
+              onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity + step) * 100) / 100); } }}
               className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
             >+</button>
           </div>

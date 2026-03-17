@@ -176,7 +176,7 @@ export const launchAddOns: AddOn[] = [
     priceDisplay: '$1,000/day',
     tier: 'launch',
     category: 'CAST + CREW',
-    perDay: true,
+    quantity: { min: 0.5, max: 10, default: 1, unit: 'days', step: 0.5 },
   },
   {
     id: 'launch-photographer',

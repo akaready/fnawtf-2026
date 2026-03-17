@@ -43,6 +43,7 @@ export interface AddOn {
     max: number;
     default: number;
     unit: string;
+    step?: number;
   };
   slider?: {
     min: number;
