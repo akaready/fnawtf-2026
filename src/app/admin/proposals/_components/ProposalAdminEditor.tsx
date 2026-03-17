@@ -1,8 +1,9 @@
 'use client';
 
-import { Fragment, useState, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Loader2, Trash2, Home, Hand, GitBranch, Calendar, Play, DollarSign, Save, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { Fragment, useState, useEffect, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { X, ExternalLink, Check, Home, Hand, GitBranch, Calendar, Play, DollarSign, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
 import type { LucideIcon } from 'lucide-react';
 import { deleteProposal, updateProposal, type ClientRow } from '@/app/admin/actions';
@@ -20,6 +21,7 @@ import type {
   ProposalRow, ContactRow, ContentSnippetRow, ProposalSectionRow,
   ProposalMilestoneRow, ProposalQuoteRow, BrowserProject, ProposalProjectWithProject,
 } from '@/types/proposal';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 
 const TABS = ['details', 'welcome', 'approach', 'timeline', 'samples', 'pricing'] as const;
 type TabId = typeof TABS[number];
@@ -90,7 +92,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   const approachRef = useRef<ApproachTabHandle>(null);
   const pricingRef = useRef<PricingTabHandle>(null);
   const [activeTab, setActiveTab] = useState<TabId>('details');
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [saveStatus, setSaveStatus] = useState<AutoSaveStatus>('idle');
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -151,6 +152,64 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   }, [slideVisibility, proposal.id, onUpdated]);
 
   useImperativeHandle(editorRef, () => ({ tryClose: handleClose }), [handleClose]);
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!proposal?.id) return;
+    const lines: string[] = [];
+    lines.push(`Title: ${proposal.title}`);
+    lines.push(`Slug: /p/${proposal.slug}`);
+    lines.push(`Status: ${status}`);
+    lines.push(`Type: ${proposalType ?? 'N/A'}`);
+    lines.push(`Views: ${viewCount}`);
+    if (proposal.contact_company) lines.push(`Client/Company: ${proposal.contact_company}`);
+    if (proposal.show_welcome !== undefined) lines.push(`Welcome visible: ${slideVisibility.show_welcome}`);
+    if (proposal.show_approach !== undefined) lines.push(`Approach visible: ${slideVisibility.show_approach}`);
+    if (proposal.show_timeline !== undefined) lines.push(`Timeline visible: ${slideVisibility.show_timeline}`);
+    if (proposal.show_samples !== undefined) lines.push(`Samples visible: ${slideVisibility.show_samples}`);
+    if (proposal.show_pricing !== undefined) lines.push(`Pricing visible: ${slideVisibility.show_pricing}`);
+    if (proposalContacts.length > 0) {
+      lines.push(`Contacts (${proposalContacts.length}):`);
+      proposalContacts.forEach(c => {
+        lines.push(`  - ${c.first_name ?? ''} ${c.last_name ?? ''}${c.email ? ` (${c.email})` : ''}${c.role ? ` — ${c.role}` : ''}`);
+      });
+    }
+    if (sections.length > 0) {
+      lines.push(`Sections (${sections.length}):`);
+      sections.forEach(s => {
+        lines.push(`  - ${s.custom_title ?? s.section_type}: ${(s.custom_content ?? '').slice(0, 120)}`);
+      });
+    }
+    if (milestones.length > 0) {
+      lines.push(`Milestones (${milestones.length}):`);
+      milestones.forEach(m => {
+        lines.push(`  - ${m.label || 'Untitled'}${m.phase ? ` [${m.phase}]` : ''} ${m.start_date} — ${m.end_date}`);
+      });
+    }
+    const activeQ = quotes.filter(q => !q.deleted_at);
+    if (activeQ.length > 0) {
+      lines.push(`Quotes (${activeQ.length}):`);
+      activeQ.forEach(q => {
+        const addonKeys = Object.keys(q.selected_addons ?? {});
+        lines.push(`  - ${q.label || 'Untitled'}: $${q.total_amount ?? 0}${addonKeys.length ? ` (addons: ${addonKeys.join(', ')})` : ''}`);
+      });
+    }
+    if (proposalProjects.length > 0) {
+      lines.push(`Linked Projects (${proposalProjects.length}):`);
+      proposalProjects.forEach(pp => {
+        lines.push(`  - ${pp.project?.title ?? pp.project_id}`);
+      });
+    }
+    setPanelContext({
+      recordType: 'proposal',
+      recordId: proposal.id,
+      recordLabel: proposal.title || 'Untitled Proposal',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [proposal, status, proposalType, viewCount, clients, proposalContacts, sections, milestones, quotes, proposalProjects, slideVisibility, setPanelContext]);
 
   function handleDelete() {
     startDelete(async () => {
@@ -315,101 +374,69 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         </div>
       </div>
 
-      {/* Footer: action buttons (left) | delete (right) */}
-      <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-admin-border bg-admin-bg-wash">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => void handleFlush()}
-            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Save size={14} />
-            Save
-          </button>
-          <a
-            href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-warning px-4 py-2.5 text-sm"
-          >
-            <ExternalLink size={13} />
-            Preview
-          </a>
-          {/* Status toggle — Draft / Sent */}
-          <div ref={statusRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setStatusOpen((o) => !o)}
-              className={`${status !== 'draft' ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
+      {/* Footer */}
+      <PanelFooter
+        onSave={() => void handleFlush()}
+        onDelete={handleDelete}
+        deleteDisabled={isDeleting}
+        secondaryActions={
+          <>
+            <a
+              href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-warning px-4 py-2.5 text-sm"
             >
-              {status === 'draft' ? 'Draft' : 'Sent'}
-              <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {statusOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
-                <div className="absolute bottom-full mb-1 left-0 min-w-[160px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange('sent')}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                      status !== 'draft' ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
-                      Sent
-                    </span>
-                    {status !== 'draft' && <Check size={12} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStatusChange('draft')}
-                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                      status === 'draft' ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
-                      Draft
-                    </span>
-                    {status === 'draft' && <Check size={12} />}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {confirmDelete ? (
-            <>
-              <span className="text-xs text-admin-danger">Delete this proposal?</span>
+              <ExternalLink size={13} />
+              Preview
+            </a>
+            {/* Status toggle — Draft / Sent */}
+            <div ref={statusRef} className="relative">
               <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-danger hover:text-admin-danger-hover hover:bg-admin-danger-bg transition-colors disabled:opacity-40"
-                title="Confirm delete"
+                type="button"
+                onClick={() => setStatusOpen((o) => !o)}
+                className={`${status !== 'draft' ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
               >
-                {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {status === 'draft' ? 'Draft' : 'Sent'}
+                <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
               </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
-                title="Cancel"
-              >
-                <X size={14} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
-      </div>
+              {statusOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
+                  <div className="absolute bottom-full mb-1 left-0 min-w-[160px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange('sent')}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                        status !== 'draft' ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                        Sent
+                      </span>
+                      {status !== 'draft' && <Check size={12} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStatusChange('draft')}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                        status === 'draft' ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                        Draft
+                      </span>
+                      {status === 'draft' && <Check size={12} />}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        }
+      />
     </div>
   );
 });

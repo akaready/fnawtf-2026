@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Plus, MessageCircle, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Plus, MessageCircle, Trash2, Pencil, Check, X, Building2, User, Video, FileText, MapPin, Tag, Clapperboard, ScrollText } from 'lucide-react';
 import { useChatContext } from './ChatContext';
 
 function timeAgo(dateStr: string): string {
@@ -15,6 +15,21 @@ function timeAgo(dateStr: string): string {
   if (days < 7) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
 }
+
+const RECORD_ICONS: Record<string, typeof Building2> = {
+  client: Building2,
+  company: Building2,
+  contact: User,
+  project: Video,
+  proposal: FileText,
+  meeting: Video,
+  contract: ScrollText,
+  template: ScrollText,
+  location: MapPin,
+  tag: Tag,
+  script: Clapperboard,
+  'call-sheet': Clapperboard,
+};
 
 export function ChatHistoryList() {
   const {
@@ -117,9 +132,20 @@ export function ChatHistoryList() {
                     <p className="text-sm text-admin-text-primary truncate">
                       {conv.title || 'Untitled chat'}
                     </p>
-                    <p className="text-[10px] text-admin-text-faint mt-0.5">
-                      {timeAgo(conv.updated_at)}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {conv.panel_context && (() => {
+                        const Icon = RECORD_ICONS[conv.panel_context.recordType] || FileText;
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-admin-text-dim">
+                            <Icon size={9} />
+                            <span className="truncate max-w-[120px]">{conv.panel_context.recordLabel}</span>
+                          </span>
+                        );
+                      })()}
+                      <span className="text-[10px] text-admin-text-faint">
+                        {timeAgo(conv.updated_at)}
+                      </span>
+                    </div>
                   </button>
                   <div className={`flex-shrink-0 flex items-center transition-all ${deletingId === conv.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                     {deletingId === conv.id ? (

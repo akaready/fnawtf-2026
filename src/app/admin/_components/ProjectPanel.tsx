@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
-import { X, Trash2, Loader2, ChevronDown, Check, Save } from 'lucide-react';
+import { X, ChevronDown, Check } from 'lucide-react';
 import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { PanelDrawer } from './PanelDrawer';
+import { PanelFooter } from './PanelFooter';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { MetadataTab } from './MetadataTab';
 import type { MetadataTabHandle } from './MetadataTab';
@@ -71,11 +73,10 @@ export function ProjectPanel({
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [localTagSuggestions, setLocalTagSuggestions] = useState<Record<string, string[]> | undefined>(tagSuggestions);
   const [localTestimonials, setLocalTestimonials] = useState<TestimonialOption[] | undefined>(testimonials);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [published, setPublished] = useState(!!project?.published);
   const [statusOpen, setStatusOpen] = useState(false);
-  const [deleting, startDelete] = useTransition();
+  const [, startDelete] = useTransition();
   const [, startStatusTransition] = useTransition();
   const autoSave = useAutoSave(async () => {
     const saves: Promise<void>[] = [];
@@ -92,6 +93,8 @@ export function ProjectPanel({
   const creditsRef = useRef<CreditsTabHandle>(null);
   const btsRef = useRef<BTSTabHandle>(null);
 
+  const { setPanelContext } = useChatContext();
+
   const isNew = !project;
   const projectId = project?.id;
 
@@ -101,7 +104,6 @@ export function ProjectPanel({
     setVideos([]);
     setCredits([]);
     setBtsImages([]);
-    setConfirmDelete(false);
     setConfirmClose(false);
     setPublished(!!project?.published);
     setStatusOpen(false);
@@ -194,6 +196,38 @@ export function ProjectPanel({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [statusOpen]);
+
+  // Chat panel context
+  useEffect(() => {
+    if (!projectId) return;
+    const lines: string[] = [];
+    lines.push(`Title: ${String(project?.title || 'Untitled')}`);
+    if (project?.slug) lines.push(`Slug: ${String(project.slug)}`);
+    if (project?.client_name) lines.push(`Client: ${String(project.client_name)}`);
+    lines.push(`Status: ${published ? 'Published' : 'Draft'}`);
+    if (project?.description) lines.push(`Description: ${String(project.description)}`);
+    if (project?.category) lines.push(`Category: ${String(project.category)}`);
+    if (project?.thumbnail_url) lines.push(`Thumbnail URL: ${String(project.thumbnail_url)}`);
+    if (project?.vimeo_id) lines.push(`Vimeo ID: ${String(project.vimeo_id)}`);
+    if (project?.days != null) lines.push(`Days: ${String(project.days)}`);
+    if (project?.crew != null) lines.push(`Crew: ${String(project.crew)}`);
+    if (project?.talent != null) lines.push(`Talent: ${String(project.talent)}`);
+    if (credits.length > 0) {
+      lines.push(`Credits:`);
+      credits.forEach((c) => lines.push(`  - ${c.name} (${c.role})`));
+    }
+    if ((project as Record<string, unknown>)?.tags && Array.isArray((project as Record<string, unknown>).tags)) {
+      const tags = (project as Record<string, unknown>).tags as string[];
+      if (tags.length > 0) lines.push(`Tags: ${tags.join(', ')}`);
+    }
+    setPanelContext({
+      recordType: 'project',
+      recordId: projectId,
+      recordLabel: String(project?.title || 'Untitled'),
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [project, projectId, published, credits, setPanelContext]);
 
   return (
     <PanelDrawer open={open} onClose={handleClose} width="w-[640px]">
@@ -292,15 +326,12 @@ export function ProjectPanel({
         )}
       </div>
 
-      {/* Footer: save + status (left) | delete (right) */}
+      {/* Footer: save + status + delete */}
       {!isNew && projectId && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
-          <div className="flex items-center gap-3">
-            <button onClick={() => void handleSaveAll()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-              <Save size={14} />
-              Save
-            </button>
-            {/* Status dropdown */}
+        <PanelFooter
+          onSave={() => void handleSaveAll()}
+          onDelete={handleDelete}
+          secondaryActions={
             <div ref={statusRef} className="relative">
               <button
                 type="button"
@@ -344,35 +375,8 @@ export function ProjectPanel({
                 </>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {confirmDelete ? (
-              <>
-                <span className="text-xs text-admin-danger mr-1">Delete this project?</span>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors disabled:opacity-40"
-                >
-                  {deleting ? <Loader2 size={12} className="animate-spin" /> : 'Delete'}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/50 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        </div>
+          }
+        />
       )}
     </PanelDrawer>
   );

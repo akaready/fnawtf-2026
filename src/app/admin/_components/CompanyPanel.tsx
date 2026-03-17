@@ -2,13 +2,13 @@
 
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import {
-  Check, Loader2, Upload, Film, Save,
+  Check, Loader2, Upload, Film,
   Trash2, X, UserPlus, Building2, Target, Link2,
   Globe, Linkedin, Search, MapPin, Calendar, Users as UsersIcon, Tag, RefreshCw,
 } from 'lucide-react';
 import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
-import { TwoStateDeleteButton } from './TwoStateDeleteButton';
+import { PanelFooter } from './PanelFooter';
 import { AdminSelect } from '@/app/admin/styleguide/_components/AdminSelect';
 import {
   type ClientRow,
@@ -22,6 +22,7 @@ import { ProjectPanel } from './ProjectPanel';
 import type { ContactRow } from '@/types/proposal';
 import { PanelDrawer } from './PanelDrawer';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 
 type ClientProject = {
   id: string;
@@ -114,7 +115,6 @@ export function CompanyPanel({
 }: CompanyPanelProps) {
   const [localCompany, setLocalCompany] = useState<ClientRow | null>(null);
   const [activeTab, setActiveTab] = useState<TabName>('info');
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [, startSave] = useTransition();
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -174,6 +174,68 @@ export function CompanyPanel({
       autoSave.reset();
     }
   }, [company?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!localCompany?.id) return;
+    const lines: string[] = [];
+    lines.push(`Name: ${localCompany.name}`);
+    lines.push(`Type: ${(localCompany.company_types ?? []).join(', ') || 'None'}`);
+    lines.push(`Status: ${localCompany.status ?? 'lead'}`);
+    if (localCompany.description) lines.push(`Description: ${localCompany.description}`);
+    if (localCompany.website_url) lines.push(`Website: ${localCompany.website_url}`);
+    if (localCompany.linkedin_url) lines.push(`LinkedIn: ${localCompany.linkedin_url}`);
+    if (localCompany.twitter_url) lines.push(`Twitter: ${localCompany.twitter_url}`);
+    if (localCompany.instagram_url) lines.push(`Instagram: ${localCompany.instagram_url}`);
+    if (localCompany.industry?.length) lines.push(`Industry: ${localCompany.industry.join(', ')}`);
+    if (localCompany.location) lines.push(`Location: ${localCompany.location}`);
+    if (localCompany.founded_year) lines.push(`Founded: ${localCompany.founded_year}`);
+    if (localCompany.company_size) lines.push(`Company Size: ${localCompany.company_size}`);
+    if (localCompany.notes) lines.push(`Notes: ${localCompany.notes}`);
+
+    const clientProjects = projects.filter((p) => p.client_id === localCompany.id);
+    if (clientProjects.length > 0) {
+      lines.push(`Projects (${clientProjects.length}):`);
+      clientProjects.forEach((p) => {
+        lines.push(`  - ${p.title}${p.category ? ` (${p.category})` : ''}`);
+      });
+    }
+
+    const clientContacts = contacts.filter((ct) => ct.client_id === localCompany.id);
+    if (clientContacts.length > 0) {
+      lines.push(`Contacts (${clientContacts.length}):`);
+      clientContacts.forEach((ct) => {
+        const parts = [`${ct.first_name} ${ct.last_name}`];
+        if (ct.email) parts.push(ct.email);
+        if (ct.role) parts.push(ct.role);
+        lines.push(`  - ${parts.join(' · ')}`);
+      });
+    }
+
+    const seenQ = new Set<string>();
+    const clientTestimonials = testimonials.filter((t) => {
+      if (t.client_id !== localCompany.id) return false;
+      if (seenQ.has(t.quote)) return false;
+      seenQ.add(t.quote);
+      return true;
+    });
+    if (clientTestimonials.length > 0) {
+      lines.push(`Testimonials (${clientTestimonials.length}):`);
+      clientTestimonials.forEach((t) => {
+        lines.push(`  - "${t.quote.slice(0, 120)}"${t.person_name ? ` — ${t.person_name}` : ''}`);
+      });
+    }
+
+    setPanelContext({
+      recordType: 'company',
+      recordId: localCompany.id,
+      recordLabel: localCompany.name || 'Untitled',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [localCompany, contacts, projects, testimonials, setPanelContext]);
 
   // ALL hooks must be declared before any conditional return
   const handleChange = useCallback((field: string, value: unknown) => {
@@ -743,12 +805,11 @@ export function CompanyPanel({
         </div>
 
         {/* Footer action bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <div className="flex items-center gap-2">
-            <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-              <Save size={14} />
-              Save
-            </button>
+        <PanelFooter
+          onSave={handleSave}
+          onDelete={handleDelete}
+          deleteDisabled={hasLinks}
+          secondaryActions={
             <button
               type="button"
               onClick={handleFetchInfo}
@@ -765,17 +826,8 @@ export function CompanyPanel({
               )}
               {fetchDone ? 'Fetched' : fetching ? 'Fetching…' : 'Fetch Data'}
             </button>
-          </div>
-          <TwoStateDeleteButton
-            itemId={localCompany.id}
-            confirmId={confirmDeleteId}
-            onRequestConfirm={(id) => !hasLinks && setConfirmDeleteId(id)}
-            onConfirmDelete={handleDelete}
-            onCancel={() => setConfirmDeleteId(null)}
-            disabled={hasLinks}
-            size={14}
-          />
-        </div>
+          }
+        />
       </PanelDrawer>
 
       {/* Nested project panel */}

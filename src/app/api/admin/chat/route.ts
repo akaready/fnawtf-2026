@@ -20,11 +20,12 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { conversationId, message, context, model } = body as {
+  const { conversationId, message, context, model, panelContext } = body as {
     conversationId?: string;
     message: string;
     context?: { route: string; recordId?: string; recordType?: string };
     model?: string;
+    panelContext?: { recordType: string; recordId: string; recordLabel: string; summary: string } | null;
   };
 
   const serviceDb = createServiceClient();
@@ -33,6 +34,28 @@ export async function POST(request: NextRequest) {
   // Create or fetch conversation
   let convId = conversationId;
   let shortTitle = '';
+  if (!convId) {
+    // Resume recent conversation for this record if one exists (< 24 hours old)
+    if (panelContext) {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from('chat_conversations')
+        .select('id, title, panel_context')
+        .eq('user_id', user.id)
+        .gte('updated_at', oneDayAgo)
+        .not('panel_context', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+      const match = (existing as unknown as { id: string; title: string; panel_context: { recordType: string; recordId: string } }[] | null)
+        ?.find((c) => c.panel_context?.recordType === panelContext.recordType && c.panel_context?.recordId === panelContext.recordId);
+
+      if (match) {
+        convId = match.id;
+        shortTitle = match.title || '';
+      }
+    }
+  }
   if (!convId) {
     // Generate a concise title via a quick Haiku call
     try {
@@ -56,6 +79,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         model: model || 'haiku',
         title: shortTitle,
+        panel_context: panelContext || null,
       } as never)
       .select('id')
       .single();
@@ -102,7 +126,7 @@ export async function POST(request: NextRequest) {
     const response = await anthropic.messages.create({
       model: modelId,
       max_tokens: 4096,
-      system: buildSystemPrompt(context || { route: '/admin' }),
+      system: buildSystemPrompt(context || { route: '/admin' }, panelContext),
       messages: currentMessages,
       tools: TOOL_DEFINITIONS,
     });

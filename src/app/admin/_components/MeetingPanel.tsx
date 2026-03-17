@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import {
   X,
   ExternalLink,
@@ -10,12 +10,14 @@ import {
   Unlink,
   Bot,
 } from 'lucide-react';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { AdminCombobox } from './AdminCombobox';
 import { PanelDrawer } from './PanelDrawer';
 import { AdminTabBar } from './AdminTabBar';
 import { StatusBadge } from './StatusBadge';
 import { MEETING_STATUSES } from './statusConfigs';
 import { TranscriptViewer } from './TranscriptViewer';
+import { MeetingInsights } from './MeetingInsights';
 import {
   linkMeetingToCompany,
   linkMeetingToContact,
@@ -40,6 +42,103 @@ export function MeetingPanel({
 }: Props) {
   const [tab, setTab] = useState('details');
   const [linking, startLink] = useTransition();
+  const { setPanelContext } = useChatContext();
+
+  /* ── Chat panel context ── */
+  useEffect(() => {
+    if (!meeting?.id) return;
+
+    const lines: string[] = [];
+    lines.push(`Title: ${meeting.title}`);
+    lines.push(`Status: ${meeting.status}`);
+    lines.push(`Date: ${meeting.start_time}`);
+    lines.push(`Start Time: ${new Date(meeting.start_time).toLocaleTimeString()}`);
+    lines.push(`End Time: ${new Date(meeting.end_time).toLocaleTimeString()}`);
+
+    const dur =
+      meeting.start_time && meeting.end_time
+        ? Math.round(
+            (new Date(meeting.end_time).getTime() -
+              new Date(meeting.start_time).getTime()) /
+              60_000,
+          )
+        : null;
+    if (dur !== null) lines.push(`Duration: ${dur} minutes`);
+
+    if (meeting.meeting_url) lines.push(`Meeting URL: ${meeting.meeting_url}`);
+    if (meeting.description) lines.push(`Description: ${meeting.description}`);
+    if (meeting.organizer_email)
+      lines.push(`Organizer Email: ${meeting.organizer_email}`);
+    if (meeting.recall_bot_status)
+      lines.push(`Bot Status: ${meeting.recall_bot_status}`);
+
+    // Attendees
+    if (meeting.meeting_attendees.length > 0) {
+      lines.push('');
+      lines.push('--- Attendees ---');
+      meeting.meeting_attendees.forEach((att) => {
+        const namePart = att.display_name || att.email;
+        const role = att.is_organizer ? ' (organizer)' : '';
+        const response = att.response_status ? ` [${att.response_status}]` : '';
+        lines.push(`- ${namePart}${role}${response} — ${att.email}`);
+      });
+    }
+
+    // Linked companies
+    const linkedCompanies = meeting.meeting_relationships
+      .filter((r) => r.clients)
+      .map((r) => r.clients!.name);
+    if (linkedCompanies.length > 0) {
+      lines.push('');
+      lines.push('--- Linked Companies ---');
+      linkedCompanies.forEach((name) => lines.push(`- ${name}`));
+    }
+
+    // Linked contacts
+    const linkedContacts = meeting.meeting_relationships
+      .filter((r) => r.contacts)
+      .map((r) => `${r.contacts!.first_name} ${r.contacts!.last_name}`);
+    if (linkedContacts.length > 0) {
+      lines.push('');
+      lines.push('--- Linked Contacts ---');
+      linkedContacts.forEach((name) => lines.push(`- ${name}`));
+    }
+
+    // Transcript
+    const transcript = meeting.meeting_transcripts;
+    if (transcript?.formatted_text) {
+      lines.push('');
+      lines.push('--- Full Transcript ---');
+      lines.push(transcript.formatted_text);
+    }
+
+    // Insights summary
+    if (transcript?.summary) {
+      lines.push('');
+      lines.push('--- Insights Summary ---');
+      lines.push(transcript.summary);
+    }
+
+    // Action items
+    if (transcript?.action_items && transcript.action_items.length > 0) {
+      lines.push('');
+      lines.push('--- Action Items ---');
+      transcript.action_items.forEach((item) => {
+        const assignee = item.assignee ? ` (${item.assignee})` : '';
+        const done = item.done ? ' [DONE]' : '';
+        lines.push(`- ${item.text}${assignee}${done}`);
+      });
+    }
+
+    setPanelContext({
+      recordType: 'meeting',
+      recordId: meeting.id,
+      recordLabel: meeting.title || 'Untitled Meeting',
+      summary: lines.join('\n'),
+    });
+
+    return () => setPanelContext(null);
+  }, [meeting, setPanelContext]);
 
   if (!meeting) return null;
 
@@ -59,15 +158,8 @@ export function MeetingPanel({
 
   const tabs = [
     { value: 'details', label: 'Details' },
-    {
-      value: 'transcript',
-      label: 'Transcript',
-      badge: transcript ? (
-        <span className="ml-1 text-[10px] rounded-full bg-admin-success-bg text-admin-success px-2 py-0.5">
-          ready
-        </span>
-      ) : undefined,
-    },
+    { value: 'transcript', label: 'Transcript' },
+    { value: 'insights', label: 'Insights' },
   ];
 
   const linkedClientIds = new Set(
@@ -321,6 +413,14 @@ export function MeetingPanel({
           <TranscriptViewer
             segments={transcriptSegments}
             formattedText={transcript?.formatted_text}
+            attendees={meeting.meeting_attendees}
+          />
+        )}
+
+        {tab === 'insights' && (
+          <MeetingInsights
+            meetingId={meeting.id}
+            transcript={transcript}
           />
         )}
       </div>

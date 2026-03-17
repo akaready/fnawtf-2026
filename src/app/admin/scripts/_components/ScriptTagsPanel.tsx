@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Loader2, X as XIcon, Check, Save } from 'lucide-react';
+import { Plus, Trash2, Loader2, X as XIcon, Check } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { createScriptTag, updateScriptTag, deleteScriptTag } from '@/app/admin/actions';
@@ -271,13 +272,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
           </div>
         </div>
 
-        {/* Footer action bar */}
-        <div className="flex items-center px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <button onClick={handleClose} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-            <Save size={14} />
-            Save
-          </button>
-        </div>
+        <PanelFooter onSave={handleClose} />
       </div>
     </PanelDrawer>
   );

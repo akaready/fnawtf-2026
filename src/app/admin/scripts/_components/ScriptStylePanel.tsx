@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Upload, Trash2, Loader2, Save } from 'lucide-react';
+import { X, Upload, Trash2, Loader2 } from 'lucide-react';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import {
@@ -123,6 +125,28 @@ export function ScriptStylePanel({
     setLocalPreset(style.style_preset ?? 'sketch');
     setLocalAspectRatio(style.aspect_ratio);
   }, [style?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!style?.id) return;
+    const lines: string[] = [];
+    if (localPreset) lines.push(`Style Preset: ${STYLE_PRESETS[localPreset].label}`);
+    else lines.push('Style Preset: None');
+    lines.push(`Aspect Ratio: ${localAspectRatio}`);
+    if (localPreset) lines.push(`Pre-prompt: ${STYLE_PRESETS[localPreset].prompt.slice(0, 200)}...`);
+    if (localPrompt) lines.push(`Additional Style Notes: ${localPrompt}`);
+    if (style.generation_mode) lines.push(`Generation Mode: ${style.generation_mode}`);
+    if (references.length > 0) lines.push(`Reference Images: ${references.length}`);
+    setPanelContext({
+      recordType: 'script-style',
+      recordId: style.id,
+      recordLabel: localPreset ? `Style — ${STYLE_PRESETS[localPreset].label}` : 'Style — Custom',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [style, localPreset, localPrompt, localAspectRatio, references, setPanelContext]);
 
   // Close — flush pending saves, then close
   const handleClose = useCallback(async () => {
@@ -370,17 +394,7 @@ export function ScriptStylePanel({
           )}
         </div>
 
-        {/* Footer action bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <button
-            onClick={() => flush()}
-            disabled={status === 'saving'}
-            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Save size={14} />
-            Save
-          </button>
-        </div>
+        <PanelFooter onSave={() => flush()} />
       </div>
     </PanelDrawer>
   );

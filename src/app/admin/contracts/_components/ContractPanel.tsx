@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Trash2, Send, RefreshCw, Plus, Clock, Eye, CheckCircle2, XCircle, AlertCircle, FileText, Users, History, Save } from 'lucide-react';
+import { X, Trash2, Send, RefreshCw, Plus, Clock, Eye, CheckCircle2, XCircle, AlertCircle, FileText, Users, History } from 'lucide-react';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import type {
   ContractRow,
   ContractEventRow,
@@ -68,11 +70,11 @@ interface Props {
 }
 
 export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted }: Props) {
+  const { setPanelContext } = useChatContext();
   const [contract, setContract] = useState<ContractRow | null>(null);
   const [events, setEvents] = useState<ContractEventRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmVoid, setConfirmVoid] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
@@ -268,6 +270,43 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
       setSending(false);
     }
   };
+
+  // Chat panel context
+  useEffect(() => {
+    if (!contract?.id) return;
+    const lines: string[] = [];
+    lines.push(`Title: ${title}`);
+    lines.push(`Type: ${TYPE_OPTIONS.find((o) => o.value === contractType)?.label || contractType}`);
+    lines.push(`Status: ${STATUS_LABELS[contract.status]}`);
+    if (contract.contract_number) lines.push(`Contract #: ${contract.contract_number}`);
+    const clientLabel = clientId ? clientOptions.find((c) => c.id === clientId)?.label : null;
+    if (clientLabel) lines.push(`Client: ${clientLabel}`);
+    const contactLabel = contactId ? contactOptions.find((c) => c.id === contactId)?.label : null;
+    if (contactLabel) lines.push(`Contact: ${contactLabel}`);
+    if (contract.signers && contract.signers.length > 0) {
+      lines.push(`Signers:`);
+      contract.signers.forEach((s) => lines.push(`  - ${s.name} (${s.email}) — ${s.status}`));
+    }
+    if (body) lines.push(`Body:\n${body}`);
+    if (notes) lines.push(`Notes: ${notes}`);
+    if (contract.created_at) lines.push(`Created: ${new Date(contract.created_at).toLocaleDateString()}`);
+    if (contract.updated_at) lines.push(`Updated: ${new Date(contract.updated_at).toLocaleDateString()}`);
+    if (events.length > 0) {
+      lines.push(`Activity:`);
+      events.forEach((e) => {
+        const actor = e.actor_email ? ` by ${e.actor_email}` : '';
+        const signer = e.signer_email ? ` — ${e.signer_email}` : '';
+        lines.push(`  - ${e.event_type}${actor}${signer} (${new Date(e.occurred_at).toLocaleString()})`);
+      });
+    }
+    setPanelContext({
+      recordType: 'contract',
+      recordId: contract.id,
+      recordLabel: title || 'Untitled Contract',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [contract, title, contractType, body, notes, clientId, contactId, clientOptions, contactOptions, events, setPanelContext]);
 
   const isEditable = contract?.status === 'draft' || contract?.status === 'pending_review';
   const canSend = isEditable && (contract?.signers?.length ?? 0) > 0 && !!body;
@@ -690,103 +729,74 @@ export function ContractPanel({ contractId, open, onClose, onUpdated, onDeleted 
             )}
           </div>
 
-          {/* Footer: save + send (left) | void + delete (right) */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
-            <div className="flex items-center gap-3">
-              {isEditable && (
-                <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-                  <Save size={14} />
-                  Save
-                </button>
-              )}
-              {/* Send for signature */}
-              {isEditable && !confirmSend && (
-                <button
-                  onClick={() => setConfirmSend(true)}
-                  disabled={!canSend}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors disabled:opacity-40"
-                >
-                  <Send size={14} />
-                  Send for Signature
-                </button>
-              )}
-              {confirmSend && (
-                <div className="flex items-center gap-2">
-                  <span className="text-admin-sm text-admin-info mr-1">
-                    Send to {contract.signers?.length || 0} signer{(contract.signers?.length || 0) !== 1 ? 's' : ''}?
-                  </span>
+          {/* Footer */}
+          <PanelFooter
+            onSave={isEditable ? handleSave : undefined}
+            onDelete={handleDelete}
+            secondaryActions={
+              <>
+                {/* Send for signature */}
+                {isEditable && !confirmSend && (
                   <button
-                    onClick={() => setConfirmSend(false)}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
+                    onClick={() => setConfirmSend(true)}
+                    disabled={!canSend}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-admin-border text-sm text-admin-text-muted hover:text-admin-text-primary hover:border-admin-border-emphasis hover:bg-admin-bg-hover transition-colors disabled:opacity-40"
                   >
-                    Cancel
+                    <Send size={14} />
+                    Send for Signature
                   </button>
+                )}
+                {confirmSend && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-admin-sm text-admin-info mr-1">
+                      Send to {contract.signers?.length || 0} signer{(contract.signers?.length || 0) !== 1 ? 's' : ''}?
+                    </span>
+                    <button
+                      onClick={() => setConfirmSend(false)}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSend}
+                      disabled={sending}
+                      className="btn-primary px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
+                    >
+                      <Send size={12} />
+                      {sending ? 'Sending...' : 'Send'}
+                    </button>
+                  </div>
+                )}
+                {/* Void button for sent/viewed contracts */}
+                {(contract.status === 'sent' || contract.status === 'viewed') && !confirmVoid && (
                   <button
-                    onClick={handleSend}
-                    disabled={sending}
-                    className="btn-primary px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
+                    onClick={() => setConfirmVoid(true)}
+                    className="btn-ghost-danger px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
                   >
-                    <Send size={12} />
-                    {sending ? 'Sending...' : 'Send'}
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Void button for sent/viewed contracts */}
-              {(contract.status === 'sent' || contract.status === 'viewed') && !confirmVoid && (
-                <button
-                  onClick={() => setConfirmVoid(true)}
-                  className="btn-ghost-danger px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
-                >
-                  <XCircle size={13} />
-                  Void
-                </button>
-              )}
-              {confirmVoid && (
-                <>
-                  <span className="text-admin-sm text-admin-danger mr-1">Void this contract?</span>
-                  <button
-                    onClick={() => setConfirmVoid(false)}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleVoid}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors"
-                  >
+                    <XCircle size={13} />
                     Void
                   </button>
-                </>
-              )}
-              {/* Delete — two-state confirmation */}
-              {confirmDelete ? (
-                <>
-                  <span className="text-admin-sm text-admin-danger mr-1">Delete this contract?</span>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors"
-                  >
-                    Delete
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/50 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          </div>
+                )}
+                {confirmVoid && (
+                  <>
+                    <span className="text-admin-sm text-admin-danger mr-1">Void this contract?</span>
+                    <button
+                      onClick={() => setConfirmVoid(false)}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleVoid}
+                      className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors"
+                    >
+                      Void
+                    </button>
+                  </>
+                )}
+              </>
+            }
+          />
         </div>
       )}
     </PanelDrawer>

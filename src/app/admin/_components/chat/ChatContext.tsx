@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Conversation, Message, ModelId } from './types';
+import type { Conversation, Message, ModelId, PanelContext } from './types';
 
 interface PageContext {
   route: string;
@@ -23,6 +23,9 @@ interface ChatState {
   selectedModel: ModelId;
 }
 
+export const CHAT_MIN = 320;
+export const CHAT_MAX = 700;
+
 interface ChatContextValue extends ChatState {
   toggle: () => void;
   close: () => void;
@@ -36,6 +39,10 @@ interface ChatContextValue extends ChatState {
   renameConversation: (id: string, title: string) => Promise<void>;
   toggleSidebarMode: () => void;
   getContext: () => PageContext;
+  chatWidth: number;
+  setChatWidth: (width: number) => void;
+  panelContext: PanelContext | null;
+  setPanelContext: (context: PanelContext | null) => void;
 }
 
 const ChatCtx = createContext<ChatContextValue | null>(null);
@@ -63,6 +70,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   });
 
   const abortRef = useRef<AbortController | null>(null);
+  const [chatWidth, setChatWidth] = useState(400);
+  const [panelContext, setPanelContext] = useState<PanelContext | null>(null);
 
   const supabase = createClient();
 
@@ -217,6 +226,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             message: text,
             context,
             model: state.selectedModel,
+            panelContext,
           }),
           signal: abortRef.current.signal,
         });
@@ -297,7 +307,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }));
       }
     },
-    [state.isStreaming, state.activeConversationId, state.selectedModel, getContext],
+    [state.isStreaming, state.activeConversationId, state.selectedModel, getContext, panelContext],
   );
 
   return (
@@ -316,6 +326,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         renameConversation,
         toggleSidebarMode,
         getContext,
+        chatWidth,
+        setChatWidth,
+        panelContext,
+        setPanelContext,
       }}
     >
       {children}

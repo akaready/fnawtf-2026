@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Loader2, Trash2, Check, X, Save } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
@@ -11,6 +12,7 @@ import { updateScript, deleteScript } from '@/app/admin/actions';
 import { createClient } from '@/lib/supabase/client';
 import { AdminCombobox } from '../../_components/AdminCombobox';
 import type { ScriptRow, ScriptStatus } from '@/types/scripts';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 
 interface Props {
   open: boolean;
@@ -32,16 +34,13 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   const [projectSearch, setProjectSearch] = useState('');
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
   const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     setTitle(script.title);
     setStatus(script.status);
     setNotes(script.notes ?? '');
-    setConfirmDelete(false);
   }, [script]);
 
   // Dirty detection
@@ -52,6 +51,29 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
       (notes ?? '') !== (script.notes ?? '')
     );
   }, [title, status, notes, script]);
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!script?.id) return;
+    const lines: string[] = [];
+    lines.push(`Title: ${title}`);
+    lines.push(`Status: ${status}`);
+    lines.push(`Version: ${script.version}`);
+    if (script.project?.title) lines.push(`Project: ${script.project.title}`);
+    else if (script.project_id) lines.push(`Project ID: ${script.project_id}`);
+    if (notes) lines.push(`Notes: ${notes}`);
+    lines.push(`Created: ${new Date(script.created_at).toLocaleDateString()}`);
+    if (script.updated_at) lines.push(`Updated: ${new Date(script.updated_at).toLocaleDateString()}`);
+    setPanelContext({
+      recordType: 'script',
+      recordId: script.id,
+      recordLabel: title || 'Untitled Script',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [script, title, status, notes, setPanelContext]);
 
   // Close guard
   const handleClose = useCallback(() => {
@@ -105,13 +127,8 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   };
 
   const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteScript(script.id);
-      router.push('/admin/scripts');
-    } finally {
-      setDeleting(false);
-    }
+    await deleteScript(script.id);
+    router.push('/admin/scripts');
   };
 
   return (
@@ -211,42 +228,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
           </div>
         </div>
 
-        {/* Footer action bar — matches CompanyPanel pattern */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-            <Save size={14} />
-            Save
-          </button>
-
-          {confirmDelete ? (
-            <div className="flex items-center gap-1">
-              <span className="text-admin-sm text-admin-danger mr-1">Delete?</span>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                title="Confirm delete"
-              >
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-                title="Cancel"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-              title="Delete script"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
+        <PanelFooter onSave={handleSave} onDelete={handleDelete} />
 
         {/* Discard changes dialog */}
         <DiscardChangesDialog

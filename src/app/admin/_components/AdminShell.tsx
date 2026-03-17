@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { NavLogo } from '@/components/layout/NavLogo';
 import { AdminSearchModal } from './AdminSearchModal';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
-import { ChatProvider, useChatContext } from './chat/ChatContext';
+import { ChatProvider, useChatContext, CHAT_MIN, CHAT_MAX } from './chat/ChatContext';
 import { ChatWidget } from './chat/ChatWidget';
 import { ChatPanel } from './chat/ChatPanel';
 
@@ -32,23 +32,19 @@ export function AdminShell({ children, userEmail }: Props) {
 
 function AdminShellInner({ children, userEmail }: Props) {
   const { theme, toggleTheme } = useTheme();
-  const { isOpen, isSidebarMode } = useChatContext();
+  const { isOpen, isSidebarMode, chatWidth, setChatWidth } = useChatContext();
   const chatSidebarOpen = isSidebarMode && isOpen;
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [chatWidth, setChatWidth] = useState(400);
   const [navTooltip, setNavTooltip] = useState<{ label: string; top: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const logoRef = useRef<HTMLAnchorElement>(null);
-
-  const CHAT_MIN = 320;
-  const CHAT_MAX = 700;
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -416,9 +412,9 @@ function AdminShellInner({ children, userEmail }: Props) {
       {/* Main content — flex container; each page manages its own scroll */}
       <main className="flex-1 min-w-0 h-full flex flex-col">{children}</main>
 
-      {/* Chat sidebar — full-height panel on the right */}
+      {/* Chat sidebar — full-height panel on the right, above panel backdrops */}
       <div
-        className="flex-shrink-0 h-full overflow-hidden relative"
+        className="flex-shrink-0 h-full overflow-hidden relative z-[120]"
         style={{
           width: chatSidebarOpen ? chatWidth : 0,
           transition: isDragging.current ? 'none' : 'width 300ms ease-in-out',

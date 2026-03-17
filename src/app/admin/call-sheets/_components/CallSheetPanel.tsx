@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react';
-import { X, ExternalLink, Check, ChevronDown, Save, MapPin, UserCheck, Users, Clapperboard, Truck, FileText, ClipboardList, Eye, EyeOff, Copy, Megaphone } from 'lucide-react';
+import { X, ExternalLink, Check, ChevronDown, MapPin, UserCheck, Users, Clapperboard, Truck, FileText, ClipboardList, Eye, EyeOff, Copy, Megaphone } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
-import { TwoStateDeleteButton } from '@/app/admin/_components/TwoStateDeleteButton';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { DiscardChangesDialog } from '@/app/admin/_components/DiscardChangesDialog';
 import type { CallSheetWithRelations, CallSheetListRow } from '@/types/callsheet-admin';
 import type { ContactRow } from '@/types/proposal';
@@ -13,6 +13,7 @@ import type { ClientRow } from '../../actions';
 import { PersonPanel } from '@/app/admin/_components/PersonPanel';
 import { getCallSheet, updateCallSheet, deleteCallSheet, getClients, updateContact, deleteContact } from '../../actions';
 import { createClient } from '@/lib/supabase/client';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { DetailsTab } from './tabs/DetailsTab';
 import { LocationsTab } from './tabs/LocationsTab';
 import { CastTab } from './tabs/CastTab';
@@ -54,7 +55,6 @@ export function CallSheetPanel({ callSheetId, projectId, open, onClose, onSaved,
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [statusOpen, setStatusOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
@@ -219,6 +219,72 @@ export function CallSheetPanel({ callSheetId, projectId, open, onClose, onSaved,
     return key === 'vendorsVisible' ? !vendorsVisible : !deptNotesVisible;
   }
 
+  const title = data?.project_title
+    ? `${data.project_title} — Day ${shootDay}`
+    : `Call Sheet — Day ${shootDay}`;
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!data?.id) return;
+    const lines: string[] = [];
+    const label = data.project_title ? `${data.project_title} — Day ${shootDay}` : `Call Sheet — Day ${shootDay}`;
+    lines.push(`Title: ${label}`);
+    if (data.slug) lines.push(`Slug: /cs/${data.slug}`);
+    lines.push(`Status: ${status}`);
+    lines.push(`Date: ${date}`);
+    lines.push(`Shoot Day: ${shootDay} of ${totalDays}`);
+    lines.push(`General Call Time: ${generalCallTime}`);
+    if (crewCall) lines.push(`Crew Call: ${crewCall}`);
+    if (talentCall) lines.push(`Talent Call: ${talentCall}`);
+    if (shootingCall) lines.push(`Shooting Call: ${shootingCall}`);
+    if (lunchTime) lines.push(`Lunch Time: ${lunchTime}`);
+    if (estimatedWrap) lines.push(`Estimated Wrap: ${estimatedWrap}`);
+    if (data.project_title) lines.push(`Project: ${data.project_title}`);
+    if (data.scenes && data.scenes.length > 0) {
+      lines.push(`Scenes (${data.scenes.length}):`);
+      data.scenes.forEach(s => {
+        const parts = [s.int_ext, s.location_name, s.time_of_day].filter(Boolean).join(' — ');
+        lines.push(`  - ${parts || 'Untitled scene'}${s.start_time ? ` @ ${s.start_time}` : ''}`);
+      });
+    }
+    if (data.cast && data.cast.length > 0) {
+      lines.push(`Cast (${data.cast.length}):`);
+      data.cast.forEach(c => {
+        lines.push(`  - ${c.character_name ?? 'Role TBD'}: ${c.contact_name ?? 'TBD'}${c.call_time ? ` @ ${c.call_time}` : ''}`);
+      });
+    }
+    if (data.crew && data.crew.length > 0) {
+      lines.push(`Crew (${data.crew.length}):`);
+      data.crew.forEach(c => {
+        lines.push(`  - ${c.contact_role ?? c.role_override ?? ''}: ${c.contact_name ?? 'TBD'}${c.call_time ? ` @ ${c.call_time}` : ''}`);
+      });
+    }
+    if (data.locations && data.locations.length > 0) {
+      lines.push(`Locations (${data.locations.length}):`);
+      data.locations.forEach(l => {
+        lines.push(`  - ${l.location_name ?? l.location_address ?? 'Unnamed'}`);
+      });
+    }
+    if (data.bulletins && data.bulletins.length > 0) {
+      lines.push(`Announcements (${data.bulletins.length}):`);
+      data.bulletins.forEach(b => {
+        lines.push(`  - ${(b.text ?? '').slice(0, 120)}`);
+      });
+    }
+    if (hospitalName) lines.push(`Hospital: ${hospitalName}`);
+    if (hospitalAddress) lines.push(`Hospital Address: ${hospitalAddress}`);
+    if (hospitalPhone) lines.push(`Hospital Phone: ${hospitalPhone}`);
+    setPanelContext({
+      recordType: 'call-sheet',
+      recordId: data.id,
+      recordLabel: label,
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [data, status, date, shootDay, totalDays, generalCallTime, crewCall, talentCall, shootingCall, lunchTime, estimatedWrap, hospitalName, hospitalAddress, hospitalPhone, setPanelContext]);
+
   const slug = data?.slug;
 
   function copyLink() {
@@ -234,10 +300,6 @@ export function CallSheetPanel({ callSheetId, projectId, open, onClose, onSaved,
     setStatusOpen(false);
     trigger();
   }
-
-  const title = data?.project_title
-    ? `${data.project_title} — Day ${shootDay}`
-    : `Call Sheet — Day ${shootDay}`;
 
   return (
     <>
@@ -400,85 +462,70 @@ export function CallSheetPanel({ callSheetId, projectId, open, onClose, onSaved,
             )}
           </div>
 
-          {/* Footer: Save + Status (left) | View + Delete (right) */}
-          <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-t border-admin-border bg-admin-bg-wash">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => void autoSave.flush()}
-                className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-              >
-                <Save size={14} />
-                Save
-              </button>
-              {/* Status toggle — Draft / Published */}
-              <div ref={statusRef} className="relative">
-
-                <button
-                  type="button"
-                  onClick={() => setStatusOpen((o) => !o)}
-                  className={`${status === 'published' ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
-                >
-                  {status === 'draft' ? 'Draft' : 'Published'}
-                  <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {statusOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
-                    <div className="absolute bottom-full mb-1 left-0 min-w-[160px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange('published')}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                          status === 'published' ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
-                          Published
-                        </span>
-                        {status === 'published' && <Check size={12} />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleStatusChange('draft')}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                          status === 'draft' ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
-                          Draft
-                        </span>
-                        {status === 'draft' && <Check size={12} />}
-                      </button>
-                    </div>
-                  </>
+          {/* Footer */}
+          <PanelFooter
+            onSave={() => void autoSave.flush()}
+            onDelete={callSheetId ? handleDelete : undefined}
+            secondaryActions={
+              <>
+                {/* Status toggle — Draft / Published */}
+                <div ref={statusRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setStatusOpen((o) => !o)}
+                    className={`${status === 'published' ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
+                  >
+                    {status === 'draft' ? 'Draft' : 'Published'}
+                    <ChevronDown size={12} className={`transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {statusOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
+                      <div className="absolute bottom-full mb-1 left-0 min-w-[160px] bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 z-50">
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange('published')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                            status === 'published' ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                            Published
+                          </span>
+                          {status === 'published' && <Check size={12} />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleStatusChange('draft')}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                            status === 'draft' ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                            Draft
+                          </span>
+                          {status === 'draft' && <Check size={12} />}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {slug && (
+                  <a
+                    href={`/cs/${slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary px-4 py-2.5 text-sm"
+                  >
+                    <ExternalLink size={13} />
+                    View
+                  </a>
                 )}
-              </div>
-              {slug && (
-                <a
-                  href={`/cs/${slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary px-4 py-2.5 text-sm"
-                >
-                  <ExternalLink size={13} />
-                  View
-                </a>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {callSheetId && (
-                <TwoStateDeleteButton
-                  itemId={callSheetId}
-                  confirmId={confirmDeleteId}
-                  onRequestConfirm={setConfirmDeleteId}
-                  onConfirmDelete={async () => { await handleDelete(); setConfirmDeleteId(null); }}
-                  onCancel={() => setConfirmDeleteId(null)}
-                />
-              )}
-            </div>
-          </div>
+              </>
+            }
+          />
         </div>
       </PanelDrawer>
 

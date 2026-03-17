@@ -9,10 +9,12 @@ import {
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from './SaveDot';
 import { PanelDrawer } from './PanelDrawer';
+import { PanelFooter } from './PanelFooter';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { ProjectPanel } from './ProjectPanel';
 import { AdminCombobox } from './AdminCombobox';
 import { contactFullName } from '@/lib/contacts';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import {
   getAllRoles,
   getContactRoles,
@@ -56,7 +58,6 @@ export function PersonPanel({
 }: PersonPanelProps) {
   const [draft, setDraft] = useState<ContactRow | null>(person);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [roles, setRoles] = useState<Array<{ id: string; name: string }>>([]);
   const [personRoleIds, setPersonRoleIds] = useState<Set<string>>(new Set());
   const [projects, setProjects] = useState<Array<{ id: string; title: string; client_name: string; thumbnail_url: string | null }>>([]);
@@ -70,6 +71,43 @@ export function PersonPanel({
   const [urlSearching, setUrlSearching] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'headshots' | 'roles' | 'projects'>('details');
+
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!draft?.id) return;
+    const lines: string[] = [];
+    lines.push(`Name: ${draft.first_name ?? ''} ${draft.last_name ?? ''}`.trim());
+    if (draft.type) lines.push(`Type: ${draft.type}`);
+    if (draft.role) lines.push(`Title: ${draft.role}`);
+    if (draft.company) lines.push(`Company: ${draft.company}`);
+    if (draft.email) lines.push(`Email: ${draft.email}`);
+    if (draft.phone) lines.push(`Phone: ${draft.phone}`);
+    if (draft.notes) lines.push(`Notes: ${draft.notes}`);
+    if (draft.headshot_url) lines.push(`Headshot URL: ${draft.headshot_url}`);
+    if (draft.linkedin_url) lines.push(`LinkedIn: ${draft.linkedin_url}`);
+    if (draft.instagram_url) lines.push(`Instagram: ${draft.instagram_url}`);
+    if (draft.imdb_url) lines.push(`IMDB: ${draft.imdb_url}`);
+    if (draft.website_url) lines.push(`Website: ${draft.website_url}`);
+    if (draft.client_id) {
+      const co = companies.find((c) => c.id === draft.client_id);
+      if (co) lines.push(`Linked Company: ${co.name}`);
+    }
+    if (roles.length > 0 && personRoleIds.size > 0) {
+      const roleNames = roles.filter((r) => personRoleIds.has(r.id)).map((r) => r.name);
+      if (roleNames.length > 0) lines.push(`Roles: ${roleNames.join(', ')}`);
+    }
+    if (projects.length > 0) {
+      lines.push(`Projects: ${projects.map((p) => `${p.title}${p.client_name ? ` (${p.client_name})` : ''}`).join(', ')}`);
+    }
+    setPanelContext({
+      recordType: 'contact',
+      recordId: draft.id,
+      recordLabel: `${draft.first_name ?? ''} ${draft.last_name ?? ''}`.trim() || 'Untitled',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [draft, roles, personRoleIds, projects, companies, setPanelContext]);
 
   const autoSave = useAutoSave(async () => {
     if (!draft) return;
@@ -99,7 +137,6 @@ export function PersonPanel({
   useEffect(() => {
     autoSave.reset();
     setConfirmClose(false);
-    setConfirmDelete(false);
     setConfirmDeleteHsId(null);
     setOpenProject(null);
     setActiveTab('details');
@@ -620,12 +657,10 @@ export function PersonPanel({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <button onClick={() => void autoSave.flush()} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-            <Save size={14} />
-            Save
-          </button>
+      <PanelFooter
+        onSave={() => void autoSave.flush()}
+        onDelete={() => { onDelete(draft.id); onClose(); }}
+        secondaryActions={
           <button
             onClick={fetchAllData}
             disabled={fetching}
@@ -634,20 +669,8 @@ export function PersonPanel({
             {fetching ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
             {fetching ? 'Fetching...' : 'Fetch Data'}
           </button>
-        </div>
-        {confirmDelete ? (
-          <div className="flex items-center gap-2">
-            <button onClick={() => { onDelete(draft.id); onClose(); }} className="px-3 py-1.5 text-xs rounded bg-red-600 text-admin-text-primary hover:bg-red-700 transition-colors">Delete</button>
-            <button onClick={() => setConfirmDelete(false)} className="p-2 rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-lg text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors">
-            <Trash2 size={14} />
-          </button>
-        )}
-      </div>
+        }
+      />
 
       {/* Nested Project Panel — backdrop click closes everything */}
       <ProjectPanel

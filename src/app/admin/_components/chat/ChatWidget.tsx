@@ -7,7 +7,7 @@ import { useChatContext } from './ChatContext';
 import { ChatPanel } from './ChatPanel';
 
 export function ChatWidget() {
-  const { isOpen, isSidebarMode, toggle, close } = useChatContext();
+  const { isOpen, isSidebarMode, toggle, close, toggleSidebarMode } = useChatContext();
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -16,12 +16,18 @@ export function ChatWidget() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'j') {
         e.preventDefault();
-        toggle();
+        if (!isOpen) {
+          toggle(); // closed → popup
+        } else if (!isSidebarMode) {
+          toggleSidebarMode(); // popup → sidebar
+        } else {
+          close(); // sidebar → closed
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [toggle]);
+  }, [isOpen, isSidebarMode, toggle, toggleSidebarMode, close]);
 
   // Click outside to close (only in floating mode)
   useEffect(() => {
@@ -67,7 +73,7 @@ export function ChatWidget() {
               mass: 0.8,
             }}
             style={{ transformOrigin: 'bottom right' }}
-            className="fixed bottom-24 right-6 z-[90] w-[380px] h-[550px]"
+            className="fixed bottom-24 right-6 z-[115] w-[380px] h-[550px]"
           >
             {/* Outer glow for lift */}
             <div className="absolute -inset-10 rounded-[2rem] bg-radial from-transparent via-black/20 to-black/60 pointer-events-none blur-md" />
@@ -93,7 +99,7 @@ export function ChatWidget() {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-        className="fixed bottom-6 right-10 z-[90] w-12 h-12 rounded-full bg-white text-black shadow-xl flex items-center justify-center"
+        className="fixed bottom-3 right-3 z-[115] w-12 h-12 rounded-full bg-white text-black shadow-xl flex items-center justify-center"
         title="Chat (⌘+J)"
       >
         <MessageCircle size={20} />

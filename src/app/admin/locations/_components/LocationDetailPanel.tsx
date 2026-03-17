@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  X, Trash2, Upload, Star, MapPin, ExternalLink, Camera, Save,
+  X, Trash2, Upload, Star, MapPin, ExternalLink, Camera,
   Image as ImageIcon, Loader2, Link2, Download, Expand, Check,
 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { AdminLightbox } from '@/app/admin/_components/AdminLightbox';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { downloadSingleImage, downloadStoryboardZip } from '@/lib/scripts/downloadStoryboards';
@@ -23,6 +24,7 @@ import {
   getLocationProjects,
 } from '@/app/admin/actions';
 import type { LocationWithImages, LocationImageRow, PeerspaceData } from '@/types/locations';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 
 type Tab = 'details' | 'images' | 'scout' | 'peerspace' | 'projects';
 
@@ -37,7 +39,6 @@ interface Props {
 
 export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelete, projects }: Props) {
   const [tab, setTab] = useState<Tab>('details');
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [linkedProjects, setLinkedProjects] = useState<{ id: string; title: string; thumbnail_url: string | null; client_name: string | null }[]>([]);
@@ -73,7 +74,6 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
   // Sync local state when location prop changes
   useEffect(() => {
     setLocal(location ? { ...location } : null);
-    setConfirmDelete(false);
     setConfirmClose(false);
     setTab('details');
     autoSave.reset();
@@ -94,6 +94,49 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
     setLocal(prev => prev ? { ...prev, [field]: value } as LocationWithImages : prev);
     autoSave.trigger();
   }, [autoSave]);
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!local?.id) return;
+    const lines: string[] = [];
+    lines.push(`Name: ${local.name}`);
+    if (local.address) lines.push(`Address: ${[local.address, local.city, local.state, local.zip].filter(Boolean).join(', ')}`);
+    if (local.description) lines.push(`Description: ${local.description}`);
+    if (local.notes) lines.push(`Notes: ${local.notes}`);
+    if (local.peerspace_url) lines.push(`Peerspace URL: ${local.peerspace_url}`);
+    const ps = local.peerspace_data as PeerspaceData;
+    if (ps) {
+      if (ps.capacity) lines.push(`Capacity: ${ps.capacity}`);
+      if (ps.pricing) lines.push(`Hourly Rate: $${ps.pricing.amount}/${ps.pricing.unit}${ps.pricing.minimum ? ` (${ps.pricing.minimum} min)` : ''}`);
+      if (ps.sqft) lines.push(`Size: ${ps.sqft.toLocaleString()} sqft`);
+      if (ps.space_type) lines.push(`Space Type: ${ps.space_type}`);
+      if (ps.rating) lines.push(`Rating: ${ps.rating.score} (${ps.rating.count} reviews)`);
+      if (ps.amenities?.length) lines.push(`Amenities: ${ps.amenities.join(', ')}`);
+      if (ps.parking) lines.push(`Parking: ${ps.parking}`);
+      if (ps.reviews?.length) {
+        lines.push(`Reviews (${ps.reviews.length}):`);
+        ps.reviews.forEach(r => {
+          lines.push(`  - ${r.reviewer_name ?? 'Anonymous'}: "${(r.text ?? '').slice(0, 120)}"`);
+        });
+      }
+    }
+    lines.push(`Images: ${local.location_images.length}`);
+    if (linkedProjects.length > 0) {
+      lines.push(`Linked Projects (${linkedProjects.length}):`);
+      linkedProjects.forEach(p => {
+        lines.push(`  - ${p.title}${p.client_name ? ` (${p.client_name})` : ''}`);
+      });
+    }
+    setPanelContext({
+      recordType: 'location',
+      recordId: local.id,
+      recordLabel: local.name || 'Unnamed Location',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [local, linkedProjects, setPanelContext]);
 
   const handleSave = async () => {
     await autoSave.flush();
@@ -696,13 +739,12 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
-          <div className="flex items-center gap-2">
-            <button onClick={handleSave} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-              <Save size={14} />
-              Save
-            </button>
-            {local.peerspace_url && (
+        <PanelFooter
+          onSave={handleSave}
+          onDelete={handleDelete}
+          deleteDisabled={deleting}
+          secondaryActions={
+            local.peerspace_url ? (
               <a
                 href={local.peerspace_url}
                 target="_blank"
@@ -711,37 +753,9 @@ export function LocationDetailPanel({ location, open, onClose, onUpdate, onDelet
               >
                 <ExternalLink size={12} /> Peerspace
               </a>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {confirmDelete ? (
-              <>
-                <span className="text-xs text-admin-danger mr-1">Delete?</span>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger text-white hover:bg-red-700 transition-colors"
-                >
-                  {deleting ? <Loader2 size={12} className="animate-spin" /> : 'Delete'}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/60 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-                title="Delete location"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        </div>
+            ) : undefined
+          }
+        />
 
         {/* Discard changes overlay */}
         <DiscardChangesDialog

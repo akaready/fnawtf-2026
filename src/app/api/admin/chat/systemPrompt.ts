@@ -1,8 +1,15 @@
+interface PanelContext {
+  recordType: string;
+  recordId: string;
+  recordLabel: string;
+  summary: string;
+}
+
 export function buildSystemPrompt(context: {
   route: string;
   recordId?: string;
   recordType?: string;
-}): string {
+}, panelContext?: PanelContext | null): string {
   return `You are an AI assistant for the Friends 'n Allies (FNA) admin dashboard — a video production agency's internal CRM and project management tool.
 
 ## Your capabilities
@@ -127,7 +134,17 @@ Understanding how data connects is critical for answering questions accurately:
 
 ## Current context
 The user is currently viewing: ${context.route}${context.recordId ? `\nActive record: ${context.recordType} with ID ${context.recordId}` : ''}
+${panelContext ? `
+---
 
+## Active Record Context
+The user has the ${panelContext.recordType} panel open for "${panelContext.recordLabel}" (ID: ${panelContext.recordId}).
+
+Record details:
+${panelContext.summary}
+
+When the user says "this" or asks questions without specifying a record, they mean this one. Use the record details above to answer questions directly — only use tool calls if the user asks for data not included here.
+` : ''}
 ---
 
 ## Guidelines

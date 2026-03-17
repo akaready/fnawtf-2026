@@ -20,6 +20,8 @@ interface TwoStateDeleteButtonProps {
   hideUntilHover?: boolean;
   /** Scoped group name for hideUntilHover (e.g. "row") — uses group-hover/{name} */
   groupName?: string;
+  /** Show cancel (X) first so it lands under the cursor after clicking trash */
+  cancelFirst?: boolean;
 }
 
 /**
@@ -51,27 +53,35 @@ export function TwoStateDeleteButton({
   size = 13,
   hideUntilHover = false,
   groupName,
+  cancelFirst = false,
 }: TwoStateDeleteButtonProps) {
   const isConfirming = confirmId === itemId;
 
   if (isConfirming) {
+    const confirmBtn = (
+      <button
+        key="confirm"
+        onClick={() => onConfirmDelete(itemId)}
+        disabled={disabled}
+        className="w-8 h-8 flex items-center justify-center text-admin-danger hover:text-red-300 transition-colors"
+        title="Confirm delete"
+      >
+        <Check size={size} />
+      </button>
+    );
+    const cancelBtn = (
+      <button
+        key="cancel"
+        onClick={onCancel}
+        className="w-8 h-8 flex items-center justify-center text-admin-text-faint hover:text-admin-text-primary transition-colors"
+        title="Cancel"
+      >
+        <X size={size} />
+      </button>
+    );
     return (
       <div className="flex items-center">
-        <button
-          onClick={() => onConfirmDelete(itemId)}
-          disabled={disabled}
-          className="w-8 h-8 flex items-center justify-center text-admin-danger hover:text-red-300 transition-colors"
-          title="Confirm delete"
-        >
-          <Check size={size} />
-        </button>
-        <button
-          onClick={onCancel}
-          className="w-8 h-8 flex items-center justify-center text-admin-text-faint hover:text-admin-text-primary transition-colors"
-          title="Cancel"
-        >
-          <X size={size} />
-        </button>
+        {cancelFirst ? <>{cancelBtn}{confirmBtn}</> : <>{confirmBtn}{cancelBtn}</>}
       </div>
     );
   }

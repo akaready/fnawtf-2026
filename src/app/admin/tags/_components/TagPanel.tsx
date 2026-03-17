@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X } from 'lucide-react';
 import { PanelDrawer } from '../../_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { AdminCombobox } from '../../_components/AdminCombobox';
 import { SaveDot } from '../../_components/SaveDot';
 import { useAutoSave } from '../../_hooks/useAutoSave';
 import { createTag, renameTag } from '../../actions';
 import type { TagWithCount } from '../../actions';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 
 type TagCategory = 'style' | 'technique' | 'addon' | 'deliverable' | 'project_type' | 'industry';
 
@@ -50,6 +52,26 @@ export function TagPanel({ tag, open, onClose, onCreated, onRenamed }: TagPanelP
   useEffect(() => {
     if (open) setTimeout(() => nameRef.current?.focus(), 200);
   }, [open]);
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!tag?.id) return;
+    const lines: string[] = [];
+    lines.push(`Name: ${tag.name}`);
+    const catLabel = CATEGORY_OPTIONS.find(c => c.id === tag.category)?.label ?? tag.category;
+    lines.push(`Category: ${catLabel}`);
+    lines.push(`Usage Count: ${tag.projectCount} project${tag.projectCount !== 1 ? 's' : ''}`);
+    if (tag.color) lines.push(`Color: ${tag.color}`);
+    setPanelContext({
+      recordType: 'tag',
+      recordId: tag.id,
+      recordLabel: tag.name,
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [tag, setPanelContext]);
 
   // Auto-save for edit mode (rename)
   const { status, trigger, flush, reset } = useAutoSave(
@@ -145,25 +167,11 @@ export function TagPanel({ tag, open, onClose, onCreated, onRenamed }: TagPanelP
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          {isNew ? (
-            <button
-              onClick={() => void handleCreate()}
-              disabled={!name.trim() || creating}
-              className="btn-primary px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {creating ? 'Creating…' : 'Create Tag'}
-            </button>
-          ) : (
-            <button
-              onClick={() => void flush()}
-              disabled={status !== 'pending'}
-              className="btn-primary px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save
-            </button>
-          )}
-        </div>
+        <PanelFooter
+          onSave={isNew ? handleCreate : flush}
+          saveLabel={isNew ? (creating ? 'Creating…' : 'Create Tag') : 'Save'}
+          saveDisabled={isNew ? !name.trim() || creating : status !== 'pending'}
+        />
       </div>
     </PanelDrawer>
   );

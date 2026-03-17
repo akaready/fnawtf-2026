@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Trash2, Save, FileText, ChevronDown, Check } from 'lucide-react';
+import { X, FileText, ChevronDown, Check } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
@@ -9,11 +9,13 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { AdminTabBar } from '@/app/admin/_components/AdminTabBar';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { RichTextToolbar } from '@/app/admin/_components/RichTextToolbar';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import type { ContractTemplateRow, ContractType, MergeFieldDef } from '@/types/contracts';
 import {
@@ -116,10 +118,10 @@ interface Props {
 }
 
 export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted }: Props) {
+  const { setPanelContext } = useChatContext();
   const [template, setTemplate] = useState<ContractTemplateRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   const [name, setName] = useState('');
@@ -241,6 +243,29 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
     autoSave.trigger();
   };
 
+  // Chat panel context
+  useEffect(() => {
+    if (!template?.id) return;
+    const lines: string[] = [];
+    lines.push(`Name: ${name}`);
+    lines.push(`Type: ${TYPE_OPTIONS.find((o) => o.value === contractType)?.label || contractType}`);
+    lines.push(`Status: ${isActive ? 'Active' : 'Inactive'}`);
+    if (description) lines.push(`Description: ${description}`);
+    const editorBody = editor?.getHTML() ?? '';
+    if (editorBody) lines.push(`Body:\n${editorBody}`);
+    if (template.merge_fields && Array.isArray(template.merge_fields) && template.merge_fields.length > 0) {
+      lines.push(`Merge Fields:`);
+      (template.merge_fields as MergeFieldDef[]).forEach((f) => lines.push(`  - {{${f.key}}} — ${f.label} (source: ${f.source})`));
+    }
+    setPanelContext({
+      recordType: 'template',
+      recordId: template.id,
+      recordLabel: name || 'Untitled Template',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [template, name, contractType, isActive, description, editor, setPanelContext]);
+
   const bodyText = editor?.getHTML() ?? '';
   const tokenStatus = validateTokens(bodyText, ALL_PREDEFINED_FIELDS);
 
@@ -357,90 +382,61 @@ export function TemplatePanel({ templateId, open, onClose, onUpdated, onDeleted 
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSave}
-                className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-              >
-                <Save size={14} />
-                Save
-              </button>
-              <div className="relative">
-                <button
-                  onClick={() => setShowStatusDropdown(p => !p)}
-                  className={`${isActive ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
-                >
-                  {isActive ? 'Active' : 'Inactive'}
-                  <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
-                </button>
-                {showStatusDropdown && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
-                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
-                      <button
-                        onClick={() => { setShowStatusDropdown(false); if (!isActive) { setIsActive(true); autoSave.trigger(); } }}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                          isActive ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
-                          Active
-                        </span>
-                        {isActive && <Check size={12} />}
-                      </button>
-                      <button
-                        onClick={() => { setShowStatusDropdown(false); if (isActive) { setIsActive(false); autoSave.trigger(); } }}
-                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                          !isActive ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
-                          Inactive
-                        </span>
-                        {!isActive && <Check size={12} />}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-              <button
-                onClick={() => window.open(`/admin/contracts/templates/${template.id}/preview`, '_blank')}
-                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
-              >
-                <FileText size={14} />
-                View PDF
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              {confirmDelete ? (
-                <>
-                  <span className="text-admin-sm text-admin-danger mr-1">Delete this template?</span>
+          <PanelFooter
+            onSave={handleSave}
+            onDelete={handleDelete}
+            secondaryActions={
+              <>
+                <div className="relative">
                   <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
+                    onClick={() => setShowStatusDropdown(p => !p)}
+                    className={`${isActive ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
                   >
-                    Cancel
+                    {isActive ? 'Active' : 'Inactive'}
+                    <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
                   </button>
-                  <button
-                    onClick={handleDelete}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors"
-                  >
-                    Delete
-                  </button>
-                </>
-              ) : (
+                  {showStatusDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                      <div className="absolute left-0 bottom-full mb-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
+                        <button
+                          onClick={() => { setShowStatusDropdown(false); if (!isActive) { setIsActive(true); autoSave.trigger(); } }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                            isActive ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                            Active
+                          </span>
+                          {isActive && <Check size={12} />}
+                        </button>
+                        <button
+                          onClick={() => { setShowStatusDropdown(false); if (isActive) { setIsActive(false); autoSave.trigger(); } }}
+                          className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                            !isActive ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                            Inactive
+                          </span>
+                          {!isActive && <Check size={12} />}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/50 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
+                  onClick={() => window.open(`/admin/contracts/templates/${template.id}/preview`, '_blank')}
+                  className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
                 >
-                  <Trash2 size={14} />
+                  <FileText size={14} />
+                  View PDF
                 </button>
-              )}
-            </div>
-          </div>
+              </>
+            }
+          />
         </div>
       )}
     </PanelDrawer>

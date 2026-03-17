@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Trash2, User, Building2, LayoutGrid, PenLine, Save } from 'lucide-react';
+import { X, User, Building2, LayoutGrid, PenLine } from 'lucide-react';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { PanelDrawer } from './PanelDrawer';
+import { PanelFooter } from './PanelFooter';
 import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
@@ -44,6 +46,7 @@ export function TestimonialPanel({
   contacts,
   onContactCreated,
 }: Props) {
+  const { setPanelContext } = useChatContext();
   const isNew = !testimonial;
 
   // Local edit state
@@ -53,7 +56,6 @@ export function TestimonialPanel({
   const [displayTitle, setDisplayTitle] = useState('');
   const [clientId, setClientId] = useState<string | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   // Refs for auto-save closure
@@ -98,7 +100,6 @@ export function TestimonialPanel({
     setDisplayTitle(testimonial?.display_title ?? '');
     setClientId(testimonial?.client_id ?? null);
     setProjectId(testimonial?.project_id ?? null);
-    setConfirmDelete(false);
     setConfirmDiscard(false);
     autoSave.reset();
   }, [open, testimonial?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -161,6 +162,28 @@ export function TestimonialPanel({
     await deleteTestimonial(testimonial.id);
     onDeleted(testimonial.id);
   };
+
+  // Chat panel context
+  useEffect(() => {
+    if (!testimonial?.id) return;
+    const lines: string[] = [];
+    if (quote) lines.push(`Quote: ${quote}`);
+    if (contactName) lines.push(`Person: ${contactName}`);
+    if (personTitle) lines.push(`Title: ${personTitle}`);
+    if (displayTitle) lines.push(`Display Title Override: ${displayTitle}`);
+    const linkedClient = clientId ? clients.find((c) => c.id === clientId) : null;
+    if (linkedClient) lines.push(`Company: ${linkedClient.name}`);
+    const linkedProject = projectId ? projects.find((p) => p.id === projectId) : null;
+    if (linkedProject) lines.push(`Project: ${linkedProject.title}`);
+    if ((testimonial as Record<string, unknown>)?.rating != null) lines.push(`Rating: ${String((testimonial as Record<string, unknown>).rating)}`);
+    setPanelContext({
+      recordType: 'testimonial',
+      recordId: testimonial.id,
+      recordLabel: contactName || 'Untitled Testimonial',
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [testimonial, quote, contactName, personTitle, displayTitle, clientId, projectId, clients, projects, setPanelContext]);
 
   const contactOptions = contacts.map((c) => ({
     id: c.id,
@@ -274,46 +297,12 @@ export function TestimonialPanel({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleSave}
-            disabled={!quote.trim()}
-            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Save size={14} />
-            {isNew ? 'Create' : 'Save'}
-          </button>
-        </div>
-        {!isNew && (
-          <div className="flex items-center gap-2">
-            {confirmDelete ? (
-              <>
-                <span className="text-xs text-admin-danger mr-1">Delete?</span>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="px-3 py-1.5 text-xs rounded-lg border border-admin-border text-admin-text-muted hover:text-admin-text-primary transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-admin-danger-bg-strong text-admin-danger border border-admin-danger-border hover:bg-admin-danger-bg-strong transition-colors"
-                >
-                  Delete
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-danger/50 hover:text-admin-danger hover:bg-admin-danger-bg transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <PanelFooter
+        onSave={handleSave}
+        saveLabel={isNew ? 'Create' : 'Save'}
+        saveDisabled={!quote.trim()}
+        onDelete={!isNew ? handleDelete : undefined}
+      />
     </PanelDrawer>
   );
 }

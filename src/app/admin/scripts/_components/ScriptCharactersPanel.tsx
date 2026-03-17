@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react';
-import { Plus, Trash2, Loader2, X, UserCircle, RefreshCw, Pencil, Sparkles, Check, Save } from 'lucide-react';
+import { Plus, Trash2, Loader2, X, UserCircle, RefreshCw, Pencil, Sparkles, Check } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -18,9 +18,11 @@ import {
 } from '@dnd-kit/sortable';
 // @dnd-kit/utilities CSS removed — using raw translate3d to avoid scale distortion
 import { createClient } from '@/lib/supabase/client';
+import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 import { AdminCombobox } from '../../_components/AdminCombobox';
 import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import {
@@ -326,6 +328,41 @@ export function ScriptCharactersPanel({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
+
+  // Chat panel context
+  const { setPanelContext } = useChatContext();
+
+  useEffect(() => {
+    if (!scriptId) return;
+    const lines: string[] = [];
+    lines.push(`Total Characters: ${characters.length}`);
+    characters.forEach(char => {
+      const charCast = castMap[char.id] ?? [];
+      const mentions = countMentions(char.id, beats);
+      lines.push(`\n[${char.name}]`);
+      lines.push(`  Type: ${char.character_type}`);
+      if (char.description) lines.push(`  Description: ${char.description}`);
+      if (char.color) lines.push(`  Color: ${char.color}`);
+      if (mentions > 0) lines.push(`  Mentioned in: ${mentions} beat${mentions !== 1 ? 's' : ''}`);
+      if (charCast.length > 0) {
+        lines.push(`  Cast (${charCast.length}):`);
+        charCast.forEach(c => {
+          const name = `${c.contact.first_name} ${c.contact.last_name}`;
+          const extras: string[] = [];
+          if (c.is_featured) extras.push('featured');
+          if (c.appearance_prompt) extras.push(`appearance: ${c.appearance_prompt.slice(0, 80)}...`);
+          lines.push(`    - ${name}${extras.length ? ` (${extras.join(', ')})` : ''}`);
+        });
+      }
+    });
+    setPanelContext({
+      recordType: 'script-characters',
+      recordId: scriptId,
+      recordLabel: `Characters (${characters.length})`,
+      summary: lines.join('\n'),
+    });
+    return () => setPanelContext(null);
+  }, [scriptId, characters, castMap, beats, setPanelContext]);
 
   // Auto-select first character, or clear if deleted
   useEffect(() => {
@@ -772,13 +809,7 @@ export function ScriptCharactersPanel({
           </div>
         </div>
 
-        {/* Footer action bar */}
-        <div className="flex items-center px-6 py-4 border-t border-admin-border bg-admin-bg-wash">
-          <button onClick={handleClose} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-            <Save size={14} />
-            Save
-          </button>
-        </div>
+        <PanelFooter onSave={handleClose} />
       </div>
     </PanelDrawer>
   );

@@ -1,9 +1,17 @@
+export interface PanelContext {
+  recordType: string;
+  recordId: string;
+  recordLabel: string;
+  summary: string;
+}
+
 export interface Conversation {
   id: string;
   title: string | null;
   model: string;
   created_at: string;
   updated_at: string;
+  panel_context?: PanelContext | null;
 }
 
 export interface Message {
