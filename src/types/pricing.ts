@@ -36,6 +36,7 @@ export interface AddOn {
   tier: 'build' | 'launch' | 'fundraising';
   included?: boolean;
   fundraisingFreebie?: boolean;
+  discountExempt?: boolean;
   perDay?: boolean;
   quantity?: {
     min: number;

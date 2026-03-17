@@ -74,6 +74,7 @@ export function QuoteSummaryCard({ quoteData, budgetInteracted }: {
     fundraising_tier: (quoteData.fundraising_tier as number) || 0,
     defer_payment: false,
     friendly_discount_pct: (quoteData.friendly_discount_pct as number) || 0,
+    additional_discount: 0,
     total_amount: null,
     down_amount: null,
     sort_order: 0,

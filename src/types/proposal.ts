@@ -178,6 +178,7 @@ export interface ProposalQuoteRow {
   fundraising_tier: number;
   defer_payment: boolean;
   friendly_discount_pct: number;
+  additional_discount: number;
   total_amount: number | null;
   down_amount: number | null;
   sort_order: number;

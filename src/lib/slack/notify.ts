@@ -530,6 +530,7 @@ function formatMessage(event: SlackEvent): Block[] {
             fundraising_tier: (q.fundraising_tier as number) || 0,
             defer_payment: false,
             friendly_discount_pct: (q.friendly_discount_pct as number) || 0,
+            additional_discount: 0,
             total_amount: null, down_amount: null, sort_order: 0,
             visible: true, description: null,
             created_at: '', updated_at: '', deleted_at: null, viewer_email: null,

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useTransition, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { motion, LayoutGroup } from 'framer-motion';
 import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, ArrowLeftRight, type LucideIcon } from 'lucide-react';
 import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
@@ -178,6 +177,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         fundraising_tier: 0,
         defer_payment: false,
         friendly_discount_pct: 0,
+        additional_discount: 0,
         total_amount: null,
         down_amount: null,
         description: null,
@@ -189,7 +189,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         selected_addons: {}, slider_values: {}, tier_selections: {},
         location_days: {}, photo_count: 0, crowdfunding_enabled: false,
         crowdfunding_tier: 0, fundraising_enabled: false, fundraising_tier: 0, defer_payment: false,
-        friendly_discount_pct: 0, total_amount: null, down_amount: null,
+        friendly_discount_pct: 0, additional_discount: 0, total_amount: null, down_amount: null,
         sort_order: 0, visible: true, description: null,
         created_at: now, updated_at: now, deleted_at: null, viewer_email: null,
       }]);
@@ -212,6 +212,15 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     startTransition(async () => {
       await saveProposalQuote(proposalId, { ...quote, description: descValue }, quote.id);
       setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
+    });
+  };
+
+  // ── Additional discount save ─────────────────────────────────────────────
+  const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
+    if (amount === (quote.additional_discount ?? 0)) return;
+    startTransition(async () => {
+      await saveProposalQuote(proposalId, { ...quote, additional_discount: amount }, quote.id);
+      setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q)));
     });
   };
 
@@ -263,7 +272,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         selected_addons: {}, slider_values: {}, tier_selections: {},
         location_days: {}, photo_count: 0, crowdfunding_enabled: false,
         crowdfunding_tier: 0, fundraising_enabled: false, fundraising_tier: 0, defer_payment: false,
-        friendly_discount_pct: 0, total_amount: null, down_amount: null,
+        friendly_discount_pct: 0, additional_discount: 0, total_amount: null, down_amount: null,
         sort_order: i, visible: true, description: null,
         created_at: now, updated_at: now, deleted_at: null, viewer_email: null,
       },
@@ -327,14 +336,11 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
       {/* Quote tabs nav — hidden for Scale (custom quotes) */}
       {selectedType === 'scale' ? null : <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        <LayoutGroup>
         {quotes.map((q, i) => {
           const isHidden = q.visible === false;
           return (
-            <motion.div
+            <div
               key={q.id}
-              layout="position"
-              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               onClick={() => handleQuoteSwitch(i)}
               className={`flex items-center rounded-lg cursor-pointer transition-colors ${
                 i === activeQuoteIndex ? 'bg-admin-bg-active' : 'hover:bg-admin-bg-hover'
@@ -349,10 +355,9 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               >
                 {q.label || QUOTE_CONFIG[i]?.defaultLabel || `Option ${i + 1}`}
               </span>
-            </motion.div>
+            </div>
           );
         })}
-        </LayoutGroup>
 
         {/* Right: Swap + Eye + Delete + Add */}
         <div className="ml-auto flex items-center gap-1">
@@ -479,6 +484,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               crowdfundingOverride={crowdfundingEnabled}
               saveRef={embedSaveRef}
               onAnyChange={() => { if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); } }}
+              onAdditionalDiscountChange={(amount) => handleAdditionalDiscountSave(activeQuote, amount)}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
                 const id = await saveProposalQuote(

@@ -61,6 +61,8 @@ interface Props {
   typeOverride?: PricingType;
   /** Controlled crowdfunding override from parent (admin PricingTab). */
   crowdfundingOverride?: boolean;
+  /** Called when admin changes the additional discount amount */
+  onAdditionalDiscountChange?: (amount: number) => void;
   /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
   onAnyChange?: () => void;
   /** Standalone mode — no server saves, emits state via onStateChange instead */
@@ -88,7 +90,7 @@ function sectionsForType(type: PricingType): Set<string> {
   return s;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAnyChange, standalone, onStateChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, onAnyChange, standalone, onStateChange }: Props) {
   const [selectedType, setSelectedType] = useState<PricingType>(
     () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
@@ -616,6 +618,8 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               hideGetStarted
               hideSaveQuote={true}
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
+              additionalDiscount={initialQuote?.additional_discount ?? 0}
+              onAdditionalDiscountChange={onAdditionalDiscountChange}
               crowdfundingApproved={crowdfundingApproved || crowdfundingOverride}
               crowdfundingDeferred={crowdfundingDeferred}
               hideCrowdfundingToggle={true}

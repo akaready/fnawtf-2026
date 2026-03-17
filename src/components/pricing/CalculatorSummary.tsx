@@ -49,6 +49,10 @@ interface CalculatorSummaryProps {
   allQuotes?: ProposalQuoteRow[];
   /** Which quote the live calculator state represents */
   activeQuoteId?: string;
+  /** Admin-set flat dollar discount (not shown on pricing page) */
+  additionalDiscount?: number;
+  /** Called when admin changes the additional discount amount */
+  onAdditionalDiscountChange?: (amount: number) => void;
   /** Called whenever the user moves the friendly discount slider */
   onFriendlyDiscountChange?: (pct: number) => void;
   /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
@@ -484,6 +488,9 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
   const leftHasFriendly = left.friendlyDiscountPct > 0;
   const rightHasFriendly = right.friendlyDiscountPct > 0;
   const eitherHasFriendly = leftHasFriendly || rightHasFriendly;
+  const leftHasAdditional = left.additionalDiscount > 0;
+  const rightHasAdditional = right.additionalDiscount > 0;
+  const eitherHasAdditional = leftHasAdditional || rightHasAdditional;
   const leftHasCrowd = left.crowdfundingEnabled && left.crowdDiscount > 0;
   const rightHasCrowd = right.crowdfundingEnabled && right.crowdDiscount > 0;
   const eitherHasCrowd = leftHasCrowd || rightHasCrowd;
@@ -536,6 +543,19 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
           ) : (
             <div className="flex justify-between gap-1 invisible" aria-hidden>
               <span className="truncate">Friendly discount</span>
+              <span className="flex-shrink-0">—</span>
+            </div>
+          )
+        )}
+        {eitherHasAdditional && (
+          leftHasAdditional ? (
+            <div className="flex justify-between gap-1">
+              <span className="text-green-600 truncate">Additional discounts</span>
+              <span className="text-green-600 flex-shrink-0">-{formatPrice(left.additionalDiscount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-1 invisible" aria-hidden>
+              <span className="truncate">Additional discounts</span>
               <span className="flex-shrink-0">—</span>
             </div>
           )
@@ -614,6 +634,19 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
             </div>
           )
         )}
+        {eitherHasAdditional && (
+          rightHasAdditional ? (
+            <div className="flex justify-between gap-1">
+              <span className="text-green-600 truncate">Additional discounts</span>
+              <span className="text-green-600 flex-shrink-0">-{formatPrice(right.additionalDiscount)}</span>
+            </div>
+          ) : (
+            <div className="flex justify-between gap-1 invisible" aria-hidden>
+              <span className="truncate">Additional discounts</span>
+              <span className="flex-shrink-0">—</span>
+            </div>
+          )
+        )}
         {eitherHasCrowd && (
           rightHasCrowd ? (
             <div className="flex justify-between gap-1">
@@ -666,6 +699,8 @@ export function CalculatorSummary({
   isReadOnly,
   isLocked,
   initialFriendlyDiscountPct,
+  additionalDiscount: additionalDiscountProp,
+  onAdditionalDiscountChange,
   allQuotes,
   activeQuoteId,
   onFriendlyDiscountChange,
@@ -823,14 +858,16 @@ export function CalculatorSummary({
     ? Math.round(discountableTotal * (friendlyDiscountPercent / 100))
     : 0;
 
-  const rawTotal = subtotalWithFee - crowdfundingDiscount - friendlyDiscount;
-  const total = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
+  const additionalDiscountAmount = additionalDiscountProp ?? 0;
+  const rawTotal = subtotalWithFee - crowdfundingDiscount - friendlyDiscount - additionalDiscountAmount;
+  const hasAnyDiscount = friendlyDiscount > 0 || crowdfundingDiscount > 0 || additionalDiscountAmount > 0;
+  const total = hasAnyDiscount ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
   const downPercent = fundraisingEnabled
     ? (fundraisingTierIndex === 4 ? 0.2 : 0.4)
     : (effectiveCrowdfundingEnabled && deferPayment) ? 0.6 : 0.4;
   const rawDown = Math.round(total * downPercent);
-  const downAmount = (friendlyDiscount > 0 || crowdfundingDiscount > 0) ? Math.ceil(rawDown / 50) * 50 : rawDown;
+  const downAmount = hasAnyDiscount ? Math.ceil(rawDown / 50) * 50 : rawDown;
 
   // ── Fundraising balance breakdown ──
   const fundTier = fundraisingTiers[fundraisingTierIndex];
@@ -858,6 +895,7 @@ export function CalculatorSummary({
     friendlyDiscount,
     crowdfundingEnabled,
     crowdDiscount: crowdfundingDiscount,
+    additionalDiscount: additionalDiscountAmount,
     total,
     downAmount,
     downPercent,
@@ -986,6 +1024,26 @@ export function CalculatorSummary({
                   deferPayment={deferPayment}
                   onToggle={() => { if (onInteraction?.()) return; setDeferPayment(!deferPayment); }}
                 />
+              )}
+
+              {/* Additional discount — admin-only flat $ amount */}
+              {onAdditionalDiscountChange && (
+                <div className="pt-2 border-t border-purple-800/40">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Additional Discount</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
+                    <input
+                      type="number"
+                      key={`addl-discount-${activeQuoteId}`}
+                      defaultValue={additionalDiscountAmount || ''}
+                      onBlur={(e) => { const v = parseInt(e.target.value) || 0; onAdditionalDiscountChange(v); }}
+                      placeholder="0"
+                      min={0}
+                      step={50}
+                      className="w-full pl-7 pr-3 py-2 bg-muted/20 border border-border rounded-lg text-foreground font-mono text-sm focus:outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -1315,6 +1373,14 @@ export function CalculatorSummary({
                 <div className="flex justify-between">
                   <span className="text-green-600">Friendly discount ({friendlyDiscountPercent}%)</span>
                   <span className="text-green-600">-{formatPrice(friendlyDiscount)}</span>
+                </div>
+              )}
+
+              {/* Additional discount (admin-set flat $) */}
+              {additionalDiscountAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-green-600">Additional discounts</span>
+                  <span className="text-green-600">-{formatPrice(additionalDiscountAmount)}</span>
                 </div>
               )}
             </div>

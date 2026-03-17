@@ -82,7 +82,7 @@ export function calcTierTotal(
       }
 
       total += linePrice;
-      if (addOn.category === 'CAST + CREW') castCrewTotal += linePrice;
+      if (addOn.category === 'CAST + CREW' || addOn.discountExempt) castCrewTotal += linePrice;
       if (addOn.category === 'PRIORITY') priorityTotal += linePrice;
 
       let label = addOn.name;
@@ -116,6 +116,7 @@ export interface QuoteColumnData {
   friendlyDiscount: number;
   crowdfundingEnabled: boolean;
   crowdDiscount: number;
+  additionalDiscount: number;
   total: number;
   downAmount: number;
   deferPayment: boolean;
@@ -176,8 +177,9 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
     ? Math.round((subtotalWithOverhead - discountExempt) * (quote.friendly_discount_pct / 100))
     : 0;
 
-  const rawTotal = subtotalWithOverhead - crowdDiscount - friendlyDiscount;
-  const hasDiscount = crowdDiscount > 0 || friendlyDiscount > 0;
+  const additionalDiscount = quote.additional_discount ?? 0;
+  const rawTotal = subtotalWithOverhead - crowdDiscount - friendlyDiscount - additionalDiscount;
+  const hasDiscount = crowdDiscount > 0 || friendlyDiscount > 0 || additionalDiscount > 0;
   const total = hasDiscount ? Math.ceil(rawTotal / 50) * 50 : rawTotal;
 
   const fundTierIdx = isFundraising ? (quote.fundraising_tier ?? 0) : 0;
@@ -211,6 +213,7 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
     friendlyDiscount,
     crowdfundingEnabled: quote.crowdfunding_enabled,
     crowdDiscount,
+    additionalDiscount,
     total,
     downAmount,
     downPercent: downPct,

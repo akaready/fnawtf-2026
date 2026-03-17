@@ -169,6 +169,16 @@ export const launchAddOns: AddOn[] = [
     quantity: { min: 1, max: 5, default: 1, unit: 'sessions' },
   },
   {
+    id: 'launch-line-producer',
+    name: 'Line Producer',
+    price: 1000,
+    priceSuffix: '/day',
+    priceDisplay: '$1,000/day',
+    tier: 'launch',
+    category: 'CAST + CREW',
+    perDay: true,
+  },
+  {
     id: 'launch-photographer',
     name: 'Photographer',
     price: 2500,
@@ -305,6 +315,17 @@ export const launchAddOns: AddOn[] = [
     perDay: true,
   },
   // ── POST PRODUCTION ──
+  {
+    id: 'launch-assistant-editor',
+    name: 'Assistant Editor',
+    price: 100,
+    priceSuffix: '/hr',
+    priceDisplay: '$100/hr',
+    tier: 'launch',
+    category: 'POST PRODUCTION',
+    discountExempt: true,
+    quantity: { min: 1, max: 40, default: 8, unit: 'hours' },
+  },
   {
     id: 'launch-additional-social',
     name: 'Additional social edits',
