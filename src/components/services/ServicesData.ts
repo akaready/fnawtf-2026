@@ -113,7 +113,7 @@ export const CROWDFUNDING = {
 };
 
 export const FUNDRAISING = {
-  title: 'Fundraising',
+  title: 'Private Equity',
   tagline: 'Investor-grade video, deferred payment.',
   description:
     'For founders raising capital we offer a conversational pitch video package that introduces you and your company to investors. Includes a private website with your scripted video, deck, and calendar link. Only 20% down, with the balance due after you raise.',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, useInView } from 'framer-motion';
 import { ServicesTags } from '@/components/services/ServicesTags';
@@ -8,6 +8,8 @@ import { ProjectReel, ServicesProjectGrid } from '@/components/services/ProjectR
 import { PHASES, CROWDFUNDING, FUNDRAISING, ServicesProjectData } from '@/components/services/ServicesData';
 import { NavButton } from '@/components/layout/NavButton';
 import { CalBookingButton } from '@/components/cal/CalBookingButton';
+import gsap from 'gsap';
+import confetti from 'canvas-confetti';
 
 type ServiceProj = { id: string; title: string; subtitle?: string; slug: string; thumbnail_url?: string; category?: string };
 
@@ -117,6 +119,62 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
   const isCrowdfundingActive = useInView(crowdfundingRef, { once: false, margin: '0px 0px -60% 0px' });
   const isFundraisingActive = useInView(fundraisingRef, { once: false, margin: '0px 0px -60% 0px' });
 
+  // $40M count-up + confetti
+  const statRef = useRef<HTMLDivElement>(null);
+  const statNumRef = useRef<HTMLSpanElement>(null);
+  const statInView = useInView(statRef, { once: true, margin: '0px 0px -20% 0px' });
+  const hasAnimatedStat = useRef(false);
+
+  useEffect(() => {
+    if (!statInView || hasAnimatedStat.current || !statNumRef.current) return;
+    hasAnimatedStat.current = true;
+
+    const obj = { value: 0 };
+    gsap.to(obj, {
+      value: 40,
+      duration: 1,
+      ease: 'power2.out',
+      onUpdate: () => {
+        if (statNumRef.current) {
+          statNumRef.current.textContent = `$${Math.round(obj.value)}M+`;
+        }
+      },
+      onComplete: () => {
+        if (!statNumRef.current) return;
+        statNumRef.current.textContent = '$40M+';
+
+        // Create a temporary canvas over the number for precise confetti origin
+        const rect = statNumRef.current.getBoundingClientRect();
+        const size = 600;
+        const canvas = document.createElement('canvas');
+        canvas.style.position = 'fixed';
+        canvas.style.left = `${rect.left + rect.width / 2 - size / 2}px`;
+        canvas.style.top = `${rect.top + rect.height / 2 - size / 2}px`;
+        canvas.style.width = `${size}px`;
+        canvas.style.height = `${size}px`;
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '9999';
+        canvas.width = size * 2;
+        canvas.height = size * 2;
+        document.body.appendChild(canvas);
+
+        const pop = confetti.create(canvas, { resize: false });
+        pop({
+          particleCount: 40,
+          spread: 70,
+          startVelocity: 25,
+          gravity: 0.8,
+          scalar: 1.2,
+          ticks: 100,
+          origin: { x: 0.5, y: 0.5 },
+          disableForReducedMotion: true,
+        })?.then(() => {
+          canvas.remove();
+        });
+      },
+    });
+  }, [statInView]);
+
   return (
     <div
       ref={containerRef}
@@ -168,7 +226,7 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
       ))}
 
       {/* ── Additional Services ───────────────────── */}
-      <section ref={additionalRef} className="pt-12 pb-16 lg:pt-20 lg:pb-32 px-6 lg:px-16">
+      <section ref={additionalRef} className="pt-16 pb-16 lg:pt-28 lg:pb-32 px-6 lg:px-16">
         <div className="max-w-7xl mx-auto">
           <motion.p
             className="text-xs tracking-[0.4em] uppercase font-mono mb-6"
@@ -179,13 +237,27 @@ export function ServicesLayout({ projects }: { projects: ServicesProjectData }) 
           </motion.p>
 
           <motion.h2
-            className="font-display font-bold mb-8 lg:mb-16 leading-[0.9]"
+            className="font-display font-bold mb-6 leading-[0.9]"
             style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)' }}
             animate={{ color: isAdditionalActive ? '#a14dfd' : '#ffffff' }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
           >
-            Flexible Engagements
+            Fundraising
           </motion.h2>
+
+          <div
+            ref={statRef}
+            className="mb-10 lg:mb-16"
+          >
+            <p
+              className="font-display font-bold leading-[0.95] text-white/30"
+              style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.5rem)' }}
+            >
+              Our work has helped raise{' '}
+              <span ref={statNumRef} className="text-white tabular-nums">$0M+</span>
+              {' '}for founders.
+            </p>
+          </div>
 
           <div className="space-y-10 lg:space-y-16">
             {/* Crowdfunding */}
