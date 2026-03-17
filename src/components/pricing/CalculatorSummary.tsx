@@ -789,12 +789,15 @@ export function CalculatorSummary({
   const fundraisingAddOnTotal = fundraisingResult?.total ?? 0;
   const allAddOnTotal = buildAddOnTotal + launchAddOnTotal + fundraisingAddOnTotal;
   const totalCastCrew = (launchResult?.castCrewTotal ?? 0);
+  const totalPriority = (buildResult?.priorityTotal ?? 0) + (launchResult?.priorityTotal ?? 0) + (fundraisingResult?.priorityTotal ?? 0);
 
   const baseTotal = fundraisingEnabled ? fundraisingBase : (buildBase + launchBase);
   const subtotal = baseTotal + allAddOnTotal;
   const hasAnyAddOns = allAddOnTotal > 0;
-  const overheadAmount = Math.round(subtotal * 0.1);
-  const overhead = hasAnyAddOns ? overheadAmount : 0;
+  // Priority Scheduling is exempt from overhead
+  const overheadBase = subtotal - totalPriority;
+  const overheadAmount = Math.round(overheadBase * 0.1);
+  const overhead = (hasAnyAddOns && overheadBase > baseTotal) ? overheadAmount : 0;
 
   const subtotalWithOverhead = subtotal + overhead;
 
@@ -808,7 +811,7 @@ export function CalculatorSummary({
   const deferredFee = Math.round(subtotalWithOverhead * (deferredFeePercent / 100));
   const subtotalWithFee = subtotalWithOverhead + deferredFee;
 
-  const discountableTotal = subtotalWithFee - totalCastCrew;
+  const discountableTotal = subtotalWithFee - totalCastCrew - totalPriority;
 
   const crowdfundingTierDiscounts = [0, 10, 20, 30];
   const crowdfundingDiscount = effectiveCrowdfundingEnabled
@@ -1213,9 +1216,9 @@ export function CalculatorSummary({
             return nameSet.has(name) ? 'text-foreground' : 'text-cyan-400';
           }
 
-          const userBuildItems = buildResult?.items ?? [];
-          const userLaunchItems = (launchResult?.items ?? []).filter(i => !i.name.includes('Production Days'));
-          const userFundItems = fundraisingResult?.items ?? [];
+          const userBuildItems = (buildResult?.items ?? []).filter(i => i.name !== 'Priority Scheduling');
+          const userLaunchItems = (launchResult?.items ?? []).filter(i => !i.name.includes('Production Days') && i.name !== 'Priority Scheduling');
+          const userFundItems = (fundraisingResult?.items ?? []).filter(i => i.name !== 'Priority Scheduling');
 
           return (
             <div className="space-y-2 mb-4 font-mono text-sm">
@@ -1282,6 +1285,14 @@ export function CalculatorSummary({
                   <span className="text-muted-foreground/60">Waived</span>
                 )}
               </div>
+
+              {/* Priority Scheduling (combined across tiers) */}
+              {totalPriority > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Priority Scheduling</span>
+                  <span className={isRecommended ? 'text-white/25' : 'text-foreground'}>{formatPrice(totalPriority)}</span>
+                </div>
+              )}
 
               {/* Deferred payment fee */}
               {effectiveCrowdfundingEnabled && deferPayment && deferredFeePercent > 0 && (

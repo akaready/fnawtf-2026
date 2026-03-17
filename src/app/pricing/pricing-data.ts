@@ -97,6 +97,16 @@ export const buildAddOns: AddOn[] = [
     tier: 'build',
     category: 'ADD-ONS',
   },
+  // ── PRIORITY SCHEDULING ──
+  {
+    id: 'priority-scheduling-build',
+    name: 'Priority Scheduling',
+    price: 3500,
+    priceDisplay: '$3,500',
+    description: 'Front-of-line scheduling and dedicated creative access',
+    tier: 'build',
+    category: 'PRIORITY',
+  },
 ];
 
 export const launchAddOns: AddOn[] = [
@@ -322,6 +332,16 @@ export const launchAddOns: AddOn[] = [
     tier: 'launch',
     category: 'POST PRODUCTION',
     slider: { min: 2500, max: 5000, step: 500, default: 2500 },
+  },
+  // ── PRIORITY SCHEDULING ──
+  {
+    id: 'priority-scheduling-launch',
+    name: 'Priority Scheduling',
+    price: 3500,
+    priceDisplay: '$3,500',
+    description: 'Front-of-line scheduling and dedicated creative access',
+    tier: 'launch',
+    category: 'PRIORITY',
   },
 ];
 

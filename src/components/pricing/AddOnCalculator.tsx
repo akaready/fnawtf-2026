@@ -1117,7 +1117,7 @@ export function AddOnCalculator() {
 
   // Category collapse state (for sub-headers within Launch)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['ADD-ONS', 'CAST + CREW', 'RENTALS + TECHNIQUES', 'POST PRODUCTION'])
+    new Set(['ADD-ONS', 'CAST + CREW', 'RENTALS + TECHNIQUES', 'POST PRODUCTION', 'PRIORITY'])
   );
   // Tier toggle state (e.g. lighting kit basic/premium)
   const [tierSelections, setTierSelections] = useState<Map<string, 'basic' | 'premium'>>(

@@ -26,6 +26,7 @@ export function calcTierTotal(
 ) {
   let total = 0;
   let castCrewTotal = 0;
+  let priorityTotal = 0;
   const items: { name: string; price: number }[] = [];
 
   for (const addOn of addOns) {
@@ -82,6 +83,7 @@ export function calcTierTotal(
 
       total += linePrice;
       if (addOn.category === 'CAST + CREW') castCrewTotal += linePrice;
+      if (addOn.category === 'PRIORITY') priorityTotal += linePrice;
 
       let label = addOn.name;
       if (qty > 1) label += ` x${qty}`;
@@ -91,7 +93,7 @@ export function calcTierTotal(
     }
   }
 
-  return { total, castCrewTotal, items };
+  return { total, castCrewTotal, priorityTotal, items };
 }
 
 // ── Compute totals from a stored ProposalQuoteRow ────────────────────────
@@ -153,20 +155,25 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
 
   const addOnTotal = (buildResult?.total ?? 0) + (launchResult?.total ?? 0) + (fundResult?.total ?? 0);
   const castCrewTotal = launchResult?.castCrewTotal ?? 0;
+  const priorityTotal = (buildResult?.priorityTotal ?? 0) + (launchResult?.priorityTotal ?? 0) + (fundResult?.priorityTotal ?? 0);
   const baseTotal = isFundraising ? fundBase : (buildBase + launchBase);
   const subtotal = baseTotal + addOnTotal;
   const hasAddOns = addOnTotal > 0;
-  const overhead = hasAddOns ? Math.round(subtotal * 0.1) : 0;
+  // Priority Scheduling is exempt from overhead — compute on subtotal minus priority fees
+  const overheadBase = subtotal - priorityTotal;
+  const overhead = (hasAddOns && overheadBase > baseTotal) ? Math.round(overheadBase * 0.1) : 0;
   const subtotalWithOverhead = subtotal + overhead;
 
+  // Priority Scheduling + Cast & Crew are exempt from all discounts
+  const discountExempt = castCrewTotal + priorityTotal;
   const crowdTierDiscounts = [0, 10, 20, 30];
   const crowdDiscount = quote.crowdfunding_enabled
-    ? Math.round((subtotalWithOverhead - castCrewTotal) * (crowdTierDiscounts[quote.crowdfunding_tier] / 100))
+    ? Math.round((subtotalWithOverhead - discountExempt) * (crowdTierDiscounts[quote.crowdfunding_tier] / 100))
     : 0;
 
   const showFriendly = !quote.crowdfunding_enabled && !isFundraising;
   const friendlyDiscount = showFriendly && quote.friendly_discount_pct > 0
-    ? Math.round((subtotalWithOverhead - castCrewTotal) * (quote.friendly_discount_pct / 100))
+    ? Math.round((subtotalWithOverhead - discountExempt) * (quote.friendly_discount_pct / 100))
     : 0;
 
   const rawTotal = subtotalWithOverhead - crowdDiscount - friendlyDiscount;
