@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X } from 'lucide-react';
+import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X, Expand, Download } from 'lucide-react';
 import { deleteStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
+import { StoryboardLightbox } from './StoryboardLightbox';
+import { buildStoryboardFilename, downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 
 interface Props {
@@ -28,6 +30,9 @@ interface Props {
   locations: ScriptLocationRow[];
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
+  scriptTitle: string;
+  scriptVersion: number;
+  beatLabel: string;
 }
 
 export function ScriptStoryboardCell({
@@ -50,8 +55,12 @@ export function ScriptStoryboardCell({
   locations,
   castMap,
   referenceMap,
+  scriptTitle,
+  scriptVersion,
+  beatLabel,
 }: Props) {
   const [generating, setGenerating] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -173,6 +182,7 @@ export function ScriptStoryboardCell({
   // With image
   if (frame) {
     return (
+      <>
       <div className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative">
         <div className="mx-2 my-2">
           <img
@@ -183,6 +193,11 @@ export function ScriptStoryboardCell({
         </div>
         {/* Hover actions */}
         <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded">
+          <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
+          <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
+            const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
+            void downloadSingleImage(frame.image_url, filename);
+          }} />
           <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
           <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
           <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={handleDelete} />
@@ -195,6 +210,15 @@ export function ScriptStoryboardCell({
           onChange={(e) => handleUpload(e.target.files)}
         />
       </div>
+      {lightboxOpen && (
+        <StoryboardLightbox
+          imageUrl={frame.image_url}
+          label={`Scene ${scene.sceneNumber} — Beat ${beatLabel}`}
+          filename={buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel)}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+      </>
     );
   }
 

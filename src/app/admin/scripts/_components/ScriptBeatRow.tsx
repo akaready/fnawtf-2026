@@ -39,6 +39,8 @@ interface Props {
   onCancelGeneration?: () => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
+  scriptTitle: string;
+  scriptVersion: number;
 }
 
 function beatLetter(n: number): string {
@@ -84,6 +86,8 @@ export function ScriptBeatRow({
   onCancelGeneration,
   castMap,
   referenceMap,
+  scriptTitle,
+  scriptVersion,
 }: Props) {
   const {
     attributes,
@@ -243,6 +247,9 @@ export function ScriptBeatRow({
               locations={locations}
               castMap={castMap}
               referenceMap={referenceMap}
+              scriptTitle={scriptTitle}
+              scriptVersion={scriptVersion}
+              beatLabel={beatLetter(beatNumber)}
             />
           )}
         </div>

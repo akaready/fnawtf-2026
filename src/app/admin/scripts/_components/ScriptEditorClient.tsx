@@ -748,6 +748,8 @@ export function ScriptEditorClient({
                 referenceMap={referenceMap}
                 toolbarPortalRef={toolbarSlotRef}
                 onReorderScenes={handleReorderScenes}
+                scriptTitle={script.title}
+                scriptVersion={script.major_version}
               />
             ) : (
               <ScriptScratchPad

@@ -2,7 +2,8 @@
 
 import { useRef, useEffect, useState, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check, GripVertical, Download } from 'lucide-react';
+import { downloadStoryboardZip, buildFullZipName, buildStoryboardFilename } from '@/lib/scripts/downloadStoryboards';
 import {
   DndContext,
   closestCenter,
@@ -54,6 +55,8 @@ interface Props {
   referenceMap?: Record<string, CharacterReferenceRow[]>;
   toolbarPortalRef?: React.RefObject<HTMLDivElement | null>;
   onReorderScenes?: (orderedIds: string[]) => void;
+  scriptTitle: string;
+  scriptVersion: number;
 }
 
 export function ScriptEditorCanvas({
@@ -85,6 +88,8 @@ export function ScriptEditorCanvas({
   referenceMap,
   toolbarPortalRef,
   onReorderScenes,
+  scriptTitle,
+  scriptVersion,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -410,6 +415,24 @@ export function ScriptEditorCanvas({
     generateForScenes(scenes, 'all');
   }, [scenes, generateForScenes]);
 
+  const handleDownloadAll = useCallback(() => {
+    const frames = storyboardFrames.map(frame => {
+      let filename = `${frame.beat_id}.jpg`;
+      for (const scene of scenes) {
+        const beatIdx = scene.beats.findIndex(b => b.id === frame.beat_id);
+        if (beatIdx !== -1) {
+          let letter = '';
+          let n = beatIdx + 1;
+          while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+          filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, letter);
+          break;
+        }
+      }
+      return { imageUrl: frame.image_url, filename };
+    });
+    void downloadStoryboardZip(frames, buildFullZipName(scriptTitle, scriptVersion));
+  }, [storyboardFrames, scenes, scriptTitle, scriptVersion]);
+
   const handleGenerateScene = useCallback((sceneId: string) => {
     const scene = scenes.find(s => s.id === sceneId);
     if (!scene) return;
@@ -547,13 +570,24 @@ export function ScriptEditorCanvas({
                     <X size={10} />
                   </button>
                 ) : (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
-                    title="Generate all storyboards"
-                  >
-                    <Sparkles size={10} />
-                  </button>
+                  <>
+                    {storyboardFrames.length > 0 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
+                        className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                        title="Download all storyboards"
+                      >
+                        <Download size={10} />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                      title="Generate all storyboards"
+                    >
+                      <Sparkles size={10} />
+                    </button>
+                  </>
                 )
               )}
               {idx < visibleColumns.length - 1 && (
@@ -692,6 +726,8 @@ export function ScriptEditorCanvas({
                         locations={locations}
                         castMap={castMap}
                         referenceMap={referenceMap}
+                        scriptTitle={scriptTitle}
+                        scriptVersion={scriptVersion}
                       />
                     ))}
                   </SortableContext>
