@@ -319,6 +319,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             forceAdditionalDiscount={proposal.force_additional_discount}
             clientAdditionalDiscount={proposal.client_additional_discount}
             forcePriorityScheduling={proposal.force_priority_scheduling}
+            hideDeferredPayment={proposal.hide_deferred_payment}
             slideRef={investmentRef}
             viewerName={viewerName}
             viewerEmail={viewerEmail}

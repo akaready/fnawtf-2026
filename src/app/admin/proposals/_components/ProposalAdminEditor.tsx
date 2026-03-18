@@ -378,6 +378,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             initialForceAdditionalDiscount={proposal.force_additional_discount}
             initialClientAdditionalDiscount={proposal.client_additional_discount}
             initialForcePriorityScheduling={proposal.force_priority_scheduling}
+            initialHideDeferredPayment={proposal.hide_deferred_payment}
             onProposalTypeChange={(type) => setProposalType(type)}
             onDirty={handleDirty}
           />

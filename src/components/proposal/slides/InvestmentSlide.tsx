@@ -45,6 +45,7 @@ interface Props {
   forceAdditionalDiscount?: boolean;
   clientAdditionalDiscount?: number;
   forcePriorityScheduling?: boolean;
+  hideDeferredPayment?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
   viewerEmail?: string | null;
@@ -61,6 +62,7 @@ export function InvestmentSlide({
   forceAdditionalDiscount,
   clientAdditionalDiscount,
   forcePriorityScheduling,
+  hideDeferredPayment,
   slideRef,
   viewerName,
   viewerEmail,
@@ -387,6 +389,7 @@ export function InvestmentSlide({
               forceAdditionalDiscount={forceAdditionalDiscount}
               clientAdditionalDiscount={clientAdditionalDiscount}
               forcePriorityScheduling={forcePriorityScheduling}
+              hideDeferredPayment={hideDeferredPayment}
             />
             {/* Unlock glow burst */}
             <AnimatePresence>

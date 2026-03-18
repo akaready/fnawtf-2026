@@ -67,6 +67,7 @@ export interface ProposalRow {
   force_additional_discount: boolean;
   client_additional_discount: number;
   force_priority_scheduling: boolean;
+  hide_deferred_payment: boolean;
   prepared_date: string | null;
   created_by: string | null;
   created_at: string;

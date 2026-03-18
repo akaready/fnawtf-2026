@@ -73,6 +73,7 @@ interface PricingTabProps {
   initialForceAdditionalDiscount?: boolean;
   initialClientAdditionalDiscount?: number;
   initialForcePriorityScheduling?: boolean;
+  initialHideDeferredPayment?: boolean;
   onProposalTypeChange?: (type: ProposalType) => void;
   onDirty?: () => void;
 }
@@ -155,7 +156,7 @@ const labelCls = 'admin-label';
 const inputCls = 'admin-input w-full';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, initialForceAdditionalDiscount, initialClientAdditionalDiscount, initialForcePriorityScheduling, onProposalTypeChange, onDirty }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, initialForceAdditionalDiscount, initialClientAdditionalDiscount, initialForcePriorityScheduling, initialHideDeferredPayment, onProposalTypeChange, onDirty }: PricingTabProps,
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
@@ -275,6 +276,15 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     setForcePriorityScheduling(force);
     startTransition(async () => {
       await updateProposal(proposalId, { force_priority_scheduling: force });
+    });
+  };
+
+  const [hideDeferredPayment, setHideDeferredPayment] = useState(initialHideDeferredPayment ?? false);
+
+  const handleHideDeferredPaymentChange = (hide: boolean) => {
+    setHideDeferredPayment(hide);
+    startTransition(async () => {
+      await updateProposal(proposalId, { hide_deferred_payment: hide });
     });
   };
 
@@ -483,6 +493,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             className={inputCls + ' resize-none leading-relaxed flex-1'}
           />
           <div className="space-y-2 flex-shrink-0 pt-1">
+            <label className={labelCls}>Options</label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -490,7 +501,16 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 onChange={(e) => handlePricingNotesToggle(e.target.checked)}
                 className="accent-admin-accent"
               />
-              <span className="text-admin-sm text-admin-text-muted">Show notes at the top of the proposal</span>
+              <span className="text-admin-sm text-admin-text-muted">Show notes at top</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!hideDeferredPayment}
+                onChange={(e) => handleHideDeferredPaymentChange(!e.target.checked)}
+                className="accent-admin-accent"
+              />
+              <span className="text-admin-sm text-admin-text-muted">Show pay after campaign</span>
             </label>
             <div className="flex items-center gap-2">
               <input

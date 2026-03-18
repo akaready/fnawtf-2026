@@ -69,6 +69,8 @@ interface Props {
   clientAdditionalDiscount?: number;
   /** Force priority scheduling on client quotes */
   forcePriorityScheduling?: boolean;
+  /** Hide the deferred payment option */
+  hideDeferredPayment?: boolean;
   /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
   onAnyChange?: () => void;
   /** Standalone mode — no server saves, emits state via onStateChange instead */
@@ -96,7 +98,7 @@ function sectionsForType(type: PricingType): Set<string> {
   return s;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, clientAdditionalDiscount, forcePriorityScheduling, onAnyChange, standalone, onStateChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, clientAdditionalDiscount, forcePriorityScheduling, hideDeferredPayment, onAnyChange, standalone, onStateChange }: Props) {
   const [selectedType, setSelectedType] = useState<PricingType>(
     () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
@@ -651,6 +653,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
               additionalDiscount={effectiveAdditionalDiscount}
               onAdditionalDiscountChange={onAdditionalDiscountChange}
+              hideDeferredPayment={hideDeferredPayment}
               crowdfundingApproved={crowdfundingApproved || crowdfundingOverride}
               crowdfundingDeferred={crowdfundingDeferred}
               hideCrowdfundingToggle={true}

@@ -53,6 +53,8 @@ interface CalculatorSummaryProps {
   additionalDiscount?: number;
   /** Called when admin changes the additional discount amount */
   onAdditionalDiscountChange?: (amount: number) => void;
+  /** Hide the deferred payment option for crowdfunding */
+  hideDeferredPayment?: boolean;
   /** Called whenever the user moves the friendly discount slider */
   onFriendlyDiscountChange?: (pct: number) => void;
   /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
@@ -739,6 +741,7 @@ export function CalculatorSummary({
   initialFriendlyDiscountPct,
   additionalDiscount: additionalDiscountProp,
   onAdditionalDiscountChange,
+  hideDeferredPayment,
   allQuotes,
   activeQuoteId,
   onFriendlyDiscountChange,
@@ -1056,8 +1059,8 @@ export function CalculatorSummary({
                 />
               )}
 
-              {/* Deferred payment — shown when crowdfunding is active */}
-              {effectiveCrowdfundingEnabled && (
+              {/* Deferred payment — shown when crowdfunding is active and not hidden */}
+              {effectiveCrowdfundingEnabled && !hideDeferredPayment && (
                 <DeferredPaymentCheckbox
                   deferPayment={deferPayment}
                   onToggle={() => { if (onInteraction?.()) return; setDeferPayment(!deferPayment); }}
