@@ -147,7 +147,7 @@ export async function getProposalData(slug: string) {
     .select('*')
     .eq('proposal_id', p.id)
     .is('deleted_at', null)
-    .order('created_at');
+    .order('sort_order');
 
   const { data: milestones } = await supabase
     .from('proposal_milestones')

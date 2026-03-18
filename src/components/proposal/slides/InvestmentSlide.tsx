@@ -247,7 +247,7 @@ export function InvestmentSlide({
                 }`}>
                   <button
                     onClick={() => setActiveQuoteId(fq.id)}
-                    className={`w-full px-4 py-4 transition-colors duration-300 cursor-pointer text-left ${
+                    className={`w-full h-full px-4 py-4 transition-colors duration-300 cursor-pointer text-left ${
                       activeQuoteId === fq.id
                         ? 'bg-purple-950 text-white'
                         : 'bg-purple-950/30 text-purple-300/70 hover:text-white hover:bg-purple-950/60'
