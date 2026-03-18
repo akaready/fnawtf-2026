@@ -454,9 +454,13 @@ function SaveQuoteButton({ onSave, saving, saved }: { onSave: () => void; saving
 // ── Aligned two-column comparison renderer ──────────────────────────────
 
 function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: QuoteColumnData; right: QuoteColumnData; rightHeader?: React.ReactNode; rightDimmed?: boolean }) {
-  // Strip quantity/day suffixes so "Talent x4" and "Talent x3" match
+  // Strip quantity/day suffixes so "Talent x4" and "Talent x3 days" match
+  // Also normalize Premium/Basic variants to match as same item
   function baseName(name: string): string {
-    return name.replace(/ x\d+[d]?$/, '').replace(/ \(D[\d,]+\)$/, '');
+    return name
+      .replace(/ x\d+(?:\.\d+)?(?:\s*(?:hrs|hours|days|d))?$/, '')
+      .replace(/ \(D[\d,]+\)$/, '')
+      .replace(/^(Premium|Basic)\s+/, '');
   }
 
   type Item = { name: string; price: number };

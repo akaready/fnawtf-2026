@@ -87,13 +87,14 @@ export function calcTierTotal(
 
       let label = addOn.name;
       if (qty > 1) {
-        const unitAbbr = addOn.quantity?.unit === 'hours' ? 'hrs'
-          : addOn.quantity?.unit === 'people' ? ''
-          : addOn.quantity?.unit === 'days' ? 'd'
-          : '';
-        label += ` x${qty}${unitAbbr}`;
+        const unit = addOn.quantity?.unit;
+        if (unit && unit !== 'people') {
+          label += ` x${qty} ${unit === 'hours' ? 'hrs' : unit}`;
+        } else {
+          label += ` x${qty}`;
+        }
       }
-      if (addOn.perDay && totalDays > 1) label += ` x${totalDays}d`;
+      if (addOn.perDay && totalDays > 1) label += ` x${totalDays} days`;
 
       items.push({ name: label, price: linePrice });
     }
