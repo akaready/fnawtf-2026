@@ -490,7 +490,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 onChange={(e) => handlePricingNotesToggle(e.target.checked)}
                 className="accent-admin-accent"
               />
-              <span className="text-admin-sm text-admin-text-muted">Show notes</span>
+              <span className="text-admin-sm text-admin-text-muted">Show notes at the top of the proposal</span>
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -499,7 +499,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 onChange={(e) => handleForceAdditionalDiscountChange(e.target.checked)}
                 className="accent-admin-accent"
               />
-              <span className="text-admin-sm text-admin-text-muted">Discount on client quotes</span>
+              <span className="text-admin-sm text-admin-text-muted">Add'l discount</span>
               <div className="relative">
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-admin-text-muted font-mono text-xs">$</span>
                 <input

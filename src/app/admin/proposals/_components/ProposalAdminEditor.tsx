@@ -141,6 +141,11 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   }, [onClose]);
 
   const handleTabChange = useCallback((tab: TabId) => {
+    // Flush any pending debounced saves from the current tab before switching
+    void Promise.all([
+      welcomeRef.current?.save(),
+      approachRef.current?.save(),
+    ].filter(Boolean));
     setActiveTab(tab);
   }, []);
 
