@@ -338,8 +338,13 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const handleLabelSave = (quote: ProposalQuoteRow, label: string) => {
     if (label === quote.label) return;
     startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...quote, label }, quote.id);
-      setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, label } : q)));
+      setQuotes((prev) => {
+        const current = prev.find((q) => q.id === quote.id);
+        if (current) {
+          void saveProposalQuote(proposalId, { ...current, label }, quote.id);
+        }
+        return prev.map((q) => (q.id === quote.id ? { ...q, label } : q));
+      });
     });
   };
 
@@ -348,8 +353,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     if (description === (quote.description ?? '')) return;
     const descValue = description.trim() || null;
     startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...quote, description: descValue }, quote.id);
-      setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
+      // Use latest quote from state to avoid stale data overwriting calculator changes
+      setQuotes((prev) => {
+        const current = prev.find((q) => q.id === quote.id);
+        if (current) {
+          void saveProposalQuote(proposalId, { ...current, description: descValue }, quote.id);
+        }
+        return prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q));
+      });
     });
   };
 
@@ -357,17 +368,27 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
     if (amount === (quote.additional_discount ?? 0)) return;
     startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...quote, additional_discount: amount }, quote.id);
-      setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q)));
+      setQuotes((prev) => {
+        const current = prev.find((q) => q.id === quote.id);
+        if (current) {
+          void saveProposalQuote(proposalId, { ...current, additional_discount: amount }, quote.id);
+        }
+        return prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q));
+      });
     });
   };
 
-  // ── Visibility toggle (not for Recommended) ─────────────────────────────
+  // ── Visibility toggle ──────────────────────────────────────────────────
   const handleVisibilityToggle = (quote: ProposalQuoteRow) => {
     const visible = !quote.visible;
-    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, visible } : q)));
     startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...quote, visible }, quote.id);
+      setQuotes((prev) => {
+        const current = prev.find((q) => q.id === quote.id);
+        if (current) {
+          void saveProposalQuote(proposalId, { ...current, visible }, quote.id);
+        }
+        return prev.map((q) => (q.id === quote.id ? { ...q, visible } : q));
+      });
     });
   };
 
