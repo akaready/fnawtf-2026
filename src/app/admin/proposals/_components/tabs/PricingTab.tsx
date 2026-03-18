@@ -1,8 +1,23 @@
 'use client';
 
-import { useState, useTransition, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, ArrowLeftRight, type LucideIcon } from 'lucide-react';
-import { saveProposalQuote, deleteProposalQuote, updateProposal } from '@/app/admin/actions';
+import { useState, useTransition, useEffect, useRef, useId, forwardRef, useImperativeHandle } from 'react';
+import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, GripVertical, type LucideIcon } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { saveProposalQuote, deleteProposalQuote, reorderProposalQuotes, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
@@ -64,6 +79,72 @@ const QUOTE_CONFIG = [
   { defaultLabel: 'Option B',    canHide: true  },
 ] as const;
 
+
+// ── Sortable quote tab ──────────────────────────────────────────────────
+
+function SortableQuoteTab({
+  quote,
+  index,
+  isActive,
+  onSelect,
+}: {
+  quote: ProposalQuoteRow;
+  index: number;
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: quote.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const isHidden = quote.visible === false;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={onSelect}
+      className={`group/tab flex items-center gap-1 rounded-lg cursor-pointer transition-colors ${
+        isActive ? 'bg-admin-bg-active' : 'hover:bg-admin-bg-hover'
+      }`}
+    >
+      {/* Number badge → drag handle on hover */}
+      <span
+        {...attributes}
+        {...listeners}
+        className="w-6 h-6 flex items-center justify-center ml-1.5 cursor-grab"
+      >
+        <span className="group-hover/tab:hidden text-xs font-mono font-bold text-admin-text-ghost">
+          {index + 1}
+        </span>
+        <GripVertical
+          size={13}
+          className="hidden group-hover/tab:block text-admin-text-muted hover:text-admin-text-primary"
+        />
+      </span>
+      <span
+        className={`pr-3 py-1.5 text-sm font-medium transition-colors ${
+          isHidden
+            ? isActive ? 'text-admin-text-dim' : 'text-admin-text-ghost'
+            : isActive ? 'text-admin-text-primary' : 'text-admin-text-dim hover:text-admin-text-secondary'
+        }`}
+      >
+        {quote.label || QUOTE_CONFIG[index]?.defaultLabel || `Option ${index + 1}`}
+      </span>
+    </div>
+  );
+}
 
 const labelCls = 'admin-label';
 const inputCls = 'admin-input w-full';
@@ -288,23 +369,32 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     setConfirmDeleteId(null);
   };
 
-  // ── Swap the two non-recommended quotes ────────────────────────────────
-  const handleSwapQuotes = async () => {
-    if (quotes.length < 3) return;
-    const a = quotes[1];
-    const b = quotes[2];
-    await Promise.all([
-      saveProposalQuote(proposalId, { ...a, sort_order: b.sort_order }, a.id),
-      saveProposalQuote(proposalId, { ...b, sort_order: a.sort_order }, b.id),
-    ]);
-    setQuotes((prev) => {
-      const next = [...prev];
-      next[1] = { ...b, sort_order: a.sort_order };
-      next[2] = { ...a, sort_order: b.sort_order };
-      return next;
+  // ── Drag-reorder quotes ────────────────────────────────────────────────
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const dndId = useId();
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = quotes.findIndex((q) => q.id === active.id);
+    const newIndex = quotes.findIndex((q) => q.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(quotes, oldIndex, newIndex);
+    setQuotes(reordered);
+
+    // Follow the active quote to its new position
+    if (activeQuoteIndex === oldIndex) {
+      setActiveQuoteIndex(newIndex);
+    } else if (oldIndex < activeQuoteIndex && newIndex >= activeQuoteIndex) {
+      setActiveQuoteIndex(activeQuoteIndex - 1);
+    } else if (oldIndex > activeQuoteIndex && newIndex <= activeQuoteIndex) {
+      setActiveQuoteIndex(activeQuoteIndex + 1);
+    }
+
+    startTransition(async () => {
+      await reorderProposalQuotes(reordered.map((q) => q.id));
     });
-    if (activeQuoteIndex === 1) setActiveQuoteIndex(2);
-    else if (activeQuoteIndex === 2) setActiveQuoteIndex(1);
   };
 
   return (
@@ -336,58 +426,35 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
       {/* Quote tabs nav — hidden for Scale (custom quotes) */}
       {selectedType === 'scale' ? null : <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        {quotes.map((q, i) => {
-          const isHidden = q.visible === false;
-          return (
-            <div
-              key={q.id}
-              onClick={() => handleQuoteSwitch(i)}
-              className={`flex items-center rounded-lg cursor-pointer transition-colors ${
-                i === activeQuoteIndex ? 'bg-admin-bg-active' : 'hover:bg-admin-bg-hover'
-              }`}
-            >
-              <span
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  isHidden
-                    ? i === activeQuoteIndex ? 'text-admin-text-dim' : 'text-admin-text-ghost'
-                    : i === activeQuoteIndex ? 'text-admin-text-primary' : 'text-admin-text-dim hover:text-admin-text-secondary'
-                }`}
-              >
-                {q.label || QUOTE_CONFIG[i]?.defaultLabel || `Option ${i + 1}`}
-              </span>
-            </div>
-          );
-        })}
+        <DndContext id={dndId} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={quotes.map((q) => q.id)} strategy={horizontalListSortingStrategy}>
+            {quotes.map((q, i) => (
+              <SortableQuoteTab
+                key={q.id}
+                quote={q}
+                index={i}
+                isActive={i === activeQuoteIndex}
+                onSelect={() => handleQuoteSwitch(i)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
 
-        {/* Right: Swap + Eye + Delete + Add */}
+        {/* Right: Eye + Delete + Add */}
         <div className="ml-auto flex items-center gap-1">
-          {/* Swap button — only when 2 non-recommended quotes exist */}
-          {quotes.length === 3 && (
-            <button
-              onClick={handleSwapQuotes}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
-              title="Swap quote order"
-            >
-              <ArrowLeftRight size={13} />
-            </button>
-          )}
-
-          {/* Eye toggle — for non-recommended quotes */}
-          {activeQuoteIndex > 0 && activeQuote && (
+          {/* Eye toggle */}
+          {activeQuote && quotes.length > 1 && (
             <button
               onClick={() => handleVisibilityToggle(activeQuote)}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                activeQuote.visible === false
-                  ? 'text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover'
-                  : 'text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover'
-              }`}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-secondary hover:bg-admin-bg-hover transition-colors"
               title={activeQuote.visible === false ? 'Show quote to client' : 'Hide quote from client'}
             >
               {activeQuote.visible === false ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
           )}
 
-          {activeQuoteIndex > 0 && activeQuote && (
+          {/* Delete — available when more than 1 quote */}
+          {activeQuote && quotes.length > 1 && (
             <>
               {confirmDeleteId === activeQuote.id ? (
                 <>
