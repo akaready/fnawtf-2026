@@ -12,6 +12,7 @@ import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { ChatProvider, useChatContext, CHAT_MIN, CHAT_MAX } from './chat/ChatContext';
 import { ChatWidget } from './chat/ChatWidget';
 import { ChatPanel } from './chat/ChatPanel';
+import { ToastProvider } from './AdminToast';
 
 interface Props {
   children: ReactNode;
@@ -21,18 +22,20 @@ interface Props {
 export function AdminShell({ children, userEmail }: Props) {
   return (
     <ThemeProvider>
-      <Suspense fallback={null}>
-        <ChatProvider>
-          <AdminShellInner userEmail={userEmail}>{children}</AdminShellInner>
-        </ChatProvider>
-      </Suspense>
+      <ToastProvider>
+        <Suspense fallback={null}>
+          <ChatProvider>
+            <AdminShellInner userEmail={userEmail}>{children}</AdminShellInner>
+          </ChatProvider>
+        </Suspense>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
 
 function AdminShellInner({ children, userEmail }: Props) {
   const { theme, toggleTheme } = useTheme();
-  const { isOpen, isSidebarMode, chatWidth, setChatWidth } = useChatContext();
+  const { isOpen, isSidebarMode, chatWidth, setChatWidth, isDragging, setIsDragging } = useChatContext();
   const chatSidebarOpen = isSidebarMode && isOpen;
   const pathname = usePathname();
   const router = useRouter();
@@ -43,22 +46,24 @@ function AdminShellInner({ children, userEmail }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
+  const draggingRef = useRef(false);
   const logoRef = useRef<HTMLAnchorElement>(null);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    isDragging.current = true;
+    draggingRef.current = true;
+    setIsDragging(true);
     const startX = e.clientX;
     const startW = chatWidth;
 
     const onMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
+      if (!draggingRef.current) return;
       const delta = startX - ev.clientX;
       setChatWidth(Math.min(CHAT_MAX, Math.max(CHAT_MIN, startW + delta)));
     };
     const onUp = () => {
-      isDragging.current = false;
+      draggingRef.current = false;
+      setIsDragging(false);
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.body.style.cursor = '';
@@ -68,7 +73,7 @@ function AdminShellInner({ children, userEmail }: Props) {
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
-  }, [chatWidth]);
+  }, [chatWidth, setIsDragging]);
 
   // Apply saved design token overrides from style guide
   useEffect(() => {
@@ -417,7 +422,7 @@ function AdminShellInner({ children, userEmail }: Props) {
         className="flex-shrink-0 h-full overflow-hidden relative z-[120]"
         style={{
           width: chatSidebarOpen ? chatWidth : 0,
-          transition: isDragging.current ? 'none' : 'width 300ms ease-in-out',
+          transition: isDragging ? 'none' : 'width 300ms ease-in-out',
         }}
       >
         {isSidebarMode && (

@@ -17,7 +17,7 @@ interface PanelDrawerProps {
  * Use this as the outer wrapper for all record panels (CompanyPanel, ProjectPanel, etc.).
  */
 export function PanelDrawer({ open, onClose, width = 'w-[480px]', level = 1, children }: PanelDrawerProps) {
-  const { isSidebarMode, isOpen: chatOpen, chatWidth } = useChatContext();
+  const { isSidebarMode, isOpen: chatOpen, chatWidth, isDragging } = useChatContext();
   const rightOffset = open && isSidebarMode && chatOpen ? chatWidth : 0;
 
   const backdropZ = level === 2 ? 'z-[110]' : 'z-[100]';
@@ -45,7 +45,7 @@ export function PanelDrawer({ open, onClose, width = 'w-[480px]', level = 1, chi
         style={{
           right: rightOffset,
           maxWidth: rightOffset > 0 ? `calc(100vw - ${rightOffset}px - 3.5rem)` : undefined,
-          transition: 'right 300ms ease-in-out, transform 200ms, max-width 300ms ease-in-out',
+          transition: isDragging ? 'none' : 'right 300ms ease-in-out, transform 200ms, max-width 300ms ease-in-out',
         }}
       >
         {children}

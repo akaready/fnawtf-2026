@@ -43,6 +43,8 @@ interface ChatContextValue extends ChatState {
   setChatWidth: (width: number) => void;
   panelContext: PanelContext | null;
   setPanelContext: (context: PanelContext | null) => void;
+  isDragging: boolean;
+  setIsDragging: (dragging: boolean) => void;
 }
 
 const ChatCtx = createContext<ChatContextValue | null>(null);
@@ -72,6 +74,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const abortRef = useRef<AbortController | null>(null);
   const [chatWidth, setChatWidth] = useState(400);
   const [panelContext, setPanelContext] = useState<PanelContext | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const supabase = createClient();
 
@@ -330,6 +333,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setChatWidth,
         panelContext,
         setPanelContext,
+        isDragging,
+        setIsDragging,
       }}
     >
       {children}
