@@ -482,42 +482,40 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
       </div>
 
       {/* Pricing notes + proposal-level toggles */}
-      <div className="px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0">
-        <div className="flex gap-6 mt-1">
-          <div className="flex-1">
-            <label className={labelCls}>Notes</label>
-            <textarea
-              defaultValue={initialPricingNotes ?? ''}
-              onBlur={(e) => handlePricingNotesSave(e.target.value)}
-              placeholder="Common notes shown above all quote options..."
-              rows={4}
-              className={inputCls + ' resize-none leading-relaxed mt-1'}
-            />
-          </div>
-          <div className="flex-shrink-0">
-            <label className={labelCls}>Options</label>
-            <div className="mt-1 flex flex-col gap-1.5">
-              <label className="flex items-center gap-2 h-6 cursor-pointer">
-                <input type="checkbox" checked={showPricingNotes} onChange={(e) => handlePricingNotesToggle(e.target.checked)} className="accent-admin-accent" />
-                <span className="text-admin-sm text-admin-text-muted">Show notes at top</span>
-              </label>
-              <label className="flex items-center gap-2 h-6 cursor-pointer">
-                <input type="checkbox" checked={!hideDeferredPayment} onChange={(e) => handleHideDeferredPaymentChange(!e.target.checked)} className="accent-admin-accent" />
-                <span className="text-admin-sm text-admin-text-muted">Show pay after campaign</span>
-              </label>
-              <label className="flex items-center gap-2 h-6 cursor-pointer">
-                <input type="checkbox" checked={forceAdditionalDiscount} onChange={(e) => handleForceAdditionalDiscountChange(e.target.checked)} className="accent-admin-accent" />
-                <span className="text-admin-sm text-admin-text-muted">Add'l discount</span>
-                <div className="relative" onClick={(e) => e.preventDefault()}>
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-admin-text-muted font-mono text-xs">$</span>
-                  <input type="number" defaultValue={clientAdditionalDiscount || ''} onBlur={(e) => handleClientAdditionalDiscountChange(parseInt(e.target.value) || 0)} placeholder="0" min={0} step={50} disabled={!forceAdditionalDiscount} className="w-20 h-6 pl-5 pr-2 bg-admin-bg-base border border-admin-border rounded-admin-sm text-admin-text-primary font-mono text-admin-sm disabled:opacity-40 disabled:cursor-not-allowed" />
-                </div>
-              </label>
-              <label className="flex items-center gap-2 h-6 cursor-pointer">
-                <input type="checkbox" checked={forcePriorityScheduling} onChange={(e) => handleForcePrioritySchedulingChange(e.target.checked)} className="accent-admin-accent" />
-                <span className="text-admin-sm text-admin-text-muted">Priority scheduling on client quotes</span>
-              </label>
-            </div>
+      <div className="grid grid-cols-2 gap-4 px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0">
+        <div>
+          <label className={labelCls}>Notes</label>
+          <textarea
+            defaultValue={initialPricingNotes ?? ''}
+            onBlur={(e) => handlePricingNotesSave(e.target.value)}
+            placeholder="Common notes shown above all quote options..."
+            rows={4}
+            className={inputCls + ' resize-none leading-relaxed mt-1'}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Options</label>
+          <div className="mt-1 flex flex-col gap-1.5">
+            <label className="flex items-center gap-2 h-6 cursor-pointer">
+              <input type="checkbox" checked={showPricingNotes} onChange={(e) => handlePricingNotesToggle(e.target.checked)} className="accent-admin-accent" />
+              <span className="text-admin-sm text-admin-text-muted">Show notes at top</span>
+            </label>
+            <label className="flex items-center gap-2 h-6 cursor-pointer">
+              <input type="checkbox" checked={!hideDeferredPayment} onChange={(e) => handleHideDeferredPaymentChange(!e.target.checked)} className="accent-admin-accent" />
+              <span className="text-admin-sm text-admin-text-muted">Show pay after campaign</span>
+            </label>
+            <label className="flex items-center gap-2 h-6 cursor-pointer">
+              <input type="checkbox" checked={forceAdditionalDiscount} onChange={(e) => handleForceAdditionalDiscountChange(e.target.checked)} className="accent-admin-accent" />
+              <span className="text-admin-sm text-admin-text-muted">Add'l discount</span>
+              <div className="relative" onClick={(e) => e.preventDefault()}>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-admin-text-muted font-mono text-xs">$</span>
+                <input type="number" defaultValue={clientAdditionalDiscount || ''} onBlur={(e) => handleClientAdditionalDiscountChange(parseInt(e.target.value) || 0)} placeholder="0" min={0} step={50} disabled={!forceAdditionalDiscount} className="w-20 h-6 pl-5 pr-2 bg-admin-bg-base border border-admin-border rounded-admin-sm text-admin-text-primary font-mono text-admin-sm disabled:opacity-40 disabled:cursor-not-allowed" />
+              </div>
+            </label>
+            <label className="flex items-center gap-2 h-6 cursor-pointer">
+              <input type="checkbox" checked={forcePriorityScheduling} onChange={(e) => handleForcePrioritySchedulingChange(e.target.checked)} className="accent-admin-accent" />
+              <span className="text-admin-sm text-admin-text-muted">Priority scheduling on client quotes</span>
+            </label>
           </div>
         </div>
       </div>
