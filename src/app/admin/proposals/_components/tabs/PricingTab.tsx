@@ -194,6 +194,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const isDirtyRef = useRef(false);
   const readyForDirtyRef = useRef(false);
   const embedSaveRef = useRef<ProposalCalculatorSaveHandle | null>(null);
+  const descRef = useRef<HTMLTextAreaElement>(null);
+  const labelRef = useRef<HTMLInputElement>(null);
 
   // Only accept dirty signals after mount settles (avoids StrictMode double-fire)
   useEffect(() => {
@@ -204,6 +206,22 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   useImperativeHandle(ref, () => ({
     get isDirty() { return isDirtyRef.current; },
     save: async () => {
+      // Flush description + label from DOM (blur may not have fired)
+      const currentQuote = quotesRef.current[activeQuoteIndex];
+      if (currentQuote) {
+        const fields: Record<string, unknown> = {};
+        if (descRef.current) {
+          const desc = descRef.current.value.trim() || null;
+          if (desc !== (currentQuote.description ?? null)) fields.description = desc;
+        }
+        if (labelRef.current) {
+          const label = labelRef.current.value;
+          if (label !== currentQuote.label) fields.label = label;
+        }
+        if (Object.keys(fields).length > 0) {
+          await updateQuoteFields(currentQuote.id, fields);
+        }
+      }
       await Promise.all([
         embedSaveRef.current?.saveNow(),
         selectedType ? updateProposal(proposalId, { proposal_type: selectedType }) : Promise.resolve(),
@@ -603,6 +621,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             <div>
               <label className={labelCls}>Quote label</label>
               <input
+                ref={labelRef}
                 type="text"
                 defaultValue={activeQuote.label}
                 key={`label-${activeQuote.id}`}
@@ -618,6 +637,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 Quote description
               </label>
               <textarea
+                ref={descRef}
                 key={`desc-${activeQuote.id}`}
                 defaultValue={activeQuote.description ?? ''}
                 onBlur={(e) => handleDescSave(activeQuote, e.target.value)}
