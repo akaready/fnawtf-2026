@@ -5,6 +5,7 @@
 **ZERO new UI patterns.** Every UI element MUST reuse an existing pattern from the codebase. Before writing ANY UI code, find an existing instance of the same interaction in another admin page and copy it exactly. If you cannot find a precedent, ASK the user before inventing anything.
 
 This is not a suggestion — it is the highest-priority rule in this file. Violations include:
+
 - Custom text links ("Remove", "Delete", "Clear") instead of `TwoStateDeleteButton`
 - Custom inline styles, one-off hover effects, or ad-hoc button classes
 - Placing controls in non-standard positions (e.g., delete in a header instead of next to the item)
@@ -12,6 +13,7 @@ This is not a suggestion — it is the highest-priority rule in this file. Viola
 - Building a new component when an existing shared component does the job
 
 ### Mandatory Pre-Flight Checklist (before every UI change)
+
 1. **Delete/remove action?** → `TwoStateDeleteButton`, positioned next to the item it deletes. Never in headers, never as text links.
 2. **Button?** → Must be `btn-primary`, `btn-secondary`, `btn-ghost`, `btn-ghost-danger`, or `btn-ghost-add`. No custom button styles.
 3. **Dropdown/select?** → `AdminCombobox`. Never native `<select>` or custom dropdowns.
@@ -29,34 +31,34 @@ All admin UI colors and typography MUST use the design token system defined in `
 
 ### Color Classes
 
-| Category | Prefix | Examples |
-|----------|--------|----------|
-| Backgrounds | `bg-admin-bg-*` | `bg-admin-bg-base`, `bg-admin-bg-overlay`, `bg-admin-bg-hover` |
-| Borders | `border-admin-border-*` | `border-admin-border`, `border-admin-border-subtle` |
-| Text | `text-admin-text-*` | `text-admin-text-primary`, `text-admin-text-muted`, `text-admin-text-faint` |
-| Status | `text-admin-danger`, `bg-admin-success-bg` | See full token list in globals.css |
-| Hover | `hover:bg-admin-bg-hover` | Standard hover state |
-| Active | `bg-admin-bg-active` | Selected/active state |
-| Toolbar ROYGBIV | `text-admin-toolbar-*` | `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, `violet` |
+| Category        | Prefix                                     | Examples                                                                    |
+| --------------- | ------------------------------------------ | --------------------------------------------------------------------------- |
+| Backgrounds     | `bg-admin-bg-*`                            | `bg-admin-bg-base`, `bg-admin-bg-overlay`, `bg-admin-bg-hover`              |
+| Borders         | `border-admin-border-*`                    | `border-admin-border`, `border-admin-border-subtle`                         |
+| Text            | `text-admin-text-*`                        | `text-admin-text-primary`, `text-admin-text-muted`, `text-admin-text-faint` |
+| Status          | `text-admin-danger`, `bg-admin-success-bg` | See full token list in globals.css                                          |
+| Hover           | `hover:bg-admin-bg-hover`                  | Standard hover state                                                        |
+| Active          | `bg-admin-bg-active`                       | Selected/active state                                                       |
+| Toolbar ROYGBIV | `text-admin-toolbar-*`                     | `red`, `orange`, `yellow`, `green`, `blue`, `indigo`, `violet`              |
 
 ### Typography Classes
 
-| Category | Prefix | Examples |
-|----------|--------|----------|
-| Font family | `font-admin-*` | `font-admin-display`, `font-admin-body`, `font-admin-mono` |
-| Font size | `text-admin-*` | `text-admin-xs`, `text-admin-sm`, `text-admin-base`, `text-admin-lg` |
+| Category    | Prefix         | Examples                                                             |
+| ----------- | -------------- | -------------------------------------------------------------------- |
+| Font family | `font-admin-*` | `font-admin-display`, `font-admin-body`, `font-admin-mono`           |
+| Font size   | `text-admin-*` | `text-admin-xs`, `text-admin-sm`, `text-admin-base`, `text-admin-lg` |
 
 ### Border Radius Tokens
 
 All buttons, inputs, and containers use CSS variable-based radius via `var(--admin-radius-*)`:
 
-| Token | Default | Tailwind |
-|-------|---------|----------|
-| `--admin-radius-sm` | 0.375rem | `rounded-admin-sm` |
-| `--admin-radius-md` | 0.5rem | `rounded-admin-md` |
-| `--admin-radius-lg` | 0.75rem | `rounded-admin-lg` |
-| `--admin-radius-xl` | 1rem | `rounded-admin-xl` |
-| `--admin-radius-full` | 9999px | `rounded-admin-full` |
+| Token                 | Default  | Tailwind             |
+| --------------------- | -------- | -------------------- |
+| `--admin-radius-sm`   | 0.375rem | `rounded-admin-sm`   |
+| `--admin-radius-md`   | 0.5rem   | `rounded-admin-md`   |
+| `--admin-radius-lg`   | 0.75rem  | `rounded-admin-lg`   |
+| `--admin-radius-xl`   | 1rem     | `rounded-admin-xl`   |
+| `--admin-radius-full` | 9999px   | `rounded-admin-full` |
 
 `.btn-primary`, `.btn-secondary`, `.btn-danger`, and `.admin-input` already use `var(--admin-radius-md)`.
 
@@ -83,16 +85,19 @@ Do not mix color families (e.g., don't use `green-400` when `admin-success` exis
 ## Button Classes
 
 ### Solid Buttons
+
 - `.btn-primary` — Main action (Save, Create). Always last/rightmost in action groups.
 - `.btn-secondary` — Secondary actions (Cancel, Export, Reset).
 - `.btn-danger` — Destructive actions. Always `inline-flex items-center gap-2` (icon beside text, never stacked).
 
 ### Ghost / Icon Buttons
+
 - `.btn-ghost` — Default grey hover for standard actions (approve, edit, settings).
 - `.btn-ghost-danger` — Red hover for destructive actions (delete, remove, trash).
 - `.btn-ghost-add` — Inverted (white bg + black icon) for add/new/plus actions.
 
 ### Button Sizing Convention
+
 - Header actions: `px-4 py-2.5 text-sm` (secondary), `px-5 py-2.5 text-sm` (primary)
 - Inline/compact: `px-3 py-2 text-xs`
 - Icon-only: `w-10 h-10` (ghost variants)
@@ -113,20 +118,24 @@ Every admin page follows this structure:
 ```
 
 ### AdminPageHeader (`_components/AdminPageHeader.tsx`)
+
 - Fixed `h-[7rem]` header with title, subtitle, search, and action buttons
 - Actions go right-to-left: secondary actions first, primary action last (far-right)
 - Uses `@container` queries for responsive stacking
 
 ### Toolbar Row
+
 - `h-[3rem] bg-admin-bg-inset border-b border-admin-border flex-shrink-0`
 - Use `ToolbarButton` from `_components/table/TableToolbar.tsx` for toolbar actions
 - Each toolbar button gets a ROYGBIV color: `blue`, `green`, `orange`, `red`, `purple`, `neutral`
 - Popovers use `ToolbarPopover` for consistent dropdown panels
 
 ### Selection-Dependent Actions
+
 ALL batch/selection actions (delete, merge, publish, etc.) render in the **toolbar row** — never in floating bars, page headers, or other locations. For table views, use `batchActions` prop on `AdminDataTable`. For list/card views, use `ToolbarButton` in the view's toolbar div. Never put selection-dependent buttons in `AdminPageHeader`.
 
 ### Content Area
+
 - `flex-1 overflow-y-auto` — only the content area scrolls, never the page
 - Admin scrollbar: `admin-scrollbar` (always visible) or `admin-scrollbar-auto` (on hover)
 
@@ -160,6 +169,7 @@ All record panels (CompanyPanel, ProjectPanel, ScriptStylePanel, etc.) use `Pane
 ## UI Patterns
 
 ### Progressive Disclosure (group hover)
+
 Hide secondary actions until the user hovers. Use scoped Tailwind groups to prevent leakage:
 
 ```tsx
@@ -173,6 +183,7 @@ Hide secondary actions until the user hovers. Use scoped Tailwind groups to prev
 Use scoped names like `group/beat`, `group/ref`, `group/row`, `group/img` — never bare `group` when nesting.
 
 ### Two-State Deletion
+
 All delete actions must use two-state confirmation:
 
 ```
@@ -183,6 +194,7 @@ State 2: Check (danger) + X (cancel) icons → Check executes delete, X cancels
 Use `.btn-ghost-danger` for the trash button. Never delete on single click.
 
 ### Inline Edit Toggle
+
 Switch between view and edit mode inline:
 
 ```
@@ -191,6 +203,7 @@ Edit mode: Input fields + Done (success) + Cancel (ghost) buttons
 ```
 
 ### Left-Border Color Coding
+
 Use `border-l` with semantic colors to categorize columns or content types:
 
 ```
@@ -201,13 +214,16 @@ border-l-[var(--admin-success)]  — Reference/supporting (green)
 ```
 
 ### Single-Select Fields (AdminCombobox)
+
 ALL single-select dropdowns use `AdminCombobox` from `_components/AdminCombobox.tsx`. Never use native `<select>`, local combobox components, or `AdminSelect` for single-select fields.
 
 Two modes:
+
 - **Record fields** (client, contact, project): `searchable={true}` (default) — type to search, provide `onCreate` for "Add new"
 - **Enum fields** (status, type, phase): `searchable={false}` — click to see all options, chevron indicator, no typing
 
 Other props:
+
 - `nullable` (default true) — optional fields show "None" to clear; `nullable={false}` for required enums
 - Keyboard navigable (arrow keys, enter, escape)
 - Options format: `{ id: string; label: string }[]`
@@ -215,6 +231,7 @@ Other props:
 For multi-select, continue using `AdminSelect` from `styleguide/_components/AdminSelect.tsx`.
 
 ### Logo Inversion (Poolside/Light Mode)
+
 Add `admin-logo` class to all client logo `<img>` tags. This opts them out of the CSS counter-inversion so white PNGs appear black in light mode.
 
 ---
@@ -232,6 +249,7 @@ Add `admin-logo` class to all client logo `<img>` tags. This opts them out of th
 ## Verification
 
 After any admin UI changes, run:
+
 - `npx tsc --noEmit` — must pass clean (pre-existing errors in scripts/intake are OK)
 - Check the style guide at `/admin/styleguide` for visual consistency
 - Use `/review-admin` skill to check design system compliance
@@ -243,6 +261,8 @@ After any admin UI changes, run:
 For ANY GitHub operation (PRs, issues, reviews, comments, checks), ALWAYS load the GitHub MCP tools first by calling `ToolSearch` with query `+github` before falling back to `gh` CLI. The GitHub MCP tools are deferred and must be loaded each session.
 
 Preference order:
+
 1. **GitHub MCP tools** (`mcp__plugin_github_github__*`) — use `ToolSearch` query `+github` to load them, then use for creating PRs, listing issues, adding comments, searching code, etc.
 2. **`gh` CLI** — fallback only if MCP tools fail or for local git operations (push, pull, branch)
 3. **Never** use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single tool or `gh` command can do the job
+4. When committing, never sign commits as "Co-Authored with Claude. Always use your absurdist chosen name, Gerald. 😉

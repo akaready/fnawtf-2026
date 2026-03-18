@@ -194,8 +194,43 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const isDirtyRef = useRef(false);
   const readyForDirtyRef = useRef(false);
   const embedSaveRef = useRef<ProposalCalculatorSaveHandle | null>(null);
-  const descRef = useRef<HTMLTextAreaElement>(null);
-  const labelRef = useRef<HTMLInputElement>(null);
+
+  // ── Controlled description + label state ────────────────────────────────
+  const [editDesc, setEditDesc] = useState('');
+  const [editLabel, setEditLabel] = useState('');
+  const editDescRef = useRef('');
+  const editLabelRef = useRef('');
+  const descDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const descMountedRef = useRef(false);
+
+  // Sync controlled state when active quote changes
+  const activeQuote = quotes[activeQuoteIndex] ?? null;
+  const activeQuoteId = activeQuote?.id;
+  useEffect(() => {
+    if (!activeQuote) return;
+    const d = activeQuote.description ?? '';
+    const l = activeQuote.label;
+    setEditDesc(d);
+    setEditLabel(l);
+    editDescRef.current = d;
+    editLabelRef.current = l;
+    descMountedRef.current = false; // skip first debounce fire after sync
+  }, [activeQuoteId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced save when description or label changes
+  useEffect(() => {
+    if (!descMountedRef.current) { descMountedRef.current = true; return; }
+    if (!activeQuoteId) return;
+    if (descDebounceRef.current) clearTimeout(descDebounceRef.current);
+    const qid = activeQuoteId;
+    descDebounceRef.current = setTimeout(() => {
+      void updateQuoteFields(qid, {
+        description: editDescRef.current.trim() || null,
+        label: editLabelRef.current,
+      });
+    }, 800);
+    return () => { if (descDebounceRef.current) clearTimeout(descDebounceRef.current); };
+  }, [editDesc, editLabel, activeQuoteId]);
 
   // Only accept dirty signals after mount settles (avoids StrictMode double-fire)
   useEffect(() => {
@@ -206,13 +241,13 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   useImperativeHandle(ref, () => ({
     get isDirty() { return isDirtyRef.current; },
     save: async () => {
-      // Always flush description + label from DOM — no guards, no comparisons.
-      // The fire-and-forget onBlur save is unreliable; this is the guaranteed write.
-      const currentQuote = quotesRef.current[activeQuoteIndex];
-      if (currentQuote && (descRef.current || labelRef.current)) {
-        await updateQuoteFields(currentQuote.id, {
-          ...(descRef.current ? { description: descRef.current.value.trim() || null } : {}),
-          ...(labelRef.current ? { label: labelRef.current.value } : {}),
+      // Flush description + label immediately — cancel any pending debounce
+      if (descDebounceRef.current) clearTimeout(descDebounceRef.current);
+      const q = quotesRef.current[activeQuoteIndex];
+      if (q) {
+        await updateQuoteFields(q.id, {
+          description: editDescRef.current.trim() || null,
+          label: editLabelRef.current,
         });
       }
       await Promise.all([
@@ -258,8 +293,6 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const initRef = useRef(false);
-
-  const activeQuote = quotes[activeQuoteIndex] ?? null;
 
   // ── Pricing notes (common across all quotes) ──────────────────────────
   const [showPricingNotes, setShowPricingNotes] = useState(initialShowPricingNotes ?? false);
@@ -346,19 +379,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Field-level saves (fire-and-forget — immune to unmount cancellation) ──
-  const handleLabelSave = (quote: ProposalQuoteRow, label: string) => {
-    if (label === quote.label) return;
-    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, label } : q)));
-    void updateQuoteFields(quote.id, { label });
-  };
-
-  const handleDescSave = (quote: ProposalQuoteRow, description: string) => {
-    if (description === (quote.description ?? '')) return;
-    const descValue = description.trim() || null;
-    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
-    void updateQuoteFields(quote.id, { description: descValue });
-  };
+  // handleLabelSave and handleDescSave removed — replaced by controlled inputs with debounced save above
 
   const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
     if (amount === (quote.additional_discount ?? 0)) return;
@@ -614,11 +635,9 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             <div>
               <label className={labelCls}>Quote label</label>
               <input
-                ref={labelRef}
                 type="text"
-                defaultValue={activeQuote.label}
-                key={`label-${activeQuote.id}`}
-                onBlur={(e) => handleLabelSave(activeQuote, e.target.value)}
+                value={editLabel}
+                onChange={(e) => { setEditLabel(e.target.value); editLabelRef.current = e.target.value; }}
                 placeholder={QUOTE_CONFIG[activeQuoteIndex]?.defaultLabel ?? `Option ${activeQuoteIndex + 1}`}
                 className={inputCls}
               />
@@ -630,10 +649,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 Quote description
               </label>
               <textarea
-                ref={descRef}
-                key={`desc-${activeQuote.id}`}
-                defaultValue={activeQuote.description ?? ''}
-                onBlur={(e) => handleDescSave(activeQuote, e.target.value)}
+                value={editDesc}
+                onChange={(e) => { setEditDesc(e.target.value); editDescRef.current = e.target.value; }}
                 placeholder="Describe this package..."
                 rows={3}
                 className={inputCls + ' resize-none leading-relaxed'}
