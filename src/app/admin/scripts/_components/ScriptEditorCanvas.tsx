@@ -23,7 +23,7 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact } from '@/types/scripts';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 
 interface Props {
   scenes: ComputedScene[];
@@ -51,6 +51,7 @@ interface Props {
   onUploadReference: (beatId: string, files: FileList) => void;
   onDeleteReference: (refId: string) => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
+  referenceMap?: Record<string, CharacterReferenceRow[]>;
   toolbarPortalRef?: React.RefObject<HTMLDivElement | null>;
   onReorderScenes?: (orderedIds: string[]) => void;
 }
@@ -81,6 +82,7 @@ export function ScriptEditorCanvas({
   onUploadReference,
   onDeleteReference,
   castMap,
+  referenceMap,
   toolbarPortalRef,
   onReorderScenes,
 }: Props) {
@@ -348,19 +350,23 @@ export function ScriptEditorCanvas({
           if (abortRef.current) break;
           const beat = scene.beats[i];
           if (storyboardFrames.some(f => f.beat_id === beat.id)) continue;
-          const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap);
+          const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap, referenceMap);
           const beatRefs = references[beat.id] ?? [];
 
-          // Collect cast headshot URLs for mentioned characters
+          // Collect visual reference URLs for mentioned characters (respects cast_mode)
           const castRefUrls: string[] = [];
-          if (castMap) {
-            const mentionPat = /\]\(([0-9a-f-]{36})\)/g;
+          if (castMap || referenceMap) {
+            const mentionPat = new RegExp('\\]\\(([0-9a-f-]{36})\\)', 'g');
             const beatText = `${beat.audio_content} ${beat.visual_content} ${beat.notes_content}`;
             let found;
             while ((found = mentionPat.exec(beatText)) !== null) {
-              const feat = castMap[found[1]]?.find(c => c.is_featured);
-              if (feat?.contact.headshot_url) {
-                castRefUrls.push(feat.contact.headshot_url);
+              const charId = found[1];
+              const char = characters.find(c => c.id === charId);
+              if (char?.cast_mode === 'references') {
+                (referenceMap?.[charId] ?? []).slice(0, 2).forEach(r => castRefUrls.push(r.image_url));
+              } else {
+                const feat = castMap?.[charId]?.find(c => c.is_featured);
+                if (feat?.contact.headshot_url) castRefUrls.push(feat.contact.headshot_url);
               }
             }
           }
@@ -398,7 +404,7 @@ export function ScriptEditorCanvas({
       setGeneratingScope(null);
       setGeneratingBeatIds(new Set());
     }
-  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap]);
+  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap, referenceMap]);
 
   const handleGenerateAll = useCallback(() => {
     generateForScenes(scenes, 'all');
@@ -685,6 +691,7 @@ export function ScriptEditorCanvas({
                         scene={scene}
                         locations={locations}
                         castMap={castMap}
+                        referenceMap={referenceMap}
                       />
                     ))}
                   </SortableContext>

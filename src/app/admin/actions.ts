@@ -3536,6 +3536,107 @@ export async function reorderCastMembers(characterId: string, orderedCastIds: st
   await Promise.all(updates);
 }
 
+// ── Script Character References ───────────────────────────────────────────
+
+import type { CharacterReferenceRow } from '@/types/scripts';
+
+/** Bulk-load all reference images for every character in a script. */
+export async function getCharacterReferenceMap(
+  scriptId: string,
+): Promise<Record<string, CharacterReferenceRow[]>> {
+  const { supabase } = await requireAuth();
+
+  const { data: chars, error: charsErr } = await supabase
+    .from('script_characters')
+    .select('id')
+    .eq('script_id', scriptId);
+  if (charsErr) throw new Error(charsErr.message);
+  const charIds = (chars ?? []).map((c: { id: string }) => c.id);
+  if (charIds.length === 0) return {};
+
+  const { data: rows, error } = await supabase
+    .from('script_character_references')
+    .select('*')
+    .in('character_id', charIds)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+
+  const result: Record<string, CharacterReferenceRow[]> = {};
+  for (const row of (rows ?? []) as CharacterReferenceRow[]) {
+    (result[row.character_id] ??= []).push(row);
+  }
+  return result;
+}
+
+/** Upload a reference image for a character. */
+export async function uploadCharacterReference(
+  characterId: string,
+  formData: FormData,
+): Promise<CharacterReferenceRow> {
+  const { supabase } = await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${characterId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadErr } = await serviceClient.storage
+    .from('character-references')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: { publicUrl } } = serviceClient.storage
+    .from('character-references')
+    .getPublicUrl(path);
+
+  // Get current max sort_order
+  const { data: existing } = await supabase
+    .from('script_character_references')
+    .select('sort_order')
+    .eq('character_id', characterId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = existing && existing.length > 0
+    ? (existing[0] as { sort_order: number }).sort_order + 1
+    : 0;
+
+  const { data: row, error: insertErr } = await supabase
+    .from('script_character_references')
+    .insert({ character_id: characterId, image_url: publicUrl, storage_path: path, sort_order: nextOrder } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+  return row as CharacterReferenceRow;
+}
+
+/** Delete a character reference image. */
+export async function deleteCharacterReference(referenceId: string, storagePath: string) {
+  const { supabase } = await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+  await serviceClient.storage.from('character-references').remove([storagePath]);
+  const { error } = await supabase
+    .from('script_character_references')
+    .delete()
+    .eq('id', referenceId);
+  if (error) throw new Error(error.message);
+}
+
+/** Set whether a character uses 'people' or 'references' mode for storyboard generation. */
+export async function setCharacterCastMode(
+  characterId: string,
+  mode: 'people' | 'references',
+) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_characters')
+    .update({ cast_mode: mode } as never)
+    .eq('id', characterId);
+  if (error) throw new Error(error.message);
+}
+
 // ── Script Location Options ───────────────────────────────────────────────
 
 /** Bulk-load all location options for every script location in a script. */

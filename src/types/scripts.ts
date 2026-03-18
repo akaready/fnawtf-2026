@@ -67,6 +67,16 @@ export interface ScriptCharacterRow {
   character_type: ScriptCharacterType;
   sort_order: number;
   max_cast_slots: number;
+  cast_mode: 'people' | 'references';
+  created_at: string;
+}
+
+export interface CharacterReferenceRow {
+  id: string;
+  character_id: string;
+  image_url: string;
+  storage_path: string;
+  sort_order: number;
   created_at: string;
 }
 

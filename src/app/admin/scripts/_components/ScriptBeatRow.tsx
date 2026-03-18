@@ -4,7 +4,7 @@ import { Check, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
-import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact } from '@/types/scripts';
+import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptStoryboardCell } from './ScriptStoryboardCell';
 
@@ -38,6 +38,7 @@ interface Props {
   batchGenerating?: boolean;
   onCancelGeneration?: () => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
+  referenceMap?: Record<string, CharacterReferenceRow[]>;
 }
 
 function beatLetter(n: number): string {
@@ -82,6 +83,7 @@ export function ScriptBeatRow({
   batchGenerating,
   onCancelGeneration,
   castMap,
+  referenceMap,
 }: Props) {
   const {
     attributes,
@@ -240,6 +242,7 @@ export function ScriptBeatRow({
               characters={characters}
               locations={locations}
               castMap={castMap}
+              referenceMap={referenceMap}
             />
           )}
         </div>

@@ -5,7 +5,7 @@ import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X } from 'luci
 import { deleteStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact } from '@/types/scripts';
+import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 
 interface Props {
   frame: ScriptStoryboardFrameRow | null;
@@ -27,6 +27,7 @@ interface Props {
   characters: ScriptCharacterRow[];
   locations: ScriptLocationRow[];
   castMap?: Record<string, CharacterCastWithContact[]>;
+  referenceMap?: Record<string, CharacterReferenceRow[]>;
 }
 
 export function ScriptStoryboardCell({
@@ -48,6 +49,7 @@ export function ScriptStoryboardCell({
   characters,
   locations,
   castMap,
+  referenceMap,
 }: Props) {
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -60,12 +62,12 @@ export function ScriptStoryboardCell({
     try {
       const beat = scene.beats[beatIndex];
       const contentPrompt = beat
-        ? buildRichPrompt(beat, beatIndex, scene, characters, locations, castMap)
+        ? buildRichPrompt(beat, beatIndex, scene, characters, locations, castMap, referenceMap)
         : [audioContent && `Audio: ${audioContent}`, visualContent && `Visual: ${visualContent}`].filter(Boolean).join('\n') || 'Empty beat — generate a neutral establishing shot';
 
-      // Extract character mentions from beat content and collect featured cast headshots
+      // Extract character mentions and collect visual references per mode
       const castReferenceUrls: string[] = [];
-      if (beat && castMap) {
+      if (beat && (castMap || referenceMap)) {
         const mentionPattern = /\]\(([0-9a-f-]{36})\)/g;
         const beatText = `${beat.audio_content} ${beat.visual_content} ${beat.notes_content}`;
         const mentionedCharIds = new Set<string>();
@@ -74,9 +76,15 @@ export function ScriptStoryboardCell({
           mentionedCharIds.add(m[1]);
         }
         for (const charId of mentionedCharIds) {
-          const featured = castMap[charId]?.find(c => c.is_featured);
-          if (featured?.contact.headshot_url) {
-            castReferenceUrls.push(featured.contact.headshot_url);
+          const char = characters.find(c => c.id === charId);
+          if (char?.cast_mode === 'references') {
+            const refs = (referenceMap?.[charId] ?? []).slice(0, 2).map(r => r.image_url);
+            castReferenceUrls.push(...refs);
+          } else {
+            const featured = castMap?.[charId]?.find(c => c.is_featured);
+            if (featured?.contact.headshot_url) {
+              castReferenceUrls.push(featured.contact.headshot_url);
+            }
           }
         }
       }
@@ -104,7 +112,7 @@ export function ScriptStoryboardCell({
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, scene, beatIndex, characters, locations, castMap, audioContent, visualContent, beatReferenceUrls, scriptId, beatId, styleReferences, onFrameChange]);
+  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, audioContent, visualContent, beatReferenceUrls, scriptId, beatId, styleReferences, onFrameChange]);
 
   const handleUpload = useCallback(
     async (files: FileList | null) => {

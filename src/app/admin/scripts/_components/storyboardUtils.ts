@@ -1,4 +1,4 @@
-import type { ScriptBeatRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact } from '@/types/scripts';
+import type { ScriptBeatRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 
 /**
  * Build a rich context prompt for storyboard image generation.
@@ -11,6 +11,7 @@ export function buildRichPrompt(
   characters: ScriptCharacterRow[],
   locations: ScriptLocationRow[],
   castMap?: Record<string, CharacterCastWithContact[]>,
+  referenceMap?: Record<string, CharacterReferenceRow[]>,
 ): string {
   const parts: string[] = [];
 
@@ -28,10 +29,14 @@ export function buildRichPrompt(
     for (const char of characters) {
       const desc = char.description ? `: ${char.description}` : '';
       const type = char.character_type === 'vo' ? 'VO' : char.character_type === 'animated' ? 'Animated' : 'Actor';
-      const featured = castMap?.[char.id]?.find(c => c.is_featured);
-      const appearance = featured?.appearance_prompt
-        ? ` Physical appearance: ${featured.appearance_prompt}`
-        : '';
+      let appearance = '';
+      if (char.cast_mode === 'references') {
+        const refCount = (referenceMap?.[char.id] ?? []).length;
+        if (refCount > 0) appearance = ` (${refCount} visual reference image${refCount !== 1 ? 's' : ''} provided)`;
+      } else {
+        const featured = castMap?.[char.id]?.find(c => c.is_featured);
+        if (featured?.appearance_prompt) appearance = ` Physical appearance: ${featured.appearance_prompt}`;
+      }
       parts.push(`- ${char.name}${desc}${appearance} (${type})`);
     }
     parts.push('');

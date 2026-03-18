@@ -14,6 +14,7 @@ import {
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
+  getCharacterReferenceMap,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -36,7 +37,7 @@ import type {
   ScriptCharacterRow, ScriptTagRow, ScriptLocationRow,
   ScriptColumnConfig, ScriptBeatReferenceRow,
   ScriptStyleRow, ScriptStyleReferenceRow, ScriptStoryboardFrameRow,
-  CharacterCastWithContact,
+  CharacterCastWithContact, CharacterReferenceRow,
   LocationOptionWithLocation,
 } from '@/types/scripts';
 
@@ -86,6 +87,7 @@ export function ScriptEditorClient({
   const [styleReferences, setStyleReferences] = useState<ScriptStyleReferenceRow[]>([]);
   const [storyboardFrames, setStoryboardFrames] = useState<ScriptStoryboardFrameRow[]>([]);
   const [castMap, setCastMap] = useState<Record<string, CharacterCastWithContact[]>>({});
+  const [referenceMap, setReferenceMap] = useState<Record<string, CharacterReferenceRow[]>>({});
   const [locationOptionsMap, setLocationOptionsMap] = useState<Record<string, LocationOptionWithLocation[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
@@ -131,11 +133,12 @@ export function ScriptEditorClient({
   useEffect(() => {
     (async () => {
       try {
-        const [style, frames, castData, locOptionsData] = await Promise.all([
+        const [style, frames, castData, locOptionsData, refData] = await Promise.all([
           getScriptStyle(script.id),
           getStoryboardFrames(script.id),
           getScriptCastMap(script.id),
           getScriptLocationOptionsMap(script.id),
+          getCharacterReferenceMap(script.id),
         ]);
         if (style) {
           setScriptStyle(style as ScriptStyleRow);
@@ -144,6 +147,7 @@ export function ScriptEditorClient({
         }
         setStoryboardFrames(frames as ScriptStoryboardFrameRow[]);
         setCastMap(castData);
+        setReferenceMap(refData);
         setLocationOptionsMap(locOptionsData);
       } catch { /* tables may not exist yet */ }
     })();
@@ -741,6 +745,7 @@ export function ScriptEditorClient({
                 onUploadReference={handleUploadReference}
                 onDeleteReference={handleDeleteReference}
                 castMap={castMap}
+                referenceMap={referenceMap}
                 toolbarPortalRef={toolbarSlotRef}
                 onReorderScenes={handleReorderScenes}
               />
@@ -770,6 +775,8 @@ export function ScriptEditorClient({
         onCharactersChange={setCharacters}
         castMap={castMap}
         onCastMapChange={setCastMap}
+        referenceMap={referenceMap}
+        onReferenceMapChange={setReferenceMap}
       />
       <ScriptTagsPanel
         open={showTags}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react';
-import { Plus, Trash2, Loader2, X, UserCircle, RefreshCw, Pencil, Sparkles, Check } from 'lucide-react';
+import { Plus, Trash2, Loader2, X, UserCircle, RefreshCw, Pencil, Sparkles, Check, ImagePlus } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -30,8 +30,9 @@ import {
   getContactsWithHeadshots,
   assignCastMember, removeCastMember,
   updateCastAppearancePrompt, reorderCastMembers,
+  uploadCharacterReference, deleteCharacterReference,
 } from '@/app/admin/actions';
-import type { ScriptCharacterRow, ScriptBeatRow, ScriptCharacterType, CharacterCastWithContact } from '@/types/scripts';
+import type { ScriptCharacterRow, ScriptBeatRow, ScriptCharacterType, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 import type { ContactRow } from '@/types/proposal';
 
 interface Props {
@@ -43,6 +44,8 @@ interface Props {
   onCharactersChange: (chars: ScriptCharacterRow[]) => void;
   castMap: Record<string, CharacterCastWithContact[]>;
   onCastMapChange: (map: Record<string, CharacterCastWithContact[]>) => void;
+  referenceMap: Record<string, CharacterReferenceRow[]>;
+  onReferenceMapChange: (map: Record<string, CharacterReferenceRow[]>) => void;
 }
 
 // PRESET_COLORS imported from ColorPicker
@@ -211,7 +214,7 @@ function CastPickerPopover({
 
   useEffect(() => {
     getContactsWithHeadshots().then(all => {
-      setContacts(all.filter(c => c.type === 'cast') as CastContact[]);
+      setContacts(all as CastContact[]);
       setLoading(false);
     });
   }, []);
@@ -296,6 +299,7 @@ function CastPickerPopover({
 export function ScriptCharactersPanel({
   open, onClose, scriptId, characters, beats, onCharactersChange,
   castMap, onCastMapChange,
+  referenceMap, onReferenceMapChange,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -309,19 +313,24 @@ export function ScriptCharactersPanel({
   const [draftDescription, setDraftDescription] = useState('');
   const [draftColor, setDraftColor] = useState('');
   const [draftType, setDraftType] = useState<ScriptCharacterType>('actor');
+  const [draftCastMode, setDraftCastMode] = useState<'people' | 'references'>('people');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingRef, setUploadingRef] = useState(false);
+  const refUploadInputRef = useRef<HTMLInputElement>(null);
 
   // Refs for autoSave closure
   const draftNameRef = useRef(draftName);
   const draftDescriptionRef = useRef(draftDescription);
   const draftColorRef = useRef(draftColor);
   const draftTypeRef = useRef(draftType);
+  const draftCastModeRef = useRef(draftCastMode);
   const selectedIdRef = useRef(selectedId);
   useEffect(() => { draftNameRef.current = draftName; });
   useEffect(() => { draftDescriptionRef.current = draftDescription; });
   useEffect(() => { draftColorRef.current = draftColor; });
   useEffect(() => { draftTypeRef.current = draftType; });
+  useEffect(() => { draftCastModeRef.current = draftCastMode; });
   useEffect(() => { selectedIdRef.current = selectedId; });
 
   const dndId = useId();
@@ -384,6 +393,7 @@ export function ScriptCharactersPanel({
       setDraftDescription(selected.description ?? '');
       setDraftColor(selected.color);
       setDraftType(selected.character_type === 'animated' ? 'actor' : selected.character_type);
+      setDraftCastMode(selected.cast_mode ?? 'people');
       setConfirmDeleteId(null);
       setEditingAppearanceId(null);
       setShowPicker(false);
@@ -399,6 +409,7 @@ export function ScriptCharactersPanel({
       description: draftDescriptionRef.current || null,
       color: draftColorRef.current,
       character_type: draftTypeRef.current,
+      cast_mode: draftCastModeRef.current,
     };
     await updateCharacter(charId, updates);
     onCharactersChange(characters.map(c =>
@@ -439,6 +450,7 @@ export function ScriptCharactersPanel({
         character_type: 'actor',
         sort_order: characters.length,
         max_cast_slots: 3,
+        cast_mode: 'people',
         created_at: new Date().toISOString(),
       };
       onCharactersChange([...characters, newChar]);
@@ -576,6 +588,28 @@ export function ScriptCharactersPanel({
     onCastMapChange({ ...castMap, [selected.id]: updated });
     setEditingAppearanceId(null);
   }, [selected, appearanceDraft, selectedCast, castMap, onCastMapChange]);
+
+  const handleUploadReference = useCallback(async (file: File) => {
+    if (!selected) return;
+    const currentRefs = referenceMap[selected.id] ?? [];
+    if (currentRefs.length >= 3) return;
+    setUploadingRef(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const row = await uploadCharacterReference(selected.id, fd);
+      onReferenceMapChange({ ...referenceMap, [selected.id]: [...currentRefs, row] });
+    } finally {
+      setUploadingRef(false);
+    }
+  }, [selected, referenceMap, onReferenceMapChange]);
+
+  const handleDeleteReference = useCallback(async (ref: CharacterReferenceRow) => {
+    if (!selected) return;
+    await deleteCharacterReference(ref.id, ref.storage_path);
+    const updated = (referenceMap[selected.id] ?? []).filter(r => r.id !== ref.id);
+    onReferenceMapChange({ ...referenceMap, [selected.id]: updated });
+  }, [selected, referenceMap, onReferenceMapChange]);
 
   const assignedContactIds = useMemo(
     () => new Set(selectedCast.map(c => c.contact_id)),
@@ -733,62 +767,132 @@ export function ScriptCharactersPanel({
                   />
                 </div>
 
-                {/* ── Casting Options — Row List ────────────────────────── */}
+                {/* ── Casting Options — Tabbed ────────────────────────── */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
-                    Character Options
+                    Casting Options
                   </label>
 
-                  {selectedCast.length > 0 && (
-                    <DndContext
-                      id={dndId}
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={selectedCast.map(c => c.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <div className="space-y-1">
-                          {selectedCast.map((cast, i) => (
-                            <SortableCastRow
-                              key={cast.id}
-                              cast={cast}
-                              isFeatured={i === 0}
-                              isExtracting={extractingCastId === cast.id}
-                              editingAppearanceId={editingAppearanceId}
-                              appearanceDraft={appearanceDraft}
-                              onAppearanceDraftChange={setAppearanceDraft}
-                              onStartEditAppearance={(id, text) => { setEditingAppearanceId(id); setAppearanceDraft(text); }}
-                              onCancelEditAppearance={() => setEditingAppearanceId(null)}
-                              onSaveAppearance={handleSaveAppearance}
-                              onRemove={handleRemoveCast}
-                              onGenerate={(c) => extractAppearance(c, selected.id)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DndContext>
-                  )}
-
-                  {/* Add cast member */}
-                  {selectedCast.length < 10 && (
-                    showPicker ? (
-                      <CastPickerPopover
-                        onSelect={handleAssignCast}
-                        onClose={() => setShowPicker(false)}
-                        assignedContactIds={assignedContactIds}
-                      />
-                    ) : (
+                  {/* Tab strip */}
+                  <div className="flex items-center gap-1 bg-admin-bg-wash rounded-admin-md p-1">
+                    {(['people', 'references'] as const).map(mode => (
                       <button
-                        onClick={() => setShowPicker(true)}
-                        className="w-full py-2 rounded-admin-md border-2 border-dashed border-admin-border text-xs text-admin-text-faint hover:border-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover transition-colors flex items-center justify-center gap-1.5"
+                        key={mode}
+                        onClick={() => { setDraftCastMode(mode); autoSave.trigger(); }}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded-admin-sm transition-colors capitalize ${
+                          draftCastMode === mode
+                            ? 'bg-admin-bg-base text-admin-text-primary shadow-sm'
+                            : 'text-admin-text-muted hover:text-admin-text-primary'
+                        }`}
                       >
-                        <UserCircle size={14} />
-                        Add Cast Member
+                        {mode === 'people' ? 'Person' : 'References'}
                       </button>
-                    )
+                    ))}
+                  </div>
+
+                  {draftCastMode === 'people' ? (
+                    <>
+                      {selectedCast.length > 0 && (
+                        <DndContext
+                          id={dndId}
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <SortableContext
+                            items={selectedCast.map(c => c.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-1">
+                              {selectedCast.map((cast, i) => (
+                                <SortableCastRow
+                                  key={cast.id}
+                                  cast={cast}
+                                  isFeatured={i === 0}
+                                  isExtracting={extractingCastId === cast.id}
+                                  editingAppearanceId={editingAppearanceId}
+                                  appearanceDraft={appearanceDraft}
+                                  onAppearanceDraftChange={setAppearanceDraft}
+                                  onStartEditAppearance={(id, text) => { setEditingAppearanceId(id); setAppearanceDraft(text); }}
+                                  onCancelEditAppearance={() => setEditingAppearanceId(null)}
+                                  onSaveAppearance={handleSaveAppearance}
+                                  onRemove={handleRemoveCast}
+                                  onGenerate={(c) => extractAppearance(c, selected.id)}
+                                />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      )}
+                      {selectedCast.length < 10 && (
+                        showPicker ? (
+                          <CastPickerPopover
+                            onSelect={handleAssignCast}
+                            onClose={() => setShowPicker(false)}
+                            assignedContactIds={assignedContactIds}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setShowPicker(true)}
+                            className="w-full py-2 rounded-admin-md border-2 border-dashed border-admin-border text-xs text-admin-text-faint hover:border-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <UserCircle size={14} />
+                            Add Person
+                          </button>
+                        )
+                      )}
+                    </>
+                  ) : (
+                    /* References tab — up to 3 uploaded images */
+                    <div className="space-y-2">
+                      <input
+                        ref={refUploadInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await handleUploadReference(file);
+                          e.target.value = '';
+                        }}
+                      />
+                      <div className="flex gap-2">
+                        {(referenceMap[selected.id] ?? []).map(ref => (
+                          <div key={ref.id} className="group/refslot relative w-20 h-20 flex-shrink-0">
+                            <img
+                              src={ref.image_url}
+                              alt=""
+                              className="w-full h-full object-cover rounded-admin-md"
+                            />
+                            <button
+                              onClick={() => handleDeleteReference(ref)}
+                              className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover/refslot:opacity-100 transition-opacity hover:bg-admin-danger"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {(referenceMap[selected.id] ?? []).length < 3 && (
+                          <button
+                            onClick={() => refUploadInputRef.current?.click()}
+                            disabled={uploadingRef}
+                            className="w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center gap-1 rounded-admin-md border-2 border-dashed border-admin-border text-admin-text-faint hover:border-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover transition-colors disabled:opacity-50"
+                          >
+                            {uploadingRef ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <>
+                                <ImagePlus size={16} />
+                                <span className="text-[10px]">Add</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-admin-text-faint">
+                        Up to 3 images used as visual references for storyboard generation.
+                      </p>
+                    </div>
                   )}
                 </div>
 
