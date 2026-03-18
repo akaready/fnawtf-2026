@@ -653,15 +653,12 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               hideDeferredPayment={hideDeferredPayment}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
-                // Read latest quote from state to avoid stale label/description
-                const current = quotesRef.current.find((q) => q.id === activeQuote.id);
+                // Only save calculator fields — label/description/additional_discount
+                // are saved separately via updateQuoteFields to avoid race conditions
                 const id = await saveProposalQuote(
                   proposalId,
                   {
                     ...payload,
-                    label: current?.label ?? activeQuote.label,
-                    description: current?.description ?? activeQuote.description,
-                    additional_discount: current?.additional_discount ?? activeQuote.additional_discount,
                     is_fna_quote: true,
                     is_locked: true,
                     defer_payment: false,
