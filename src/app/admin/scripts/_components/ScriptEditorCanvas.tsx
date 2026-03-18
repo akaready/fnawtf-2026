@@ -589,21 +589,21 @@ export function ScriptEditorCanvas({
                 <div ref={visualTipsRef} className="contents">
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowVisualTips(v => !v); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
                     title="Visual content best practices"
                   >
-                    <Info size={10} />
+                    <Info size={14} />
                   </button>
                   {showVisualTips && (
-                    <div className="absolute top-full left-0 mt-1 z-30 w-72 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-lg p-3">
+                    <div className="absolute top-full left-0 mt-1 z-30 w-80 bg-admin-bg-sidebar border border-admin-border rounded-admin-md shadow-xl p-3">
                       <p className="text-admin-sm font-semibold text-admin-text-primary mb-2">Visual content tips</p>
-                      <ul className="space-y-1.5 text-admin-text-muted" style={{ fontSize: '11px' }}>
+                      <ul className="space-y-1.5 text-admin-text-muted text-admin-sm">
                         <li>Describe what the <strong className="text-admin-text-primary">camera sees</strong> — not the audio or dialogue</li>
-                        <li>Use <strong className="text-admin-text-primary">framing language:</strong> wide shot, close-up, medium shot, over-the-shoulder</li>
+                        <li>Use <strong className="text-admin-text-primary">framing language:</strong> wide shot, close-up, medium shot</li>
                         <li>Use <strong className="text-admin-text-primary">lighting language:</strong> natural window light, warm evening glow, overhead fluorescent</li>
                         <li>Use <strong className="text-admin-text-primary">spatial anchors:</strong> seated beside, standing at, foreground/background</li>
                         <li>Use <strong className="text-admin-text-primary">action verbs:</strong> reaching for, gesturing toward, looking at</li>
-                        <li><strong className="text-admin-text-primary">Interview scenes:</strong> describe the B-roll, not the interviewee on camera</li>
+                        <li><strong className="text-admin-text-primary">Interview scenes:</strong> show the person being interviewed on camera. Only describe B-roll if you want B-roll instead.</li>
                         <li><strong className="text-admin-text-primary">Avoid numbers/stats</strong> — describe the concept visually instead</li>
                         <li><strong className="text-admin-text-primary">Avoid text on screens</strong> or whiteboards — describe the visual metaphor</li>
                       </ul>
@@ -618,25 +618,25 @@ export function ScriptEditorCanvas({
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
                     title="Cancel generation"
                   >
-                    <X size={10} />
+                    <X size={14} />
                   </button>
                 ) : (
                   <>
                     {storyboardFrames.length > 0 && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
-                        className="absolute right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                        className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
                         title="Download all storyboards"
                       >
-                        <Download size={10} />
+                        <Download size={14} />
                       </button>
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
                       title="Generate all storyboards"
                     >
-                      <Sparkles size={10} />
+                      <Sparkles size={14} />
                     </button>
                   </>
                 )

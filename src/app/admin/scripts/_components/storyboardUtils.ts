@@ -42,17 +42,17 @@ export function buildRichPrompt(
     parts.push('');
   }
 
-  // Interview scene detection — default to B-roll, not the talking head
+  // Interview scene detection — default to showing the interviewee on camera
   const isInterviewScene =
     /interview/i.test(scene.location_name ?? '') ||
     /\binterview\b/i.test(`${beat.audio_content ?? ''} ${beat.visual_content ?? ''} ${beat.notes_content ?? ''}`);
   if (isInterviewScene) {
     parts.push('INTERVIEW SCENE GUIDANCE:');
     parts.push(
-      'Unless visual_content explicitly places the subject on camera (e.g. "CU on NAME speaking"), ' +
-      'do NOT show the interview subject talking to camera. Show B-ROLL imagery instead — ' +
-      'the environments, objects, products, activities, or concepts referenced in the audio content. ' +
-      'Ask: what would a documentary editor cut to while this audio plays?'
+      'This is an interview scene. Show the SUBJECT being interviewed — frame them directly on camera ' +
+      '(medium shot, close-up, etc.). Do NOT show the interviewer. Do NOT use over-the-shoulder shots. ' +
+      'Do NOT show camera equipment, a film set, or crew. ' +
+      'Only show B-roll (environments, objects, activities) if the visual_content explicitly describes it.'
     );
     parts.push('');
   }

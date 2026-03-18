@@ -247,14 +247,14 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
               className="text-admin-danger hover:text-red-300 p-1 transition-colors"
               title="Confirm delete scene"
             >
-              <Check size={12} />
+              <Check size={14} />
             </button>
             <button
               onClick={e => { e.stopPropagation(); setConfirmDelete(false); }}
-              className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors"
+              className="text-admin-text-muted hover:text-admin-text-primary p-1 transition-colors"
               title="Cancel"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           </>
         ) : (
@@ -263,25 +263,25 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
               <button
                 onClick={e => { e.stopPropagation(); onGenerate(); }}
                 disabled={generating}
-                className="text-admin-text-ghost hover:text-admin-text-primary p-1 transition-colors"
+                className="text-admin-text-secondary hover:text-admin-text-primary p-1 transition-colors"
                 title={generating ? 'Generating…' : 'Generate storyboards for scene'}
               >
-                {generating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
               </button>
             )}
             <button
               onClick={e => { e.stopPropagation(); onEditingChange?.(true); }}
-              className="text-admin-text-ghost hover:text-admin-text-primary p-1 transition-colors"
+              className="text-admin-text-secondary hover:text-admin-text-primary p-1 transition-colors"
               title="Edit scene"
             >
-              <Pencil size={12} />
+              <Pencil size={14} />
             </button>
             <button
               onClick={e => { e.stopPropagation(); setConfirmDelete(true); }}
-              className="text-admin-text-ghost hover:text-admin-danger p-1 transition-colors"
+              className="text-admin-text-secondary hover:text-admin-danger p-1 transition-colors"
               title="Delete scene"
             >
-              <Trash2 size={12} />
+              <Trash2 size={14} />
             </button>
           </>
         )}
