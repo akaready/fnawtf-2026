@@ -482,8 +482,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
       </div>
 
       {/* Pricing notes + proposal-level toggles */}
-      <div className="grid grid-cols-2 gap-4 px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0">
-        <div>
+      <div className="flex gap-6 px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0">
+        <div className="flex-1 min-w-0">
           <label className={labelCls}>Notes</label>
           <textarea
             defaultValue={initialPricingNotes ?? ''}
@@ -493,7 +493,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             className={inputCls + ' resize-none leading-relaxed mt-1'}
           />
         </div>
-        <div>
+        <div className="flex-shrink-0">
           <label className={labelCls}>Options</label>
           <div className="mt-1 flex flex-col gap-1.5">
             <label className="flex items-center gap-2 h-6 cursor-pointer">
