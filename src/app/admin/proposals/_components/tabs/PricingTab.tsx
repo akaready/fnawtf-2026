@@ -254,16 +254,12 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [showPricingNotes, setShowPricingNotes] = useState(initialShowPricingNotes ?? false);
 
   const handlePricingNotesSave = (notes: string) => {
-    startTransition(async () => {
-      await updateProposal(proposalId, { pricing_notes: notes.trim() || null });
-    });
+    void updateProposal(proposalId, { pricing_notes: notes.trim() || null });
   };
 
   const handlePricingNotesToggle = (show: boolean) => {
     setShowPricingNotes(show);
-    startTransition(async () => {
-      await updateProposal(proposalId, { show_pricing_notes: show });
-    });
+    void updateProposal(proposalId, { show_pricing_notes: show });
   };
 
   // ── Force toggles (proposal-level) ─────────────────────────────────────
@@ -273,32 +269,24 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
   const handleForceAdditionalDiscountChange = (force: boolean) => {
     setForceAdditionalDiscount(force);
-    startTransition(async () => {
-      await updateProposal(proposalId, { force_additional_discount: force });
-    });
+    void updateProposal(proposalId, { force_additional_discount: force });
   };
 
   const handleClientAdditionalDiscountChange = (amount: number) => {
     setClientAdditionalDiscount(amount);
-    startTransition(async () => {
-      await updateProposal(proposalId, { client_additional_discount: amount });
-    });
+    void updateProposal(proposalId, { client_additional_discount: amount });
   };
 
   const handleForcePrioritySchedulingChange = (force: boolean) => {
     setForcePriorityScheduling(force);
-    startTransition(async () => {
-      await updateProposal(proposalId, { force_priority_scheduling: force });
-    });
+    void updateProposal(proposalId, { force_priority_scheduling: force });
   };
 
   const [hideDeferredPayment, setHideDeferredPayment] = useState(initialHideDeferredPayment ?? false);
 
   const handleHideDeferredPaymentChange = (hide: boolean) => {
     setHideDeferredPayment(hide);
-    startTransition(async () => {
-      await updateProposal(proposalId, { hide_deferred_payment: hide });
-    });
+    void updateProposal(proposalId, { hide_deferred_payment: hide });
   };
 
   // ── Auto-create Recommended on first open if empty ──────────────────────
@@ -347,30 +335,30 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Field-level saves (partial updates — no race with calculator auto-save) ──
+  // ── Field-level saves (fire-and-forget — immune to unmount cancellation) ──
   const handleLabelSave = (quote: ProposalQuoteRow, label: string) => {
     if (label === quote.label) return;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, label } : q)));
-    startTransition(async () => { await updateQuoteFields(quote.id, { label }); });
+    void updateQuoteFields(quote.id, { label });
   };
 
   const handleDescSave = (quote: ProposalQuoteRow, description: string) => {
     if (description === (quote.description ?? '')) return;
     const descValue = description.trim() || null;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
-    startTransition(async () => { await updateQuoteFields(quote.id, { description: descValue }); });
+    void updateQuoteFields(quote.id, { description: descValue });
   };
 
   const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
     if (amount === (quote.additional_discount ?? 0)) return;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q)));
-    startTransition(async () => { await updateQuoteFields(quote.id, { additional_discount: amount }); });
+    void updateQuoteFields(quote.id, { additional_discount: amount });
   };
 
   const handleVisibilityToggle = (quote: ProposalQuoteRow) => {
     const visible = !quote.visible;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, visible } : q)));
-    startTransition(async () => { await updateQuoteFields(quote.id, { visible }); });
+    void updateQuoteFields(quote.id, { visible });
   };
 
   // ── Add quote ───────────────────────────────────────────────────────────
