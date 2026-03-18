@@ -86,7 +86,13 @@ export function calcTierTotal(
       if (addOn.category === 'PRIORITY') priorityTotal += linePrice;
 
       let label = addOn.name;
-      if (qty > 1) label += ` x${qty}`;
+      if (qty > 1) {
+        const unitAbbr = addOn.quantity?.unit === 'hours' ? 'hrs'
+          : addOn.quantity?.unit === 'people' ? ''
+          : addOn.quantity?.unit === 'days' ? 'd'
+          : '';
+        label += ` x${qty}${unitAbbr}`;
+      }
       if (addOn.perDay && totalDays > 1) label += ` x${totalDays}d`;
 
       items.push({ name: label, price: linePrice });
