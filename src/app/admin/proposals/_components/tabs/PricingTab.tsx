@@ -17,7 +17,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { saveProposalQuote, deleteProposalQuote, reorderProposalQuotes, updateProposal } from '@/app/admin/actions';
+import { saveProposalQuote, updateQuoteFields, deleteProposalQuote, reorderProposalQuotes, updateProposal } from '@/app/admin/actions';
 import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
@@ -234,9 +234,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     setActiveQuoteIndex(i);
   };
 
+  const activeQuoteIdRef = useRef(quotes[activeQuoteIndex]?.id);
+  activeQuoteIdRef.current = quotes[activeQuoteIndex]?.id;
+
   const handleQuoteUpdated = (payload: CalculatorStateSnapshot) => {
     isDirtyRef.current = false;
-    setQuotes((prev) => prev.map((q) => (q.id === activeQuote?.id ? { ...q, ...payload } : q)));
+    const qid = activeQuoteIdRef.current;
+    if (!qid) return;
+    setQuotes((prev) => prev.map((q) => (q.id === qid ? { ...q, ...payload } : q)));
   };
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -342,49 +347,30 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Label save ──────────────────────────────────────────────────────────
+  // ── Field-level saves (partial updates — no race with calculator auto-save) ──
   const handleLabelSave = (quote: ProposalQuoteRow, label: string) => {
     if (label === quote.label) return;
-    const current = quotesRef.current.find((q) => q.id === quote.id);
-    if (!current) return;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, label } : q)));
-    startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...current, label }, quote.id);
-    });
+    startTransition(async () => { await updateQuoteFields(quote.id, { label }); });
   };
 
-  // ── Description save ────────────────────────────────────────────────────
   const handleDescSave = (quote: ProposalQuoteRow, description: string) => {
     if (description === (quote.description ?? '')) return;
     const descValue = description.trim() || null;
-    const current = quotesRef.current.find((q) => q.id === quote.id);
-    if (!current) return;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
-    startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...current, description: descValue }, quote.id);
-    });
+    startTransition(async () => { await updateQuoteFields(quote.id, { description: descValue }); });
   };
 
-  // ── Additional discount save ─────────────────────────────────────────────
   const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
     if (amount === (quote.additional_discount ?? 0)) return;
-    const current = quotesRef.current.find((q) => q.id === quote.id);
-    if (!current) return;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q)));
-    startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...current, additional_discount: amount }, quote.id);
-    });
+    startTransition(async () => { await updateQuoteFields(quote.id, { additional_discount: amount }); });
   };
 
-  // ── Visibility toggle ──────────────────────────────────────────────────
   const handleVisibilityToggle = (quote: ProposalQuoteRow) => {
     const visible = !quote.visible;
-    const current = quotesRef.current.find((q) => q.id === quote.id);
-    if (!current) return;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, visible } : q)));
-    startTransition(async () => {
-      await saveProposalQuote(proposalId, { ...current, visible }, quote.id);
-    });
+    startTransition(async () => { await updateQuoteFields(quote.id, { visible }); });
   };
 
   // ── Add quote ───────────────────────────────────────────────────────────

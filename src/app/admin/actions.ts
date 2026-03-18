@@ -909,6 +909,15 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
   }
 }
 
+export async function updateQuoteFields(quoteId: string, fields: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposal_quotes')
+    .update({ ...fields, updated_at: new Date().toISOString() } as never)
+    .eq('id', quoteId);
+  if (error) throw new Error(error.message);
+}
+
 export async function reorderProposalQuotes(orderedIds: string[]) {
   const { supabase } = await requireAuth();
   await Promise.all(

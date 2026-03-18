@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
@@ -107,6 +107,14 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
   }), [save]);
 
   saveRef.current = save;
+
+  // Clear debounce timers on unmount to prevent stale saves
+  useEffect(() => {
+    return () => {
+      if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
+      if (bodyTimerRef.current) clearTimeout(bodyTimerRef.current);
+    };
+  }, []);
 
   // ── Title change with debounced persist ────────────────────────────────
 
