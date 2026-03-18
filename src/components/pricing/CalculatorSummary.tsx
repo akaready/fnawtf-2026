@@ -454,24 +454,45 @@ function SaveQuoteButton({ onSave, saving, saved }: { onSave: () => void; saving
 // ── Aligned two-column comparison renderer ──────────────────────────────
 
 function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: QuoteColumnData; right: QuoteColumnData; rightHeader?: React.ReactNode; rightDimmed?: boolean }) {
-  function addedItems(a: { name: string; price: number }[], b: { name: string; price: number }[]) {
-    const names = new Set(a.map(i => i.name));
-    return b.filter(i => !names.has(i.name));
+  // Strip quantity/day suffixes so "Talent x4" and "Talent x3" match
+  function baseName(name: string): string {
+    return name.replace(/ x\d+[d]?$/, '').replace(/ \(D[\d,]+\)$/, '');
   }
+
+  type Item = { name: string; price: number };
+  type AlignedRow = { key: string; leftItem: Item | null; rightItem: Item | null };
 
   function renderTierPair(
     label: string,
     leftBase: number,
     rightBase: number,
-    leftItems: { name: string; price: number }[],
-    rightItems: { name: string; price: number }[],
+    leftItems: Item[],
+    rightItems: Item[],
   ) {
-    const leftItemMap = new Map(leftItems.map(i => [i.name, i]));
-    const rightItemMap = new Map(rightItems.map(i => [i.name, i]));
-    const leftAdded = addedItems(rightItems, leftItems);
-    const rightAdded = addedItems(leftItems, rightItems);
+    // Build maps keyed by base name
+    const rightByBase = new Map<string, Item>();
+    for (const item of rightItems) rightByBase.set(baseName(item.name), item);
+    const leftByBase = new Map<string, Item>();
+    for (const item of leftItems) leftByBase.set(baseName(item.name), item);
 
-    return { label, leftBase, rightBase, leftItems, rightItems, leftItemMap, rightItemMap, leftAdded, rightAdded };
+    // Aligned rows: left order first, then right-only appended
+    const rows: AlignedRow[] = [];
+    const usedBases = new Set<string>();
+
+    for (const item of leftItems) {
+      const base = baseName(item.name);
+      usedBases.add(base);
+      rows.push({ key: base, leftItem: item, rightItem: rightByBase.get(base) ?? null });
+    }
+    for (const item of rightItems) {
+      const base = baseName(item.name);
+      if (!usedBases.has(base)) {
+        usedBases.add(base);
+        rows.push({ key: base, leftItem: null, rightItem: item });
+      }
+    }
+
+    return { label, leftBase, rightBase, rows };
   }
 
   const tiers: ReturnType<typeof renderTierPair>[] = [];
@@ -512,18 +533,18 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
               <span className="text-muted-foreground truncate">{tier.label} base</span>
               <span className="text-foreground flex-shrink-0">{formatPrice(tier.leftBase)}</span>
             </div>
-            {tier.leftItems.map((item) => (
-              <div key={item.name} className="flex justify-between gap-1">
-                <span className="text-muted-foreground truncate">{item.name}</span>
-                <span className="text-foreground flex-shrink-0">{formatPrice(item.price)}</span>
-              </div>
-            ))}
-            {/* Spacers for items only in right column */}
-            {tier.rightAdded.map((item) => (
-              <div key={`spacer-${item.name}`} className="flex justify-between gap-1 invisible" aria-hidden>
-                <span className="truncate">{item.name}</span>
-                <span className="flex-shrink-0">{formatPrice(item.price)}</span>
-              </div>
+            {tier.rows.map((row) => (
+              row.leftItem ? (
+                <div key={row.key} className="flex justify-between gap-1">
+                  <span className="text-muted-foreground truncate">{row.leftItem.name}</span>
+                  <span className="text-foreground flex-shrink-0">{formatPrice(row.leftItem.price)}</span>
+                </div>
+              ) : (
+                <div key={row.key} className="flex justify-between gap-1 invisible" aria-hidden>
+                  <span className="truncate">{row.rightItem!.name}</span>
+                  <span className="flex-shrink-0">{formatPrice(row.rightItem!.price)}</span>
+                </div>
+              )
             ))}
           </Fragment>
         ))}
@@ -593,25 +614,38 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
               <span className="text-muted-foreground truncate">{tier.label} base</span>
               <span className="text-foreground flex-shrink-0">{formatPrice(tier.rightBase)}</span>
             </div>
-            {/* Render items in left column order (matching/removed) */}
-            {tier.leftItems.map((item) => {
-              const rightItem = tier.rightItemMap.get(item.name);
+            {tier.rows.map((row) => {
+              const { leftItem, rightItem } = row;
+              // Right-only (added)
+              if (!leftItem && rightItem) {
+                return (
+                  <div key={row.key} className="flex justify-between gap-1">
+                    <span className="text-cyan-400/80 truncate">{rightItem.name}</span>
+                    <span className="text-cyan-400 flex-shrink-0">{formatPrice(rightItem.price)}</span>
+                  </div>
+                );
+              }
+              // Left-only (removed)
+              if (leftItem && !rightItem) {
+                return (
+                  <div key={row.key} className="flex justify-between gap-1">
+                    <span className="text-red-400/60 truncate">{leftItem.name}</span>
+                    <span className="text-red-400/60 flex-shrink-0">$0</span>
+                  </div>
+                );
+              }
+              // Both exist — compare prices
+              const rPrice = rightItem!.price;
+              const lPrice = leftItem!.price;
+              const color = rPrice < lPrice ? 'text-red-400/80' : rPrice > lPrice ? 'text-cyan-400' : 'text-foreground';
+              const labelColor = rPrice < lPrice ? 'text-red-400/60' : rPrice > lPrice ? 'text-cyan-400/80' : 'text-muted-foreground';
               return (
-                <div key={item.name} className="flex justify-between gap-1">
-                  <span className={`truncate ${rightItem ? 'text-muted-foreground' : 'text-red-400/60'}`}>{item.name}</span>
-                  <span className={`flex-shrink-0 ${rightItem ? 'text-foreground' : 'text-red-400/60'}`}>
-                    {rightItem ? formatPrice(rightItem.price) : '$0'}
-                  </span>
+                <div key={row.key} className="flex justify-between gap-1">
+                  <span className={`truncate ${labelColor}`}>{rightItem!.name}</span>
+                  <span className={`flex-shrink-0 ${color}`}>{formatPrice(rPrice)}</span>
                 </div>
               );
             })}
-            {/* Added items (cyan) */}
-            {tier.rightAdded.map((item) => (
-              <div key={item.name} className="flex justify-between gap-1">
-                <span className="text-cyan-400/80 truncate">{item.name}</span>
-                <span className="text-cyan-400 flex-shrink-0">{formatPrice(item.price)}</span>
-              </div>
-            ))}
           </Fragment>
         ))}
         <div className="h-px bg-green-900/50 my-1" />
