@@ -462,22 +462,9 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         })}
       </div>
 
-      {/* Pricing notes — common across all quotes */}
+      {/* Pricing notes + proposal-level toggles */}
       <div className="px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0 space-y-2">
-        <div className="flex items-center gap-2">
-          <label className={labelCls}>Notes</label>
-          <button
-            onClick={() => handlePricingNotesToggle(!showPricingNotes)}
-            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-              showPricingNotes
-                ? 'text-admin-text-secondary hover:text-admin-text-primary hover:bg-admin-bg-hover'
-                : 'text-admin-text-ghost hover:text-admin-text-secondary hover:bg-admin-bg-hover'
-            }`}
-            title={showPricingNotes ? 'Hide notes on proposal' : 'Show notes on proposal'}
-          >
-            {showPricingNotes ? <Eye size={13} /> : <EyeOff size={13} />}
-          </button>
-        </div>
+        <label className={labelCls}>Notes</label>
         <textarea
           defaultValue={initialPricingNotes ?? ''}
           onBlur={(e) => handlePricingNotesSave(e.target.value)}
@@ -485,6 +472,35 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
           rows={2}
           className={inputCls + ' resize-none leading-relaxed'}
         />
+        <div className="space-y-1.5 pt-1">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showPricingNotes}
+              onChange={(e) => handlePricingNotesToggle(e.target.checked)}
+              className="accent-admin-accent"
+            />
+            <span className="text-admin-sm text-admin-text-muted">Show notes on proposal</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={forceAdditionalDiscount}
+              onChange={(e) => handleForceAdditionalDiscountChange(e.target.checked)}
+              className="accent-admin-accent"
+            />
+            <span className="text-admin-sm text-admin-text-muted">Apply additional discount to all quotes</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={forcePriorityScheduling}
+              onChange={(e) => handleForcePrioritySchedulingChange(e.target.checked)}
+              className="accent-admin-accent"
+            />
+            <span className="text-admin-sm text-admin-text-muted">Apply priority scheduling to all quotes</span>
+          </label>
+        </div>
       </div>
 
       {/* Quote tabs nav — hidden for Scale (custom quotes) */}
@@ -615,10 +631,6 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               saveRef={embedSaveRef}
               onAnyChange={() => { if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); } }}
               onAdditionalDiscountChange={(amount) => handleAdditionalDiscountSave(activeQuote, amount)}
-              forceAdditionalDiscount={forceAdditionalDiscount}
-              onForceAdditionalDiscountChange={handleForceAdditionalDiscountChange}
-              forcePriorityScheduling={forcePriorityScheduling}
-              onForcePrioritySchedulingChange={handleForcePrioritySchedulingChange}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
                 const id = await saveProposalQuote(

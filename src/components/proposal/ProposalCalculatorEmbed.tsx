@@ -65,10 +65,8 @@ interface Props {
   onAdditionalDiscountChange?: (amount: number) => void;
   /** Force additional discount on client quotes */
   forceAdditionalDiscount?: boolean;
-  onForceAdditionalDiscountChange?: (force: boolean) => void;
   /** Force priority scheduling on client quotes */
   forcePriorityScheduling?: boolean;
-  onForcePrioritySchedulingChange?: (force: boolean) => void;
   /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
   onAnyChange?: () => void;
   /** Standalone mode — no server saves, emits state via onStateChange instead */
@@ -96,7 +94,7 @@ function sectionsForType(type: PricingType): Set<string> {
   return s;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, onForceAdditionalDiscountChange, forcePriorityScheduling, onForcePrioritySchedulingChange, onAnyChange, standalone, onStateChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, forcePriorityScheduling, onAnyChange, standalone, onStateChange }: Props) {
   const [selectedType, setSelectedType] = useState<PricingType>(
     () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
@@ -651,10 +649,6 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
               additionalDiscount={effectiveAdditionalDiscount}
               onAdditionalDiscountChange={onAdditionalDiscountChange}
-              forceAdditionalDiscount={forceAdditionalDiscount}
-              onForceAdditionalDiscountChange={onForceAdditionalDiscountChange}
-              forcePriorityScheduling={forcePriorityScheduling}
-              onForcePrioritySchedulingChange={onForcePrioritySchedulingChange}
               crowdfundingApproved={crowdfundingApproved || crowdfundingOverride}
               crowdfundingDeferred={crowdfundingDeferred}
               hideCrowdfundingToggle={true}
