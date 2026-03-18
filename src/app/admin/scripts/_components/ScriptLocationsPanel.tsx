@@ -574,15 +574,15 @@ export function ScriptLocationsPanel({
                   </label>
 
                   {/* Tab strip */}
-                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden">
+                  <div className="flex border-b border-admin-border">
                     {(['place', 'references'] as const).map(mode => (
                       <button
                         key={mode}
                         onClick={() => handleLocalUpdate(selectedWithEdits.id, 'location_mode', mode)}
-                        className={`flex-1 py-1.5 text-admin-sm font-medium transition-colors ${
+                        className={`flex-1 py-2 text-admin-sm font-medium transition-colors border-b-2 -mb-px ${
                           (selectedWithEdits.location_mode ?? 'place') === mode
-                            ? 'bg-admin-bg-overlay text-admin-text-primary font-semibold'
-                            : 'text-admin-text-ghost hover:text-admin-text-muted'
+                            ? 'border-admin-text-primary text-admin-text-primary'
+                            : 'border-transparent text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >
                         {mode === 'place' ? 'Location' : 'References'}
