@@ -123,7 +123,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     () => sectionsForType(initSelectedType(proposalType, initialQuote?.quote_type))
   );
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['ADD-ONS', 'CAST + CREW', 'RENTALS + TECHNIQUES', 'POST PRODUCTION'])
+    new Set(['ADD-ONS', 'CAST + CREW', 'RENTALS + TECHNIQUES', 'POST PRODUCTION', 'PRIORITY'])
   );
 
   // When controlled from parent (admin PricingTab), override internal type/crowdfunding

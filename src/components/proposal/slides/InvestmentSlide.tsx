@@ -40,6 +40,8 @@ interface Props {
   quotes: ProposalQuoteRow[];
   crowdfundingApproved?: boolean;
   crowdfundingDeferred?: boolean;
+  pricingNotes?: string | null;
+  showPricingNotes?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
   viewerEmail?: string | null;
@@ -51,6 +53,8 @@ export function InvestmentSlide({
   quotes: initialQuotes,
   crowdfundingApproved,
   crowdfundingDeferred,
+  pricingNotes,
+  showPricingNotes,
   slideRef,
   viewerName,
   viewerEmail,
@@ -236,6 +240,14 @@ export function InvestmentSlide({
 
         {/* Quote tabs + content */}
         <div data-content>
+          {/* ── Pricing notes (common across all quotes) ── */}
+          {showPricingNotes && pricingNotes && (
+            <div className="rounded-xl px-6 py-5 mb-6 bg-white/[0.04] border border-white/[0.12]">
+              <p className="section-eyebrow mb-2">Notes</p>
+              <p className="text-white/80 leading-relaxed text-base">{pricingNotes}</p>
+            </div>
+          )}
+
           {/* ── FNA quote cards (purple grid) ── */}
           {fnaQuotes.length > 0 && (
             <div className={`mb-4 grid gap-3 ${

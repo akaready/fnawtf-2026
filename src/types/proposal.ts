@@ -62,6 +62,8 @@ export interface ProposalRow {
   show_timeline: boolean;
   show_samples: boolean;
   show_pricing: boolean;
+  pricing_notes: string | null;
+  show_pricing_notes: boolean;
   prepared_date: string | null;
   created_by: string | null;
   created_at: string;

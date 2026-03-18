@@ -68,6 +68,8 @@ interface PricingTabProps {
   proposalId: string;
   proposalType: ProposalType;
   initialQuotes: ProposalQuoteRow[];
+  initialPricingNotes?: string | null;
+  initialShowPricingNotes?: boolean;
   onProposalTypeChange?: (type: ProposalType) => void;
   onDirty?: () => void;
 }
@@ -150,7 +152,7 @@ const labelCls = 'admin-label';
 const inputCls = 'admin-input w-full';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes, onProposalTypeChange, onDirty }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, onProposalTypeChange, onDirty }: PricingTabProps,
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
@@ -230,6 +232,22 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const initRef = useRef(false);
 
   const activeQuote = quotes[activeQuoteIndex] ?? null;
+
+  // ── Pricing notes (common across all quotes) ──────────────────────────
+  const [showPricingNotes, setShowPricingNotes] = useState(initialShowPricingNotes ?? false);
+
+  const handlePricingNotesSave = (notes: string) => {
+    startTransition(async () => {
+      await updateProposal(proposalId, { pricing_notes: notes.trim() || null });
+    });
+  };
+
+  const handlePricingNotesToggle = (show: boolean) => {
+    setShowPricingNotes(show);
+    startTransition(async () => {
+      await updateProposal(proposalId, { show_pricing_notes: show });
+    });
+  };
 
   // ── Auto-create Recommended on first open if empty ──────────────────────
   useEffect(() => {
@@ -424,6 +442,31 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
         })}
       </div>
 
+      {/* Pricing notes — common across all quotes */}
+      <div className="px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0 space-y-2">
+        <div className="flex items-center gap-2">
+          <label className={labelCls}>Notes</label>
+          <button
+            onClick={() => handlePricingNotesToggle(!showPricingNotes)}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+              showPricingNotes
+                ? 'text-admin-text-secondary hover:text-admin-text-primary hover:bg-admin-bg-hover'
+                : 'text-admin-text-ghost hover:text-admin-text-secondary hover:bg-admin-bg-hover'
+            }`}
+            title={showPricingNotes ? 'Hide notes on proposal' : 'Show notes on proposal'}
+          >
+            {showPricingNotes ? <Eye size={13} /> : <EyeOff size={13} />}
+          </button>
+        </div>
+        <textarea
+          defaultValue={initialPricingNotes ?? ''}
+          onBlur={(e) => handlePricingNotesSave(e.target.value)}
+          placeholder="Common notes shown above all quote options..."
+          rows={2}
+          className={inputCls + ' resize-none leading-relaxed'}
+        />
+      </div>
+
       {/* Quote tabs nav — hidden for Scale (custom quotes) */}
       {selectedType === 'scale' ? null : <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
         <DndContext id={dndId} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -529,7 +572,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             {/* Description — all FNA quotes */}
             <div>
               <label className={labelCls}>
-                Quote description (shown to client)
+                Quote description
               </label>
               <textarea
                 key={`desc-${activeQuote.id}`}

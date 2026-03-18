@@ -314,6 +314,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             quotes={quotes}
             crowdfundingApproved={proposal.crowdfunding_approved}
             crowdfundingDeferred={proposal.crowdfunding_deferred}
+            pricingNotes={proposal.pricing_notes}
+            showPricingNotes={proposal.show_pricing_notes}
             slideRef={investmentRef}
             viewerName={viewerName}
             viewerEmail={viewerEmail}
