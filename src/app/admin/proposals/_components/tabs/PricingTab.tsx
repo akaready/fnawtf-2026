@@ -71,6 +71,7 @@ interface PricingTabProps {
   initialPricingNotes?: string | null;
   initialShowPricingNotes?: boolean;
   initialForceAdditionalDiscount?: boolean;
+  initialClientAdditionalDiscount?: number;
   initialForcePriorityScheduling?: boolean;
   onProposalTypeChange?: (type: ProposalType) => void;
   onDirty?: () => void;
@@ -154,7 +155,7 @@ const labelCls = 'admin-label';
 const inputCls = 'admin-input w-full';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, initialForceAdditionalDiscount, initialForcePriorityScheduling, onProposalTypeChange, onDirty }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, initialForceAdditionalDiscount, initialClientAdditionalDiscount, initialForcePriorityScheduling, onProposalTypeChange, onDirty }: PricingTabProps,
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
@@ -253,12 +254,20 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
   // ── Force toggles (proposal-level) ─────────────────────────────────────
   const [forceAdditionalDiscount, setForceAdditionalDiscount] = useState(initialForceAdditionalDiscount ?? false);
+  const [clientAdditionalDiscount, setClientAdditionalDiscount] = useState(initialClientAdditionalDiscount ?? 0);
   const [forcePriorityScheduling, setForcePriorityScheduling] = useState(initialForcePriorityScheduling ?? false);
 
   const handleForceAdditionalDiscountChange = (force: boolean) => {
     setForceAdditionalDiscount(force);
     startTransition(async () => {
       await updateProposal(proposalId, { force_additional_discount: force });
+    });
+  };
+
+  const handleClientAdditionalDiscountChange = (amount: number) => {
+    setClientAdditionalDiscount(amount);
+    startTransition(async () => {
+      await updateProposal(proposalId, { client_additional_discount: amount });
     });
   };
 
@@ -473,7 +482,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             rows={3}
             className={inputCls + ' resize-none leading-relaxed flex-1'}
           />
-          <div className="space-y-1.5 flex-shrink-0 pt-1">
+          <div className="space-y-2 flex-shrink-0 pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -483,15 +492,28 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               />
               <span className="text-admin-sm text-admin-text-muted">Show notes</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={forceAdditionalDiscount}
                 onChange={(e) => handleForceAdditionalDiscountChange(e.target.checked)}
                 className="accent-admin-accent"
               />
-              <span className="text-admin-sm text-admin-text-muted">Force additional discount</span>
-            </label>
+              <span className="text-admin-sm text-admin-text-muted">Discount on client quotes</span>
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-admin-text-muted font-mono text-xs">$</span>
+                <input
+                  type="number"
+                  defaultValue={clientAdditionalDiscount || ''}
+                  onBlur={(e) => handleClientAdditionalDiscountChange(parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  min={0}
+                  step={50}
+                  disabled={!forceAdditionalDiscount}
+                  className="w-20 pl-5 pr-2 py-1 bg-admin-bg-base border border-admin-border rounded-admin-sm text-admin-text-primary font-mono text-admin-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -499,7 +521,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 onChange={(e) => handleForcePrioritySchedulingChange(e.target.checked)}
                 className="accent-admin-accent"
               />
-              <span className="text-admin-sm text-admin-text-muted">Force priority scheduling</span>
+              <span className="text-admin-sm text-admin-text-muted">Priority scheduling on client quotes</span>
             </label>
           </div>
         </div>

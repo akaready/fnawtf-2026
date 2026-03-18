@@ -43,6 +43,7 @@ interface Props {
   pricingNotes?: string | null;
   showPricingNotes?: boolean;
   forceAdditionalDiscount?: boolean;
+  clientAdditionalDiscount?: number;
   forcePriorityScheduling?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
@@ -58,6 +59,7 @@ export function InvestmentSlide({
   pricingNotes,
   showPricingNotes,
   forceAdditionalDiscount,
+  clientAdditionalDiscount,
   forcePriorityScheduling,
   slideRef,
   viewerName,
@@ -383,6 +385,7 @@ export function InvestmentSlide({
               onActiveQuoteChange={(id) => setActiveQuoteId(id)}
               onLockedInteract={isLocked && clientQuotes.length === 0 ? handleNewQuote : undefined}
               forceAdditionalDiscount={forceAdditionalDiscount}
+              clientAdditionalDiscount={clientAdditionalDiscount}
               forcePriorityScheduling={forcePriorityScheduling}
             />
             {/* Unlock glow burst */}

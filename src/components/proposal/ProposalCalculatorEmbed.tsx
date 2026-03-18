@@ -65,6 +65,8 @@ interface Props {
   onAdditionalDiscountChange?: (amount: number) => void;
   /** Force additional discount on client quotes */
   forceAdditionalDiscount?: boolean;
+  /** Amount to apply when forceAdditionalDiscount is true */
+  clientAdditionalDiscount?: number;
   /** Force priority scheduling on client quotes */
   forcePriorityScheduling?: boolean;
   /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
@@ -94,7 +96,7 @@ function sectionsForType(type: PricingType): Set<string> {
   return s;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, forcePriorityScheduling, onAnyChange, standalone, onStateChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, clientAdditionalDiscount, forcePriorityScheduling, onAnyChange, standalone, onStateChange }: Props) {
   const [selectedType, setSelectedType] = useState<PricingType>(
     () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
@@ -479,9 +481,9 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     ? new Set(['priority-scheduling-build', 'priority-scheduling-launch'])
     : undefined;
 
-  // When force additional discount is on and this is a client quote, use the FNA quote's amount
-  const effectiveAdditionalDiscount = forceAdditionalDiscount && !isLocked && recommendedRef
-    ? (recommendedRef.additional_discount ?? 0)
+  // When force additional discount is on and this is a client quote, use the proposal-level amount
+  const effectiveAdditionalDiscount = forceAdditionalDiscount && !isLocked
+    ? (clientAdditionalDiscount ?? 0)
     : (initialQuote?.additional_discount ?? 0);
 
   return (
