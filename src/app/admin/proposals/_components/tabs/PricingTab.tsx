@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { saveProposalQuote, updateQuoteFields, deleteProposalQuote, reorderProposalQuotes, updateProposal } from '@/app/admin/actions';
-import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle, type CalculatorStateSnapshot } from '@/components/proposal/ProposalCalculatorEmbed';
+import { ProposalCalculatorEmbed, type PricingType, type ProposalCalculatorSaveHandle } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalQuoteRow, ProposalType } from '@/types/proposal';
 
 export interface PricingTabHandle {
@@ -200,8 +200,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [editLabel, setEditLabel] = useState('');
   const editDescRef = useRef('');
   const editLabelRef = useRef('');
-  const descDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const descMountedRef = useRef(false);
+  const addlDiscountRef = useRef(0);
 
   // Sync controlled state when active quote changes
   const activeQuote = quotes[activeQuoteIndex] ?? null;
@@ -214,23 +213,40 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     setEditLabel(l);
     editDescRef.current = d;
     editLabelRef.current = l;
-    descMountedRef.current = false; // skip first debounce fire after sync
+    addlDiscountRef.current = activeQuote.additional_discount ?? 0;
   }, [activeQuoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced save when description or label changes
-  useEffect(() => {
-    if (!descMountedRef.current) { descMountedRef.current = true; return; }
-    if (!activeQuoteId) return;
-    if (descDebounceRef.current) clearTimeout(descDebounceRef.current);
-    const qid = activeQuoteId;
-    descDebounceRef.current = setTimeout(() => {
-      void updateQuoteFields(qid, {
-        description: editDescRef.current.trim() || null,
-        label: editLabelRef.current,
-      });
-    }, 800);
-    return () => { if (descDebounceRef.current) clearTimeout(descDebounceRef.current); };
-  }, [editDesc, editLabel, activeQuoteId]);
+  // ── Unified save — single path for all quote fields ──────────────────────
+  const saveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const flushSave = useCallback(async () => {
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    const q = quotesRef.current.find((r) => r.id === activeQuoteIdRef.current);
+    if (!q || !embedSaveRef.current) return;
+    const snapshot = embedSaveRef.current.getState();
+    const description = editDescRef.current.trim() || null;
+    const label = editLabelRef.current;
+    const additional_discount = addlDiscountRef.current;
+    await saveProposalQuote(proposalId, {
+      ...snapshot,
+      label,
+      description,
+      additional_discount,
+      is_fna_quote: true,
+      is_locked: true,
+      defer_payment: false,
+      total_amount: null,
+      down_amount: null,
+    }, q.id);
+    setQuotes((prev) => prev.map((r) => r.id === q.id
+      ? { ...r, ...snapshot, description, label, additional_discount }
+      : r));
+  }, [proposalId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scheduleSave = useCallback(() => {
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    saveDebounceRef.current = setTimeout(() => { void flushSave(); }, 1500);
+  }, [flushSave]);
 
   // Only accept dirty signals after mount settles (avoids StrictMode double-fire)
   useEffect(() => {
@@ -241,19 +257,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   useImperativeHandle(ref, () => ({
     get isDirty() { return isDirtyRef.current; },
     save: async () => {
-      // Flush description + label immediately — cancel any pending debounce
-      if (descDebounceRef.current) clearTimeout(descDebounceRef.current);
-      const q = quotesRef.current[activeQuoteIndex];
-      if (q) {
-        await updateQuoteFields(q.id, {
-          description: editDescRef.current.trim() || null,
-          label: editLabelRef.current,
-        });
-      }
-      await Promise.all([
-        embedSaveRef.current?.saveNow(),
-        selectedType ? updateProposal(proposalId, { proposal_type: selectedType }) : Promise.resolve(),
-      ]);
+      await flushSave();
+      if (selectedType) await updateProposal(proposalId, { proposal_type: selectedType });
     },
   }));
 
@@ -283,12 +288,6 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const activeQuoteIdRef = useRef(quotes[activeQuoteIndex]?.id);
   activeQuoteIdRef.current = quotes[activeQuoteIndex]?.id;
 
-  const handleQuoteUpdated = (payload: CalculatorStateSnapshot) => {
-    isDirtyRef.current = false;
-    const qid = activeQuoteIdRef.current;
-    if (!qid) return;
-    setQuotes((prev) => prev.map((q) => (q.id === qid ? { ...q, ...payload } : q)));
-  };
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -379,12 +378,11 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // handleLabelSave and handleDescSave removed — replaced by controlled inputs with debounced save above
-
   const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
     if (amount === (quote.additional_discount ?? 0)) return;
+    addlDiscountRef.current = amount;
     setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q)));
-    void updateQuoteFields(quote.id, { additional_discount: amount });
+    scheduleSave();
   };
 
   const handleVisibilityToggle = (quote: ProposalQuoteRow) => {
@@ -637,7 +635,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               <input
                 type="text"
                 value={editLabel}
-                onChange={(e) => { setEditLabel(e.target.value); editLabelRef.current = e.target.value; }}
+                onChange={(e) => { setEditLabel(e.target.value); editLabelRef.current = e.target.value; scheduleSave(); }}
                 placeholder={QUOTE_CONFIG[activeQuoteIndex]?.defaultLabel ?? `Option ${activeQuoteIndex + 1}`}
                 className={inputCls}
               />
@@ -650,7 +648,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               </label>
               <textarea
                 value={editDesc}
-                onChange={(e) => { setEditDesc(e.target.value); editDescRef.current = e.target.value; }}
+                onChange={(e) => { setEditDesc(e.target.value); editDescRef.current = e.target.value; scheduleSave(); }}
                 placeholder="Describe this package..."
                 rows={3}
                 className={inputCls + ' resize-none leading-relaxed'}
@@ -666,28 +664,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               typeOverride={selectedType}
               crowdfundingOverride={crowdfundingEnabled}
               saveRef={embedSaveRef}
-              onAnyChange={() => { if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); } }}
+              standalone
+              onAnyChange={() => {
+                scheduleSave();
+                if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); }
+              }}
               onAdditionalDiscountChange={(amount) => handleAdditionalDiscountSave(activeQuote, amount)}
               hideDeferredPayment={hideDeferredPayment}
               activeQuoteId={activeQuote.id}
-              onFnaSave={async (payload) => {
-                // Only save calculator fields — label/description/additional_discount
-                // are saved separately via updateQuoteFields to avoid race conditions
-                const id = await saveProposalQuote(
-                  proposalId,
-                  {
-                    ...payload,
-                    is_fna_quote: true,
-                    is_locked: true,
-                    defer_payment: false,
-                    total_amount: null,
-                    down_amount: null,
-                  },
-                  activeQuote.id,
-                );
-                return id;
-              }}
-              onQuoteUpdated={handleQuoteUpdated}
             />
           </div>
         ) : (
