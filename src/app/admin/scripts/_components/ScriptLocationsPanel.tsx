@@ -581,7 +581,7 @@ export function ScriptLocationsPanel({
                         onClick={() => handleLocalUpdate(selectedWithEdits.id, 'location_mode', mode)}
                         className={`flex-1 py-1.5 text-admin-sm font-medium transition-colors ${
                           (selectedWithEdits.location_mode ?? 'place') === mode
-                            ? 'bg-admin-accent text-white'
+                            ? 'bg-admin-bg-active text-admin-text-primary'
                             : 'bg-admin-bg-base text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >

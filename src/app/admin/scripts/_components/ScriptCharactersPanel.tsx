@@ -781,7 +781,7 @@ export function ScriptCharactersPanel({
                         onClick={() => { setDraftCastMode(mode); autoSave.trigger(); }}
                         className={`flex-1 py-1.5 text-admin-sm font-medium transition-colors ${
                           draftCastMode === mode
-                            ? 'bg-admin-accent text-white'
+                            ? 'bg-admin-bg-active text-admin-text-primary'
                             : 'bg-admin-bg-base text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >
