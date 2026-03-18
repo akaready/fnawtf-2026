@@ -648,6 +648,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               saveRef={embedSaveRef}
               onAnyChange={() => { if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); } }}
               onAdditionalDiscountChange={(amount) => handleAdditionalDiscountSave(activeQuote, amount)}
+              hideDeferredPayment={hideDeferredPayment}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
                 const id = await saveProposalQuote(
