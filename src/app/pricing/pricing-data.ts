@@ -324,7 +324,7 @@ export const launchAddOns: AddOn[] = [
     tier: 'launch',
     category: 'POST PRODUCTION',
     discountExempt: true,
-    quantity: { min: 1, max: 200, default: 8, unit: 'hours' },
+    quantity: { min: 1, max: 200, default: 40, unit: 'hours' },
   },
   {
     id: 'launch-additional-social',
