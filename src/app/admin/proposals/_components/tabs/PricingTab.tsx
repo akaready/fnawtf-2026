@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect, useRef, useId, forwardRef, useImperativeHandle } from 'react';
+import { useState, useTransition, useEffect, useRef, useId, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, GripVertical, type LucideIcon } from 'lucide-react';
 import {
   DndContext,
@@ -159,9 +159,17 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, initialForceAdditionalDiscount, initialClientAdditionalDiscount, initialForcePriorityScheduling, initialHideDeferredPayment, onProposalTypeChange, onDirty }: PricingTabProps,
   ref,
 ) {
-  const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
+  const [quotes, setQuotesRaw] = useState<ProposalQuoteRow[]>(
     [...initialQuotes.filter((q) => !q.deleted_at && q.is_fna_quote)].sort((a, b) => a.sort_order - b.sort_order),
   );
+  const quotesRef = useRef(quotes);
+  const setQuotes = useCallback((updater: ProposalQuoteRow[] | ((prev: ProposalQuoteRow[]) => ProposalQuoteRow[])) => {
+    setQuotesRaw((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      quotesRef.current = next;
+      return next;
+    });
+  }, []);
   const [selectedPhases, setSelectedPhases] = useState<string[]>(() =>
     initPhases(proposalType, initialQuotes),
   );
@@ -337,14 +345,11 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   // ── Label save ──────────────────────────────────────────────────────────
   const handleLabelSave = (quote: ProposalQuoteRow, label: string) => {
     if (label === quote.label) return;
+    const current = quotesRef.current.find((q) => q.id === quote.id);
+    if (!current) return;
+    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, label } : q)));
     startTransition(async () => {
-      setQuotes((prev) => {
-        const current = prev.find((q) => q.id === quote.id);
-        if (current) {
-          void saveProposalQuote(proposalId, { ...current, label }, quote.id);
-        }
-        return prev.map((q) => (q.id === quote.id ? { ...q, label } : q));
-      });
+      await saveProposalQuote(proposalId, { ...current, label }, quote.id);
     });
   };
 
@@ -352,43 +357,33 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const handleDescSave = (quote: ProposalQuoteRow, description: string) => {
     if (description === (quote.description ?? '')) return;
     const descValue = description.trim() || null;
+    const current = quotesRef.current.find((q) => q.id === quote.id);
+    if (!current) return;
+    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q)));
     startTransition(async () => {
-      // Use latest quote from state to avoid stale data overwriting calculator changes
-      setQuotes((prev) => {
-        const current = prev.find((q) => q.id === quote.id);
-        if (current) {
-          void saveProposalQuote(proposalId, { ...current, description: descValue }, quote.id);
-        }
-        return prev.map((q) => (q.id === quote.id ? { ...q, description: descValue } : q));
-      });
+      await saveProposalQuote(proposalId, { ...current, description: descValue }, quote.id);
     });
   };
 
   // ── Additional discount save ─────────────────────────────────────────────
   const handleAdditionalDiscountSave = (quote: ProposalQuoteRow, amount: number) => {
     if (amount === (quote.additional_discount ?? 0)) return;
+    const current = quotesRef.current.find((q) => q.id === quote.id);
+    if (!current) return;
+    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q)));
     startTransition(async () => {
-      setQuotes((prev) => {
-        const current = prev.find((q) => q.id === quote.id);
-        if (current) {
-          void saveProposalQuote(proposalId, { ...current, additional_discount: amount }, quote.id);
-        }
-        return prev.map((q) => (q.id === quote.id ? { ...q, additional_discount: amount } : q));
-      });
+      await saveProposalQuote(proposalId, { ...current, additional_discount: amount }, quote.id);
     });
   };
 
   // ── Visibility toggle ──────────────────────────────────────────────────
   const handleVisibilityToggle = (quote: ProposalQuoteRow) => {
     const visible = !quote.visible;
+    const current = quotesRef.current.find((q) => q.id === quote.id);
+    if (!current) return;
+    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, visible } : q)));
     startTransition(async () => {
-      setQuotes((prev) => {
-        const current = prev.find((q) => q.id === quote.id);
-        if (current) {
-          void saveProposalQuote(proposalId, { ...current, visible }, quote.id);
-        }
-        return prev.map((q) => (q.id === quote.id ? { ...q, visible } : q));
-      });
+      await saveProposalQuote(proposalId, { ...current, visible }, quote.id);
     });
   };
 
@@ -672,12 +667,15 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               hideDeferredPayment={hideDeferredPayment}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
+                // Read latest quote from state to avoid stale label/description
+                const current = quotesRef.current.find((q) => q.id === activeQuote.id);
                 const id = await saveProposalQuote(
                   proposalId,
                   {
                     ...payload,
-                    label: activeQuote.label,
-                    description: activeQuote.description,
+                    label: current?.label ?? activeQuote.label,
+                    description: current?.description ?? activeQuote.description,
+                    additional_discount: current?.additional_discount ?? activeQuote.additional_discount,
                     is_fna_quote: true,
                     is_locked: true,
                     defer_payment: false,
