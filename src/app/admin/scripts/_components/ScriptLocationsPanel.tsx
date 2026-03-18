@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from 'react';
-import { Plus, Trash2, Check, X, Loader2, MapPin } from 'lucide-react';
+import { Plus, Trash2, Check, X, Loader2, MapPin, ImagePlus } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -25,8 +25,9 @@ import { ColorPicker } from './ColorPicker';
 import {
   createLocation, updateLocation, deleteLocation,
   assignLocationOption, removeLocationOption, reorderLocationOptions,
+  uploadLocationReference, deleteLocationReference,
 } from '@/app/admin/actions';
-import type { ScriptLocationRow, ScriptSceneRow, LocationOptionWithLocation } from '@/types/scripts';
+import type { ScriptLocationRow, ScriptSceneRow, LocationOptionWithLocation, LocationReferenceRow } from '@/types/scripts';
 
 interface Props {
   open: boolean;
@@ -38,6 +39,8 @@ interface Props {
   globalLocations?: { id: string; name: string; featured_image: string | null }[];
   locationOptionsMap: Record<string, LocationOptionWithLocation[]>;
   onLocationOptionsMapChange: (map: Record<string, LocationOptionWithLocation[]>) => void;
+  locationReferenceMap: Record<string, LocationReferenceRow[]>;
+  onLocationReferenceMapChange: (map: Record<string, LocationReferenceRow[]>) => void;
 }
 
 // ── Sortable Location Option Row ──────────────────────────────────────────
@@ -190,11 +193,14 @@ function LocationPickerPopover({
 export function ScriptLocationsPanel({
   open, onClose, scriptId, locations, scenes, onLocationsChange,
   globalLocations = [], locationOptionsMap, onLocationOptionsMapChange,
+  locationReferenceMap, onLocationReferenceMapChange,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [uploadingRef, setUploadingRef] = useState(false);
+  const refUploadInputRef = useRef<HTMLInputElement>(null);
   // Local edits for dirty state tracking
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptLocationRow>>>({});
   const localEditsRef = useRef(localEdits);
@@ -313,6 +319,7 @@ export function ScriptLocationsPanel({
         color: '#38bdf8',
         sort_order: locations.length,
         global_location_id: null,
+        location_mode: 'place',
         created_at: new Date().toISOString(),
       };
       onLocationsChange([...locations, newLoc]);
@@ -384,6 +391,28 @@ export function ScriptLocationsPanel({
     }
     onLocationOptionsMapChange({ ...locationOptionsMap, [selected.id]: updated });
   }, [selected, selectedOptions, locationOptionsMap, onLocationOptionsMapChange]);
+
+  const handleUploadLocationRef = useCallback(async (file: File) => {
+    if (!selected) return;
+    const currentRefs = locationReferenceMap[selected.id] ?? [];
+    if (currentRefs.length >= 4) return;
+    setUploadingRef(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const row = await uploadLocationReference(selected.id, fd);
+      onLocationReferenceMapChange({ ...locationReferenceMap, [selected.id]: [...currentRefs, row] });
+    } finally {
+      setUploadingRef(false);
+    }
+  }, [selected, locationReferenceMap, onLocationReferenceMapChange]);
+
+  const handleDeleteLocationRef = useCallback(async (ref: LocationReferenceRow) => {
+    if (!selected) return;
+    await deleteLocationReference(ref.id, ref.storage_path);
+    const updated = (locationReferenceMap[selected.id] ?? []).filter(r => r.id !== ref.id);
+    onLocationReferenceMapChange({ ...locationReferenceMap, [selected.id]: updated });
+  }, [selected, locationReferenceMap, onLocationReferenceMapChange]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     if (!selected) return;
@@ -536,6 +565,83 @@ export function ScriptLocationsPanel({
                     rows={4}
                     className="admin-input w-full text-sm resize-none py-2.5 px-3 leading-relaxed"
                   />
+                </div>
+
+                {/* ── Storyboard Mode — Toggle ────────────────────── */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
+                    Storyboard Reference
+                  </label>
+
+                  {/* Tab strip */}
+                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden text-xs">
+                    {(['place', 'references'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => handleLocalUpdate(selectedWithEdits.id, 'location_mode', mode)}
+                        className={`flex-1 py-1.5 font-medium transition-colors ${
+                          (selectedWithEdits.location_mode ?? 'place') === mode
+                            ? 'bg-admin-text-primary text-admin-bg-base'
+                            : 'bg-admin-bg-base text-admin-text-ghost hover:text-admin-text-muted'
+                        }`}
+                      >
+                        {mode === 'place' ? 'Location' : 'References'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(selectedWithEdits.location_mode ?? 'place') === 'references' && (
+                    /* References tab — up to 4 uploaded images */
+                    <div className="space-y-2">
+                      <input
+                        ref={refUploadInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await handleUploadLocationRef(file);
+                          e.target.value = '';
+                        }}
+                      />
+                      <div className="flex gap-2 flex-wrap">
+                        {(locationReferenceMap[selectedWithEdits.id] ?? []).map(ref => (
+                          <div key={ref.id} className="group/refslot relative w-20 h-20 flex-shrink-0">
+                            <img
+                              src={ref.image_url}
+                              alt=""
+                              className="w-full h-full object-cover rounded-admin-md"
+                            />
+                            <button
+                              onClick={() => handleDeleteLocationRef(ref)}
+                              className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover/refslot:opacity-100 transition-opacity hover:bg-admin-danger"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        {(locationReferenceMap[selectedWithEdits.id] ?? []).length < 4 && (
+                          <button
+                            onClick={() => refUploadInputRef.current?.click()}
+                            disabled={uploadingRef}
+                            className="w-20 h-20 flex-shrink-0 flex flex-col items-center justify-center gap-1 rounded-admin-md border-2 border-dashed border-admin-border text-admin-text-faint hover:border-admin-text-faint hover:text-admin-text-muted hover:bg-admin-bg-hover transition-colors disabled:opacity-50"
+                          >
+                            {uploadingRef ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <>
+                                <ImagePlus size={16} />
+                                <span className="text-[10px]">Add</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-admin-text-faint">
+                        Up to 4 images used as visual references for storyboard generation.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Location Options — Row List ────────────────────── */}

@@ -7,7 +7,7 @@ import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
 import { StoryboardLightbox } from './StoryboardLightbox';
 import { buildStoryboardFilename, downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
-import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
+import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow } from '@/types/scripts';
 
 interface Props {
   frame: ScriptStoryboardFrameRow | null;
@@ -30,6 +30,7 @@ interface Props {
   locations: ScriptLocationRow[];
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
+  locationReferenceMap?: Record<string, LocationReferenceRow[]>;
   scriptTitle: string;
   scriptVersion: number;
   beatLabel: string;
@@ -55,6 +56,7 @@ export function ScriptStoryboardCell({
   locations,
   castMap,
   referenceMap,
+  locationReferenceMap,
   scriptTitle,
   scriptVersion,
   beatLabel,
@@ -73,6 +75,14 @@ export function ScriptStoryboardCell({
       const contentPrompt = beat
         ? buildRichPrompt(beat, beatIndex, scene, characters, locations, castMap, referenceMap)
         : [audioContent && `Audio: ${audioContent}`, visualContent && `Visual: ${visualContent}`].filter(Boolean).join('\n') || 'Empty beat — generate a neutral establishing shot';
+
+      // Collect location reference URLs if location is in 'references' mode
+      const locationReferenceUrls: string[] = [];
+      const loc = locations.find(l => l.id === scene.location_id);
+      if (loc?.location_mode === 'references' && scene.location_id) {
+        (locationReferenceMap?.[scene.location_id] ?? []).slice(0, 2)
+          .forEach((r: LocationReferenceRow) => locationReferenceUrls.push(r.image_url));
+      }
 
       // Extract character mentions and collect visual references per mode
       const castReferenceUrls: string[] = [];
@@ -111,6 +121,7 @@ export function ScriptStoryboardCell({
           referenceImageUrls: styleReferences.map((r) => r.image_url),
           beatReferenceUrls,
           castReferenceUrls,
+          locationReferenceUrls,
         }),
       });
 
@@ -121,7 +132,7 @@ export function ScriptStoryboardCell({
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, audioContent, visualContent, beatReferenceUrls, scriptId, beatId, styleReferences, onFrameChange]);
+  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, scriptId, beatId, styleReferences, onFrameChange]);
 
   const handleUpload = useCallback(
     async (files: FileList | null) => {

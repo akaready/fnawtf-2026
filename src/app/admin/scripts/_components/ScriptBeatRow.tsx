@@ -4,7 +4,7 @@ import { Check, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
-import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
+import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptStoryboardCell } from './ScriptStoryboardCell';
 
@@ -39,6 +39,7 @@ interface Props {
   onCancelGeneration?: () => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
+  locationReferenceMap?: Record<string, LocationReferenceRow[]>;
   scriptTitle: string;
   scriptVersion: number;
 }
@@ -86,6 +87,7 @@ export function ScriptBeatRow({
   onCancelGeneration,
   castMap,
   referenceMap,
+  locationReferenceMap,
   scriptTitle,
   scriptVersion,
 }: Props) {
@@ -247,6 +249,7 @@ export function ScriptBeatRow({
               locations={locations}
               castMap={castMap}
               referenceMap={referenceMap}
+              locationReferenceMap={locationReferenceMap}
               scriptTitle={scriptTitle}
               scriptVersion={scriptVersion}
               beatLabel={beatLetter(beatNumber)}

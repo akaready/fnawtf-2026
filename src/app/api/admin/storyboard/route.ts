@@ -43,6 +43,7 @@ interface GenerateRequest {
   referenceImageUrls?: string[];
   beatReferenceUrls?: string[];
   castReferenceUrls?: string[];
+  locationReferenceUrls?: string[];
 }
 
 export async function POST(request: Request) {
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
   const {
     scriptId, beatId, sceneId, contentPrompt, stylePrompt,
     stylePreset, notesContent: _notesContent, aspectRatio = '16:9',
-    referenceImageUrls = [], beatReferenceUrls = [], castReferenceUrls = [],
+    referenceImageUrls = [], beatReferenceUrls = [], castReferenceUrls = [], locationReferenceUrls = [],
   } = body;
 
   if (!scriptId || (!beatId && !sceneId)) {
@@ -117,7 +118,21 @@ export async function POST(request: Request) {
     promptSections.push(contentPrompt);
     promptSections.push('');
 
-    // ── Section 4: Character references (text header only — images follow inline) ──
+    // ── Section 4: Location references (text header only — images follow inline) ──
+    if (locationReferenceUrls.length > 0) {
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push('LOCATION REFERENCE PHOTOS — see attached images below:');
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push(
+        'The attached photos show the actual location where this scene takes place. ' +
+        'You MUST replicate the environment\'s architecture, surfaces, lighting quality, ' +
+        'color palette, and spatial feel. This is not a "similar-looking" place — it is ' +
+        'THIS specific location. Match the reference photos exactly in every frame.'
+      );
+      promptSections.push('');
+    }
+
+    // ── Section 5: Character references (text header only — images follow inline) ──
     const castUrls = castReferenceUrls.slice(0, 2);
     if (castUrls.length > 0) {
       promptSections.push('════════════════════════════════════════════════════════');
@@ -136,7 +151,8 @@ export async function POST(request: Request) {
 
     // ── Assemble parts: text first, then reference images interleaved with labels ──
     const styleUrls = referenceImageUrls.slice(0, 4);
-    const remainingSlots = Math.max(0, 8 - styleUrls.length - castUrls.length);
+    const locUrls = locationReferenceUrls.slice(0, 2);
+    const remainingSlots = Math.max(0, 8 - styleUrls.length - castUrls.length - locUrls.length);
     const beatUrls = beatReferenceUrls.slice(0, remainingSlots);
 
     const parts: Part[] = [{ text: textPart }];
@@ -153,6 +169,13 @@ export async function POST(request: Request) {
       parts.push({ text: 'CHARACTER REFERENCE PHOTOS (replicate this face exactly — same person every frame):' });
       const castImgs = await Promise.all(castUrls.map(fetchImagePart));
       for (const img of castImgs) { if (img) parts.push(img); }
+    }
+
+    // Location reference images — labeled group
+    if (locUrls.length > 0) {
+      parts.push({ text: 'LOCATION REFERENCE PHOTOS (replicate this environment exactly — same location every frame):' });
+      const locImgs = await Promise.all(locUrls.map(fetchImagePart));
+      for (const img of locImgs) { if (img) parts.push(img); }
     }
 
     // Beat visual reference images — labeled group

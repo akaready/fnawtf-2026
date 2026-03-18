@@ -24,7 +24,7 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow } from '@/types/scripts';
 
 interface Props {
   scenes: ComputedScene[];
@@ -53,6 +53,7 @@ interface Props {
   onDeleteReference: (refId: string) => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
+  locationReferenceMap?: Record<string, LocationReferenceRow[]>;
   toolbarPortalRef?: React.RefObject<HTMLDivElement | null>;
   onReorderScenes?: (orderedIds: string[]) => void;
   scriptTitle: string;
@@ -86,6 +87,7 @@ export function ScriptEditorCanvas({
   onDeleteReference,
   castMap,
   referenceMap,
+  locationReferenceMap,
   toolbarPortalRef,
   onReorderScenes,
   scriptTitle,
@@ -372,6 +374,14 @@ export function ScriptEditorCanvas({
           const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap, referenceMap);
           const beatRefs = references[beat.id] ?? [];
 
+          // Collect location reference URLs if location is in 'references' mode
+          const locationRefUrls: string[] = [];
+          const loc = locations.find(l => l.id === scene.location_id);
+          if (loc?.location_mode === 'references' && scene.location_id) {
+            (locationReferenceMap?.[scene.location_id] ?? []).slice(0, 2)
+              .forEach((r: LocationReferenceRow) => locationRefUrls.push(r.image_url));
+          }
+
           // Collect visual reference URLs for mentioned characters (respects cast_mode)
           const castRefUrls: string[] = [];
           if (castMap || referenceMap) {
@@ -404,6 +414,7 @@ export function ScriptEditorCanvas({
                 referenceImageUrls: styleReferences.map(r => r.image_url),
                 beatReferenceUrls: beatRefs.map(r => r.image_url),
                 castReferenceUrls: castRefUrls,
+                locationReferenceUrls: locationRefUrls,
               }),
             });
             if (res.ok) {
@@ -423,7 +434,7 @@ export function ScriptEditorCanvas({
       setGeneratingScope(null);
       setGeneratingBeatIds(new Set());
     }
-  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap, referenceMap]);
+  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap, referenceMap, locationReferenceMap]);
 
   const handleGenerateAll = useCallback(() => {
     generateForScenes(scenes, 'all');
@@ -766,6 +777,7 @@ export function ScriptEditorCanvas({
                         locations={locations}
                         castMap={castMap}
                         referenceMap={referenceMap}
+                        locationReferenceMap={locationReferenceMap}
                         scriptTitle={scriptTitle}
                         scriptVersion={scriptVersion}
                       />

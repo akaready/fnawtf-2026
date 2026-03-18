@@ -3637,6 +3637,93 @@ export async function setCharacterCastMode(
   if (error) throw new Error(error.message);
 }
 
+// ── Script Location References ────────────────────────────────────────────
+
+import type { LocationReferenceRow } from '@/types/scripts';
+
+/** Bulk-load all reference images for every script location in a script. */
+export async function getLocationReferenceMap(
+  scriptId: string,
+): Promise<Record<string, LocationReferenceRow[]>> {
+  const { supabase } = await requireAuth();
+
+  const { data: locs, error: locsErr } = await supabase
+    .from('script_locations')
+    .select('id')
+    .eq('script_id', scriptId);
+  if (locsErr) throw new Error(locsErr.message);
+  const locIds = (locs ?? []).map((l: { id: string }) => l.id);
+  if (locIds.length === 0) return {};
+
+  const { data: rows, error } = await supabase
+    .from('script_location_references')
+    .select('*')
+    .in('location_id', locIds)
+    .order('sort_order');
+  if (error) throw new Error(error.message);
+
+  const result: Record<string, LocationReferenceRow[]> = {};
+  for (const row of (rows ?? []) as LocationReferenceRow[]) {
+    (result[row.location_id] ??= []).push(row);
+  }
+  return result;
+}
+
+/** Upload a reference image for a script location. */
+export async function uploadLocationReference(
+  locationId: string,
+  formData: FormData,
+): Promise<LocationReferenceRow> {
+  const { supabase } = await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${locationId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadErr } = await serviceClient.storage
+    .from('location-references')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: { publicUrl } } = serviceClient.storage
+    .from('location-references')
+    .getPublicUrl(path);
+
+  const { data: existing } = await supabase
+    .from('script_location_references')
+    .select('sort_order')
+    .eq('location_id', locationId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = existing && existing.length > 0
+    ? (existing[0] as { sort_order: number }).sort_order + 1
+    : 0;
+
+  const { data: row, error: insertErr } = await supabase
+    .from('script_location_references')
+    .insert({ location_id: locationId, image_url: publicUrl, storage_path: path, sort_order: nextOrder } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+  return row as LocationReferenceRow;
+}
+
+/** Delete a location reference image. */
+export async function deleteLocationReference(referenceId: string, storagePath: string) {
+  const { supabase } = await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+  await serviceClient.storage.from('location-references').remove([storagePath]);
+  const { error } = await supabase
+    .from('script_location_references')
+    .delete()
+    .eq('id', referenceId);
+  if (error) throw new Error(error.message);
+}
+
 // ── Script Location Options ───────────────────────────────────────────────
 
 /** Bulk-load all location options for every script location in a script. */

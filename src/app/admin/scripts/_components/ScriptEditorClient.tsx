@@ -14,7 +14,7 @@ import {
   uploadBeatReference, deleteBeatReference,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
-  getCharacterReferenceMap,
+  getCharacterReferenceMap, getLocationReferenceMap,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -38,7 +38,7 @@ import type {
   ScriptColumnConfig, ScriptBeatReferenceRow,
   ScriptStyleRow, ScriptStyleReferenceRow, ScriptStoryboardFrameRow,
   CharacterCastWithContact, CharacterReferenceRow,
-  LocationOptionWithLocation,
+  LocationOptionWithLocation, LocationReferenceRow,
 } from '@/types/scripts';
 
 interface Props {
@@ -89,6 +89,7 @@ export function ScriptEditorClient({
   const [castMap, setCastMap] = useState<Record<string, CharacterCastWithContact[]>>({});
   const [referenceMap, setReferenceMap] = useState<Record<string, CharacterReferenceRow[]>>({});
   const [locationOptionsMap, setLocationOptionsMap] = useState<Record<string, LocationOptionWithLocation[]>>({});
+  const [locationReferenceMap, setLocationReferenceMap] = useState<Record<string, LocationReferenceRow[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
@@ -133,12 +134,13 @@ export function ScriptEditorClient({
   useEffect(() => {
     (async () => {
       try {
-        const [style, frames, castData, locOptionsData, refData] = await Promise.all([
+        const [style, frames, castData, locOptionsData, refData, locRefData] = await Promise.all([
           getScriptStyle(script.id),
           getStoryboardFrames(script.id),
           getScriptCastMap(script.id),
           getScriptLocationOptionsMap(script.id),
           getCharacterReferenceMap(script.id),
+          getLocationReferenceMap(script.id),
         ]);
         if (style) {
           setScriptStyle(style as ScriptStyleRow);
@@ -149,6 +151,7 @@ export function ScriptEditorClient({
         setCastMap(castData);
         setReferenceMap(refData);
         setLocationOptionsMap(locOptionsData);
+        setLocationReferenceMap(locRefData);
       } catch { /* tables may not exist yet */ }
     })();
   }, [script.id]);
@@ -746,6 +749,7 @@ export function ScriptEditorClient({
                 onDeleteReference={handleDeleteReference}
                 castMap={castMap}
                 referenceMap={referenceMap}
+                locationReferenceMap={locationReferenceMap}
                 toolbarPortalRef={toolbarSlotRef}
                 onReorderScenes={handleReorderScenes}
                 scriptTitle={script.title}
@@ -797,6 +801,8 @@ export function ScriptEditorClient({
         globalLocations={globalLocations}
         locationOptionsMap={locationOptionsMap}
         onLocationOptionsMapChange={setLocationOptionsMap}
+        locationReferenceMap={locationReferenceMap}
+        onLocationReferenceMapChange={setLocationReferenceMap}
       />
       <ScriptSettingsPanel
         open={showSettings}

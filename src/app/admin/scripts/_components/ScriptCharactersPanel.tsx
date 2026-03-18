@@ -592,7 +592,7 @@ export function ScriptCharactersPanel({
   const handleUploadReference = useCallback(async (file: File) => {
     if (!selected) return;
     const currentRefs = referenceMap[selected.id] ?? [];
-    if (currentRefs.length >= 3) return;
+    if (currentRefs.length >= 4) return;
     setUploadingRef(true);
     try {
       const fd = new FormData();
@@ -774,15 +774,15 @@ export function ScriptCharactersPanel({
                   </label>
 
                   {/* Tab strip */}
-                  <div className="flex items-center gap-1 bg-admin-bg-wash rounded-admin-md p-1">
+                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden text-xs">
                     {(['people', 'references'] as const).map(mode => (
                       <button
                         key={mode}
                         onClick={() => { setDraftCastMode(mode); autoSave.trigger(); }}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-admin-sm transition-colors capitalize ${
+                        className={`flex-1 py-1.5 font-medium transition-colors ${
                           draftCastMode === mode
-                            ? 'bg-admin-bg-base text-admin-text-primary shadow-sm'
-                            : 'text-admin-text-muted hover:text-admin-text-primary'
+                            ? 'bg-admin-text-primary text-admin-bg-base'
+                            : 'bg-admin-bg-base text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >
                         {mode === 'people' ? 'Person' : 'References'}
@@ -843,7 +843,7 @@ export function ScriptCharactersPanel({
                       )}
                     </>
                   ) : (
-                    /* References tab — up to 3 uploaded images */
+                    /* References tab — up to 4 uploaded images */
                     <div className="space-y-2">
                       <input
                         ref={refUploadInputRef}
@@ -872,7 +872,7 @@ export function ScriptCharactersPanel({
                             </button>
                           </div>
                         ))}
-                        {(referenceMap[selected.id] ?? []).length < 3 && (
+                        {(referenceMap[selected.id] ?? []).length < 4 && (
                           <button
                             onClick={() => refUploadInputRef.current?.click()}
                             disabled={uploadingRef}
@@ -890,7 +890,7 @@ export function ScriptCharactersPanel({
                         )}
                       </div>
                       <p className="text-[10px] text-admin-text-faint">
-                        Up to 3 images used as visual references for storyboard generation.
+                        Up to 4 images used as visual references for storyboard generation.
                       </p>
                     </div>
                   )}

@@ -104,6 +104,15 @@ export interface CharacterCastWithContact extends CharacterCastRow {
   };
 }
 
+export interface LocationReferenceRow {
+  id: string;
+  location_id: string;
+  image_url: string;
+  storage_path: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface ScriptLocationRow {
   id: string;
   script_id: string;
@@ -112,6 +121,7 @@ export interface ScriptLocationRow {
   color: string;
   sort_order: number;
   global_location_id: string | null;
+  location_mode: 'place' | 'references';
   created_at: string;
 }
 
