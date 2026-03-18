@@ -63,6 +63,12 @@ interface Props {
   crowdfundingOverride?: boolean;
   /** Called when admin changes the additional discount amount */
   onAdditionalDiscountChange?: (amount: number) => void;
+  /** Force additional discount on client quotes */
+  forceAdditionalDiscount?: boolean;
+  onForceAdditionalDiscountChange?: (force: boolean) => void;
+  /** Force priority scheduling on client quotes */
+  forcePriorityScheduling?: boolean;
+  onForcePrioritySchedulingChange?: (force: boolean) => void;
   /** Called whenever the user edits any per-quote field (not on mount or quote reload) */
   onAnyChange?: () => void;
   /** Standalone mode — no server saves, emits state via onStateChange instead */
@@ -90,7 +96,7 @@ function sectionsForType(type: PricingType): Set<string> {
   return s;
 }
 
-export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, onAnyChange, standalone, onStateChange }: Props) {
+export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote, crowdfundingApproved, crowdfundingDeferred, isReadOnly, prefillQuote, isLocked, activeQuoteId, saveRef, onQuoteUpdated, allQuotes, onActiveQuoteChange, onLockedInteract, onFnaSave, typeOverride, crowdfundingOverride, onAdditionalDiscountChange, forceAdditionalDiscount, onForceAdditionalDiscountChange, forcePriorityScheduling, onForcePrioritySchedulingChange, onAnyChange, standalone, onStateChange }: Props) {
   const [selectedType, setSelectedType] = useState<PricingType>(
     () => initSelectedType(proposalType, initialQuote?.quote_type)
   );
@@ -115,6 +121,19 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
       ? new Map(Object.entries(initialQuote.tier_selections).map(([k, v]) => [k, v as 'basic' | 'premium']))
       : new Map()
   );
+  // Force priority scheduling add-ons into selectedAddOns when flag is on
+  useEffect(() => {
+    if (!forcePriorityScheduling || isLocked) return;
+    setSelectedAddOns((prev) => {
+      const ids = ['priority-scheduling-build', 'priority-scheduling-launch'];
+      const needsUpdate = ids.some((id) => !prev.has(id));
+      if (!needsUpdate) return prev;
+      const next = new Map(prev);
+      for (const id of ids) if (!next.has(id)) next.set(id, 1);
+      return next;
+    });
+  }, [forcePriorityScheduling, isLocked]);
+
   const [crowdfundingEnabled, setCrowdfundingEnabled] = useState(initialQuote?.crowdfunding_enabled ?? false);
   const [crowdfundingTierIndex, setCrowdfundingTierIndex] = useState(initialQuote?.crowdfunding_tier ?? 0);
   const [fundraisingTierIndex, setFundraisingTierIndex] = useState(initialQuote?.fundraising_tier ?? 0);
@@ -457,6 +476,16 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
     : undefined;
   const recommendedPhotoCountVal = recommendedRef?.photo_count ?? undefined;
 
+  // Build forced add-on IDs set (for client quotes when admin forces priority scheduling)
+  const forcedAddOnIds = forcePriorityScheduling && !isLocked
+    ? new Set(['priority-scheduling-build', 'priority-scheduling-launch'])
+    : undefined;
+
+  // When force additional discount is on and this is a client quote, use the FNA quote's amount
+  const effectiveAdditionalDiscount = forceAdditionalDiscount && !isLocked && recommendedRef
+    ? (recommendedRef.additional_discount ?? 0)
+    : (initialQuote?.additional_discount ?? 0);
+
   return (
     <div className={
       isLocked
@@ -532,6 +561,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   recommendedAddOns={recommendedAddOnsMap}
                   recommendedSliderValues={recommendedSliderValuesMap}
                   recommendedPhotoCount={recommendedPhotoCountVal}
+                  forcedAddOnIds={forcedAddOnIds}
                 />
               </CollapsibleSection>
             )}
@@ -565,6 +595,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   recommendedAddOns={recommendedAddOnsMap}
                   recommendedSliderValues={recommendedSliderValuesMap}
                   recommendedPhotoCount={recommendedPhotoCountVal}
+                  forcedAddOnIds={forcedAddOnIds}
                 />
               </CollapsibleSection>
             )}
@@ -618,8 +649,12 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               hideGetStarted
               hideSaveQuote={true}
               initialFriendlyDiscountPct={initialQuote?.friendly_discount_pct ?? 0}
-              additionalDiscount={initialQuote?.additional_discount ?? 0}
+              additionalDiscount={effectiveAdditionalDiscount}
               onAdditionalDiscountChange={onAdditionalDiscountChange}
+              forceAdditionalDiscount={forceAdditionalDiscount}
+              onForceAdditionalDiscountChange={onForceAdditionalDiscountChange}
+              forcePriorityScheduling={forcePriorityScheduling}
+              onForcePrioritySchedulingChange={onForcePrioritySchedulingChange}
               crowdfundingApproved={crowdfundingApproved || crowdfundingOverride}
               crowdfundingDeferred={crowdfundingDeferred}
               hideCrowdfundingToggle={true}

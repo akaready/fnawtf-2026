@@ -837,6 +837,7 @@ export function AddOnSection({
   recommendedAddOns,
   recommendedSliderValues,
   recommendedPhotoCount,
+  forcedAddOnIds,
 }: {
   addOns: AddOn[];
   selectedAddOns: Map<string, number>;
@@ -859,6 +860,8 @@ export function AddOnSection({
   recommendedAddOns?: Map<string, number>;
   recommendedSliderValues?: Map<string, number>;
   recommendedPhotoCount?: number;
+  /** Add-on IDs that are forced on and cannot be toggled off */
+  forcedAddOnIds?: Set<string>;
 }) {
   const days = totalDays ?? 1;
 
@@ -890,6 +893,7 @@ export function AddOnSection({
   function renderToggleableRow(addOn: AddOn) {
     const addonIsRecommended = recommendedAddOns?.has(addOn.id) ?? false;
     const recQty = recommendedAddOns?.get(addOn.id);
+    const isForced = forcedAddOnIds?.has(addOn.id) ?? false;
 
     if (fundraisingActive && addOn.fundraisingFreebie) {
       return <FreebieRow key={addOn.id} addOn={addOn} />;
@@ -973,12 +977,12 @@ export function AddOnSection({
       <AddOnRow
         key={addOn.id}
         addOn={addOn}
-        selected={selectedAddOns.has(addOn.id)}
+        selected={isForced || selectedAddOns.has(addOn.id)}
         quantity={selectedAddOns.get(addOn.id) ?? addOn.quantity?.default ?? 1}
-        onToggle={onToggle}
+        onToggle={isForced ? () => {} : onToggle}
         onQuantityChange={onQuantityChange}
         totalDays={days}
-        isLocked={isLocked}
+        isLocked={isLocked || isForced}
         isCompare={isCompare}
         isRecommended={addonIsRecommended}
         recommendedQuantity={recQty}

@@ -42,6 +42,8 @@ interface Props {
   crowdfundingDeferred?: boolean;
   pricingNotes?: string | null;
   showPricingNotes?: boolean;
+  forceAdditionalDiscount?: boolean;
+  forcePriorityScheduling?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
   viewerEmail?: string | null;
@@ -55,6 +57,8 @@ export function InvestmentSlide({
   crowdfundingDeferred,
   pricingNotes,
   showPricingNotes,
+  forceAdditionalDiscount,
+  forcePriorityScheduling,
   slideRef,
   viewerName,
   viewerEmail,
@@ -378,6 +382,8 @@ export function InvestmentSlide({
               allQuotes={allActive}
               onActiveQuoteChange={(id) => setActiveQuoteId(id)}
               onLockedInteract={isLocked && clientQuotes.length === 0 ? handleNewQuote : undefined}
+              forceAdditionalDiscount={forceAdditionalDiscount}
+              forcePriorityScheduling={forcePriorityScheduling}
             />
             {/* Unlock glow burst */}
             <AnimatePresence>

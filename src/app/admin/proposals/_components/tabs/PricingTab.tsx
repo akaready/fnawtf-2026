@@ -70,6 +70,8 @@ interface PricingTabProps {
   initialQuotes: ProposalQuoteRow[];
   initialPricingNotes?: string | null;
   initialShowPricingNotes?: boolean;
+  initialForceAdditionalDiscount?: boolean;
+  initialForcePriorityScheduling?: boolean;
   onProposalTypeChange?: (type: ProposalType) => void;
   onDirty?: () => void;
 }
@@ -152,7 +154,7 @@ const labelCls = 'admin-label';
 const inputCls = 'admin-input w-full';
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, onProposalTypeChange, onDirty }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialShowPricingNotes, initialForceAdditionalDiscount, initialForcePriorityScheduling, onProposalTypeChange, onDirty }: PricingTabProps,
   ref,
 ) {
   const [quotes, setQuotes] = useState<ProposalQuoteRow[]>(
@@ -246,6 +248,24 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
     setShowPricingNotes(show);
     startTransition(async () => {
       await updateProposal(proposalId, { show_pricing_notes: show });
+    });
+  };
+
+  // ── Force toggles (proposal-level) ─────────────────────────────────────
+  const [forceAdditionalDiscount, setForceAdditionalDiscount] = useState(initialForceAdditionalDiscount ?? false);
+  const [forcePriorityScheduling, setForcePriorityScheduling] = useState(initialForcePriorityScheduling ?? false);
+
+  const handleForceAdditionalDiscountChange = (force: boolean) => {
+    setForceAdditionalDiscount(force);
+    startTransition(async () => {
+      await updateProposal(proposalId, { force_additional_discount: force });
+    });
+  };
+
+  const handleForcePrioritySchedulingChange = (force: boolean) => {
+    setForcePriorityScheduling(force);
+    startTransition(async () => {
+      await updateProposal(proposalId, { force_priority_scheduling: force });
     });
   };
 
@@ -595,6 +615,10 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               saveRef={embedSaveRef}
               onAnyChange={() => { if (readyForDirtyRef.current) { isDirtyRef.current = true; onDirty?.(); } }}
               onAdditionalDiscountChange={(amount) => handleAdditionalDiscountSave(activeQuote, amount)}
+              forceAdditionalDiscount={forceAdditionalDiscount}
+              onForceAdditionalDiscountChange={handleForceAdditionalDiscountChange}
+              forcePriorityScheduling={forcePriorityScheduling}
+              onForcePrioritySchedulingChange={handleForcePrioritySchedulingChange}
               activeQuoteId={activeQuote.id}
               onFnaSave={async (payload) => {
                 const id = await saveProposalQuote(

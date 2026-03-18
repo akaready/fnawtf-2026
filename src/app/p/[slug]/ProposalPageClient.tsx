@@ -316,6 +316,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             crowdfundingDeferred={proposal.crowdfunding_deferred}
             pricingNotes={proposal.pricing_notes}
             showPricingNotes={proposal.show_pricing_notes}
+            forceAdditionalDiscount={proposal.force_additional_discount}
+            forcePriorityScheduling={proposal.force_priority_scheduling}
             slideRef={investmentRef}
             viewerName={viewerName}
             viewerEmail={viewerEmail}

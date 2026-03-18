@@ -64,6 +64,8 @@ export interface ProposalRow {
   show_pricing: boolean;
   pricing_notes: string | null;
   show_pricing_notes: boolean;
+  force_additional_discount: boolean;
+  force_priority_scheduling: boolean;
   prepared_date: string | null;
   created_by: string | null;
   created_at: string;

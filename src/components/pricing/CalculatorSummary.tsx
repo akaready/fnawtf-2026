@@ -53,6 +53,12 @@ interface CalculatorSummaryProps {
   additionalDiscount?: number;
   /** Called when admin changes the additional discount amount */
   onAdditionalDiscountChange?: (amount: number) => void;
+  /** Force additional discount on client quotes */
+  forceAdditionalDiscount?: boolean;
+  onForceAdditionalDiscountChange?: (force: boolean) => void;
+  /** Force priority scheduling on client quotes */
+  forcePriorityScheduling?: boolean;
+  onForcePrioritySchedulingChange?: (force: boolean) => void;
   /** Called whenever the user moves the friendly discount slider */
   onFriendlyDiscountChange?: (pct: number) => void;
   /** Called when user selects a different quote in the compare dropdown (syncs with tabs) */
@@ -735,6 +741,10 @@ export function CalculatorSummary({
   initialFriendlyDiscountPct,
   additionalDiscount: additionalDiscountProp,
   onAdditionalDiscountChange,
+  forceAdditionalDiscount,
+  onForceAdditionalDiscountChange,
+  forcePriorityScheduling,
+  onForcePrioritySchedulingChange,
   allQuotes,
   activeQuoteId,
   onFriendlyDiscountChange,
@@ -1077,6 +1087,33 @@ export function CalculatorSummary({
                       className="w-full pl-7 pr-3 py-2 bg-muted/20 border border-border rounded-lg text-foreground font-mono text-sm focus:outline-none focus:border-purple-500 transition-colors"
                     />
                   </div>
+                  {onForceAdditionalDiscountChange && (
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={forceAdditionalDiscount ?? false}
+                        onChange={(e) => onForceAdditionalDiscountChange(e.target.checked)}
+                        className="accent-purple-500"
+                      />
+                      <span className="text-xs text-muted-foreground">Apply to client quotes</span>
+                    </label>
+                  )}
+                </div>
+              )}
+
+              {/* Force Priority Scheduling — admin-only */}
+              {onForcePrioritySchedulingChange && (
+                <div className="pt-2 border-t border-purple-800/40">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Priority Scheduling</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={forcePriorityScheduling ?? false}
+                      onChange={(e) => onForcePrioritySchedulingChange(e.target.checked)}
+                      className="accent-purple-500"
+                    />
+                    <span className="text-xs text-muted-foreground">Apply to client quotes</span>
+                  </label>
                 </div>
               )}
             </div>
