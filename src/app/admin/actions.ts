@@ -891,12 +891,9 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
 
   if (quoteId) {
     // Update existing quote by ID
-    // Strip description/label/additional_discount — these are managed by updateQuoteFields
-    // to prevent auto-save from overwriting user edits
-    const { description: _d, label: _l, additional_discount: _ad, ...safeData } = quoteData as Record<string, unknown>;
     const { error } = await supabase
       .from('proposal_quotes')
-      .update({ ...safeData, updated_at: new Date().toISOString() } as never)
+      .update({ ...quoteData, updated_at: new Date().toISOString() } as never)
       .eq('id', quoteId);
     if (error) throw new Error(error.message);
     return quoteId;
@@ -3119,6 +3116,23 @@ export async function deleteStoryboardFrame(id: string) {
     await supabase.storage.from('script-storyboards').remove([(frame as { storage_path: string }).storage_path]);
   }
   await supabase.from('script_storyboard_frames').delete().eq('id', id);
+}
+
+export async function deleteAllStoryboardFrames(scriptId: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const { data: frames } = await supabase
+    .from('script_storyboard_frames')
+    .select('storage_path')
+    .eq('script_id', scriptId);
+
+  if (frames && frames.length > 0) {
+    const paths = (frames as { storage_path: string }[]).map(f => f.storage_path);
+    await supabase.storage.from('script-storyboards').remove(paths);
+    await supabase.from('script_storyboard_frames').delete().eq('script_id', scriptId);
+  }
 }
 
 // ── Locations ─────────────────────────────────────────────────────────

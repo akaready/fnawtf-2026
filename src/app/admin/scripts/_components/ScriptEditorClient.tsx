@@ -754,6 +754,7 @@ export function ScriptEditorClient({
                 onReorderScenes={handleReorderScenes}
                 scriptTitle={script.title}
                 scriptVersion={script.major_version}
+                onAllFramesDeleted={() => setStoryboardFrames([])}
               />
             ) : (
               <ScriptScratchPad

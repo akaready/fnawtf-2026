@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X, Expand, Download } from 'lucide-react';
+import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X, Expand, Download, Check } from 'lucide-react';
 import { deleteStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
@@ -65,6 +65,7 @@ export function ScriptStoryboardCell({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const generate = useCallback(async () => {
@@ -203,15 +204,27 @@ export function ScriptStoryboardCell({
           />
         </div>
         {/* Hover actions */}
-        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded">
-          <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
-          <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
-            const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
-            void downloadSingleImage(frame.image_url, filename);
-          }} />
-          <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
-          <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
-          <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={handleDelete} />
+        <div
+          className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded"
+          onMouseLeave={() => setConfirmDelete(false)}
+        >
+          {confirmDelete ? (
+            <>
+              <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={handleDelete} />
+              <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDelete(false)} />
+            </>
+          ) : (
+            <>
+              <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
+              <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
+                const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
+                void downloadSingleImage(frame.image_url, filename);
+              }} />
+              <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
+              <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
+              <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDelete(true)} />
+            </>
+          )}
         </div>
         <input
           ref={fileRef}

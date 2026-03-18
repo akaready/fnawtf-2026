@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check, GripVertical, Download, Info } from 'lucide-react';
 import { downloadStoryboardZip, buildFullZipName, buildStoryboardFilename } from '@/lib/scripts/downloadStoryboards';
+import { deleteAllStoryboardFrames } from '@/app/admin/actions';
 import {
   DndContext,
   closestCenter,
@@ -58,6 +59,7 @@ interface Props {
   onReorderScenes?: (orderedIds: string[]) => void;
   scriptTitle: string;
   scriptVersion: number;
+  onAllFramesDeleted?: () => void;
 }
 
 export function ScriptEditorCanvas({
@@ -92,6 +94,7 @@ export function ScriptEditorCanvas({
   onReorderScenes,
   scriptTitle,
   scriptVersion,
+  onAllFramesDeleted,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -103,6 +106,7 @@ export function ScriptEditorCanvas({
   const selectionModeRef = useRef(false);
   const [showVisualTips, setShowVisualTips] = useState(false);
   const visualTipsRef = useRef<HTMLDivElement>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -458,6 +462,12 @@ export function ScriptEditorCanvas({
     void downloadStoryboardZip(frames, buildFullZipName(scriptTitle, scriptVersion));
   }, [storyboardFrames, scenes, scriptTitle, scriptVersion]);
 
+  const handleDeleteAll = useCallback(async () => {
+    await deleteAllStoryboardFrames(scriptId);
+    onAllFramesDeleted?.();
+    setConfirmDeleteAll(false);
+  }, [scriptId, onAllFramesDeleted]);
+
   const handleGenerateScene = useCallback((sceneId: string) => {
     const scene = scenes.find(s => s.id === sceneId);
     if (!scene) return;
@@ -620,16 +630,42 @@ export function ScriptEditorCanvas({
                   >
                     <X size={14} />
                   </button>
+                ) : confirmDeleteAll ? (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); void handleDeleteAll(); }}
+                      className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                      title="Confirm — delete all storyboards"
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(false); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover"
+                      title="Cancel"
+                    >
+                      <X size={14} />
+                    </button>
+                  </>
                 ) : (
                   <>
                     {storyboardFrames.length > 0 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
-                        className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
-                        title="Download all storyboards"
-                      >
-                        <Download size={14} />
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(true); }}
+                          className="absolute right-[3.5rem] top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                          title="Delete all storyboards"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
+                          className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                          title="Download all storyboards"
+                        >
+                          <Download size={14} />
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
