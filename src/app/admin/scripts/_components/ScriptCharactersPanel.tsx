@@ -774,14 +774,14 @@ export function ScriptCharactersPanel({
                   </label>
 
                   {/* Tab strip */}
-                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden text-xs">
+                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden">
                     {(['people', 'references'] as const).map(mode => (
                       <button
                         key={mode}
                         onClick={() => { setDraftCastMode(mode); autoSave.trigger(); }}
-                        className={`flex-1 py-1.5 font-medium transition-colors ${
+                        className={`flex-1 py-1.5 text-admin-sm font-medium transition-colors ${
                           draftCastMode === mode
-                            ? 'bg-admin-text-primary text-admin-bg-base'
+                            ? 'bg-admin-accent text-white'
                             : 'bg-admin-bg-base text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >
@@ -889,7 +889,7 @@ export function ScriptCharactersPanel({
                           </button>
                         )}
                       </div>
-                      <p className="text-[10px] text-admin-text-faint">
+                      <p className="text-admin-sm text-admin-text-faint">
                         Up to 4 images used as visual references for storyboard generation.
                       </p>
                     </div>

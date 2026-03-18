@@ -574,14 +574,14 @@ export function ScriptLocationsPanel({
                   </label>
 
                   {/* Tab strip */}
-                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden text-xs">
+                  <div className="flex rounded-admin-md border border-admin-border overflow-hidden">
                     {(['place', 'references'] as const).map(mode => (
                       <button
                         key={mode}
                         onClick={() => handleLocalUpdate(selectedWithEdits.id, 'location_mode', mode)}
-                        className={`flex-1 py-1.5 font-medium transition-colors ${
+                        className={`flex-1 py-1.5 text-admin-sm font-medium transition-colors ${
                           (selectedWithEdits.location_mode ?? 'place') === mode
-                            ? 'bg-admin-text-primary text-admin-bg-base'
+                            ? 'bg-admin-accent text-white'
                             : 'bg-admin-bg-base text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >
@@ -637,15 +637,15 @@ export function ScriptLocationsPanel({
                           </button>
                         )}
                       </div>
-                      <p className="text-[10px] text-admin-text-faint">
+                      <p className="text-admin-sm text-admin-text-faint">
                         Up to 4 images used as visual references for storyboard generation.
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* ── Location Options — Row List ────────────────────── */}
-                <div className="space-y-2">
+                {/* ── Location Options — Row List (only in Location mode) ─ */}
+                {(selectedWithEdits.location_mode ?? 'place') === 'place' && <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">
                     Location Options
                   </label>
@@ -692,7 +692,7 @@ export function ScriptLocationsPanel({
                       Add Location Option
                     </button>
                   )}
-                </div>
+                </div>}
 
                 {/* Scene usage */}
                 {sceneCountByLocation(selectedWithEdits.id) > 0 && (
