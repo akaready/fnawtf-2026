@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { ImageIcon, CheckCircle } from 'lucide-react';
+import { useAdminToast } from './AdminToast';
 import { ThumbnailScrubCard } from './ThumbnailScrubCard';
 import { updateProject } from '../actions';
 
@@ -24,12 +25,11 @@ export function ThumbnailGallery({ projectId, videos, currentThumbnailUrl, compa
   const [framePreview, setFramePreview] = useState<string | null>(null);
   const [previewBroken, setPreviewBroken] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const toast = useAdminToast();
 
   const handleSelect = useCallback(async (bunnyVideoId: string, thumbnailTimeMs: number, frameDataUrl: string) => {
     setSavingVideoId(bunnyVideoId);
     setSaveStatus('saving');
-    setSaveError(null);
     if (frameDataUrl) { setFramePreview(frameDataUrl); setPreviewBroken(false); }
 
     try {
@@ -42,7 +42,7 @@ export function ThumbnailGallery({ projectId, videos, currentThumbnailUrl, compa
 
       if (!blob) {
         setSaveStatus('error');
-        setSaveError('Could not capture frame. Try hovering the video first.');
+        toast.showError('Could not capture frame', 'Try hovering over the video to load a preview before selecting.');
         return;
       }
 
@@ -59,7 +59,7 @@ export function ThumbnailGallery({ projectId, videos, currentThumbnailUrl, compa
       if (!uploadRes.ok) {
         const data = await uploadRes.json();
         setSaveStatus('error');
-        setSaveError(data.error || 'Failed to upload thumbnail');
+        toast.showError('Thumbnail upload failed', data.error || 'The image could not be uploaded. Please try again.');
         return;
       }
 
@@ -74,13 +74,12 @@ export function ThumbnailGallery({ projectId, videos, currentThumbnailUrl, compa
 
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
-      console.error('Thumbnail update failed:', err);
       setSaveStatus('error');
-      setSaveError(err instanceof Error ? err.message : 'Unknown error');
+      toast.showError('Thumbnail update failed', err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setSavingVideoId(null);
     }
-  }, [projectId, router]);
+  }, [projectId, router, toast]);
 
   if (videos.length === 0) {
     return (
@@ -106,12 +105,6 @@ export function ThumbnailGallery({ projectId, videos, currentThumbnailUrl, compa
         <p className="text-xs text-admin-success flex items-center gap-1.5">
           <CheckCircle className="w-3.5 h-3.5" />
           Saved!
-        </p>
-      )}
-      {saveStatus === 'error' && (
-        <p className="text-xs text-admin-danger flex items-center gap-1.5">
-          <AlertCircle className="w-3.5 h-3.5" />
-          {saveError || 'Save failed'}
         </p>
       )}
     </>

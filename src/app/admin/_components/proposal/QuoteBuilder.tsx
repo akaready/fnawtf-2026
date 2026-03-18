@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Loader2, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { saveProposalQuote, deleteProposalQuote } from '../../actions';
+import { useAdminToast } from '../AdminToast';
 import type { ProposalQuoteRow } from '@/types/proposal';
 
 const QUOTE_TYPES = [
@@ -41,11 +42,10 @@ function QuoteForm({
   const [description, setDescription] = useState(quote?.description ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useAdminToast();
 
   const handleSave = async () => {
     setSaving(true);
-    setError(null);
     try {
       await saveProposalQuote(proposalId, {
         label: label.trim() || 'FNA Quote',
@@ -70,7 +70,7 @@ function QuoteForm({
       setOpen(false);
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save quote');
+      toast.showError('Quote could not be saved', err instanceof Error ? err.message : 'Check all fields and try again.');
       setSaving(false);
     }
   };
@@ -82,7 +82,7 @@ function QuoteForm({
       await deleteProposalQuote(quote.id);
       onDeleted?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete quote');
+      toast.showError('Quote could not be deleted', err instanceof Error ? err.message : 'Please try again.');
       setDeleting(false);
     }
   };
@@ -218,8 +218,6 @@ function QuoteForm({
               />
             </button>
           </div>
-
-          {error && <p className="text-xs text-admin-danger">{error}</p>}
 
           <div className="flex gap-3">
             <button

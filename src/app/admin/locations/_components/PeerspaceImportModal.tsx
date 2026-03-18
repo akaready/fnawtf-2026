@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Loader2, ExternalLink, Check, Save, MapPin, Users, Ruler, Star } from 'lucide-react';
 import { createLocationRecord } from '@/app/admin/actions';
+import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import type { LocationWithImages, PeerspaceData } from '@/types/locations';
 
 interface ScrapedImage {
@@ -26,12 +27,12 @@ interface Props {
   onImport: (loc: LocationWithImages) => void;
 }
 
-type Step = 'url' | 'scraping' | 'preview' | 'saving' | 'error';
+type Step = 'url' | 'scraping' | 'preview' | 'saving';
 
 export function PeerspaceImportModal({ onClose, onImport }: Props) {
   const [url, setUrl] = useState('');
   const [step, setStep] = useState<Step>('url');
-  const [error, setError] = useState('');
+  const toast = useAdminToast();
   const [scraped, setScraped] = useState<ScrapedData | null>(null);
   const [images, setImages] = useState<ScrapedImage[]>([]);
   const [editName, setEditName] = useState('');
@@ -40,11 +41,10 @@ export function PeerspaceImportModal({ onClose, onImport }: Props) {
 
   const handleScrape = async () => {
     if (!url.includes('peerspace.com')) {
-      setError('Please enter a valid Peerspace URL.');
+      toast.showError('Invalid URL', 'Please enter a valid Peerspace listing URL.');
       return;
     }
     setStep('scraping');
-    setError('');
 
     try {
       const res = await fetch('/api/admin/peerspace/scrape', {
@@ -63,8 +63,8 @@ export function PeerspaceImportModal({ onClose, onImport }: Props) {
       setImages(data.images.map(img => ({ ...img, selected: true })));
       setStep('preview');
     } catch (err) {
-      setError((err as Error).message);
-      setStep('error');
+      toast.showError('Peerspace scrape failed', (err as Error).message || 'Could not read listing. Check the URL and try again.');
+      setStep('url');
     }
   };
 
@@ -161,8 +161,8 @@ export function PeerspaceImportModal({ onClose, onImport }: Props) {
         onImport(loc);
       }
     } catch (err) {
-      setError((err as Error).message);
-      setStep('error');
+      toast.showError('Import failed', (err as Error).message || 'Could not save location. Please try again.');
+      setStep('url');
     }
   };
 
@@ -195,7 +195,7 @@ export function PeerspaceImportModal({ onClose, onImport }: Props) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto admin-scrollbar-auto overscroll-contain">
           {/* Step 1: URL input */}
-          {(step === 'url' || step === 'error') && (
+          {(step === 'url') && (
             <div className="p-6 space-y-4">
               <p className="text-sm text-admin-text-muted">
                 Paste a Peerspace listing URL to automatically import location data and images.
@@ -209,9 +209,6 @@ export function PeerspaceImportModal({ onClose, onImport }: Props) {
                 autoFocus
                 onKeyDown={e => e.key === 'Enter' && handleScrape()}
               />
-              {error && (
-                <p className="text-sm text-admin-danger">{error}</p>
-              )}
             </div>
           )}
 
@@ -442,7 +439,7 @@ export function PeerspaceImportModal({ onClose, onImport }: Props) {
 
         {/* Footer */}
         <div className="flex items-center gap-2.5 px-6 py-4 border-t border-admin-border flex-shrink-0">
-          {(step === 'url' || step === 'error') && (
+          {(step === 'url') && (
             <button
               onClick={handleScrape}
               disabled={!url.includes('peerspace.com')}

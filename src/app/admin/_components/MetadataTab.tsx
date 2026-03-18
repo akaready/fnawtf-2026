@@ -3,6 +3,7 @@
 import { useState, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, MessageSquare } from 'lucide-react';
+import { useAdminToast } from './AdminToast';
 import { AdminCombobox } from './AdminCombobox';
 import { SaveButton } from './SaveButton';
 import { useSaveState } from '@/app/admin/_hooks/useSaveState';
@@ -83,7 +84,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
 ) {
   const router = useRouter();
   const { saving: isPending, saved: isSaved, wrap: wrapSave } = useSaveState(2500);
-  const [errorMsg, setErrorMsg] = useState('');
+  const toast = useAdminToast();
   const [isDirty, setIsDirty] = useState(false);
 
   // Local clients list (can grow if user creates a new client inline)
@@ -168,9 +169,11 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
   const handleSave = () => wrapSave(async () => {
     try {
       await doSave();
-      setErrorMsg('');
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Save failed');
+      toast.showError(
+        project ? 'Project could not be saved' : 'Project could not be created',
+        err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.',
+      );
       throw err;
     }
   });
@@ -381,11 +384,7 @@ export const MetadataTab = forwardRef<MetadataTabHandle, Props>(function Metadat
             label={project ? 'Save' : 'Create Project'}
             className="px-5 py-2.5 text-sm"
           />
-          {errorMsg && <span className="text-sm text-admin-danger">{errorMsg}</span>}
         </div>
-      )}
-      {hideInlineSave && errorMsg && (
-        <p className="text-sm text-admin-danger pt-2">{errorMsg}</p>
       )}
     </div>
   );

@@ -29,7 +29,7 @@ export async function createProject(data: Record<string, unknown>): Promise<stri
   const { supabase, userId } = await requireAuth();
   const { data: project, error } = await supabase
     .from('projects')
-    .insert({ ...data, updated_by: userId } as never)
+    .insert({ type: 'video', ...data, updated_by: userId } as never)
     .select('id')
     .single();
   if (error) throw new Error(error.message);

@@ -14,6 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { ActionItem, MeetingTranscriptRow } from '@/types/meetings';
+import { useAdminToast } from './AdminToast';
 
 interface Props {
   meetingId: string;
@@ -28,7 +29,7 @@ export function MeetingInsights({ meetingId, transcript, onUpdate }: Props) {
     (transcript?.action_items as ActionItem[] | undefined) || [],
   );
   const [status, setStatus] = useState(transcript?.insights_status || 'none');
-  const [error, setError] = useState<string | null>(null);
+  const toast = useAdminToast();
   const autoTriggered = useRef(false);
 
   // Edit states
@@ -56,7 +57,6 @@ export function MeetingInsights({ meetingId, transcript, onUpdate }: Props) {
 
   const handleGenerate = () => {
     startGenerate(async () => {
-      setError(null);
       setStatus('pending');
       try {
         const res = await fetch('/api/admin/meetings/insights', {
@@ -74,7 +74,7 @@ export function MeetingInsights({ meetingId, transcript, onUpdate }: Props) {
         setStatus('ready');
         onUpdate?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Generation failed');
+        toast.showError('Insights could not be generated', err instanceof Error ? err.message : 'Check that a transcript exists and try again.');
         setStatus('failed');
       }
     });
@@ -160,7 +160,6 @@ export function MeetingInsights({ meetingId, transcript, onUpdate }: Props) {
         <p className="text-sm text-admin-text-secondary">
           Use AI to extract a summary and action items from this transcript
         </p>
-        {error && <p className="text-xs text-admin-danger">{error}</p>}
         <button
           onClick={handleGenerate}
           disabled={generating}

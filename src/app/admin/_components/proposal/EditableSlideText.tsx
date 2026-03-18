@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Check, Loader2, X } from 'lucide-react';
 import { updateProposalSection, addProposalSection } from '../../actions';
+import { useAdminToast } from '../AdminToast';
 import type { ProposalSectionRow } from '@/types/proposal';
 
 interface Props {
@@ -29,13 +30,12 @@ export function EditableSlideText({
   const [editTitle, setEditTitle] = useState(title ?? '');
   const [editContent, setEditContent] = useState(content ?? '');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useAdminToast();
 
   const handleSave = async () => {
     const newTitle = editTitle.trim() || null;
     const newContent = editContent.trim() || null;
     setSaving(true);
-    setError(null);
     try {
       if (sectionId) {
         await updateProposalSection(sectionId, {
@@ -76,7 +76,7 @@ export function EditableSlideText({
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      toast.showError('Slide text could not be saved', err instanceof Error ? err.message : 'Please try again.');
       setSaving(false);
     }
   };
@@ -115,7 +115,6 @@ export function EditableSlideText({
           rows={5}
           className="w-full text-2xl lg:text-3xl font-display text-[#ccc] leading-relaxed bg-transparent border-b border-dashed border-admin-border-emphasis outline-none resize-none placeholder:text-white/15 pb-3"
         />
-        {error && <p className="text-xs text-admin-danger">{error}</p>}
         <div className="flex items-center justify-between">
           <p className="text-xs text-admin-text-placeholder font-mono">⌘↵ to save · Esc to cancel</p>
           <div className="flex gap-2">

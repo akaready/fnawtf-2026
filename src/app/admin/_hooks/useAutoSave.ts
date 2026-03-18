@@ -4,9 +4,11 @@ export type AutoSaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 export function useAutoSave(
   saveFn: () => Promise<void>,
-  options?: { delay?: number },
+  options?: { delay?: number; onError?: (err: unknown) => void },
 ) {
   const delay = options?.delay ?? 600;
+  const onErrorRef = useRef(options?.onError);
+  useEffect(() => { onErrorRef.current = options?.onError; });
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -25,8 +27,9 @@ export function useAutoSave(
       await saveFnRef.current();
       setStatus('saved');
       savedTimerRef.current = setTimeout(() => setStatus('idle'), 2000);
-    } catch {
+    } catch (err) {
       setStatus('error');
+      onErrorRef.current?.(err);
     }
   }, []);
 

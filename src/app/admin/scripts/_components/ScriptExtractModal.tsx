@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, AlertCircle, Trash2 } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, Trash2 } from 'lucide-react';
 import { StylePresetCard } from './StylePresetCard';
 import { ColorPicker } from './ColorPicker';
 import { STYLE_PRESETS } from './ScriptStylePanel';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
+import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { createScriptFromExtract, getContactsWithHeadshots } from '@/app/admin/actions';
 import type { ExtractedScriptData } from '@/app/admin/actions';
 import type { ScriptCharacterRow, ScriptLocationRow, ScriptCharacterType, StoryboardStylePreset, IntExt } from '@/types/scripts';
@@ -23,7 +24,7 @@ interface Props {
   onVersionCreated: (newScriptId: string) => void;
 }
 
-type Step = 'rewrite-level' | 'loading' | 'characters' | 'locations' | 'style' | 'preview' | 'confirming' | 'error';
+type Step = 'rewrite-level' | 'loading' | 'characters' | 'locations' | 'style' | 'preview' | 'confirming';
 
 interface EditableCharacter {
   name: string;
@@ -85,7 +86,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
   const [locations, setLocations] = useState<EditableLocation[]>([]);
   const [scenes, setScenes] = useState<ExtractedScene[]>([]);
   const [styleChoice, setStyleChoice] = useState<StyleChoice>({ style_preset: null, aspect_ratio: '16:9', prompt: '' });
-  const [errorMessage, setErrorMessage] = useState('');
+  const toast = useAdminToast();
   const [hasExtracted, setHasExtracted] = useState(false);
   const [confirmDeleteChar, setConfirmDeleteChar] = useState<number | null>(null);
   const [confirmDeleteLoc, setConfirmDeleteLoc] = useState<number | null>(null);
@@ -113,7 +114,6 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
       setLocations([]);
       setScenes([]);
       setStyleChoice({ style_preset: null, aspect_ratio: '16:9', prompt: '' });
-      setErrorMessage('');
       setHasExtracted(false);
       setConfirmDeleteChar(null);
       setConfirmDeleteLoc(null);
@@ -138,8 +138,8 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
 
       if (!res.ok) {
         const err = await res.json();
-        setErrorMessage(err.error ?? 'Extraction failed');
-        setStep('error');
+        toast.showError('Script extraction failed', err.error ?? 'The AI could not process this script. Try adjusting the rewrite level.');
+        setStep('rewrite-level');
         return;
       }
 
@@ -176,10 +176,10 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
       setHasExtracted(true);
       setStep('characters');
     } catch (err) {
-      setErrorMessage(String(err));
-      setStep('error');
+      toast.showError('Script extraction failed', err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
+      setStep('rewrite-level');
     }
-  }, [scriptId, scratchContent, rewriteLevel, defaultTimeOfDay, existingCharacters, existingLocations]);
+  }, [scriptId, scratchContent, rewriteLevel, defaultTimeOfDay, existingCharacters, existingLocations, toast]);
 
   const handleConfirm = useCallback(async () => {
     setStep('confirming');
@@ -205,10 +205,10 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
       const newScriptId = await createScriptFromExtract(scriptId, data);
       onVersionCreated(newScriptId);
     } catch (err) {
-      setErrorMessage(String(err));
-      setStep('error');
+      toast.showError('Version could not be created', err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
+      setStep('preview');
     }
-  }, [scriptId, characters, locations, scenes, styleChoice, onVersionCreated]);
+  }, [scriptId, characters, locations, scenes, styleChoice, onVersionCreated, toast]);
 
   const updateCharacter = (idx: number, updates: Partial<EditableCharacter>) => {
     setCharacters(prev => prev.map((c, i) => i === idx ? { ...c, ...updates } : c));
@@ -238,7 +238,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
 
       {/* Modal card — constant size */}
       <div className={`relative bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden ${
-        step === 'rewrite-level' || step === 'loading' || step === 'confirming' || step === 'error' ? 'max-h-[85vh]' : 'h-[85vh]'
+        step === 'rewrite-level' || step === 'loading' || step === 'confirming' ? 'max-h-[85vh]' : 'h-[85vh]'
       }`}>
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-raised">
@@ -250,7 +250,6 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
             {step === 'style' && 'Style Preset'}
             {step === 'preview' && 'Scene Preview'}
             {step === 'confirming' && 'Creating Version...'}
-            {step === 'error' && 'Error'}
           </h2>
           {step !== 'loading' && step !== 'confirming' && (
             <button
@@ -614,13 +613,6 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
             </div>
           )}
 
-          {/* Step: Error */}
-          {step === 'error' && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <AlertCircle size={32} className="text-admin-danger" />
-              <p className="text-sm text-admin-text-primary text-center max-w-md">{errorMessage}</p>
-            </div>
-          )}
         </div>
 
         {/* Footer — navigation buttons */}
@@ -649,9 +641,6 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
                 <button onClick={() => setStep('style')} className="btn-secondary px-4 py-2 text-sm flex items-center gap-1">
                   <ChevronLeft size={14} /> Style
                 </button>
-              )}
-              {step === 'error' && (
-                <button onClick={onClose} className="btn-secondary px-4 py-2 text-sm">Close</button>
               )}
             </div>
 
@@ -700,11 +689,6 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
               {step === 'preview' && (
                 <button onClick={handleConfirm} className="btn-primary px-5 py-2 text-sm">
                   Create {nextVersionLabel}
-                </button>
-              )}
-              {step === 'error' && (
-                <button onClick={() => setStep('rewrite-level')} className="btn-primary px-4 py-2 text-sm">
-                  Try Again
                 </button>
               )}
             </div>
