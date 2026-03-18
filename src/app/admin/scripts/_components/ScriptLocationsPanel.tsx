@@ -500,7 +500,7 @@ export function ScriptLocationsPanel({
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate uppercase">{loc.name}</div>
                         {count > 0 && (
-                          <div className="text-[10px] text-admin-text-faint">{count} scene{count !== 1 ? 's' : ''}</div>
+                          <div className="text-admin-sm text-admin-text-faint">{count} scene{count !== 1 ? 's' : ''}</div>
                         )}
                       </div>
                     </button>
