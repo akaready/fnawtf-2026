@@ -483,7 +483,10 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
       {/* Pricing notes + proposal-level toggles */}
       <div className="px-6 @md:px-8 py-3 border-b border-admin-border flex-shrink-0">
-        <label className={labelCls}>Notes</label>
+        <div className="flex gap-4">
+          <label className={labelCls + ' flex-1'}>Notes</label>
+          <label className={labelCls + ' flex-shrink-0'}>Options</label>
+        </div>
         <div className="flex gap-4 mt-1">
           <textarea
             defaultValue={initialPricingNotes ?? ''}
@@ -492,8 +495,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
             rows={3}
             className={inputCls + ' resize-none leading-relaxed flex-1'}
           />
-          <div className="space-y-2 flex-shrink-0 pt-1">
-            <label className={labelCls}>Options</label>
+          <div className="flex flex-col gap-2 flex-shrink-0">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -512,7 +514,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               />
               <span className="text-admin-sm text-admin-text-muted">Show pay after campaign</span>
             </label>
-            <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={forceAdditionalDiscount}
@@ -520,7 +522,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                 className="accent-admin-accent"
               />
               <span className="text-admin-sm text-admin-text-muted">Add'l discount</span>
-              <div className="relative">
+              <div className="relative" onClick={(e) => e.preventDefault()}>
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-admin-text-muted font-mono text-xs">$</span>
                 <input
                   type="number"
@@ -533,7 +535,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
                   className="w-20 pl-5 pr-2 py-1 bg-admin-bg-base border border-admin-border rounded-admin-sm text-admin-text-primary font-mono text-admin-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 />
               </div>
-            </div>
+            </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
