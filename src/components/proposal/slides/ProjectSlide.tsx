@@ -50,6 +50,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
       const subtitleEl = el.querySelector('[data-subtitle]')    as HTMLElement | null;
       const blurb      = el.querySelector('[data-blurb]')       as HTMLElement | null;
       const videoEl    = el.querySelector('[data-video]')       as HTMLElement | null;
+      const belowEls   = el.querySelectorAll('[data-below]');
 
       if (eyebrow)        gsap.set(eyebrow,    { opacity: 0, y: 12 });
       if (wordEls.length) gsap.set(wordEls,    { y: '115%' });
@@ -57,6 +58,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
       if (subtitleEl)     gsap.set(subtitleEl,  { opacity: 0, y: 16 });
       if (blurb)          gsap.set(blurb,       { opacity: 0, y: 14 });
       if (videoEl)        gsap.set(videoEl,     { opacity: 0 });
+      if (belowEls.length) gsap.set(belowEls,  { opacity: 0, y: 16 });
 
       const tl = gsap.timeline();
       if (eyebrow)        tl.to(eyebrow,    { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' });
@@ -65,6 +67,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
       if (subtitleEl)     tl.to(subtitleEl,  { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.3');
       if (blurb)          tl.to(blurb,       { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, '-=0.3');
       if (videoEl)        tl.to(videoEl,     { opacity: 1, duration: 0.7, ease: 'power2.out' }, '-=0.2');
+      if (belowEls.length) tl.to(belowEls,  { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', stagger: 0.12 }, '-=0.3');
 
       const observer = new IntersectionObserver(([entry]) => {
         if (entry.isIntersecting && !hasAnimated.current) {
@@ -168,22 +171,26 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
 
         {/* Testimonial — directly under video */}
         {project?.testimonials?.[0] && (
-          <ProjectQuote
-            quote={project.testimonials[0].quote}
-            personName={project.testimonials[0].person_name}
-            personTitle={project.testimonials[0].person_title ?? project.testimonials[0].display_title}
-          />
+          <div data-below>
+            <ProjectQuote
+              quote={project.testimonials[0].quote}
+              personName={project.testimonials[0].person_name}
+              personTitle={project.testimonials[0].person_title ?? project.testimonials[0].display_title}
+            />
+          </div>
         )}
 
         {/* Project content — negate parent padding so shared components'
              own px/max-w align with the video edges */}
         <div className="-mx-6 lg:-mx-16 proposal-content-stretch [&_section.border-b]:border-b-0">
-          <ProjectDeliveryAndDescription
-            assetsDelivered={assetsDelivered}
-            description={description ?? ''}
-          />
+          <div data-below>
+            <ProjectDeliveryAndDescription
+              assetsDelivered={assetsDelivered}
+              description={description ?? ''}
+            />
+          </div>
 
-          <div className="pointer-events-none select-none [&_.max-w-4xl]:max-w-none">
+          <div data-below className="pointer-events-none select-none [&_.max-w-4xl]:max-w-none">
             <ProjectMetaGrid
               styleTags={tags}
               premiumAddons={premium_addons}
@@ -196,11 +203,15 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
           </div>
 
           {(project?.bts_images?.length ?? 0) > 0 && (
-            <ProjectBTSGrid images={project!.bts_images!} />
+            <div data-below>
+              <ProjectBTSGrid images={project!.bts_images!} />
+            </div>
           )}
 
           {(project?.credits?.length ?? 0) > 0 && (
-            <ProjectCredits credits={project!.credits!} compact />
+            <div data-below>
+              <ProjectCredits credits={project!.credits!} compact />
+            </div>
           )}
         </div>
       </div>
