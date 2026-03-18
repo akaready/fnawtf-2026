@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { ProjectForm } from '../../_components/ProjectForm';
-import { getTagSuggestions } from '../../actions';
+import { getTagSuggestions, getClients } from '../../actions';
 
 export default async function NewProjectPage() {
-  const tagSuggestions = await getTagSuggestions();
+  const [tagSuggestions, clients] = await Promise.all([
+    getTagSuggestions(),
+    getClients(),
+  ]);
 
   return (
     <div className="flex flex-col h-full">
@@ -18,7 +21,7 @@ export default async function NewProjectPage() {
         <h1 className="font-display text-2xl font-bold text-admin-text-primary">New Project</h1>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
-        <ProjectForm project={null} videos={[]} credits={[]} btsImages={[]} tagSuggestions={tagSuggestions} />
+        <ProjectForm project={null} videos={[]} credits={[]} btsImages={[]} tagSuggestions={tagSuggestions} clients={clients.map(c => ({ id: c.id, name: c.name }))} />
       </div>
     </div>
   );

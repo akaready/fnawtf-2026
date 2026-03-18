@@ -6,6 +6,7 @@ import { VideosTab } from './VideosTab';
 import { CreditsTab } from './CreditsTab';
 import { BTSTab } from './BTSTab';
 import { ThumbnailGallery } from './ThumbnailGallery';
+import type { ClientOption } from './MetadataTab';
 
 type Tab = 'metadata' | 'videos' | 'thumbnail' | 'credits' | 'bts';
 
@@ -32,6 +33,7 @@ interface Props {
   btsImages: Array<{ id?: string; image_url: string; caption: string | null; sort_order: number }>;
   tagSuggestions?: TagSuggestions;
   testimonials?: TestimonialOption[];
+  clients?: ClientOption[];
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -42,7 +44,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'bts', label: 'BTS' },
 ];
 
-export function ProjectForm({ project, videos, credits, btsImages, tagSuggestions, testimonials }: Props) {
+export function ProjectForm({ project, videos, credits, btsImages, tagSuggestions, testimonials, clients }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('metadata');
   const isNew = !project;
 
@@ -77,7 +79,7 @@ export function ProjectForm({ project, videos, credits, btsImages, tagSuggestion
 
       {/* Tab content */}
       {activeTab === 'metadata' && (
-        <MetadataTab project={project as Parameters<typeof MetadataTab>[0]['project']} tagSuggestions={tagSuggestions} testimonials={testimonials} />
+        <MetadataTab project={project as Parameters<typeof MetadataTab>[0]['project']} tagSuggestions={tagSuggestions} testimonials={testimonials} clients={clients} />
       )}
       {activeTab === 'videos' && project && (
         <VideosTab projectId={project.id} initialVideos={videos as unknown as Parameters<typeof VideosTab>[0]['initialVideos']} />
