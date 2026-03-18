@@ -891,9 +891,12 @@ export async function saveProposalQuote(proposalId: string, quoteData: {
 
   if (quoteId) {
     // Update existing quote by ID
+    // Strip description/label/additional_discount — these are managed by updateQuoteFields
+    // to prevent auto-save from overwriting user edits
+    const { description: _d, label: _l, additional_discount: _ad, ...safeData } = quoteData as Record<string, unknown>;
     const { error } = await supabase
       .from('proposal_quotes')
-      .update({ ...quoteData, updated_at: new Date().toISOString() } as never)
+      .update({ ...safeData, updated_at: new Date().toISOString() } as never)
       .eq('id', quoteId);
     if (error) throw new Error(error.message);
     return quoteId;
