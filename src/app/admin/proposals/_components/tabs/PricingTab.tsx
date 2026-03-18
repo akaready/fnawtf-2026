@@ -206,21 +206,14 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   useImperativeHandle(ref, () => ({
     get isDirty() { return isDirtyRef.current; },
     save: async () => {
-      // Flush description + label from DOM (blur may not have fired)
+      // Always flush description + label from DOM — no guards, no comparisons.
+      // The fire-and-forget onBlur save is unreliable; this is the guaranteed write.
       const currentQuote = quotesRef.current[activeQuoteIndex];
-      if (currentQuote) {
-        const fields: Record<string, unknown> = {};
-        if (descRef.current) {
-          const desc = descRef.current.value.trim() || null;
-          if (desc !== (currentQuote.description ?? null)) fields.description = desc;
-        }
-        if (labelRef.current) {
-          const label = labelRef.current.value;
-          if (label !== currentQuote.label) fields.label = label;
-        }
-        if (Object.keys(fields).length > 0) {
-          await updateQuoteFields(currentQuote.id, fields);
-        }
+      if (currentQuote && (descRef.current || labelRef.current)) {
+        await updateQuoteFields(currentQuote.id, {
+          ...(descRef.current ? { description: descRef.current.value.trim() || null } : {}),
+          ...(labelRef.current ? { label: labelRef.current.value } : {}),
+        });
       }
       await Promise.all([
         embedSaveRef.current?.saveNow(),
