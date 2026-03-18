@@ -5,8 +5,31 @@ import { STYLE_PRESETS } from '@/app/admin/scripts/_components/ScriptStylePanel'
 import type { StoryboardStylePreset } from '@/types/scripts';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = 'gemini-3.1-flash-image-preview';
+// Nano Banana Pro — built for complex multi-constraint instructions. Override via STORYBOARD_MODEL env var.
+const MODEL = process.env.STORYBOARD_MODEL ?? 'gemini-3-pro-image-preview';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+
+// Absolute rules injected at the very top of every prompt — must appear before style or content.
+const ABSOLUTE_RULES = `\
+════════════════════════════════════════════════════════
+ABSOLUTE RULES — THESE OVERRIDE EVERY OTHER INSTRUCTION
+════════════════════════════════════════════════════════
+
+ZERO TEXT: No words, letters, numbers, percentages, statistics, labels, captions, \
+scene titles, dialogue, subtitles, speech bubbles, sound effects, infographics, \
+charts, graphs, or data visualizations anywhere in the image — not on whiteboards \
+or chalkboards (show them BLANK or with abstract scribbles only), not on screens or \
+monitors (show abstract glowing shapes only), not as statistical overlays, not as \
+frame numbers, production notes, or directional arrows. If the script mentions data \
+or statistics, represent the CONCEPT through people, objects, and environments only — \
+never as readable numbers or text.
+
+ZERO BORDERS: No storyboard panel borders, no rectangular frames drawn inside the \
+image, no decorative edges, no vignette treatments that create a frame-within-a-frame \
+effect. The illustration fills 100% of the image edge-to-edge with zero internal borders.
+
+ZERO WATERMARKS: No production logos, copyright notices, studio identifiers, or \
+frame numbering of any kind.`;
 
 interface GenerateRequest {
   scriptId: string;
@@ -46,66 +69,100 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Build prompt: preset → custom style → beat content (audio, visual, notes)
-    const promptParts: string[] = [];
+    type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
 
-    // Style instructions come first and are strongly framed
-    const hasStyle = (stylePreset && STYLE_PRESETS[stylePreset]) || stylePrompt;
-    if (hasStyle) {
-      promptParts.push('MANDATORY VISUAL STYLE (the entire image MUST match this style):');
-      if (stylePreset && STYLE_PRESETS[stylePreset]) {
-        promptParts.push(STYLE_PRESETS[stylePreset].prompt);
-      }
-      if (stylePrompt) {
-        promptParts.push(stylePrompt);
-      }
-      promptParts.push('');
-    }
-
-    promptParts.push('Generate a single storyboard frame based on the following context:');
-    promptParts.push(contentPrompt);
-    promptParts.push('');
-    promptParts.push('Single frame, no text overlays. The visual style above is non-negotiable.');
-
-    // If cast reference photos are included, instruct the model to match appearance
-    const castUrls = castReferenceUrls.slice(0, 2);
-    if (castUrls.length > 0) {
-      promptParts.push('');
-      promptParts.push('CHARACTER REFERENCE PHOTOS are included as reference images. Match the physical appearance of these people in the generated frame.');
-    }
-
-    const textPart = promptParts.join('\n');
-
-    const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-      { text: textPart },
-    ];
-
-    // Fetch reference images: style refs (up to 4) + cast refs (up to 2) + beat refs (remaining), cap 8
-    const styleUrls = referenceImageUrls.slice(0, 4);
-    const remainingSlots = 8 - styleUrls.length - castUrls.length;
-    const allRefUrls = [
-      ...styleUrls,
-      ...castUrls,
-      ...beatReferenceUrls.slice(0, Math.max(0, remainingSlots)),
-    ].slice(0, 8);
-    for (const url of allRefUrls) {
+    // Helper: fetch a URL and return an inlineData part, or null on failure
+    async function fetchImagePart(url: string): Promise<Part | null> {
       try {
         const res = await fetch(url);
-        if (!res.ok) continue;
+        if (!res.ok) return null;
         const buf = Buffer.from(await res.arrayBuffer());
         const mimeType = res.headers.get('content-type') ?? 'image/jpeg';
-        parts.push({
-          inlineData: {
-            mimeType,
-            data: buf.toString('base64'),
-          },
-        });
+        return { inlineData: { mimeType, data: buf.toString('base64') } };
       } catch {
-        // Skip failed reference images
+        return null;
       }
     }
 
-    // Call Nano Banana 2
+    // ── Section 1: Absolute rules (top of prompt — highest enforcement weight) ──
+    const promptSections: string[] = [ABSOLUTE_RULES, ''];
+
+    // ── Section 2: Mandatory visual style ──
+    const hasStyle = (stylePreset && STYLE_PRESETS[stylePreset]) || stylePrompt;
+    if (hasStyle) {
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push('MANDATORY VISUAL STYLE — every pixel of this image MUST match:');
+      promptSections.push('════════════════════════════════════════════════════════');
+      if (stylePreset && STYLE_PRESETS[stylePreset]) {
+        promptSections.push(STYLE_PRESETS[stylePreset].prompt);
+      }
+      if (stylePrompt) {
+        promptSections.push(stylePrompt);
+      }
+      promptSections.push('');
+      promptSections.push(
+        'SEQUENCE CONSISTENCY: This is one frame in a multi-frame storyboard sequence. ' +
+        'It MUST look as if drawn by the same artist using identical tools, identical line ' +
+        'weight, identical color palette, identical shading technique, and identical rendering ' +
+        'approach as every other frame in this project. Do not introduce any new colors, ' +
+        'textures, or techniques not specified above. Do not drift.'
+      );
+      promptSections.push('');
+    }
+
+    // ── Section 3: Scene content ──
+    promptSections.push('════════════════════════════════════════════════════════');
+    promptSections.push('SCENE CONTENT — generate a single storyboard frame for:');
+    promptSections.push('════════════════════════════════════════════════════════');
+    promptSections.push(contentPrompt);
+    promptSections.push('');
+
+    // ── Section 4: Character references (text header only — images follow inline) ──
+    const castUrls = castReferenceUrls.slice(0, 2);
+    if (castUrls.length > 0) {
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push('CHARACTER REFERENCE PHOTOS — see attached images below:');
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push(
+        'The attached photos define this character\'s exact appearance. You MUST replicate ' +
+        'their precise facial structure, hair color and style, eye shape, skin tone, and key ' +
+        'identifying physical features. This is not a "similar-looking" person — it is THIS ' +
+        'specific person. Match the reference photos exactly in every frame.'
+      );
+      promptSections.push('');
+    }
+
+    const textPart = promptSections.join('\n');
+
+    // ── Assemble parts: text first, then reference images interleaved with labels ──
+    const styleUrls = referenceImageUrls.slice(0, 4);
+    const remainingSlots = Math.max(0, 8 - styleUrls.length - castUrls.length);
+    const beatUrls = beatReferenceUrls.slice(0, remainingSlots);
+
+    const parts: Part[] = [{ text: textPart }];
+
+    // Style reference images — labeled group
+    if (styleUrls.length > 0) {
+      parts.push({ text: 'STYLE REFERENCE IMAGES (match this visual style exactly):' });
+      const styleImgs = await Promise.all(styleUrls.map(fetchImagePart));
+      for (const img of styleImgs) { if (img) parts.push(img); }
+    }
+
+    // Character reference images — labeled group
+    if (castUrls.length > 0) {
+      parts.push({ text: 'CHARACTER REFERENCE PHOTOS (replicate this face exactly — same person every frame):' });
+      const castImgs = await Promise.all(castUrls.map(fetchImagePart));
+      for (const img of castImgs) { if (img) parts.push(img); }
+    }
+
+    // Beat visual reference images — labeled group
+    if (beatUrls.length > 0) {
+      parts.push({ text: 'VISUAL REFERENCE for this scene:' });
+      const beatImgs = await Promise.all(beatUrls.map(fetchImagePart));
+      for (const img of beatImgs) { if (img) parts.push(img); }
+    }
+
+    // Call Nano Banana Pro
     const geminiRes = await fetch(ENDPOINT, {
       method: 'POST',
       headers: {

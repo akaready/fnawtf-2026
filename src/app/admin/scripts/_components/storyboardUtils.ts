@@ -42,6 +42,34 @@ export function buildRichPrompt(
     parts.push('');
   }
 
+  // Interview scene detection — default to B-roll, not the talking head
+  const isInterviewScene =
+    /interview/i.test(scene.location_name ?? '') ||
+    /\binterview\b/i.test(`${beat.audio_content ?? ''} ${beat.visual_content ?? ''} ${beat.notes_content ?? ''}`);
+  if (isInterviewScene) {
+    parts.push('INTERVIEW SCENE GUIDANCE:');
+    parts.push(
+      'Unless visual_content explicitly places the subject on camera (e.g. "CU on NAME speaking"), ' +
+      'do NOT show the interview subject talking to camera. Show B-ROLL imagery instead — ' +
+      'the environments, objects, products, activities, or concepts referenced in the audio content. ' +
+      'Ask: what would a documentary editor cut to while this audio plays?'
+    );
+    parts.push('');
+  }
+
+  // Data/statistics detection — describe concept cinematically, never as text/numbers
+  const mentionsData = /\d+\s*%|(?:times\s+)?faster|slower|\bstats?\b|\bdata\b|\bstatistics?\b|\bpercentage\b|\bchart\b|\bgraph\b|\bmetric\b/i
+    .test(`${beat.audio_content ?? ''} ${beat.visual_content ?? ''}`);
+  if (mentionsData) {
+    parts.push('DATA/STATISTICS CONTENT NOTE:');
+    parts.push(
+      'The script references numbers, percentages, or statistics. Do NOT render any data as readable ' +
+      'text, numbers, infographics, or overlaid charts. Translate the meaning into a cinematic image ' +
+      'showing people, environments, or objects that represent the concept — never as readable figures.'
+    );
+    parts.push('');
+  }
+
   // Beat position + neighbors
   const total = scene.beats.length;
   parts.push(`BEAT ${beatIndex + 1} OF ${total} IN THIS SCENE:`);

@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check, GripVertical, Download } from 'lucide-react';
+import { ChevronRight, ChevronDown, Sparkles, X, Trash2, Check, GripVertical, Download, Info } from 'lucide-react';
 import { downloadStoryboardZip, buildFullZipName, buildStoryboardFilename } from '@/lib/scripts/downloadStoryboards';
 import {
   DndContext,
@@ -99,6 +99,8 @@ export function ScriptEditorCanvas({
   const lastSelectedBeatId = useRef<string | null>(null);
   const skipScrollRef = useRef(false);
   const selectionModeRef = useRef(false);
+  const [showVisualTips, setShowVisualTips] = useState(false);
+  const visualTipsRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -112,6 +114,18 @@ export function ScriptEditorCanvas({
       return next;
     });
   };
+
+  // Close visual tips popover on outside click
+  useEffect(() => {
+    if (!showVisualTips) return;
+    const handler = (e: MouseEvent) => {
+      if (visualTipsRef.current && !visualTipsRef.current.contains(e.target as Node)) {
+        setShowVisualTips(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showVisualTips]);
 
   // Scroll to active scene when it changes — only from sidebar navigation
   useEffect(() => {
@@ -560,6 +574,32 @@ export function ScriptEditorCanvas({
               className={`group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} opacity-60 border-l ${col.borderColor}`}
             >
               {col.label}
+              {col.key === 'visual' && (
+                <div ref={visualTipsRef} className="contents">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowVisualTips(v => !v); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                    title="Visual content best practices"
+                  >
+                    <Info size={10} />
+                  </button>
+                  {showVisualTips && (
+                    <div className="absolute top-full left-0 mt-1 z-30 w-72 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-lg p-3">
+                      <p className="text-admin-sm font-semibold text-admin-text-primary mb-2">Visual content tips</p>
+                      <ul className="space-y-1.5 text-admin-text-muted" style={{ fontSize: '11px' }}>
+                        <li>Describe what the <strong className="text-admin-text-primary">camera sees</strong> — not the audio or dialogue</li>
+                        <li>Use <strong className="text-admin-text-primary">framing language:</strong> wide shot, close-up, medium shot, over-the-shoulder</li>
+                        <li>Use <strong className="text-admin-text-primary">lighting language:</strong> natural window light, warm evening glow, overhead fluorescent</li>
+                        <li>Use <strong className="text-admin-text-primary">spatial anchors:</strong> seated beside, standing at, foreground/background</li>
+                        <li>Use <strong className="text-admin-text-primary">action verbs:</strong> reaching for, gesturing toward, looking at</li>
+                        <li><strong className="text-admin-text-primary">Interview scenes:</strong> describe the B-roll, not the interviewee on camera</li>
+                        <li><strong className="text-admin-text-primary">Avoid numbers/stats</strong> — describe the concept visually instead</li>
+                        <li><strong className="text-admin-text-primary">Avoid text on screens</strong> or whiteboards — describe the visual metaphor</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
               {col.key === 'storyboard' && scriptStyle && (
                 generatingScope ? (
                   <button
