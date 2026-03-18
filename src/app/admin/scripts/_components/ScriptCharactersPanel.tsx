@@ -774,14 +774,14 @@ export function ScriptCharactersPanel({
                   </label>
 
                   {/* Tab strip */}
-                  <div className="flex items-center gap-0.5 bg-admin-bg-inset rounded-admin-md p-0.5">
+                  <div className="flex items-center gap-0.5 rounded-admin-md p-0.5">
                     {(['people', 'references'] as const).map(mode => (
                       <button
                         key={mode}
                         onClick={() => { setDraftCastMode(mode); autoSave.trigger(); }}
                         className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors ${
                           draftCastMode === mode
-                            ? 'bg-admin-bg-raised text-admin-text-primary shadow font-semibold'
+                            ? 'bg-admin-bg-overlay text-admin-text-primary font-semibold'
                             : 'text-admin-text-ghost hover:text-admin-text-muted'
                         }`}
                       >
