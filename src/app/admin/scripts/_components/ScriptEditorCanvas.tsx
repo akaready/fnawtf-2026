@@ -404,6 +404,12 @@ export function ScriptEditorCanvas({
             }
           }
 
+          // Prior frames from this scene for visual consistency (exclude this beat, last 2)
+          const priorSceneFrameUrls = storyboardFrames
+            .filter(f => scene.beats.some(b => b.id === f.beat_id) && f.beat_id !== beat.id)
+            .slice(-2)
+            .map(f => f.image_url);
+
           try {
             const res = await fetch('/api/admin/storyboard', {
               method: 'POST',
@@ -419,6 +425,7 @@ export function ScriptEditorCanvas({
                 beatReferenceUrls: beatRefs.map(r => r.image_url),
                 castReferenceUrls: castRefUrls,
                 locationReferenceUrls: locationRefUrls,
+                consistencyFrameUrls: priorSceneFrameUrls,
               }),
             });
             if (res.ok) {
@@ -764,6 +771,7 @@ export function ScriptEditorCanvas({
                     onEditingChange={(editing) => setEditingSceneId(editing ? scene.id : null)}
                     onGenerate={columnConfig.storyboard && scriptStyle ? () => handleGenerateScene(scene.id) : undefined}
                     generating={generatingScope === scene.id}
+                    isGenerating={generatingScope !== null && generatingScope !== scene.id && scene.beats.some(b => generatingBeatIds.has(b.id))}
                   />
                 </div>
               </div>
@@ -780,7 +788,27 @@ export function ScriptEditorCanvas({
                     items={scene.beats.map(b => b.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {scene.beats.map((beat, i) => (
+                    {(() => {
+                      // Frames already generated for this scene, sorted by beat order
+                      const thisSceneFrames = storyboardFrames
+                        .filter(f => scene.beats.some(beat => beat.id === f.beat_id))
+                        .sort((fa, fb) => {
+                          const ai = scene.beats.findIndex(beat => beat.id === fa.beat_id);
+                          const bi = scene.beats.findIndex(beat => beat.id === fb.beat_id);
+                          return ai - bi;
+                        });
+                      const sceneFramesForLightbox = thisSceneFrames.map(f => {
+                        const beatIdx = scene.beats.findIndex(b => b.id === f.beat_id);
+                        let letter = '';
+                        let n = beatIdx + 1;
+                        while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+                        return {
+                          imageUrl: f.image_url,
+                          label: `Scene ${scene.sceneNumber} — Beat ${letter}`,
+                          filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, letter),
+                        };
+                      });
+                      return scene.beats.map((beat, i) => (
                       <ScriptBeatRow
                         key={beat.id}
                         beat={beat}
@@ -816,8 +844,10 @@ export function ScriptEditorCanvas({
                         locationReferenceMap={locationReferenceMap}
                         scriptTitle={scriptTitle}
                         scriptVersion={scriptVersion}
+                        sceneFrames={sceneFramesForLightbox}
                       />
-                    ))}
+                    ));
+                    })()}
                   </SortableContext>
                 </DndContext>
               )}

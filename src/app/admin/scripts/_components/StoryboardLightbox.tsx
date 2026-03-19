@@ -1,35 +1,39 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import { X, Download } from 'lucide-react';
+import { useEffect, useCallback, useState } from 'react';
+import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 
 interface Props {
-  imageUrl: string;
-  label: string;
-  filename: string;
+  frames: { imageUrl: string; label: string; filename: string }[];
+  initialIndex: number;
   onClose: () => void;
 }
 
-export function StoryboardLightbox({ imageUrl, label, filename, onClose }: Props) {
-  const handleEscape = useCallback(
+export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
+  const [idx, setIdx] = useState(initialIndex);
+  const current = frames[idx];
+
+  const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') setIdx(i => (i - 1 + frames.length) % frames.length);
+      if (e.key === 'ArrowRight') setIdx(i => (i + 1) % frames.length);
     },
-    [onClose]
+    [onClose, frames.length]
   );
 
   useEffect(() => {
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [handleEscape]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
   };
 
   const handleDownload = () => {
-    downloadSingleImage(imageUrl, filename);
+    downloadSingleImage(current.imageUrl, current.filename);
   };
 
   return (
@@ -39,7 +43,7 @@ export function StoryboardLightbox({ imageUrl, label, filename, onClose }: Props
     >
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4">
-        <span className="text-white text-sm font-mono">{label}</span>
+        <span className="text-white text-sm font-mono">{current.label}</span>
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownload}
@@ -58,12 +62,34 @@ export function StoryboardLightbox({ imageUrl, label, filename, onClose }: Props
         </div>
       </div>
 
+      {/* Prev button */}
+      {frames.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIdx(i => (i - 1 + frames.length) % frames.length); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors"
+          title="Previous"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+
       {/* Image */}
       <img
-        src={imageUrl}
-        alt={label}
+        src={current.imageUrl}
+        alt={current.label}
         className="max-w-[90vw] max-h-[85vh] object-contain"
       />
+
+      {/* Next button */}
+      {frames.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIdx(i => (i + 1) % frames.length); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 text-white hover:bg-black/80 transition-colors"
+          title="Next"
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
     </div>
   );
 }

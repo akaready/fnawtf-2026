@@ -34,6 +34,8 @@ interface Props {
   scriptTitle: string;
   scriptVersion: number;
   beatLabel: string;
+  sceneFrames?: { imageUrl: string; label: string; filename: string }[];
+  consistencyFrameUrls?: string[];
 }
 
 export function ScriptStoryboardCell({
@@ -60,6 +62,8 @@ export function ScriptStoryboardCell({
   scriptTitle,
   scriptVersion,
   beatLabel,
+  sceneFrames,
+  consistencyFrameUrls,
 }: Props) {
   const [generating, setGenerating] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -123,6 +127,7 @@ export function ScriptStoryboardCell({
           beatReferenceUrls,
           castReferenceUrls,
           locationReferenceUrls,
+          consistencyFrameUrls,
         }),
       });
 
@@ -133,7 +138,7 @@ export function ScriptStoryboardCell({
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, scriptId, beatId, styleReferences, onFrameChange]);
+  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, consistencyFrameUrls, scriptId, beatId, styleReferences, onFrameChange]);
 
   const handleUpload = useCallback(
     async (files: FileList | null) => {
@@ -208,22 +213,20 @@ export function ScriptStoryboardCell({
           className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded"
           onMouseLeave={() => setConfirmDelete(false)}
         >
+            <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
+          <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
+            const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
+            void downloadSingleImage(frame.image_url, filename);
+          }} />
+          <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
+          <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
           {confirmDelete ? (
             <>
               <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={handleDelete} />
               <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDelete(false)} />
             </>
           ) : (
-            <>
-              <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
-              <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
-                const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
-                void downloadSingleImage(frame.image_url, filename);
-              }} />
-              <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
-              <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
-              <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDelete(true)} />
-            </>
+            <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDelete(true)} />
           )}
         </div>
         <input
@@ -234,14 +237,19 @@ export function ScriptStoryboardCell({
           onChange={(e) => handleUpload(e.target.files)}
         />
       </div>
-      {lightboxOpen && (
-        <StoryboardLightbox
-          imageUrl={frame.image_url}
-          label={`Scene ${scene.sceneNumber} — Beat ${beatLabel}`}
-          filename={buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel)}
-          onClose={() => setLightboxOpen(false)}
-        />
-      )}
+      {lightboxOpen && (() => {
+        const lightboxFrames = sceneFrames && sceneFrames.length > 0
+          ? sceneFrames
+          : [{ imageUrl: frame.image_url, label: `Scene ${scene.sceneNumber} — Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel) }];
+        const lightboxIndex = lightboxFrames.findIndex(f => f.imageUrl === frame.image_url);
+        return (
+          <StoryboardLightbox
+            frames={lightboxFrames}
+            initialIndex={Math.max(0, lightboxIndex)}
+            onClose={() => setLightboxOpen(false)}
+          />
+        );
+      })()}
       </>
     );
   }

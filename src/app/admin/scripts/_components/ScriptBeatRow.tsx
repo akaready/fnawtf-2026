@@ -42,6 +42,7 @@ interface Props {
   locationReferenceMap?: Record<string, LocationReferenceRow[]>;
   scriptTitle: string;
   scriptVersion: number;
+  sceneFrames?: { imageUrl: string; label: string; filename: string }[];
 }
 
 function beatLetter(n: number): string {
@@ -90,6 +91,7 @@ export function ScriptBeatRow({
   locationReferenceMap,
   scriptTitle,
   scriptVersion,
+  sceneFrames,
 }: Props) {
   const {
     attributes,
@@ -253,6 +255,7 @@ export function ScriptBeatRow({
               scriptTitle={scriptTitle}
               scriptVersion={scriptVersion}
               beatLabel={beatLetter(beatNumber)}
+              sceneFrames={sceneFrames}
             />
           )}
         </div>

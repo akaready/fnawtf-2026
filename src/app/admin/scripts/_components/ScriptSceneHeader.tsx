@@ -15,6 +15,8 @@ interface Props {
   onEditingChange?: (editing: boolean) => void;
   onGenerate?: () => void;
   generating?: boolean;
+  /** True when any beat in this scene is actively being batch-generated (e.g. scene is collapsed) */
+  isGenerating?: boolean;
 }
 
 const INT_EXT_OPTIONS: { id: string; label: string }[] = [
@@ -31,7 +33,7 @@ const TIME_OPTIONS: { id: string; label: string }[] = [
   { id: 'LATER', label: 'LATER' },
 ];
 
-export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating }: Props) {
+export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating, isGenerating }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [locQuery, setLocQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -259,14 +261,19 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
           </>
         ) : (
           <>
+            {(isGenerating && !onGenerate) && (
+              <span className="p-1 text-admin-text-muted" title="Generating…">
+                <Loader2 size={14} className="animate-spin" />
+              </span>
+            )}
             {onGenerate && (
               <button
                 onClick={e => { e.stopPropagation(); onGenerate(); }}
-                disabled={generating}
+                disabled={generating || isGenerating}
                 className="text-admin-text-secondary hover:text-admin-text-primary p-1 transition-colors"
-                title={generating ? 'Generating…' : 'Generate storyboards for scene'}
+                title={(generating || isGenerating) ? 'Generating…' : 'Generate storyboards for scene'}
               >
-                {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {(generating || isGenerating) ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
               </button>
             )}
             <button
