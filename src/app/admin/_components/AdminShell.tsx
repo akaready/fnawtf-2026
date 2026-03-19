@@ -344,6 +344,7 @@ function AdminShellInner({ children, userEmail }: Props) {
               >
                 <LogOut size={15} strokeWidth={1.75} />
               </button>
+              <div className="flex-1" />
               {userEmail === 'ready@fna.wtf' && (
                 <motion.div layout="position" className="relative">
                   <button
