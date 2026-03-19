@@ -98,10 +98,9 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete, on
                   onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
                 />
                 <div
-                  className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 rounded"
+                  className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 rounded"
                   onMouseLeave={() => setConfirmDeleteId(null)}
                 >
-                  {/* Drag handle — top-left */}
                   <span
                     draggable
                     onDragStart={(e) => {
@@ -117,24 +116,21 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete, on
                       const img = (e.target as HTMLElement).closest('.group\\/img')?.querySelector('img');
                       if (img) e.dataTransfer.setDragImage(img, 40, 22);
                     }}
-                    className="absolute top-1 left-1 w-6 h-6 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
+                    className="w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
                     title="Drag to move"
                   >
-                    <GripVertical size={10} />
+                    <GripVertical size={12} />
                   </span>
-                  {/* Action buttons — centered */}
-                  <div className="absolute inset-0 flex items-center justify-center gap-1">
-                    <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxIndex(i)} />
-                    <ImageActionButton icon={Download} color="info" title="Download" onClick={() => void downloadSingleImage(ref.image_url, `reference-${i + 1}.jpg`)} />
-                    {confirmDeleteId === ref.id ? (
-                      <>
-                        <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={() => onDelete(ref.id)} />
-                        <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDeleteId(null)} />
-                      </>
-                    ) : (
-                      <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDeleteId(ref.id)} />
-                    )}
-                  </div>
+                  <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxIndex(i)} />
+                  <ImageActionButton icon={Download} color="info" title="Download" onClick={() => void downloadSingleImage(ref.image_url, `reference-${i + 1}.jpg`)} />
+                  {confirmDeleteId === ref.id ? (
+                    <>
+                      <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={() => onDelete(ref.id)} />
+                      <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDeleteId(null)} />
+                    </>
+                  ) : (
+                    <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDeleteId(ref.id)} />
+                  )}
                 </div>
               </div>
             ))}

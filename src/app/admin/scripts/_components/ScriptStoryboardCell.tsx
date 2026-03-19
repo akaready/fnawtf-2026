@@ -256,50 +256,46 @@ export function ScriptStoryboardCell({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-        <div className="mx-2 my-2">
-          <img
-            src={frame.image_url}
-            alt=""
-            className="w-full aspect-video object-cover rounded cursor-pointer"
-            onClick={() => setLightboxOpen(true)}
-          />
-        </div>
         {/* Image-move drop indicator */}
         {imageMoveOver && (
           <div className="absolute inset-0 flex items-center justify-center bg-admin-info-bg/20 border-2 border-dashed border-admin-info rounded pointer-events-none z-20">
             <GripVertical size={16} className="text-admin-info" />
           </div>
         )}
-        {/* Hover actions — two-row layout */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded"
-          onMouseLeave={() => setConfirmDelete(false)}
-        >
-          {/* Drag handle — top-left */}
-          <span
-            draggable
-            onDragStart={(e) => {
-              e.stopPropagation();
-              e.dataTransfer.setData('application/x-image-move', JSON.stringify({
-                dragType: 'storyboard',
-                imageId: frame.id,
-                sourceBeatId: beatId,
-                imageUrl: frame.image_url,
-                storagePath: frame.storage_path,
-              } satisfies ImageDragData));
-              e.dataTransfer.effectAllowed = 'move';
-              const img = (e.target as HTMLElement).closest('.group\\/sb')?.querySelector('img');
-              if (img) e.dataTransfer.setDragImage(img, 40, 22);
-            }}
-            className="absolute top-2.5 left-2.5 w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
-            title="Drag to move"
+        <div className="relative mx-2 my-2 group/img">
+          <img
+            src={frame.image_url}
+            alt=""
+            className="w-full aspect-video object-cover rounded cursor-pointer"
+            onClick={() => setLightboxOpen(true)}
+          />
+          {/* Hover actions — overlay on image only */}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 rounded"
+            onMouseLeave={() => setConfirmDelete(false)}
           >
-            <GripVertical size={12} />
-          </span>
-          {/* Grouped actions — centered */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4">
-            {/* Row 1: Edit / Generate */}
+            {/* Row 1: Move / Edit / Generate */}
             <div className="flex items-center gap-1">
+              <span
+                draggable
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  e.dataTransfer.setData('application/x-image-move', JSON.stringify({
+                    dragType: 'storyboard',
+                    imageId: frame.id,
+                    sourceBeatId: beatId,
+                    imageUrl: frame.image_url,
+                    storagePath: frame.storage_path,
+                  } satisfies ImageDragData));
+                  e.dataTransfer.effectAllowed = 'move';
+                  const img = (e.target as HTMLElement).closest('.group\\/img')?.querySelector('img');
+                  if (img) e.dataTransfer.setDragImage(img, 40, 22);
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
+                title="Drag to move"
+              >
+                <GripVertical size={12} />
+              </span>
               <ImageActionButton icon={Pencil} color="info" title="Edit generation" onClick={() => setModalOpen(true)} />
               <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
               <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
