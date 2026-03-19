@@ -2686,6 +2686,212 @@ export async function deleteBeatReference(id: string) {
   await supabase.from('script_beat_references').delete().eq('id', id);
 }
 
+// ── Image Move / Swap ──────────────────────────────────────────────────
+
+/** Move a beat reference to a different beat (append to target) */
+export async function moveReference(refId: string, targetBeatId: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Get next sort_order on target beat
+  const { data: existing } = await supabase
+    .from('script_beat_references')
+    .select('sort_order')
+    .eq('beat_id', targetBeatId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = ((existing?.[0] as { sort_order: number } | undefined)?.sort_order ?? -1) + 1;
+
+  const { error } = await supabase
+    .from('script_beat_references')
+    .update({ beat_id: targetBeatId, sort_order: nextOrder } as never)
+    .eq('id', refId);
+  if (error) throw new Error(error.message);
+}
+
+/** Move a storyboard frame to a different beat (deactivates any existing active frame on target) */
+export async function moveStoryboardFrame(frameId: string, targetBeatId: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Deactivate any active frame on target beat
+  await supabase
+    .from('script_storyboard_frames')
+    .update({ is_active: false } as never)
+    .eq('beat_id', targetBeatId)
+    .eq('is_active', true);
+
+  const { error } = await supabase
+    .from('script_storyboard_frames')
+    .update({ beat_id: targetBeatId } as never)
+    .eq('id', frameId);
+  if (error) throw new Error(error.message);
+}
+
+/** Swap beat_ids between two storyboard frames */
+export async function swapStoryboardFrames(frameAId: string, frameBId: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Read both frames
+  const { data: frameA } = await supabase
+    .from('script_storyboard_frames')
+    .select('beat_id')
+    .eq('id', frameAId)
+    .single();
+  const { data: frameB } = await supabase
+    .from('script_storyboard_frames')
+    .select('beat_id')
+    .eq('id', frameBId)
+    .single();
+  if (!frameA || !frameB) throw new Error('Frame not found');
+
+  const beatIdA = (frameA as { beat_id: string }).beat_id;
+  const beatIdB = (frameB as { beat_id: string }).beat_id;
+
+  // Swap beat_ids
+  const { error: errA } = await supabase
+    .from('script_storyboard_frames')
+    .update({ beat_id: beatIdB } as never)
+    .eq('id', frameAId);
+  if (errA) throw new Error(errA.message);
+
+  const { error: errB } = await supabase
+    .from('script_storyboard_frames')
+    .update({ beat_id: beatIdA } as never)
+    .eq('id', frameBId);
+  if (errB) throw new Error(errB.message);
+}
+
+/** Convert a beat reference into a storyboard frame (copies file between buckets) */
+export async function convertRefToStoryboard(
+  refId: string,
+  scriptId: string,
+  targetBeatId: string,
+): Promise<import('@/types/scripts').ScriptStoryboardFrameRow> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Get the reference
+  const { data: ref } = await supabase
+    .from('script_beat_references')
+    .select('*')
+    .eq('id', refId)
+    .single();
+  if (!ref) throw new Error('Reference not found');
+  const { storage_path } = ref as { storage_path: string };
+
+  // Download from script-references bucket
+  const { data: fileData, error: dlErr } = await supabase.storage
+    .from('script-references')
+    .download(storage_path);
+  if (dlErr || !fileData) throw new Error(dlErr?.message ?? 'Download failed');
+
+  // Upload to script-storyboards bucket
+  const ext = storage_path.split('.').pop() ?? 'jpg';
+  const newPath = `frames/${targetBeatId}/${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('script-storyboards')
+    .upload(newPath, fileData, { contentType: `image/${ext}`, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(newPath);
+  const newImageUrl = urlData.publicUrl;
+
+  // Deactivate any active frame on target beat
+  await supabase
+    .from('script_storyboard_frames')
+    .update({ is_active: false } as never)
+    .eq('beat_id', targetBeatId)
+    .eq('is_active', true);
+
+  // Create storyboard frame
+  const { data: frame, error: insertErr } = await supabase
+    .from('script_storyboard_frames')
+    .insert({
+      script_id: scriptId,
+      beat_id: targetBeatId,
+      scene_id: null,
+      image_url: newImageUrl,
+      storage_path: newPath,
+      source: 'uploaded',
+      is_active: true,
+      reference_urls_used: [],
+    } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+
+  // Delete original reference + storage file
+  await supabase.storage.from('script-references').remove([storage_path]);
+  await supabase.from('script_beat_references').delete().eq('id', refId);
+
+  return frame as import('@/types/scripts').ScriptStoryboardFrameRow;
+}
+
+/** Convert a storyboard frame into a beat reference (copies file between buckets) */
+export async function convertStoryboardToRef(
+  frameId: string,
+  targetBeatId: string,
+): Promise<import('@/types/scripts').ScriptBeatReferenceRow> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Get the frame
+  const { data: frame } = await supabase
+    .from('script_storyboard_frames')
+    .select('*')
+    .eq('id', frameId)
+    .single();
+  if (!frame) throw new Error('Frame not found');
+  const { storage_path } = frame as { storage_path: string };
+
+  // Download from script-storyboards bucket
+  const { data: fileData, error: dlErr } = await supabase.storage
+    .from('script-storyboards')
+    .download(storage_path);
+  if (dlErr || !fileData) throw new Error(dlErr?.message ?? 'Download failed');
+
+  // Upload to script-references bucket
+  const ext = storage_path.split('.').pop() ?? 'jpg';
+  const newPath = `${targetBeatId}/${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('script-references')
+    .upload(newPath, fileData, { contentType: `image/${ext}`, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: urlData } = supabase.storage.from('script-references').getPublicUrl(newPath);
+  const newImageUrl = urlData.publicUrl;
+
+  // Get next sort_order on target beat
+  const { data: existing } = await supabase
+    .from('script_beat_references')
+    .select('sort_order')
+    .eq('beat_id', targetBeatId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = ((existing?.[0] as { sort_order: number } | undefined)?.sort_order ?? -1) + 1;
+
+  // Create reference
+  const { data: newRef, error: insertErr } = await supabase
+    .from('script_beat_references')
+    .insert({ beat_id: targetBeatId, image_url: newImageUrl, storage_path: newPath, sort_order: nextOrder } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+
+  // Delete original frame + storage file
+  await supabase.storage.from('script-storyboards').remove([storage_path]);
+  await supabase.from('script_storyboard_frames').delete().eq('id', frameId);
+
+  return newRef as import('@/types/scripts').ScriptBeatReferenceRow;
+}
+
 // ── Script Versioning ──────────────────────────────────────────────────
 
 /** Shared duplication helper — clones script + scenes/beats/characters/tags/locations */
@@ -3043,10 +3249,44 @@ export async function getStoryboardFrames(scriptId: string) {
     .from('script_storyboard_frames')
     .select('*')
     .eq('script_id', scriptId)
+    .eq('is_active', true)
     .order('created_at');
   if (error?.message?.includes('schema cache')) return [];
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function getFrameHistoryForBeat(beatId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_storyboard_frames')
+    .select('*')
+    .eq('beat_id', beatId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('@/types/scripts').ScriptStoryboardFrameRow[];
+}
+
+export async function setActiveFrame(frameId: string, beatId: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  // Deactivate all frames for this beat
+  await supabase
+    .from('script_storyboard_frames')
+    .update({ is_active: false } as never)
+    .eq('beat_id', beatId);
+
+  // Activate the chosen one
+  const { data, error } = await supabase
+    .from('script_storyboard_frames')
+    .update({ is_active: true } as never)
+    .eq('id', frameId)
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as import('@/types/scripts').ScriptStoryboardFrameRow;
 }
 
 export async function uploadStoryboardFrame(
@@ -3073,27 +3313,19 @@ export async function uploadStoryboardFrame(
   const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(path);
   const image_url = urlData.publicUrl;
 
-  // Delete existing frame for this beat/scene (single image per beat)
+  // Deactivate existing active frame(s) — preserve history
   if (target.beatId) {
-    const { data: old } = await supabase
+    await supabase
       .from('script_storyboard_frames')
-      .select('id, storage_path')
-      .eq('beat_id', target.beatId);
-    if (old && old.length > 0) {
-      const paths = (old as { storage_path: string }[]).map(r => r.storage_path);
-      await supabase.storage.from('script-storyboards').remove(paths);
-      await supabase.from('script_storyboard_frames').delete().eq('beat_id', target.beatId);
-    }
+      .update({ is_active: false } as never)
+      .eq('beat_id', target.beatId)
+      .eq('is_active', true);
   } else if (target.sceneId) {
-    const { data: old } = await supabase
+    await supabase
       .from('script_storyboard_frames')
-      .select('id, storage_path')
-      .eq('scene_id', target.sceneId);
-    if (old && old.length > 0) {
-      const paths = (old as { storage_path: string }[]).map(r => r.storage_path);
-      await supabase.storage.from('script-storyboards').remove(paths);
-      await supabase.from('script_storyboard_frames').delete().eq('scene_id', target.sceneId);
-    }
+      .update({ is_active: false } as never)
+      .eq('scene_id', target.sceneId)
+      .eq('is_active', true);
   }
 
   const { data: frame, error: insertErr } = await supabase
@@ -3105,6 +3337,8 @@ export async function uploadStoryboardFrame(
       image_url,
       storage_path: path,
       source: 'uploaded',
+      is_active: true,
+      reference_urls_used: [],
     } as never)
     .select('id')
     .single();
@@ -3120,13 +3354,39 @@ export async function deleteStoryboardFrame(id: string) {
 
   const { data: frame } = await supabase
     .from('script_storyboard_frames')
-    .select('storage_path')
+    .select('storage_path, beat_id, scene_id, is_active')
     .eq('id', id)
     .single();
-  if (frame) {
-    await supabase.storage.from('script-storyboards').remove([(frame as { storage_path: string }).storage_path]);
-  }
+  if (!frame) return;
+
+  const { storage_path, beat_id, scene_id, is_active } = frame as {
+    storage_path: string; beat_id: string | null; scene_id: string | null; is_active: boolean;
+  };
+
+  // Remove from storage + DB
+  await supabase.storage.from('script-storyboards').remove([storage_path]);
   await supabase.from('script_storyboard_frames').delete().eq('id', id);
+
+  // If deleted frame was active, promote the most recent remaining frame
+  if (is_active) {
+    const col = beat_id ? 'beat_id' : 'scene_id';
+    const val = beat_id ?? scene_id;
+    if (val) {
+      const { data: next } = await supabase
+        .from('script_storyboard_frames')
+        .select('id')
+        .eq(col, val)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (next) {
+        await supabase
+          .from('script_storyboard_frames')
+          .update({ is_active: true } as never)
+          .eq('id', (next as { id: string }).id);
+      }
+    }
+  }
 }
 
 export async function deleteAllStoryboardFrames(scriptId: string) {
@@ -5046,7 +5306,7 @@ export async function createScriptShare(scriptId: string): Promise<string> {
 /** Update a script share link. */
 export async function updateScriptShare(
   shareId: string,
-  updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean },
+  updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string },
 ) {
   const { supabase } = await requireAuth();
   const { error } = await supabase

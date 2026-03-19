@@ -12,6 +12,7 @@ import {
   createBeat, updateBeat, deleteBeat, reorderBeats,
   createScriptVersion, publishScriptVersion, unpublishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
+  moveReference, moveStoryboardFrame, swapStoryboardFrames, convertRefToStoryboard, convertStoryboardToRef,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
   getCharacterReferenceMap, getLocationReferenceMap,
@@ -251,6 +252,7 @@ export function ScriptEditorClient({
       time_of_day: 'DAY',
       int_ext: 'INT',
       scene_notes: null,
+      scene_description: null,
       created_at: new Date().toISOString(),
     };
     setScenes(prev => [...prev, newScene]);
@@ -396,6 +398,96 @@ export function ScriptEditorClient({
       setStoryboardFrames(prev => prev.filter(f => f.beat_id !== beatId));
     }
   }, []);
+
+  // ── Image move / swap between beat rows ──
+  const handleImageMove = useCallback(async (
+    dragData: import('@/types/scripts').ImageDragData,
+    dropData: import('@/types/scripts').ImageDropData,
+  ) => {
+    const { dragType, imageId, sourceBeatId } = dragData;
+    const { dropType, beatId: targetBeatId } = dropData;
+
+    // No-op: dropped on same cell
+    const sameColumn = (dragType === 'reference' && dropType === 'ref-cell') || (dragType === 'storyboard' && dropType === 'storyboard-cell');
+    if (sourceBeatId === targetBeatId && sameColumn) return;
+
+    // Snapshot for rollback
+    const prevRefs = references;
+    const prevFrames = storyboardFrames;
+
+    try {
+      // ── Reference → Reference cell ──
+      if (dragType === 'reference' && dropType === 'ref-cell') {
+        setReferences(prev => prev.map(r =>
+          r.id === imageId ? { ...r, beat_id: targetBeatId, sort_order: prev.filter(x => x.beat_id === targetBeatId).length } : r
+        ));
+        await moveReference(imageId, targetBeatId);
+        return;
+      }
+
+      // ── Storyboard → Storyboard cell ──
+      if (dragType === 'storyboard' && dropType === 'storyboard-cell') {
+        const targetFrame = storyboardFrames.find(f => f.beat_id === targetBeatId);
+        if (targetFrame) {
+          // Swap: trade beat_ids
+          setStoryboardFrames(prev => prev.map(f => {
+            if (f.id === imageId) return { ...f, beat_id: targetBeatId };
+            if (f.id === targetFrame.id) return { ...f, beat_id: sourceBeatId };
+            return f;
+          }));
+          await swapStoryboardFrames(imageId, targetFrame.id);
+        } else {
+          // Move to empty beat
+          setStoryboardFrames(prev => prev.map(f =>
+            f.id === imageId ? { ...f, beat_id: targetBeatId } : f
+          ));
+          await moveStoryboardFrame(imageId, targetBeatId);
+        }
+        return;
+      }
+
+      // ── Reference → Storyboard cell ──
+      if (dragType === 'reference' && dropType === 'storyboard-cell') {
+        const targetFrame = storyboardFrames.find(f => f.beat_id === targetBeatId);
+
+        // Remove ref optimistically
+        setReferences(prev => prev.filter(r => r.id !== imageId));
+
+        if (targetFrame) {
+          // Swap: ref becomes storyboard, existing storyboard becomes ref on source beat
+          setStoryboardFrames(prev => prev.filter(f => f.id !== targetFrame.id));
+
+          const [newFrame, newRef] = await Promise.all([
+            convertRefToStoryboard(imageId, script.id, targetBeatId),
+            convertStoryboardToRef(targetFrame.id, sourceBeatId),
+          ]);
+
+          setStoryboardFrames(prev => [...prev, newFrame]);
+          setReferences(prev => [...prev, newRef]);
+        } else {
+          // Convert ref to storyboard on empty target
+          const newFrame = await convertRefToStoryboard(imageId, script.id, targetBeatId);
+          setStoryboardFrames(prev => [...prev, newFrame]);
+        }
+        return;
+      }
+
+      // ── Storyboard → Reference cell ──
+      if (dragType === 'storyboard' && dropType === 'ref-cell') {
+        setStoryboardFrames(prev => prev.filter(f => f.id !== imageId));
+
+        const newRef = await convertStoryboardToRef(imageId, targetBeatId);
+        setReferences(prev => [...prev, newRef]);
+        return;
+      }
+    } catch (err) {
+      // Rollback on error
+      setReferences(prevRefs);
+      setStoryboardFrames(prevFrames);
+      const msg = err instanceof Error ? err.message : 'Move failed';
+      showError('Image move failed', msg);
+    }
+  }, [references, storyboardFrames, script.id, showError]);
 
   // ── Save all (flush via autoSave) ──
   const handleSaveAll = useCallback(async () => {
@@ -794,6 +886,7 @@ export function ScriptEditorClient({
                 scriptTitle={script.title}
                 scriptVersion={script.major_version}
                 onAllFramesDeleted={() => setStoryboardFrames([])}
+                onImageMove={handleImageMove}
               />
             ) : (
               <ScriptScratchPad

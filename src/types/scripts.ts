@@ -24,6 +24,21 @@ export function formatScriptVersion(major: number, minor: number, isPublished: b
   return isPublished ? `${major}` : `${major}.${minor}`;
 }
 
+/** Payload carried during image drag-and-drop between beat rows */
+export interface ImageDragData {
+  dragType: 'reference' | 'storyboard';
+  imageId: string;
+  sourceBeatId: string;
+  imageUrl: string;
+  storagePath: string;
+}
+
+/** Drop target metadata for image drag-and-drop */
+export interface ImageDropData {
+  dropType: 'ref-cell' | 'storyboard-cell';
+  beatId: string;
+}
+
 export interface ScriptBeatReferenceRow {
   id: string;
   beat_id: string;
@@ -42,6 +57,7 @@ export interface ScriptSceneRow {
   time_of_day: string;
   int_ext: IntExt;
   scene_notes: string | null;
+  scene_description: string | null;
   created_at: string;
 }
 
@@ -222,6 +238,11 @@ export interface ScriptStyleReferenceRow {
   created_at: string;
 }
 
+export interface StoryboardReferenceUsed {
+  url: string;
+  purpose: 'style' | 'cast' | 'location' | 'beat' | 'consistency';
+}
+
 export interface ScriptStoryboardFrameRow {
   id: string;
   script_id: string;
@@ -231,6 +252,8 @@ export interface ScriptStoryboardFrameRow {
   storage_path: string;
   source: StoryboardFrameSource;
   prompt_used: string | null;
+  is_active: boolean;
+  reference_urls_used: StoryboardReferenceUsed[];
   created_at: string;
 }
 
@@ -258,6 +281,8 @@ export interface ScriptWithProject extends ScriptRow {
 }
 
 /** Script share link record */
+export type ShareMode = 'presentation' | 'table';
+
 export interface ScriptShareRow {
   id: string;
   script_id: string;
@@ -266,9 +291,22 @@ export interface ScriptShareRow {
   notes: string | null;
   label: string;
   is_active: boolean;
+  share_mode: ShareMode;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ScriptShareCommentRow {
+  id: string;
+  share_id: string;
+  beat_id: string;
+  viewer_email: string;
+  viewer_name: string | null;
+  content: string;
+  is_admin: boolean;
+  deleted_at: string | null;
+  created_at: string;
 }
 
 /** Script share view tracking record */

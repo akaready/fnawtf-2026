@@ -129,7 +129,7 @@ export function ReadOnlyCanvas({
                   {scene.sceneNumber}
                 </span>
                 <span className="text-xs font-medium text-foreground/70 uppercase tracking-wider flex-1 min-w-0 truncate">
-                  {[scene.int_ext, scene.location_name || 'UNTITLED LOCATION', scene.time_of_day ? `\u2014 ${scene.time_of_day}` : ''].filter(Boolean).join('. ')}
+                  {[scene.int_ext, scene.location_name || 'UNTITLED LOCATION', scene.time_of_day ? `\u2014 ${scene.time_of_day}` : ''].filter(Boolean).join('. ').replace('. \u2014', ' \u2014')}
                 </span>
               </div>
             </div>

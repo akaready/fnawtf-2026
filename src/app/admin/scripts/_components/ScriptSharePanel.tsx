@@ -99,7 +99,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     }
   };
 
-  const handleUpdate = async (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean }) => {
+  const handleUpdate = async (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => {
     await updateScriptShare(shareId, updates);
     setShares(prev => prev.map(s => s.id === shareId ? { ...s, ...updates } as ShareWithViews : s));
   };
@@ -268,7 +268,7 @@ function ShareDetail({
   share: ShareWithViews;
   copiedId: string | null;
   onCopyLink: (token: string, id: string) => void;
-  onUpdate: (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean }) => void;
+  onUpdate: (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => void;
 }) {
   const [label, setLabel] = useState(share.label);
   const [accessCode, setAccessCode] = useState(share.access_code);
@@ -298,6 +298,26 @@ function ShareDetail({
           >
             {copiedId === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
           </button>
+        </div>
+      </div>
+
+      {/* Share mode */}
+      <div className="space-y-1.5">
+        <label className="admin-label">View Mode</label>
+        <div className="flex gap-0.5 bg-admin-bg-inset border border-admin-border rounded-admin-md p-0.5">
+          {([['presentation', 'Presentation'], ['table', 'Script Table']] as const).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => { if (share.share_mode !== mode) onUpdate(share.id, { share_mode: mode }); }}
+              className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors ${
+                share.share_mode === mode
+                  ? 'bg-admin-text-primary text-admin-bg-base'
+                  : 'text-admin-text-ghost hover:text-admin-text-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 

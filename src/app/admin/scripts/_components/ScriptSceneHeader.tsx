@@ -101,7 +101,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
   if (editing) {
     return (
       <div
-        className="flex items-center gap-2 py-2 pr-2"
+        className="flex items-center gap-2 py-2 pr-2 flex-wrap"
         id={`scene-${scene.id}`}
         onClick={e => e.stopPropagation()}
         onBlur={e => {
@@ -210,6 +210,16 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
         >
           <X size={14} />
         </button>
+
+        {/* Scene description row */}
+        <div className="w-full pl-[5.5rem] ml-2">
+          <input
+            value={scene.scene_description ?? ''}
+            onChange={e => onUpdate(scene.id, { scene_description: e.target.value || null })}
+            placeholder="Scene description"
+            className={`${fieldClass} w-60 normal-case`}
+          />
+        </div>
       </div>
     );
   }
@@ -239,6 +249,9 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
       )}
       <span className="text-xs font-medium text-admin-text-secondary uppercase tracking-wider flex-1 min-w-0 truncate">
         {heading}
+        {scene.scene_description && (
+          <span className="text-admin-text-faint font-normal normal-case ml-2">[{scene.scene_description}]</span>
+        )}
       </span>
 
       <div className={`flex items-center gap-0.5 flex-shrink-0 transition-opacity ${confirmDelete ? 'opacity-100' : 'opacity-0 group-hover/scene:opacity-100'}`}>
