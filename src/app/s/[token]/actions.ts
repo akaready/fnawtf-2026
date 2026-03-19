@@ -232,6 +232,7 @@ export async function updateScriptViewDuration(viewId: string, durationSeconds: 
 // ── Comments ─────────────────────────────────────────────────────────────
 
 export async function getComments(shareId: string, beatId: string) {
+  if (!shareId || !beatId) return [];
   const service = createServiceClient();
 
   const { data, error } = await service
@@ -274,6 +275,7 @@ export async function addComment(
   viewerName: string | null,
   content: string,
 ) {
+  if (!shareId || !beatId) throw new Error('Missing share or beat ID');
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('script_share_comments' as never)
