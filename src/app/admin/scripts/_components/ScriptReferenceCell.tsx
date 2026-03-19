@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { ImagePlus, Trash2, Upload } from 'lucide-react';
+import { ImagePlus, Trash2, Expand, Download, Check, X } from 'lucide-react';
 import type { ScriptBeatReferenceRow } from '@/types/scripts';
+import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
+import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 import { StoryboardLightbox } from './StoryboardLightbox';
 
 interface Props {
@@ -15,6 +17,7 @@ interface Props {
 export function ScriptReferenceCell({ beatId, references, onUpload, onDelete }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -60,36 +63,39 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete }: 
         <>
           {/* Image grid */}
           <div className={`grid ${references.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 p-1`}>
-            {references.map(ref => (
+            {references.map((ref, i) => (
               <div key={ref.id} className="relative group/img aspect-video rounded overflow-hidden">
                 <img
                   src={ref.image_url}
                   alt=""
                   className="w-full h-full object-cover cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(references.indexOf(ref)); }}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
                 />
-                <button
-                  onClick={() => onDelete(ref.id)}
-                  className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 rounded opacity-0 group-hover/img:opacity-100 transition-opacity text-admin-danger hover:text-red-300"
-                  title="Remove"
+                <div
+                  className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 rounded"
+                  onMouseLeave={() => setConfirmDeleteId(null)}
                 >
-                  <Trash2 size={10} />
-                </button>
+                  <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxIndex(i)} />
+                  <ImageActionButton icon={Download} color="info" title="Download" onClick={() => void downloadSingleImage(ref.image_url, `reference-${i + 1}.jpg`)} />
+                  {confirmDeleteId === ref.id ? (
+                    <>
+                      <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={() => onDelete(ref.id)} />
+                      <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDeleteId(null)} />
+                    </>
+                  ) : (
+                    <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDeleteId(ref.id)} />
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Upload overlay on hover */}
-          <div
-            className={`absolute inset-0 flex items-center justify-center transition-opacity cursor-pointer rounded ${
-              dragOver
-                ? 'bg-admin-success-bg border-2 border-dashed border-admin-success-border opacity-100'
-                : 'opacity-0 group-hover/ref:opacity-100 bg-black/30'
-            }`}
-            onClick={() => inputRef.current?.click()}
-          >
-            <Upload size={16} className="text-admin-text-faint" />
-          </div>
+          {/* Drag-over indicator */}
+          {dragOver && (
+            <div className="absolute inset-0 flex items-center justify-center bg-admin-success-bg border-2 border-dashed border-admin-success-border rounded pointer-events-none">
+              <ImagePlus size={16} className="text-admin-text-faint" />
+            </div>
+          )}
         </>
       ) : (
         /* Empty state — drop zone fills cell */

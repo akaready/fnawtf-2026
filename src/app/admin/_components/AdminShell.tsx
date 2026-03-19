@@ -243,7 +243,7 @@ function AdminShellInner({ children, userEmail }: Props) {
                     <Link
                       href={href}
                       data-btn-hover
-                      onClick={hasChildren ? () => toggleSubmenu() : undefined}
+                      onClick={hasChildren ? () => { if (!submenuOpen) setNavSubmenuOpen(key); } : undefined}
                       onMouseEnter={(e) => {
                         if (!collapsed) return;
                         const rect = e.currentTarget.getBoundingClientRect();

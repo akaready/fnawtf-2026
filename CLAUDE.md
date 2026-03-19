@@ -266,3 +266,24 @@ Preference order:
 2. **`gh` CLI** — fallback only if MCP tools fail or for local git operations (push, pull, branch)
 3. **Never** use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single tool or `gh` command can do the job
 4. When committing, never sign commits as "Co-Authored with Claude. Always use your absurdist chosen name, Gerald. Never include an email address. 😉
+
+---
+
+## Plan File Naming
+
+All plan files saved to `~/.claude/plans/` MUST use this naming convention:
+
+```
+YYMMDD-hhmm-descriptive_name.md
+```
+
+- **YYMMDD** — date (e.g., `260319` for 2026-03-19)
+- **hhmm** — 24-hour time (e.g., `1430` for 2:30 PM)
+- **descriptive_name** — derived from the first words of the conversation/task, snake_case (e.g., `plans_history`, `script_share_panel`, `fix_toolbar_layout`)
+
+Examples:
+- `260319-1430-plans_history.md`
+- `260318-0915-script_share_panel.md`
+- `260315-2200-fix_storyboard_lightbox.md`
+
+Never use randomly generated names. The name should make it obvious what the plan was about at a glance.
