@@ -1,7 +1,10 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import gsap from 'gsap';
+import { Mail } from 'lucide-react';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 
 /**
  * Intro/start page for script share links.
@@ -18,6 +21,11 @@ interface Props {
   onBegin: () => void;
 }
 
+const iconVariants = {
+  hidden: { opacity: 0, x: 8, width: 0, marginLeft: -8 },
+  visible: { opacity: 1, x: 0, width: 'auto', marginLeft: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+};
+
 export function ScriptShareIntro({
   scriptTitle,
   clientName,
@@ -25,6 +33,59 @@ export function ScriptShareIntro({
   onBegin,
 }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const emailBtnRef = useRef<HTMLAnchorElement>(null);
+  const emailFillRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isEmailHovered, setIsEmailHovered] = useState(false);
+
+  useDirectionalFill(emailBtnRef, emailFillRef, {
+    onFillStart: () => {
+      setIsEmailHovered(true);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    },
+    onFillEnd: () => {
+      setIsEmailHovered(false);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    },
+  });
+
+  // Directional fill for main button
+  useEffect(() => {
+    if (!buttonRef.current || !fillRef.current) return;
+    const button = buttonRef.current;
+    const fill = fillRef.current;
+    const textSpan = button.querySelector('span');
+
+    const handleMouseEnter = (e: MouseEvent) => {
+      setIsHovered(true);
+      const rect = button.getBoundingClientRect();
+      const x = (e.clientX || e.pageX) - rect.left;
+      const direction = x < rect.width / 2 ? 'left' : 'right';
+      gsap.killTweensOf([fill, textSpan]);
+      gsap.fromTo(fill,
+        { scaleX: 0, transformOrigin: direction === 'left' ? '0 50%' : '100% 50%' },
+        { scaleX: 1, duration: 0.3, ease: 'power2.out' },
+      );
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    };
+
+    const handleMouseLeave = () => {
+      setIsHovered(false);
+      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    };
+
+    button.addEventListener('mouseenter', handleMouseEnter);
+    button.addEventListener('mouseleave', handleMouseLeave);
+    return () => {
+      button.removeEventListener('mouseenter', handleMouseEnter);
+      button.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, []);
 
   const titleWords = scriptTitle.split(' ');
 
@@ -121,24 +182,74 @@ export function ScriptShareIntro({
 
         {/* What to look for */}
         {shareNotes && (
-          <p data-notes className="text-xl text-white/40 max-w-lg leading-relaxed mb-8" style={{ opacity: 0 }}>
-            {shareNotes}
-          </p>
+          <div data-notes className="max-w-lg mb-8 text-left" style={{ opacity: 0 }}>
+            <p className="text-xs tracking-[0.3em] uppercase text-white/20 font-mono mb-2">What to Look For</p>
+            <p className="text-base text-white/50 leading-relaxed whitespace-pre-wrap">
+              {shareNotes}
+            </p>
+          </div>
         )}
 
-        {/* CTA Button */}
+        {/* CTA Button — directional fill */}
         <div data-button className="w-full max-w-sm mb-5" style={{ opacity: 0 }}>
-          <button
+          <motion.button
+            ref={buttonRef}
             onClick={onBegin}
-            className="relative w-full px-6 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden hover:bg-white/90 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="relative w-full px-6 py-3 font-medium text-black bg-white border border-white rounded-lg overflow-hidden"
           >
-            View Script
-          </button>
+            <div
+              ref={fillRef}
+              className="absolute inset-0 bg-black pointer-events-none"
+              style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+            />
+            <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
+              View Script
+              <motion.span
+                variants={iconVariants}
+                initial="hidden"
+                animate={isHovered ? 'visible' : 'hidden'}
+                className="flex items-center text-lg"
+              >
+                →
+              </motion.span>
+            </span>
+          </motion.button>
+        </div>
+
+        {/* Email Button — directional fill */}
+        <div data-button className="w-full max-w-[12rem] mb-5" style={{ opacity: 0 }}>
+          <a
+            ref={emailBtnRef}
+            href="mailto:hi@fna.wtf"
+            className="relative w-full px-6 py-3 font-medium text-white bg-black border border-white rounded-lg overflow-hidden flex items-center justify-center"
+          >
+            <div
+              ref={emailFillRef}
+              className="absolute inset-0 bg-white pointer-events-none"
+              style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+            />
+            <span className="relative flex items-center justify-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
+              <motion.span
+                variants={iconVariants}
+                initial="hidden"
+                animate={isEmailHovered ? 'visible' : 'hidden'}
+                className="flex items-center"
+              >
+                <Mail size={16} strokeWidth={1.5} />
+              </motion.span>
+              hi@fna.wtf
+            </span>
+          </a>
         </div>
 
         {/* Instructions */}
-        <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+        <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed mb-1" style={{ opacity: 0 }}>
           Navigate with arrow keys, the timeline, or the left/right buttons.
+        </p>
+        <p data-instructions className="text-xs text-white/30 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+          Please leave comments per beat — your feedback helps us get it right.
         </p>
       </div>
     </section>
