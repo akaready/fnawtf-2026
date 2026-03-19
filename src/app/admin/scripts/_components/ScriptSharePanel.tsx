@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Plus, ExternalLink, EyeOff, Eye, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, Copy, Check, Plus, ExternalLink, EyeOff, Eye, Trash2 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
-import { getScriptShares, createScriptShare, updateScriptShare, archiveScriptShare, restoreScriptShare } from '@/app/admin/actions';
+import { getScriptShares, createScriptShare, updateScriptShare, archiveScriptShare, restoreScriptShare, deleteScriptShare } from '@/app/admin/actions';
 import type { ScriptShareRow } from '@/types/scripts';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadShares = useCallback(async () => {
     setLoading(true);
@@ -78,18 +78,14 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     if (open) loadShares();
   }, [open, loadShares]);
 
-  // Auto-select first active or fix stale selection
-  const activeShares = shares.filter(s => s.is_active);
-  const archivedShares = shares.filter(s => !s.is_active);
-
   useEffect(() => {
     if (selectedId && !shares.find(s => s.id === selectedId)) {
-      setSelectedId(activeShares[0]?.id ?? null);
+      setSelectedId(shares[0]?.id ?? null);
     }
-    if (!selectedId && activeShares.length > 0) {
-      setSelectedId(activeShares[0].id);
+    if (!selectedId && shares.length > 0) {
+      setSelectedId(shares[0].id);
     }
-  }, [shares, selectedId, activeShares]);
+  }, [shares, selectedId]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -108,18 +104,20 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     setShares(prev => prev.map(s => s.id === shareId ? { ...s, ...updates } as ShareWithViews : s));
   };
 
-  const handleArchive = async (shareId: string) => {
-    await archiveScriptShare(shareId);
-    setShares(prev => prev.map(s => s.id === shareId ? { ...s, is_active: false } as ShareWithViews : s));
-    // Select next active share
-    const remaining = shares.filter(s => s.is_active && s.id !== shareId);
-    setSelectedId(remaining[0]?.id ?? null);
+  const handleToggleActive = async (shareId: string, currentlyActive: boolean) => {
+    if (currentlyActive) {
+      await archiveScriptShare(shareId);
+      setShares(prev => prev.map(s => s.id === shareId ? { ...s, is_active: false } as ShareWithViews : s));
+    } else {
+      await restoreScriptShare(shareId);
+      setShares(prev => prev.map(s => s.id === shareId ? { ...s, is_active: true } as ShareWithViews : s));
+    }
   };
 
-  const handleRestore = async (shareId: string) => {
-    await restoreScriptShare(shareId);
-    setShares(prev => prev.map(s => s.id === shareId ? { ...s, is_active: true } as ShareWithViews : s));
-    setSelectedId(shareId);
+  const handleDelete = async (shareId: string) => {
+    await deleteScriptShare(shareId);
+    setShares(prev => prev.filter(s => s.id !== shareId));
+    setConfirmDeleteId(null);
   };
 
   const copyLink = (token: string, id: string) => {
@@ -163,52 +161,62 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
                 <p className="px-4 py-3 text-admin-sm text-admin-text-faint">Loading...</p>
               )}
 
-              {/* Active shares */}
-              {activeShares.map(share => (
-                <SidebarItem
+              {shares.map(share => (
+                <div
                   key={share.id}
-                  share={share}
-                  isSelected={selectedId === share.id}
-                  onSelect={() => setSelectedId(share.id)}
-                  onConfirmDelete={() => handleArchive(share.id)}
-                />
+                  className={`group/row w-full flex items-center px-4 py-3 gap-2.5 transition-colors cursor-pointer ${
+                    selectedId === share.id
+                      ? 'bg-admin-bg-active text-admin-text-primary'
+                      : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
+                  } ${!share.is_active ? 'opacity-40' : ''}`}
+                >
+                  <button onClick={() => setSelectedId(share.id)} className="flex-1 flex items-center gap-2.5 min-w-0">
+                    <span className={`flex-shrink-0 w-2.5 h-2.5 rounded-full ${
+                      share.is_active ? 'bg-admin-success' : 'border border-admin-success'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-admin-base font-medium truncate">
+                        {share.label || share.token}
+                      </div>
+                      <div className="text-xs text-admin-text-faint">
+                        {share.view_count} view{share.view_count !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </button>
+                  <span className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                    {/* Toggle visibility */}
+                    <button
+                      onClick={() => handleToggleActive(share.id, share.is_active)}
+                      className="text-admin-text-ghost hover:text-admin-text-faint p-1 transition-colors"
+                      title={share.is_active ? 'Take offline' : 'Put online'}
+                    >
+                      {share.is_active ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                    {/* Delete */}
+                    {confirmDeleteId === share.id ? (
+                      <>
+                        <button onClick={() => handleDelete(share.id)} className="text-admin-danger hover:text-red-300 p-1 transition-colors" title="Confirm delete">
+                          <Check size={13} />
+                        </button>
+                        <button onClick={() => setConfirmDeleteId(null)} className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors" title="Cancel">
+                          <X size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(share.id)}
+                        className="text-admin-text-ghost hover:text-admin-danger p-1 transition-colors"
+                        title="Delete permanently"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </span>
+                </div>
               ))}
 
-              {activeShares.length === 0 && !loading && (
+              {shares.length === 0 && !loading && (
                 <p className="px-4 py-3 text-admin-sm text-admin-text-faint">No share links yet.</p>
-              )}
-
-              {/* Archived section */}
-              {archivedShares.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-admin-border-subtle">
-                  <button
-                    onClick={() => setShowArchived(prev => !prev)}
-                    className="w-full flex items-center gap-1.5 px-4 py-2 text-xs text-admin-text-ghost hover:text-admin-text-faint transition-colors"
-                  >
-                    {showArchived ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                    Archived ({archivedShares.length})
-                  </button>
-                  {showArchived && archivedShares.map(share => (
-                    <div
-                      key={share.id}
-                      className={`group/row w-full flex items-center px-4 py-2.5 gap-2.5 opacity-40 transition-colors cursor-pointer ${
-                        selectedId === share.id ? 'bg-admin-bg-active' : 'hover:bg-admin-bg-hover'
-                      }`}
-                    >
-                      <button onClick={() => setSelectedId(share.id)} className="flex-1 flex items-center gap-2.5 min-w-0">
-                        <span className="flex-shrink-0 w-2 h-2 rounded-full border border-admin-text-ghost" />
-                        <span className="text-admin-sm truncate text-admin-text-faint">{share.label || share.token}</span>
-                      </button>
-                      <button
-                        onClick={() => handleRestore(share.id)}
-                        className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-text-faint p-1 transition-all"
-                        title="Restore"
-                      >
-                        <Eye size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
               )}
             </div>
           </div>
@@ -246,49 +254,6 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
         />
       </div>
     </PanelDrawer>
-  );
-}
-
-// ── Sidebar item ─────────────────────────────────────────────────────────
-
-function SidebarItem({
-  share,
-  isSelected,
-  onSelect,
-  onConfirmDelete,
-}: {
-  share: ShareWithViews;
-  isSelected: boolean;
-  onSelect: () => void;
-  onConfirmDelete: () => void;
-}) {
-  return (
-    <div
-      className={`group/row w-full flex items-center px-4 py-3 gap-2.5 transition-colors cursor-pointer ${
-        isSelected
-          ? 'bg-admin-bg-active text-admin-text-primary'
-          : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
-      }`}
-    >
-      <button onClick={onSelect} className="flex-1 flex items-center gap-2.5 min-w-0">
-        <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-admin-success" />
-        <div className="flex-1 min-w-0">
-          <div className="text-admin-base font-medium truncate">
-            {share.label || share.token}
-          </div>
-          <div className="text-xs text-admin-text-faint">
-            {share.view_count} view{share.view_count !== 1 ? 's' : ''}
-          </div>
-        </div>
-      </button>
-      <button
-        onClick={onConfirmDelete}
-        className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-text-faint p-1 transition-all"
-        title="Hide link"
-      >
-        <EyeOff size={14} />
-      </button>
-    </div>
   );
 }
 

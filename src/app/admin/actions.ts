@@ -5078,3 +5078,14 @@ export async function restoreScriptShare(shareId: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/scripts');
 }
+
+/** Permanently delete a script share link. */
+export async function deleteScriptShare(shareId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_shares')
+    .delete()
+    .eq('id', shareId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
