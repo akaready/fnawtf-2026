@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { FileText, ScrollText, Receipt, FileSignature, Inbox } from 'lucide-react';
 import { getPortalSession } from '@/lib/portal/portalAuth';
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -54,39 +53,65 @@ function isWithinSevenDays(iso: string): boolean {
 
 async function fetchPageData(clientId: string, clientName: string) {
   const supabase = await createClient();
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Proposals for this client (matched by contact_company = clientName)
-  const { data: proposals } = await supabase
-    .from('proposals')
-    .select('id, slug, title, status, created_at, updated_at')
-    .eq('contact_company', clientName)
-    .order('updated_at', { ascending: false });
+  // Fan out all 4 queries in parallel (Fix 1 + Fix 3)
+  const [
+    { data: proposals, error: proposalsError },
+    { data: scripts, error: scriptsError },
+    { data: contracts, error: contractsError },
+    { data: intakeRows, error: intakeError },
+  ] = await Promise.all([
+    // Proposals for this client (matched by contact_company = clientName)
+    supabase
+      .from('proposals')
+      .select('id, slug, title, status, created_at, updated_at')
+      .eq('contact_company', clientName)
+      .order('updated_at', { ascending: false }),
 
-  const proposalRows = (proposals ?? []) as {
-    id: string;
-    slug: string;
-    title: string;
-    status: string;
-    created_at: string;
-    updated_at: string;
-  }[];
+    // Scripts for this client via projects.client_id
+    supabase
+      .from('scripts')
+      .select('id, title, status, created_at, updated_at, project_id, projects!inner(client_id)')
+      .eq('projects.client_id', clientId)
+      .order('updated_at', { ascending: false }),
 
-  // Scripts for this client via projects.client_id
-  const { data: scripts } = await supabase
-    .from('scripts')
-    .select('id, title, status, created_at, updated_at, project_id, projects!inner(client_id)')
-    .eq('projects.client_id', clientId)
-    .order('updated_at', { ascending: false });
+    // Contracts — one query, derive count + recency client-side (Fix 3)
+    supabase
+      .from('contracts')
+      .select('id, created_at')
+      .eq('client_id', clientId),
 
-  const scriptRows = (scripts ?? []) as {
-    id: string;
-    title: string;
-    status: string;
-    created_at: string | null;
-    updated_at: string | null;
-    project_id: string | null;
-  }[];
+    // Intake submissions — one query, derive count + recency client-side (Fix 3)
+    supabase
+      .from('intake_submissions')
+      .select('id, created_at')
+      .eq('client_id', clientId),
+  ]);
+
+  // Fix 2: throw on critical errors, console.error on supplementary ones
+  if (proposalsError) {
+    throw new Error(`Portal home: proposals query failed — ${proposalsError.message}`);
+  }
+  if (scriptsError) {
+    throw new Error(`Portal home: scripts query failed — ${scriptsError.message}`);
+  }
+  if (contractsError) {
+    console.error('Portal home: contracts query failed —', contractsError.message);
+  }
+  if (intakeError) {
+    console.error('Portal home: intake query failed —', intakeError.message);
+  }
+
+  // Fix 3: derive count + recency from the single query result
+  const contractCount = contracts?.length ?? 0;
+  const contractHasNew = contracts?.some((c) => isWithinSevenDays(c.created_at)) ?? false;
+
+  const intakeCount = intakeRows?.length ?? 0;
+  const intakeHasNew = intakeRows?.some((r) => isWithinSevenDays(r.created_at)) ?? false;
+
+  // Fix 5: use inferred types — no `as` casts needed; ?? [] satisfies non-null
+  const proposalRows = proposals ?? [];
+  const scriptRows = scripts ?? [];
 
   // Build recent items list (merge + sort + take 3)
   const recentProposals: RecentItem[] = proposalRows.map((p) => ({
@@ -120,41 +145,12 @@ async function fetchPageData(clientId: string, clientName: string) {
     isWithinSevenDays(s.updated_at ?? s.created_at ?? '')
   );
 
-  // Contracts count for this client
-  const { count: contractCount } = await supabase
-    .from('contracts')
-    .select('id', { count: 'exact', head: true })
-    .eq('client_id', clientId);
-
-  // Contracts: check for new
-  const { data: recentContracts } = await supabase
-    .from('contracts')
-    .select('id')
-    .eq('client_id', clientId)
-    .gte('created_at', sevenDaysAgo)
-    .limit(1);
-  const contractHasNew = (recentContracts ?? []).length > 0;
-
-  // Intake submissions for this client
-  const { count: intakeCount } = await supabase
-    .from('intake_submissions')
-    .select('id', { count: 'exact', head: true })
-    .eq('client_id', clientId);
-
-  const { data: recentIntake } = await supabase
-    .from('intake_submissions')
-    .select('id')
-    .eq('client_id', clientId)
-    .gte('created_at', sevenDaysAgo)
-    .limit(1);
-  const intakeHasNew = (recentIntake ?? []).length > 0;
-
   return {
     recentItems,
     proposalCount,
     scriptCount,
-    contractCount: contractCount ?? 0,
-    intakeCount: intakeCount ?? 0,
+    contractCount,
+    intakeCount,
     proposalHasNew,
     scriptHasNew,
     contractHasNew,
@@ -224,8 +220,9 @@ function RecentItemCard({ item }: { item: RecentItem }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function PortalHomePage() {
+  // Fix 4: layout.tsx already guards the session; keep call for clientId/clientName/email,
+  // but remove the redirect — it can never be null here.
   const session = await getPortalSession();
-  if (!session) redirect('/portal/login');
 
   const {
     recentItems,
@@ -237,9 +234,9 @@ export default async function PortalHomePage() {
     scriptHasNew,
     contractHasNew,
     intakeHasNew,
-  } = await fetchPageData(session.clientId, session.clientName);
+  } = await fetchPageData(session!.clientId, session!.clientName);
 
-  const firstName = deriveFirstName(session.email);
+  const firstName = deriveFirstName(session!.email);
 
   const tiles: SectionTile[] = [
     {
@@ -292,7 +289,7 @@ export default async function PortalHomePage() {
           Welcome back, {firstName}.
         </h1>
         <p className="mt-1 text-sm text-portal-text-muted">
-          {session.clientName} &middot; Your project portal
+          {session!.clientName} &middot; Your project portal
         </p>
       </div>
 
