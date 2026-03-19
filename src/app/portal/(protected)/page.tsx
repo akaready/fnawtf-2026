@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type LucideIcon, FileText, ScrollText, Receipt, FileSignature, Inbox } from 'lucide-react';
+import { type LucideIcon, FileText, ScrollText, Receipt, FileSignature, Inbox, Clapperboard, Package, Truck } from 'lucide-react';
 import { getPortalSession } from '@/lib/portal/portalAuth';
 import { createClient } from '@/lib/supabase/server';
 
@@ -166,15 +166,15 @@ function SectionTileCard({ tile }: { tile: SectionTile }) {
   return (
     <Link
       href={tile.href}
-      className="relative flex flex-col items-start gap-3 rounded-lg border border-portal-tile-border bg-portal-tile-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-colors px-4 py-5 border-l-2"
-      style={{ borderLeftColor: tile.color }}
+      className="relative flex flex-col items-start gap-4 rounded-lg border bg-portal-tile-bg hover:bg-portal-tile-hover transition-colors px-5 py-6"
+      style={{ borderColor: `${tile.color}33` }}
     >
       {tile.hasNew && (
-        <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-portal-accent" />
+        <span className="absolute top-3 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: tile.color }} />
       )}
-      <Icon size={20} strokeWidth={1.5} style={{ color: tile.color }} className="opacity-60" />
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium text-portal-text-primary leading-tight">
+      <Icon size={24} strokeWidth={1.5} style={{ color: tile.color }} className="opacity-60" />
+      <div className="flex flex-col gap-1">
+        <span className="text-base font-medium text-portal-text-primary leading-tight">
           {tile.label}
         </span>
         <span className="text-xs text-portal-text-faint">
@@ -240,7 +240,16 @@ export default async function PortalHomePage() {
 
   const firstName = deriveFirstName(session!.email);
 
-  const tiles: SectionTile[] = [
+  const businessTiles: SectionTile[] = [
+    {
+      label: 'Intake',
+      icon: Inbox,
+      href: '/portal/intake',
+      count: intakeCount,
+      countLabel: intakeCount === 1 ? '1 form' : `${intakeCount} forms`,
+      hasNew: intakeHasNew,
+      color: '#ef4444',
+    },
     {
       label: 'Proposals',
       icon: FileText,
@@ -248,25 +257,7 @@ export default async function PortalHomePage() {
       count: proposalCount,
       countLabel: proposalCount === 1 ? '1 total' : `${proposalCount} total`,
       hasNew: proposalHasNew,
-      color: '#7c3aed',
-    },
-    {
-      label: 'Scripts',
-      icon: ScrollText,
-      href: '/portal/scripts',
-      count: scriptCount,
-      countLabel: scriptCount === 1 ? '1 total' : `${scriptCount} total`,
-      hasNew: scriptHasNew,
-      color: '#0ea5e9',
-    },
-    {
-      label: 'Invoices',
-      icon: Receipt,
-      href: '/portal/invoices',
-      count: null,
-      countLabel: 'Coming soon',
-      hasNew: false,
-      color: '#f59e0b',
+      color: '#f97316',
     },
     {
       label: 'Contracts',
@@ -275,36 +266,75 @@ export default async function PortalHomePage() {
       count: contractCount,
       countLabel: contractCount === 1 ? '1 total' : `${contractCount} total`,
       hasNew: contractHasNew,
-      color: '#10b981',
+      color: '#eab308',
     },
     {
-      label: 'Intake',
-      icon: Inbox,
-      href: '/portal/intake',
-      count: intakeCount,
-      countLabel: intakeCount === 1 ? '1 total' : `${intakeCount} total`,
-      hasNew: intakeHasNew,
-      color: '#f43f5e',
+      label: 'Invoices',
+      icon: Receipt,
+      href: '/portal/invoices',
+      count: null,
+      countLabel: 'Coming soon',
+      hasNew: false,
+      color: '#22c55e',
+    },
+  ];
+
+  const creativeTiles: SectionTile[] = [
+    {
+      label: 'Scripts',
+      icon: ScrollText,
+      href: '/portal/scripts',
+      count: scriptCount,
+      countLabel: scriptCount === 1 ? '1 total' : `${scriptCount} total`,
+      hasNew: scriptHasNew,
+      color: '#3b82f6',
+    },
+    {
+      label: 'Call Sheets',
+      icon: Clapperboard,
+      href: '/portal/call-sheets',
+      count: null,
+      countLabel: 'Coming soon',
+      hasNew: false,
+      color: '#6366f1',
+    },
+    {
+      label: 'Exports',
+      icon: Package,
+      href: '/portal/exports',
+      count: null,
+      countLabel: 'Coming soon',
+      hasNew: false,
+      color: '#8b5cf6',
+    },
+    {
+      label: 'Delivery',
+      icon: Truck,
+      href: '/portal/delivery',
+      count: null,
+      countLabel: 'Coming soon',
+      hasNew: false,
+      color: '#a855f7',
     },
   ];
 
   return (
-    <div className="px-4 md:px-8 py-8 max-w-4xl mx-auto">
+    <div className="px-4 md:px-8 pt-14 pb-10 max-w-4xl mx-auto">
       {/* Greeting */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-light text-portal-text-primary tracking-tight">
+      <div className="mb-12">
+        <h1 className="text-4xl font-light text-portal-text-primary tracking-tight leading-tight">
           Welcome back, {firstName}.
         </h1>
-        <p className="mt-1 text-sm text-portal-text-muted">
-          {session!.clientName} &middot; Your project portal
+        <p className="mt-2 text-base text-portal-text-muted">
+          {session!.clientName}
         </p>
       </div>
 
       {/* Recent strip */}
       {recentItems.length > 0 && (
-        <section className="mb-10">
-          <h2 className="text-xs uppercase tracking-widest text-portal-text-faint font-medium mb-3">
-            Recent
+        <section className="mb-12">
+          <h2 className="text-xs uppercase tracking-widest text-portal-text-faint font-medium mb-4">
+            Activity
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {recentItems.map((item) => (
@@ -314,13 +344,25 @@ export default async function PortalHomePage() {
         </section>
       )}
 
-      {/* Section tiles */}
-      <section>
-        <h2 className="text-xs uppercase tracking-widest text-portal-text-faint font-medium mb-3">
-          Sections
+      {/* Project & Billing */}
+      <section className="mb-10">
+        <h2 className="text-xs uppercase tracking-widest text-portal-text-faint font-medium mb-4">
+          Project
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {tiles.map((tile) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {businessTiles.map((tile) => (
+            <SectionTileCard key={tile.label} tile={tile} />
+          ))}
+        </div>
+      </section>
+
+      {/* Creative */}
+      <section>
+        <h2 className="text-xs uppercase tracking-widest text-portal-text-faint font-medium mb-4">
+          Creative
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {creativeTiles.map((tile) => (
             <SectionTileCard key={tile.label} tile={tile} />
           ))}
         </div>
