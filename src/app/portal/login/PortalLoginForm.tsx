@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { loginToPortal } from '@/lib/portal/portalActions';
 
 export function PortalLoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [accessCode, setAccessCode] = useState('');
   const [error, setError] = useState('');
@@ -24,10 +22,8 @@ export function PortalLoginForm() {
       const result = await loginToPortal(email.trim(), accessCode.trim());
       if (!result.success) {
         setError(result.error ?? 'Invalid access code.');
-        return;
       }
-
-      router.push('/portal');
+      // On success the server action calls redirect('/portal') — no client navigation needed.
     });
   };
 
