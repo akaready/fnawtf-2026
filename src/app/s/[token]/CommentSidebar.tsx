@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useTransition } from 'react';
-import { User, Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { User, Pencil, Trash2, Check, X, PanelRightClose } from 'lucide-react';
 import { getComments, updateComment, deleteComment } from './actions';
 
 interface Comment {
@@ -56,25 +56,22 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
 
   return (
     <>
-      {/* Toggle button — always visible */}
-      <button
-        onClick={onToggle}
-        className="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground hover:bg-white/5 transition-colors"
-        title={open ? 'Hide comments' : 'Show comments'}
-      >
-        {open ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-      </button>
-
       {/* Sidebar */}
       <div
-        className={`flex-shrink-0 h-full border-l border-border bg-[#0a0a0a] overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[260px]' : 'w-0'}`}
+        className={`flex-shrink-0 h-full border-l border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[260px]' : 'w-0'}`}
       >
         <div className="w-[260px] h-full flex flex-col">
-          {/* Header */}
-          <div className="flex-shrink-0 px-4 py-3 border-b border-border/30">
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+          {/* Header — same h-[3rem] as left sidebar */}
+          <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
+            <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">
               Comments {comments.length > 0 && `(${comments.length})`}
-            </h3>
+            </span>
+            <button
+              onClick={onToggle}
+              className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+            >
+              <PanelRightClose size={14} />
+            </button>
           </div>
 
           {/* List */}
@@ -83,7 +80,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
               <p className="px-4 py-6 text-xs text-muted-foreground/40 text-center">Loading...</p>
             )}
             {!loading && comments.length === 0 && (
-              <p className="px-4 py-6 text-xs text-muted-foreground/40 text-center">No comments on this frame yet.</p>
+              <p className="px-4 py-6 text-xs text-muted-foreground/40 text-center">No comments on this beat yet.</p>
             )}
             {comments.map(comment => (
               <CommentRow

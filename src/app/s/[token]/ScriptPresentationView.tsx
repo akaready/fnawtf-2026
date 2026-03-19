@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { CommentSidebar } from './CommentSidebar';
 import { CommentInput } from './CommentInput';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
@@ -205,18 +205,30 @@ export function ScriptPresentationView({
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
-      {/* ════ LEFT SIDEBAR — Scene Nav (matches admin/table share sidebar exactly) ════ */}
+      {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
       <div
         className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
       >
-        <div className="w-56 h-full overflow-y-auto admin-scrollbar">
+        <div className="w-56 h-full flex flex-col">
+          {/* Header */}
+          <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
+            <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
+            <button
+              onClick={() => setLeftOpen(false)}
+              className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+            >
+              <PanelLeftClose size={14} />
+            </button>
+          </div>
+          {/* List */}
+          <div className="flex-1 overflow-y-auto admin-scrollbar">
           {scenes.map((scene) => {
             const isActive = scene.id === activeSceneId;
             return (
               <button
                 key={scene.id}
                 onClick={() => jumpToScene(scene.id)}
-                className={`w-full text-left flex items-center gap-1 px-2 py-3 border-b border-admin-border-subtle cursor-grab transition-colors ${
+                className={`w-full text-left flex items-center gap-1 px-2 py-3 border-b border-admin-border-subtle transition-colors ${
                   isActive
                     ? 'bg-admin-bg-active text-admin-text-primary'
                     : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
@@ -239,6 +251,7 @@ export function ScriptPresentationView({
               </button>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -260,15 +273,15 @@ export function ScriptPresentationView({
         <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
           {/* Scene heading */}
           <div className="w-full max-w-5xl flex-shrink-0 mb-3">
-            <div className="flex items-center gap-2 px-1">
-              <span className="text-[#555] font-mono text-xs flex-shrink-0">
+            <div className="flex items-baseline gap-2.5 px-1">
+              <span className="text-[#666] font-mono text-sm font-bold flex-shrink-0">
                 {current.sceneNumber}{current.beatLetter}
               </span>
-              <span className="text-xs font-medium text-[#888] uppercase tracking-wider truncate">
+              <span className="text-sm font-medium text-[#999] uppercase tracking-wider truncate">
                 {sceneHeading}
               </span>
               {activeScene?.scene_description && (
-                <span className="text-xs text-[#444] truncate">
+                <span className="text-sm text-[#555] truncate">
                   [{activeScene.scene_description}]
                 </span>
               )}
