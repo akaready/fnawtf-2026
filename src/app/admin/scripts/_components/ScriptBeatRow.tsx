@@ -44,6 +44,7 @@ interface Props {
   scriptTitle: string;
   scriptVersion: number;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
+  allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
 }
 
 function beatLetter(n: number): string {
@@ -94,6 +95,7 @@ export function ScriptBeatRow({
   scriptTitle,
   scriptVersion,
   sceneFrames,
+  allScriptFrames,
 }: Props) {
   const {
     attributes,
@@ -261,6 +263,7 @@ export function ScriptBeatRow({
               scriptVersion={scriptVersion}
               beatLabel={beatLetter(beatNumber)}
               sceneFrames={sceneFrames}
+              allScriptFrames={allScriptFrames}
             />
           )}
         </div>

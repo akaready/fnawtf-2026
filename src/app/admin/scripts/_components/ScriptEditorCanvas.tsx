@@ -731,7 +731,33 @@ export function ScriptEditorCanvas({
       ) : (
         <DndContext id={sceneDndId} sensors={sceneSensors} collisionDetection={closestCenter} onDragEnd={handleSceneDragEnd}>
           <SortableContext items={scenes.map(s => s.id)} strategy={verticalListSortingStrategy}>
-        {scenes.map((scene, sceneIdx) => {
+        {(() => {
+          // Build all-script lightbox frames across every scene for full-script navigation
+          const allScriptFrames: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[] = [];
+          for (const s of scenes) {
+            const sorted = storyboardFrames
+              .filter(f => s.beats.some(b => b.id === f.beat_id))
+              .sort((fa, fb) => {
+                const ai = s.beats.findIndex(b => b.id === fa.beat_id);
+                const bi = s.beats.findIndex(b => b.id === fb.beat_id);
+                return ai - bi;
+              });
+            for (const f of sorted) {
+              const beatIdx = s.beats.findIndex(b => b.id === f.beat_id);
+              const beat = s.beats[beatIdx];
+              let letter = '';
+              let n = beatIdx + 1;
+              while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+              allScriptFrames.push({
+                imageUrl: f.image_url,
+                label: `Scene ${s.sceneNumber} — Beat ${letter}`,
+                filename: buildStoryboardFilename(scriptTitle, scriptVersion, s.sceneNumber, letter),
+                audioContent: beat?.audio_content ?? '',
+                visualContent: beat?.visual_content ?? '',
+              });
+            }
+          }
+          return scenes.map((scene, sceneIdx) => {
           const isCollapsed = collapsedScenes.has(scene.id);
           const isEditing = editingSceneId === scene.id;
           const prevCollapsed = sceneIdx > 0 && collapsedScenes.has(scenes[sceneIdx - 1].id);
@@ -875,6 +901,7 @@ export function ScriptEditorCanvas({
                         scriptTitle={scriptTitle}
                         scriptVersion={scriptVersion}
                         sceneFrames={sceneFramesForLightbox}
+                        allScriptFrames={allScriptFrames}
                       />
                     ));
                     })()}
@@ -885,7 +912,8 @@ export function ScriptEditorCanvas({
             )}
             </SortableSceneItem>
           );
-        })}
+        });
+        })()}
           </SortableContext>
         </DndContext>
       )}

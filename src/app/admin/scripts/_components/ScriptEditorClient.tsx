@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package, Share2, Play } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -24,12 +24,15 @@ import { DEFAULT_FRACTIONS } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
 import { ScriptSceneSidebar } from './ScriptSceneSidebar';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
+import { ScriptPresentation } from './ScriptPresentation';
+import { buildPresentationSlides } from './presentationUtils';
 import { ScriptCharactersPanel } from './ScriptCharactersPanel';
 import { ScriptTagsPanel } from './ScriptTagsPanel';
 import { ScriptLocationsPanel } from './ScriptLocationsPanel';
 import { ScriptProductsPanel } from './ScriptProductsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
 import { ScriptStylePanel } from './ScriptStylePanel';
+import { ScriptSharePanel } from './ScriptSharePanel';
 import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from './ScriptScratchPad';
 import { ScriptExtractModal } from './ScriptExtractModal';
 import { formatScriptVersion } from '@/types/scripts';
@@ -45,7 +48,7 @@ import type {
 } from '@/types/scripts';
 
 interface Props {
-  script: ScriptRow & { project?: { id: string; title: string } | null };
+  script: ScriptRow & { project?: { id: string; title: string; client_name?: string; client?: { logo_url: string | null } | null } | null };
   initialScenes: ScriptSceneRow[];
   initialBeats: ScriptBeatRow[];
   initialCharacters: ScriptCharacterRow[];
@@ -94,10 +97,12 @@ export function ScriptEditorClient({
   const [locationOptionsMap, setLocationOptionsMap] = useState<Record<string, LocationOptionWithLocation[]>>({});
   const [locationReferenceMap, setLocationReferenceMap] = useState<Record<string, LocationReferenceRow[]>>({});
   const [showProducts, setShowProducts] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [products, setProducts] = useState<ScriptProductRow[]>([]);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
+  const [showPresentation, setShowPresentation] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
@@ -517,14 +522,14 @@ export function ScriptEditorClient({
                 >
                   Scripts
                 </Link>
-                <ChevronRight size={10} className="text-admin-text-ghost" />
-                <span className="text-xs text-admin-text-muted">{script.title}</span>
-                {script.project && (
+                {script.project?.client_name && (
                   <>
-                    <span className="text-admin-text-ghost mx-0.5">·</span>
-                    <span className="text-xs text-admin-text-faint">{script.project.title}</span>
+                    <ChevronRight size={10} className="text-admin-text-ghost" />
+                    <span className="text-xs text-admin-text-faint">{script.project.client_name}</span>
                   </>
                 )}
+                <ChevronRight size={10} className="text-admin-text-ghost" />
+                <span className="text-xs text-admin-text-muted">{script.title}</span>
               </div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold tracking-tight text-admin-text-primary">
@@ -588,6 +593,9 @@ export function ScriptEditorClient({
         rightContent={<SaveDot status={autoSave.status} />}
         actions={
           <>
+            <button onClick={() => setShowShare(true)} className="btn-secondary px-2.5" title="Share">
+              <Share2 size={14} />
+            </button>
             <button
               onClick={handleNewVersion}
               disabled={versioning}
@@ -692,6 +700,13 @@ export function ScriptEditorClient({
             title={`Width: ${CONTAINER_LABELS[containerIdx]} → ${CONTAINER_LABELS[(containerIdx + 1) % CONTAINER_WIDTHS.length]}`}
           >
             <SeparatorVertical size={16} />
+          </button>
+          <button
+            onClick={() => setShowPresentation(true)}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            title="Present"
+          >
+            <Play size={16} />
           </button>
         </div>
         {/* Center zone */}
@@ -840,6 +855,25 @@ export function ScriptEditorClient({
         onStyleChange={setScriptStyle}
         onReferencesChange={setStyleReferences}
       />
+      <ScriptSharePanel
+        open={showShare}
+        onClose={() => setShowShare(false)}
+        scriptId={script.id}
+        isPublished={script.is_published}
+        onPublish={handlePublish}
+      />
+      {showPresentation && (
+        <ScriptPresentation
+          slides={buildPresentationSlides(computedScenes, storyboardFrames, refsByBeat)}
+          columnConfig={columnConfig}
+          onClose={() => setShowPresentation(false)}
+          scriptTitle={script.title}
+          clientName={script.project?.client_name}
+          clientLogoUrl={script.project?.client?.logo_url}
+          versionLabel={formatScriptVersion(script.major_version, script.minor_version, script.is_published)}
+        />
+      )}
+
       <ScriptExtractModal
         open={showExtractModal}
         onClose={() => setShowExtractModal(false)}

@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { ImagePlus, Trash2, Upload } from 'lucide-react';
 import type { ScriptBeatReferenceRow } from '@/types/scripts';
+import { StoryboardLightbox } from './StoryboardLightbox';
 
 interface Props {
   beatId: string;
@@ -13,6 +14,7 @@ interface Props {
 
 export function ScriptReferenceCell({ beatId, references, onUpload, onDelete }: Props) {
   const [dragOver, setDragOver] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -63,7 +65,8 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete }: 
                 <img
                   src={ref.image_url}
                   alt=""
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(references.indexOf(ref)); }}
                 />
                 <button
                   onClick={() => onDelete(ref.id)}
@@ -100,6 +103,18 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete }: 
         >
           <ImagePlus size={14} className="text-admin-text-ghost" />
         </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <StoryboardLightbox
+          frames={references.map((r, i) => ({
+            imageUrl: r.image_url,
+            label: `Reference ${i + 1} of ${references.length}`,
+            filename: `reference-${i + 1}.jpg`,
+          }))}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 
 interface Props {
-  frames: { imageUrl: string; label: string; filename: string; audioContent?: string; visualContent?: string }[];
+  frames: { imageUrl: string; label: string; filename: string }[];
   initialIndex: number;
   onClose: () => void;
 }
@@ -18,7 +18,6 @@ export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
   const [idx, setIdx] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
   const current = frames[idx];
-  const hasContent = !!(current.audioContent || current.visualContent);
 
   const goNext = useCallback(() => {
     setDirection(1);
@@ -50,7 +49,7 @@ export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center"
       onClick={handleBackdropClick}
     >
       {/* Screen-edge nav arrows */}
@@ -73,12 +72,12 @@ export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
         </>
       )}
 
-      {/* Image + header + beat content — centered block */}
+      {/* Image + header — centered block */}
       <div
         className="flex flex-col items-center w-[90vw] max-w-5xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header bar — label + download + close, right above image */}
+        {/* Header bar — label + download + close */}
         <div className="flex items-center justify-between w-full mb-2">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
@@ -127,39 +126,10 @@ export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
               animate="center"
               exit="exit"
               transition={TRANSITION}
-              className={`w-full object-contain ${hasContent ? 'max-h-[62vh]' : 'max-h-[82vh]'}`}
+              className="w-full object-contain max-h-[85vh]"
             />
           </AnimatePresence>
         </div>
-
-        {/* Beat content */}
-        {hasContent && (
-          <AnimatePresence mode="wait" initial={false} custom={direction}>
-            <motion.div
-              key={idx}
-              custom={direction}
-              variants={{
-                enter: (d: number) => ({ opacity: 0, x: d * SLIDE_DISTANCE }),
-                center: { opacity: 1, x: 0 },
-                exit: (d: number) => ({ opacity: 0, x: d * -SLIDE_DISTANCE }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={TRANSITION}
-              className="grid grid-cols-2 w-full mt-2"
-            >
-              <div className="border-l-2 border-l-[var(--admin-accent)] bg-black/30 backdrop-blur-xl px-4 py-3 mr-px">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-1.5">Audio</p>
-                <p className="text-sm text-white/80 leading-relaxed">{current.audioContent}</p>
-              </div>
-              <div className="border-l-2 border-l-[var(--admin-info)] bg-black/30 backdrop-blur-xl px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-1.5">Visual</p>
-                <p className="text-sm text-white/80 leading-relaxed">{current.visualContent}</p>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        )}
       </div>
     </div>
   );

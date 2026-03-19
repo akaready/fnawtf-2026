@@ -464,6 +464,16 @@ export async function updateClientRecord(id: string, data: Record<string, unknow
     .update(data as never)
     .eq('id', id);
   if (error) throw new Error(error.message);
+
+  // Sync denormalized client_name on projects when name changes
+  if (typeof data.name === 'string') {
+    await supabase
+      .from('projects')
+      .update({ client_name: data.name } as never)
+      .eq('client_id', id);
+    revalidatePath('/admin/projects');
+  }
+
   revalidatePath('/admin/companies');
 }
 
@@ -2310,7 +2320,7 @@ export async function getScripts() {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('scripts')
-    .select('*, project:projects(id, title)')
+    .select('*, project:projects(id, title, client_name)')
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -2331,7 +2341,7 @@ export async function getScriptById(id: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('scripts')
-    .select('*, project:projects(id, title)')
+    .select('*, project:projects(id, title, client_name, client:clients!client_id(logo_url))')
     .eq('id', id)
     .single();
   if (error) throw new Error(error.message);
@@ -4988,4 +4998,67 @@ export async function deleteProductReference(referenceId: string, storagePath: s
     .delete()
     .eq('id', referenceId);
   if (error) throw new Error(error.message);
+}
+
+// ── Script Shares ────────────────────────────────────────────────────────
+
+/** List all share links for a script, with view counts. */
+export async function getScriptShares(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_shares')
+    .select('*, script_share_views(id)')
+    .eq('script_id', scriptId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as unknown as Array<Record<string, unknown>>).map((row) => ({
+    ...row,
+    view_count: Array.isArray(row.script_share_views) ? row.script_share_views.length : 0,
+    script_share_views: undefined,
+  }));
+}
+
+/** Create a new share link for a published script. */
+export async function createScriptShare(scriptId: string): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+  const token = crypto.randomUUID().slice(0, 8);
+  const accessCode = crypto.randomUUID().slice(0, 6).toUpperCase();
+  const { data, error } = await supabase
+    .from('script_shares')
+    .insert({
+      script_id: scriptId,
+      token,
+      access_code: accessCode,
+      created_by: userId,
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+  return (data as { id: string }).id;
+}
+
+/** Update a script share link. */
+export async function updateScriptShare(
+  shareId: string,
+  updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean },
+) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_shares')
+    .update({ ...updates, updated_at: new Date().toISOString() } as never)
+    .eq('id', shareId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
+/** Delete a script share link. */
+export async function deleteScriptShare(shareId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_shares')
+    .delete()
+    .eq('id', shareId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
 }

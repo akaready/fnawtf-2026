@@ -35,6 +35,7 @@ interface Props {
   scriptVersion: number;
   beatLabel: string;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
+  allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
   consistencyFrameUrls?: string[];
 }
 
@@ -63,6 +64,7 @@ export function ScriptStoryboardCell({
   scriptVersion,
   beatLabel,
   sceneFrames,
+  allScriptFrames,
 }: Props) {
   const [generating, setGenerating] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -250,9 +252,11 @@ export function ScriptStoryboardCell({
         />
       </div>
       {lightboxOpen && (() => {
-        const lightboxFrames = sceneFrames && sceneFrames.length > 0
-          ? sceneFrames
-          : [{ imageUrl: frame.image_url, label: `Scene ${scene.sceneNumber} — Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel), audioContent, visualContent }];
+        const lightboxFrames = allScriptFrames && allScriptFrames.length > 0
+          ? allScriptFrames.map(f => ({ imageUrl: f.imageUrl, label: f.label, filename: f.filename }))
+          : sceneFrames && sceneFrames.length > 0
+            ? sceneFrames
+            : [{ imageUrl: frame.image_url, label: `Scene ${scene.sceneNumber} — Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel) }];
         const lightboxIndex = lightboxFrames.findIndex(f => f.imageUrl === frame.image_url);
         return (
           <StoryboardLightbox

@@ -7,6 +7,8 @@ interface Props {
   onChange: (config: ScriptColumnConfig) => void;
   /** Show only colored dots without labels */
   compact?: boolean;
+  /** Keys to hide from the toggle (e.g. ['storyboard'] in presentation mode) */
+  exclude?: (keyof ScriptColumnConfig)[];
 }
 
 const columns: { key: keyof ScriptColumnConfig; label: string; color: string }[] = [
@@ -17,7 +19,9 @@ const columns: { key: keyof ScriptColumnConfig; label: string; color: string }[]
   { key: 'storyboard', label: 'Storyboard', color: 'bg-[var(--admin-success)]' },
 ];
 
-export function ScriptColumnToggle({ config, onChange, compact }: Props) {
+export function ScriptColumnToggle({ config, onChange, compact, exclude }: Props) {
+  const visibleColumns = exclude ? columns.filter(c => !exclude.includes(c.key)) : columns;
+
   const toggle = (key: keyof ScriptColumnConfig) => {
     // Prevent disabling all columns
     const next = { ...config, [key]: !config[key] };
@@ -28,7 +32,7 @@ export function ScriptColumnToggle({ config, onChange, compact }: Props) {
   if (compact) {
     return (
       <div className="flex items-center gap-1">
-        {columns.map(({ key, label, color }) => (
+        {visibleColumns.map(({ key, label, color }) => (
           <button
             key={key}
             onClick={() => toggle(key)}

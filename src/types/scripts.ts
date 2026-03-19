@@ -254,7 +254,31 @@ export interface AiPromptLogRow {
 
 /** Script with joined project name for list view */
 export interface ScriptWithProject extends ScriptRow {
-  project?: { id: string; title: string } | null;
+  project?: { id: string; title: string; client_name?: string } | null;
+}
+
+/** Script share link record */
+export interface ScriptShareRow {
+  id: string;
+  script_id: string;
+  token: string;
+  access_code: string;
+  notes: string | null;
+  label: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Script share view tracking record */
+export interface ScriptShareViewRow {
+  id: string;
+  share_id: string;
+  viewer_email: string | null;
+  viewer_name: string | null;
+  duration_seconds: number | null;
+  viewed_at: string;
 }
 
 /** Default tags seeded on every new script. */

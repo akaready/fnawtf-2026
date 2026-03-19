@@ -397,13 +397,9 @@ export function CompanyPanel({
             onRemove={handleLogoRemove}
           />
           <div className="flex-1 min-w-0">
-            <input
-              type="text"
-              value={localCompany.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Company name"
-              className="w-full bg-transparent text-lg font-semibold text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none border-b border-transparent focus:border-admin-border-emphasis pb-1"
-            />
+            <p className="text-lg font-semibold text-admin-text-primary truncate">
+              {localCompany.name || 'Untitled'}
+            </p>
             {clientProjects.length > 0 && (
               <p className="text-xs text-admin-text-ghost mt-0.5">
                 {clientProjects.length} project{clientProjects.length !== 1 ? 's' : ''}
@@ -474,6 +470,12 @@ export function CompanyPanel({
         <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-6 py-5">
           {activeTab === 'info' && (
             <div className="space-y-4">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Name</label>
+                <input type="text" value={localCompany.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Company name" className={inputCls} />
+              </div>
+
               {/* Type */}
               <div className="space-y-1.5">
                 <label className="admin-label">Type</label>
