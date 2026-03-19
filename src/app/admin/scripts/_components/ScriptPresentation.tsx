@@ -181,7 +181,6 @@ export function ScriptPresentation({ slides, initialIndex = 0, columnConfig: ini
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <style>{`@keyframes presentFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
       {/* Close button */}
       <button
         onClick={onClose}
@@ -219,12 +218,12 @@ export function ScriptPresentation({ slides, initialIndex = 0, columnConfig: ini
       {/* Main content area — fixed layout, image never moves */}
       <div className="flex-1 flex flex-col items-center px-16 pt-4 min-h-0">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 pt-6 pb-3 flex-shrink-0">
-          <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-8 opacity-30" />
+        <div className="flex items-center justify-center gap-3 pt-8 pb-5 flex-shrink-0">
+          <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-8" />
           {clientLogoUrl && (
             <>
-              <span className="text-[#333] text-admin-sm">&times;</span>
-              <img src={clientLogoUrl} alt="" className="h-8 object-contain admin-logo opacity-60" />
+              <span className="text-[#555] text-xl">&times;</span>
+              <img src={clientLogoUrl} alt="" className="h-8 object-contain admin-logo" />
             </>
           )}
         </div>
@@ -295,11 +294,7 @@ export function ScriptPresentation({ slides, initialIndex = 0, columnConfig: ini
 
           {/* All beat content — simple fade on key change */}
           {!contentCollapsed && contentPanels.length > 0 && (
-            <div
-              key={current.beatId}
-              className="transition-opacity duration-300"
-              style={{ animation: 'presentFadeIn 0.3s ease-out' }}
-            >
+            <div key={current.beatId}>
               {contentRows.map((row, ri) => (
                 <div key={ri} className={`grid ${row.length === 2 ? 'grid-cols-2' : 'grid-cols-1'} gap-px ${ri > 0 ? 'mt-px' : ''}`}>
                   {row.map(panel => (
