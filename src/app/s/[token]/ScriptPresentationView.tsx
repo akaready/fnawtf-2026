@@ -274,24 +274,23 @@ export function ScriptPresentationView({
 
           {/* Storyboard image with nav arrows overlaid */}
           <div className="group/image relative w-full max-w-5xl flex-shrink-0">
-            {/* Prev arrow — overlay on image, visible on hover */}
-            {idx > 0 && (
+            {/* Nav arrows — bottom center of image, visible on hover */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300">
               <button
                 onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"
+                disabled={idx === 0}
+                className="p-2 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} />
               </button>
-            )}
-            {/* Next arrow — overlay on image, visible on hover */}
-            {idx < slides.length - 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); goNext(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"
+                disabled={idx >= slides.length - 1}
+                className="p-2 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={18} />
               </button>
-            )}
+            </div>
             <CrossfadeImage
               src={current.storyboardImageUrl}
               alt={`Scene ${current.sceneNumber} \u2014 Beat ${current.beatLetter}`}
