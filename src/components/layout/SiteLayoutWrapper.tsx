@@ -36,7 +36,7 @@ export function SiteLayoutWrapper({ children, nav, footer }: Props) {
   }
 
   // Immersive pages: no nav/footer (they unmount behind the PageTransition panel)
-  const isProposalDeck = /^\/p\/[^/]+$/.test(pathname);
+  const isProposalDeck = pathname.startsWith('/p/');
   const isIntakeForm = pathname === '/start';
   const isCallSheet = pathname.startsWith('/cs/');
   const isInvoice   = pathname.startsWith('/invoice/');
