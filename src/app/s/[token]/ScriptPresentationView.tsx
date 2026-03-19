@@ -100,7 +100,7 @@ export function ScriptPresentationView({
     visual: true,
     notes: true,
     reference: true,
-    storyboard: false,
+    storyboard: true,
   });
   const [chromeVisible, setChromeVisible] = useState(true);
   const [leftOpen, setLeftOpen] = useState(true);
@@ -189,7 +189,6 @@ export function ScriptPresentationView({
   }, [slides]);
 
   /* ── Build content panels ── */
-  const showAudio = colConfig.audio;
   const showVisual = colConfig.visual;
   const showNotes = colConfig.notes;
   const showReference = colConfig.reference;
@@ -271,9 +270,9 @@ export function ScriptPresentationView({
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
-          {/* Scene heading */}
+          {/* Scene heading — centered */}
           <div className="w-full max-w-5xl flex-shrink-0 mb-3">
-            <div className="flex items-baseline gap-2.5 px-1">
+            <div className="flex items-baseline justify-center gap-2.5">
               <span className="text-[#666] font-mono text-sm font-bold flex-shrink-0">
                 {current.sceneNumber}{current.beatLetter}
               </span>
@@ -335,30 +334,27 @@ export function ScriptPresentationView({
             />
           </div>
 
-          {/* Column toggle dots */}
+          {/* Column toggle dots — audio + storyboard always on */}
           <div className="flex justify-center mt-1 mb-3 flex-shrink-0">
             <ScriptColumnToggle
               config={colConfig}
-              onChange={setColConfig}
+              onChange={(c) => setColConfig({ ...c, audio: true, storyboard: true })}
               compact
-              exclude={['storyboard']}
             />
           </div>
 
           {/* ── Audio (full width, content text larger) ── */}
-          {showAudio && (
-            <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 mb-px">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
-              <div className="text-base text-[#ccc] leading-relaxed">
-                {current.audioContent || <span className="text-[#333]">&mdash;</span>}
-              </div>
+          <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 mb-px">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
+            <div className="text-base text-[#ccc] leading-relaxed">
+              {current.audioContent || <span className="text-[#333]">&mdash;</span>}
             </div>
-          )}
+          </div>
 
-          {/* ── Three columns: Visual, Notes, Reference ── */}
-          {(showVisual || showNotes || showReference) && (
-            <div className="w-full max-w-5xl flex-shrink-0 mb-6">
-              <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${[showVisual, showNotes, showReference].filter(Boolean).length}, minmax(0, 1fr))` }}>
+          {/* ── Two columns: Visual + Notes ── */}
+          {(showVisual || showNotes) && (
+            <div className="w-full max-w-5xl flex-shrink-0 mb-px">
+              <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${[showVisual, showNotes].filter(Boolean).length}, minmax(0, 1fr))` }}>
                 {showVisual && (
                   <div className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-3">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Visual</p>
@@ -375,21 +371,23 @@ export function ScriptPresentationView({
                     </div>
                   </div>
                 )}
-                {showReference && (
-                  <div className="border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
-                    <div className="text-sm text-[#999] leading-relaxed">
-                      {current.referenceImageUrls.length > 0 ? (
-                        <div className="flex gap-2 flex-wrap">
-                          {current.referenceImageUrls.map((url, i) => (
-                            <img key={i} src={url} alt="" className="h-16 rounded object-cover" />
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-[#333]">&mdash;</span>
-                      )}
-                    </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Reference (full width) ── */}
+          {showReference && (
+            <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3 mb-6">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
+              <div className="text-sm text-[#999] leading-relaxed">
+                {current.referenceImageUrls.length > 0 ? (
+                  <div className="flex gap-2 flex-wrap">
+                    {current.referenceImageUrls.map((url, i) => (
+                      <img key={i} src={url} alt="" className="h-16 rounded object-cover" />
+                    ))}
                   </div>
+                ) : (
+                  <span className="text-[#333]">&mdash;</span>
                 )}
               </div>
             </div>

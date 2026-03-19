@@ -33,14 +33,17 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude }: Props
     return (
       <div className="flex items-center gap-1">
         {visibleColumns.map(({ key, label, color }) => (
-          <button
-            key={key}
-            onClick={() => toggle(key)}
-            className="flex items-center justify-center w-[30px] h-[30px] rounded-lg transition-all duration-200 hover:bg-admin-bg-hover"
-            title={label}
-          >
-            <span className={`block w-2.5 h-2.5 rounded-full transition-colors ${config[key] ? color : 'bg-admin-text-ghost'}`} />
-          </button>
+          <div key={key} className="relative group/dot">
+            <button
+              onClick={() => toggle(key)}
+              className="flex items-center justify-center w-[30px] h-[30px] rounded-lg transition-all duration-200 hover:bg-admin-bg-hover"
+            >
+              <span className={`block w-2.5 h-2.5 rounded-full transition-colors ${config[key] ? color : 'bg-admin-text-ghost'}`} />
+            </button>
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] font-medium text-white bg-[#222] border border-white/10 rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
+              {label}
+            </span>
+          </div>
         ))}
       </div>
     );

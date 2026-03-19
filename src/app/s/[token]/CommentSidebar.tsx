@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useTransition } from 'react';
-import { User, Pencil, Trash2, Check, X, PanelRightClose } from 'lucide-react';
+import { User, Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { getComments, updateComment, deleteComment } from './actions';
 
 interface Comment {
@@ -94,6 +94,17 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
           </div>
         </div>
       </div>
+
+      {/* Re-open button when collapsed */}
+      {!open && (
+        <button
+          onClick={onToggle}
+          className="absolute right-3 top-3 z-30 w-8 h-8 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+          title="Show comments"
+        >
+          <PanelRightOpen size={16} />
+        </button>
+      )}
     </>
   );
 }

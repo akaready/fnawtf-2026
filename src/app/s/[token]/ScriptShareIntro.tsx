@@ -98,13 +98,13 @@ export function ScriptShareIntro({
       const eyebrow = el.querySelector('[data-eyebrow]') as HTMLElement;
       const words = el.querySelectorAll('[data-word]');
       const notes = el.querySelector('[data-notes]') as HTMLElement | null;
-      const button = el.querySelector('[data-button]') as HTMLElement | null;
+      const buttons = el.querySelectorAll('[data-button]');
       const instructions = el.querySelectorAll('[data-instructions]');
 
       gsap.set(eyebrow, { opacity: 0, y: 20 });
       gsap.set(words, { y: '115%' });
       if (notes) gsap.set(notes, { opacity: 0, y: 24 });
-      if (button) gsap.set(button, { opacity: 0, y: 32 });
+      if (buttons.length) gsap.set(buttons, { opacity: 0, y: 32 });
       if (instructions.length) gsap.set(instructions, { opacity: 0, y: 12 });
 
       const tl = gsap.timeline({ delay: 0.3 });
@@ -120,12 +120,12 @@ export function ScriptShareIntro({
         tl.to(notes, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5');
       }
 
-      if (button) {
-        tl.to(button, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3');
+      if (buttons.length) {
+        tl.to(buttons, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', stagger: 0.1 }, '-=0.3');
       }
 
       if (instructions.length) {
-        tl.to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3');
+        tl.to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', stagger: 0.05 }, '-=0.3');
       }
     }, el.closest('section') ?? el);
 
@@ -245,7 +245,7 @@ export function ScriptShareIntro({
         </div>
 
         {/* Instructions */}
-        <p data-instructions className="text-xs text-white/40 max-w-sm leading-relaxed mb-1" style={{ opacity: 0 }}>
+        <p data-instructions className="text-sm text-white/40 max-w-sm leading-relaxed mb-1" style={{ opacity: 0 }}>
           Navigate with arrow keys, the timeline, or the left/right buttons.
         </p>
         <p data-instructions className="text-xs text-white/30 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
