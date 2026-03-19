@@ -49,6 +49,15 @@ export default async function ScriptPreviewPage({ params }: Props) {
       const p = project as { title: string; client_name: string | null };
       projectTitle = p.title;
       clientName = p.client_name;
+      if (p.client_name) {
+        const { data: client } = await supabase
+          .from('clients')
+          .select('logo_url')
+          .eq('name', p.client_name)
+          .limit(1)
+          .single();
+        if (client) clientLogoUrl = (client as { logo_url: string | null }).logo_url;
+      }
     }
   }
 

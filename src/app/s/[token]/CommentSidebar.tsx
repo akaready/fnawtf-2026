@@ -60,7 +60,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
       {!open && (
         <button
           onClick={onToggle}
-          className="absolute right-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+          className="absolute right-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
           title="Show comments"
         >
           <PanelRightOpen size={16} />

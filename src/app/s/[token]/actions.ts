@@ -135,6 +135,16 @@ export async function getScriptShareData(token: string) {
       const p = project as { title: string; client_name: string | null };
       projectTitle = p.title;
       clientName = p.client_name;
+      // Look up client logo by name
+      if (p.client_name) {
+        const { data: client } = await service
+          .from('clients')
+          .select('logo_url')
+          .eq('name', p.client_name)
+          .limit(1)
+          .single();
+        if (client) clientLogoUrl = (client as { logo_url: string | null }).logo_url;
+      }
     }
   }
 

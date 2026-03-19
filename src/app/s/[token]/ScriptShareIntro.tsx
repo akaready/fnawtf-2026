@@ -242,8 +242,8 @@ export function ScriptShareIntro({
         </div>
 
         {/* Instructions */}
-        <p data-instructions className="text-sm text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
-          Navigate with arrow keys, the timeline, or the left/right buttons. Please leave comments per beat — your feedback helps us get it right.
+        <p data-instructions className="text-xs text-white/40 max-w-sm whitespace-nowrap" style={{ opacity: 0 }}>
+          Navigate with arrow keys, the timeline, the left/right buttons, or by scrolling.
         </p>
       </div>
     </section>

@@ -85,10 +85,10 @@ interface Props {
 export function ScriptPresentationView({
   slides,
   onClose: _onClose,
-  scriptTitle: _scriptTitle,
-  clientName: _clientName,
-  clientLogoUrl: _clientLogoUrl,
-  versionLabel: _versionLabel,
+  scriptTitle,
+  clientName,
+  clientLogoUrl,
+  versionLabel,
   scenes,
   shareId,
   viewerEmail,
@@ -205,20 +205,32 @@ export function ScriptPresentationView({
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
-      <div
-        className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
-      >
-        <div className="w-56 h-full flex flex-col">
-          {/* Header */}
-          <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
-            <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
-            <button
-              onClick={() => setLeftOpen(false)}
-              className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-            >
-              <PanelLeftClose size={14} />
-            </button>
-          </div>
+      <div className="relative flex-shrink-0 h-full">
+        {/* Re-open button — behind sidebar, revealed as it collapses */}
+        {!leftOpen && (
+          <button
+            onClick={() => setLeftOpen(true)}
+            className="absolute left-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
+            title="Show scenes"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        )}
+
+        <div
+          className={`h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
+        >
+          <div className="w-56 h-full flex flex-col">
+            {/* Header */}
+            <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
+              <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
+              <button
+                onClick={() => setLeftOpen(false)}
+                className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+              >
+                <PanelLeftClose size={14} />
+              </button>
+            </div>
           {/* List */}
           <div className="flex-1 overflow-y-auto admin-scrollbar">
           {scenes.map((scene) => {
@@ -252,39 +264,33 @@ export function ScriptPresentationView({
           })}
           </div>
         </div>
+        </div>
       </div>
-
-      {/* Left sidebar toggle (when collapsed) */}
-      {!leftOpen && (
-        <button
-          onClick={() => setLeftOpen(true)}
-          className={`absolute left-2 top-2 z-[5] p-2 rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-all duration-500 ${
-            chromeVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <PanelLeftOpen size={16} />
-        </button>
-      )}
 
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
-          {/* Scene heading — centered */}
-          <div className="w-full max-w-5xl flex-shrink-0 mb-3">
-            <div className="flex items-baseline justify-center gap-2.5">
-              <span className="text-[#666] font-mono text-sm font-bold flex-shrink-0">
-                {current.sceneNumber}{current.beatLetter}
-              </span>
-              <span className="text-sm font-medium text-[#999] uppercase tracking-wider truncate">
-                {sceneHeading}
-              </span>
-              {activeScene?.scene_description && (
-                <span className="text-sm text-[#555] truncate">
-                  [{activeScene.scene_description}]
-                </span>
-              )}
-            </div>
+          {/* Logo bar */}
+          <div className="flex items-center justify-center gap-3 pt-4 pb-3 flex-shrink-0">
+            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-7" />
+            {clientLogoUrl && (
+              <>
+                <span className="text-[#555] text-lg">&times;</span>
+                <img src={clientLogoUrl} alt="" className="h-7 object-contain admin-logo" />
+              </>
+            )}
+          </div>
+
+          {/* Title */}
+          <div className="text-center pb-4 flex-shrink-0">
+            {clientName && (
+              <p className="text-[#555] text-xs uppercase tracking-widest mb-0.5">{clientName}</p>
+            )}
+            <p className="text-[#ccc] text-sm font-medium">
+              {scriptTitle}
+              {versionLabel && <span className="text-[#444] ml-2">v{versionLabel}</span>}
+            </p>
           </div>
 
           {/* Storyboard image with nav arrows overlaid */}
@@ -342,6 +348,21 @@ export function ScriptPresentationView({
               onChange={(c) => setColConfig({ ...c, audio: true, storyboard: true })}
               compact
             />
+          </div>
+
+          {/* Scene heading — matches table view scene header exactly */}
+          <div className="w-full max-w-5xl flex-shrink-0 flex items-center bg-[#141414] border-b border-border rounded-t px-4 py-3 mb-px">
+            <span className="text-muted-foreground font-mono text-xs flex-shrink-0 mr-2">
+              {current.sceneNumber}
+            </span>
+            <span className="text-xs font-medium text-foreground/70 uppercase tracking-wider flex-1 min-w-0 truncate">
+              {sceneHeading}
+            </span>
+            {activeScene?.scene_description && (
+              <span className="text-xs text-muted-foreground/40 ml-2 truncate">
+                [{activeScene.scene_description}]
+              </span>
+            )}
           </div>
 
           {/* ── Audio (full width, content text larger) ── */}
