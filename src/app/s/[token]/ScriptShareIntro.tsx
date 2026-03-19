@@ -20,54 +20,54 @@ export function ScriptShareIntro({
   onBegin,
 }: Props) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-20 bg-black">
-      <div className="relative w-full max-w-lg text-center">
-        {/* Logos */}
-        <div className="flex items-center justify-center gap-4 mb-10">
-          <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-6" />
-          {clientLogoUrl && (
-            <>
-              <span className="text-border text-sm">/</span>
-              <img src={clientLogoUrl} alt="" className="h-6 object-contain admin-logo" />
-            </>
+    <div className="min-h-screen flex items-center justify-center px-6 py-20">
+      <div className="relative w-full max-w-md bg-surface border border-border rounded-2xl p-8 shadow-2xl">
+        <div className="text-center mb-8">
+          {/* Logos */}
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
+            {clientLogoUrl && (
+              <>
+                <span className="text-border text-xs">/</span>
+                <img src={clientLogoUrl} alt="" className="h-5 object-contain admin-logo" />
+              </>
+            )}
+          </div>
+
+          {/* Eyebrow */}
+          {clientName && (
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+              Script for {clientName}
+            </p>
           )}
+
+          {/* Title */}
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            {scriptTitle}
+          </h1>
+
+          {/* Version */}
+          <p className="text-xs text-muted-foreground mt-1">v{versionLabel}</p>
         </div>
-
-        {/* Client / project eyebrow */}
-        {clientName && (
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/50 mb-2">
-            {clientName}
-          </p>
-        )}
-
-        {/* Script title */}
-        <h1 className="font-display text-3xl font-bold text-foreground leading-tight mb-2">
-          {scriptTitle}
-        </h1>
-
-        {/* Version */}
-        <span className="inline-block px-3 py-1 text-xs font-mono font-bold text-muted-foreground bg-white/[0.05] border border-border rounded-full mb-8">
-          v{versionLabel}
-        </span>
 
         {/* What to look for */}
         {shareNotes && (
-          <div className="bg-white/[0.03] border border-border rounded-xl px-6 py-5 text-left mb-10">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mb-2">
+          <div className="mb-6">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               What to Look For
-            </p>
-            <p className="text-sm text-muted-foreground/80 whitespace-pre-wrap leading-relaxed">
+            </label>
+            <div className="w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
               {shareNotes}
-            </p>
+            </div>
           </div>
         )}
 
         {/* Begin button */}
         <button
           onClick={onBegin}
-          className="relative px-10 py-3.5 font-medium rounded-lg overflow-hidden border text-black bg-white border-white cursor-pointer hover:bg-white/90 transition-all duration-300 text-sm"
+          className={`relative w-full px-4 py-3 font-medium rounded-lg overflow-hidden border transition-all duration-300 text-black bg-white border-white cursor-pointer hover:bg-white/90`}
         >
-          Begin
+          View Script
         </button>
       </div>
     </div>
