@@ -339,10 +339,10 @@ function AdminShellInner({ children, userEmail }: Props) {
               <button
                 onClick={handleSignOut}
                 disabled={signingOut}
-                className="flex-1 min-w-0 flex items-center gap-2.5 h-10 pl-[13px] pr-[7px] rounded-lg text-sm whitespace-nowrap text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+                title="Sign Out"
+                className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
               >
-                <LogOut size={15} strokeWidth={1.75} className="flex-shrink-0" />
-                <span>{signingOut ? 'Signing out…' : 'Sign Out'}</span>
+                <LogOut size={15} strokeWidth={1.75} />
               </button>
               {userEmail === 'ready@fna.wtf' && (
                 <motion.div layout="position" className="relative">
