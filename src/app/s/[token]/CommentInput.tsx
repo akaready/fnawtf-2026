@@ -34,22 +34,23 @@ export function CommentInput({ shareId, beatId, viewerEmail, viewerName, onComme
   };
 
   return (
-    <div className="flex items-end gap-2 px-4 py-3 border-t border-border bg-black/30">
+    <div className="flex items-end gap-3 px-6 py-4 border-t border-border bg-[#0a0a0a]">
       <textarea
         value={text}
         onChange={e => setText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Share your feedback on this frame..."
+        placeholder="Share your feedback on this story beat..."
         rows={2}
-        className="flex-1 bg-white/[0.04] border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none focus:border-muted-foreground/30 transition-colors"
+        className="flex-1 bg-white/[0.06] border border-white/[0.08] rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 resize-none focus:outline-none focus:border-white/20 focus:bg-white/[0.08] transition-colors"
       />
       <button
         onClick={handleSubmit}
         disabled={isPending || !text.trim()}
-        className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="flex-shrink-0 px-4 h-[42px] flex items-center justify-center gap-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
         title="Submit"
       >
-        <Send size={14} />
+        <Send size={13} />
+        Send
       </button>
     </div>
   );

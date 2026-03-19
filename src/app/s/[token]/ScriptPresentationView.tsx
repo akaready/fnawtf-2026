@@ -382,19 +382,20 @@ export function ScriptPresentationView({
             </div>
           )}
 
-          {/* ── Comment input ── */}
-          {current && (
-            <div className="w-full max-w-5xl flex-shrink-0 mb-4">
-              <CommentInput
-                shareId={shareId}
-                beatId={current.beatId}
-                viewerEmail={viewerEmail}
-                viewerName={viewerName}
-                onCommentAdded={() => setCommentRefreshKey(k => k + 1)}
-              />
-            </div>
-          )}
         </div>
+
+        {/* Comment input — sticky bottom of center column */}
+        {current && (
+          <div className="flex-shrink-0">
+            <CommentInput
+              shareId={shareId}
+              beatId={current.beatId}
+              viewerEmail={viewerEmail}
+              viewerName={viewerName}
+              onCommentAdded={() => setCommentRefreshKey(k => k + 1)}
+            />
+          </div>
+        )}
       </div>
 
       {/* ════ RIGHT SIDEBAR — Comments ════ */}
