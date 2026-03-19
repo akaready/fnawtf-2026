@@ -119,6 +119,24 @@ const config: Config = {
             violet: 'var(--admin-toolbar-violet)',
           },
         },
+
+        // ─── Portal Design Tokens ───────────────────────────────────
+        portal: {
+          'bg-base':        'var(--portal-bg-base)',
+          'bar':            'var(--portal-bar)',
+          'border':         'var(--portal-border)',
+          'border-subtle':  'var(--portal-border-subtle)',
+          'text-primary':   'var(--portal-text-primary)',
+          'text-muted':     'var(--portal-text-muted)',
+          'text-faint':     'var(--portal-text-faint)',
+          'text-separator': 'var(--portal-text-separator)',
+          'avatar-bg':      'var(--portal-avatar-bg)',
+          'avatar-border':  'var(--portal-avatar-border)',
+          'avatar-text':    'var(--portal-avatar-text)',
+          'crumb-active':   'var(--portal-crumb-active)',
+          'crumb-inactive': 'var(--portal-crumb-inactive)',
+          'logout-border':  'var(--portal-logout-border)',
+        },
       },
       fontFamily: {
         display: ['var(--font-space-grotesk)', 'sans-serif'],

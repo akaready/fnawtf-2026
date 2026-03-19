@@ -14,7 +14,7 @@ export default async function PortalProtectedLayout({
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0a0a0a]">
+    <div className="flex flex-col flex-1 bg-portal-bg-base">
       <PortalTopBar
         clientName={session.clientName}
         clientLogoUrl={session.logoUrl}
