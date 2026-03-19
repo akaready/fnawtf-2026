@@ -94,6 +94,7 @@ export default async function ScriptPreviewPage({ params }: Props) {
     <ScriptShareClient
       shareId=""
       shareNotes={null}
+      shareMode="presentation"
       script={{
         id: sc.id,
         title: sc.title,

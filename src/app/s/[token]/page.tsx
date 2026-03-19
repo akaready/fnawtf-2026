@@ -35,6 +35,7 @@ export default async function ScriptSharePage({ params }: Props) {
     <ScriptShareClient
       shareId={data.shareId}
       shareNotes={data.shareNotes}
+      shareMode={data.shareMode}
       script={data.script}
       projectTitle={data.projectTitle}
       projectNumber={data.projectNumber}

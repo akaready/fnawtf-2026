@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Play, Expand, Shrink } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink } from 'lucide-react';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
-import { ScriptPresentation } from '@/app/admin/scripts/_components/ScriptPresentation';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
+import { ScriptShareIntro } from './ScriptShareIntro';
+import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
 import { startScriptViewSession, updateScriptViewDuration } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
@@ -17,6 +18,7 @@ const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
 interface Props {
   shareId: string;
   shareNotes: string | null;
+  shareMode: 'presentation' | 'table';
   script: {
     id: string;
     title: string;
@@ -43,8 +45,9 @@ interface Props {
 export function ScriptShareClient({
   shareId,
   shareNotes,
+  shareMode,
   script,
-  projectTitle: _projectTitle,
+  projectTitle,
   projectNumber,
   clientName,
   clientLogoUrl,
@@ -57,12 +60,12 @@ export function ScriptShareClient({
   storyboardFrames: rawStoryboardFrames,
   viewerEmail,
 }: Props) {
+  const [showIntro, setShowIntro] = useState(true);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
     audio: true, visual: true, notes: true, reference: true, storyboard: true,
   });
   const [showSidebar, setShowSidebar] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
-  const [showPresentation, setShowPresentation] = useState(false);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -135,6 +138,60 @@ export function ScriptShareClient({
 
   const btnCls = 'w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors';
 
+  // Build presentation slides data
+  const refsByBeat: Record<string, { image_url: string }[]> = {};
+  for (const ref of typedReferences) {
+    const list = refsByBeat[ref.beat_id] ?? [];
+    list.push(ref);
+    refsByBeat[ref.beat_id] = list;
+  }
+
+  const presentationSlides = buildPresentationSlides(computedScenes, typedStoryboardFrames, refsByBeat);
+
+  const presentationScenes = computedScenes.map(sc => ({
+    id: sc.id,
+    sceneNumber: sc.sceneNumber,
+    location_name: sc.location_name,
+    int_ext: sc.int_ext,
+    time_of_day: sc.time_of_day,
+    scene_description: (sc as Record<string, unknown>).scene_description as string | null ?? null,
+  }));
+
+  // Intro page
+  if (showIntro) {
+    return (
+      <ScriptShareIntro
+        scriptTitle={script.title}
+        projectTitle={projectTitle}
+        clientName={clientName}
+        clientLogoUrl={clientLogoUrl ?? null}
+        versionLabel={versionLabel}
+        shareNotes={shareNotes}
+        onBegin={() => setShowIntro(false)}
+      />
+    );
+  }
+
+  // Presentation mode
+  if (shareMode === 'presentation') {
+    return (
+      <ScriptPresentationView
+        slides={presentationSlides}
+        columnConfig={columnConfig}
+        onClose={() => setShowIntro(true)}
+        scriptTitle={script.title}
+        clientName={clientName ?? undefined}
+        clientLogoUrl={clientLogoUrl}
+        versionLabel={versionLabel}
+        scenes={presentationScenes}
+        shareId={shareId}
+        viewerEmail={viewerEmail}
+        viewerName={null}
+      />
+    );
+  }
+
+  // Table mode — existing table view
   return (
     <div className="flex flex-col h-screen bg-black text-foreground">
       {/* Title header — collapses in focus mode */}
@@ -173,16 +230,6 @@ export function ScriptShareClient({
               </span>
             </div>
           </div>
-
-          {/* Notes banner */}
-          {shareNotes && (
-            <div className="px-8 py-3 border-b border-border bg-white/[0.02] flex-shrink-0">
-              <div className="max-w-2xl mx-auto text-sm text-muted-foreground/80 whitespace-pre-wrap">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40 mr-2">What to Look For</span>
-                {shareNotes}
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -209,13 +256,6 @@ export function ScriptShareClient({
             title={isFocused ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
-          </button>
-          <button
-            onClick={() => setShowPresentation(true)}
-            className={btnCls}
-            title="Present"
-          >
-            <Play size={16} />
           </button>
         </div>
         {/* Dots — absolutely centered to match header centering */}
@@ -275,25 +315,6 @@ export function ScriptShareClient({
         </div>
       </div>
 
-      {showPresentation && (() => {
-        const refsByBeat: Record<string, { image_url: string }[]> = {};
-        for (const ref of typedReferences) {
-          const list = refsByBeat[ref.beat_id] ?? [];
-          list.push(ref);
-          refsByBeat[ref.beat_id] = list;
-        }
-        return (
-          <ScriptPresentation
-            slides={buildPresentationSlides(computedScenes, typedStoryboardFrames, refsByBeat)}
-            columnConfig={columnConfig}
-            onClose={() => setShowPresentation(false)}
-            scriptTitle={script.title}
-            clientName={clientName ?? undefined}
-            clientLogoUrl={clientLogoUrl}
-            versionLabel={formatScriptVersion(script.majorVersion, script.minorVersion, script.isPublished)}
-          />
-        );
-      })()}
     </div>
   );
 }

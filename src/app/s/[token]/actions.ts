@@ -103,7 +103,7 @@ export async function getScriptShareData(token: string) {
 
   if (shareErr || !share) return null;
 
-  const s = share as { id: string; script_id: string; notes: string | null; token: string };
+  const s = share as unknown as { id: string; script_id: string; notes: string | null; token: string; share_mode: string };
 
   // Use service client to bypass RLS for script data
   const service = createServiceClient();
@@ -182,6 +182,7 @@ export async function getScriptShareData(token: string) {
   return {
     shareId: s.id,
     shareNotes: s.notes,
+    shareMode: s.share_mode as 'presentation' | 'table',
     script: {
       id: sc.id,
       title: sc.title,
