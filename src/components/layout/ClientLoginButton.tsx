@@ -255,18 +255,24 @@ function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => voi
 // ── Footer trigger button ─────────────────────────────────────────────────
 
 export function ClientLoginButton() {
-  const [open, setOpen] = useState(false);
+  const handleClick = () => {
+    // Navigate via synthetic link click to trigger page transition
+    const link = document.createElement('a');
+    link.href = '/portal';
+    link.style.display = 'none';
+    link.setAttribute('data-page-transition', 'true');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
 
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
-      >
-        <Lock className="w-4 h-4" />
-        Client Login
-      </button>
-      <ClientLoginModal open={open} onClose={() => setOpen(false)} />
-    </>
+    <button
+      onClick={handleClick}
+      className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors"
+    >
+      <Lock className="w-4 h-4" />
+      Client Login
+    </button>
   );
 }
