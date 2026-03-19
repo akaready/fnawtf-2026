@@ -140,7 +140,7 @@ export function ScriptShareClient({
       {/* Title header — collapses in focus mode */}
       {!isFocused && (
         <>
-          <div className="relative flex items-center px-8 py-4 border-b border-border flex-shrink-0">
+          <div className="relative flex items-center px-8 py-6 border-b border-border flex-shrink-0">
             {/* Left — logos */}
             <div className="flex items-center gap-4 flex-shrink-0">
               <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />

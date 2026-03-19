@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { X, Copy, Check, Plus, ExternalLink, Link2, Trash2 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
-import { TwoStateDeleteButton } from '@/app/admin/_components/TwoStateDeleteButton';
 import { getScriptShares, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
 import type { ScriptShareRow } from '@/types/scripts';
 
@@ -17,16 +16,16 @@ interface Props {
   onClose: () => void;
   scriptId: string;
   isPublished: boolean;
-  /** Called when a share is created from an unpublished script — publishes first, returns true on success */
   onPublish: () => Promise<void>;
 }
 
 export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPublish }: Props) {
   const [shares, setShares] = useState<ShareWithCount[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const loadShares = useCallback(async () => {
     setLoading(true);
@@ -42,15 +41,23 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     if (open) loadShares();
   }, [open, loadShares]);
 
+  // Auto-select first item or fix stale selection
+  useEffect(() => {
+    if (selectedId && !shares.find(s => s.id === selectedId)) {
+      setSelectedId(shares[0]?.id ?? null);
+    }
+    if (!selectedId && shares.length > 0) {
+      setSelectedId(shares[0].id);
+    }
+  }, [shares, selectedId]);
+
   const handleCreate = async () => {
     setCreating(true);
     try {
-      // Auto-publish if not yet published
-      if (!isPublished) {
-        await onPublish();
-      }
-      await createScriptShare(scriptId);
+      if (!isPublished) await onPublish();
+      const id = await createScriptShare(scriptId);
       await loadShares();
+      setSelectedId(id);
     } finally {
       setCreating(false);
     }
@@ -67,14 +74,16 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     setConfirmDeleteId(null);
   };
 
-  const copyLink = (token: string, shareId: string) => {
+  const copyLink = (token: string, id: string) => {
     navigator.clipboard.writeText(`https://fna.wtf/s/${token}`);
-    setCopiedId(shareId);
+    setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const selected = shares.find(s => s.id === selectedId) ?? null;
+
   return (
-    <PanelDrawer open={open} onClose={onClose} width="w-[420px]">
+    <PanelDrawer open={open} onClose={onClose} width="w-[560px]">
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-admin-border bg-admin-bg-sidebar">
@@ -84,43 +93,92 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto admin-scrollbar p-6 space-y-4">
-          {loading && shares.length === 0 && (
-            <p className="text-admin-sm text-admin-text-faint">Loading...</p>
-          )}
+        {/* Body — sidebar + detail split */}
+        <div className="flex-1 flex min-h-0">
+          {/* Left: share list */}
+          <div className="w-[220px] flex-shrink-0 border-r border-admin-border flex flex-col">
+            {/* Add button */}
+            <div className="flex-shrink-0 border-b border-admin-border px-3 py-3">
+              <button
+                onClick={handleCreate}
+                disabled={creating}
+                className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors disabled:opacity-40"
+              >
+                <Plus size={12} />
+                {creating ? 'Creating...' : (isPublished ? 'New Link' : 'Publish & Share')}
+              </button>
+            </div>
 
-          {shares.map((share) => (
-            <ShareRow
-              key={share.id}
-              share={share}
-              copiedId={copiedId}
-              confirmDeleteId={confirmDeleteId}
-              onCopyLink={copyLink}
-              onUpdate={handleUpdate}
-              onRequestConfirm={setConfirmDeleteId}
-              onConfirmDelete={handleDelete}
-              onCancelDelete={() => setConfirmDeleteId(null)}
-            />
-          ))}
-
-          {shares.length === 0 && !loading && (
-            <div className="text-admin-sm text-admin-text-faint space-y-2">
-              <p>No share links yet.</p>
-              {!isPublished && (
-                <p className="text-admin-text-muted">
-                  Creating a share link will automatically publish this script as v1.
-                </p>
+            {/* Scrollable list */}
+            <div className="flex-1 overflow-y-auto admin-scrollbar-auto py-1">
+              {loading && shares.length === 0 && (
+                <p className="px-4 py-3 text-admin-sm text-admin-text-faint">Loading...</p>
+              )}
+              {shares.map(share => (
+                <div
+                  key={share.id}
+                  className={`group/row w-full flex items-center px-3 py-2.5 gap-2 transition-colors cursor-pointer ${
+                    selectedId === share.id
+                      ? 'bg-admin-bg-active text-admin-text-primary'
+                      : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
+                  } ${!share.is_active ? 'opacity-40' : ''}`}
+                >
+                  <button onClick={() => setSelectedId(share.id)} className="flex-1 flex items-center gap-2.5 min-w-0">
+                    <Link2 size={14} className="flex-shrink-0 text-admin-text-ghost" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-admin-sm font-medium truncate">
+                        {share.label || share.token}
+                      </div>
+                      <div className="text-xs text-admin-text-faint">
+                        {share.view_count} view{share.view_count !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </button>
+                  {confirmDeleteId === share.id ? (
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={() => handleDelete(share.id)} className="text-admin-danger hover:text-red-300 p-1 transition-colors" title="Confirm delete">
+                        <Check size={14} />
+                      </button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors" title="Cancel">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(share.id)}
+                      className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-danger p-1 transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {shares.length === 0 && !loading && (
+                <p className="px-4 py-3 text-admin-sm text-admin-text-faint">No share links yet.</p>
               )}
             </div>
-          )}
+          </div>
+
+          {/* Right: detail pane */}
+          <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar-auto">
+            {selected ? (
+              <ShareDetail
+                share={selected}
+                copiedId={copiedId}
+                onCopyLink={copyLink}
+                onUpdate={handleUpdate}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-admin-sm text-admin-text-faint">
+                {shares.length === 0 ? 'Create a share link to get started.' : 'Select a share link.'}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
         <PanelFooter
-          onSave={handleCreate}
-          saveLabel={creating ? 'Creating...' : (isPublished ? 'Create Share Link' : 'Publish & Share')}
-          saveDisabled={creating}
           secondaryActions={
             <button
               onClick={() => window.open(`/s/preview/${scriptId}`, '_blank')}
@@ -136,39 +194,38 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
   );
 }
 
-// ── Individual share row ─────────────────────────────────────────────────
+// ── Detail pane for a selected share ─────────────────────────────────────
 
-function ShareRow({
+function ShareDetail({
   share,
   copiedId,
-  confirmDeleteId,
   onCopyLink,
   onUpdate,
-  onRequestConfirm,
-  onConfirmDelete,
-  onCancelDelete,
 }: {
   share: ShareWithCount;
   copiedId: string | null;
-  confirmDeleteId: string | null;
-  onCopyLink: (token: string, shareId: string) => void;
+  onCopyLink: (token: string, id: string) => void;
   onUpdate: (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean }) => void;
-  onRequestConfirm: (id: string) => void;
-  onConfirmDelete: (id: string) => void;
-  onCancelDelete: () => void;
 }) {
   const [label, setLabel] = useState(share.label);
   const [accessCode, setAccessCode] = useState(share.access_code);
   const [notes, setNotes] = useState(share.notes ?? '');
 
+  // Sync local state when selection changes
+  useEffect(() => {
+    setLabel(share.label);
+    setAccessCode(share.access_code);
+    setNotes(share.notes ?? '');
+  }, [share.id, share.label, share.access_code, share.notes]);
+
   return (
-    <div className={`border border-admin-border rounded-admin-md p-4 space-y-3 ${!share.is_active ? 'opacity-50' : ''}`}>
-      {/* Top row: link + actions */}
-      <div className="flex items-center justify-between gap-2">
-        <code className="text-admin-sm text-admin-text-secondary font-admin-mono truncate">
-          fna.wtf/s/{share.token}
-        </code>
-        <div className="flex items-center gap-1">
+    <div className="p-5 space-y-5">
+      {/* Link + copy */}
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <code className="text-admin-sm text-admin-text-secondary font-admin-mono truncate">
+            fna.wtf/s/{share.token}
+          </code>
           <button
             onClick={() => onCopyLink(share.token, share.id)}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
@@ -176,26 +233,27 @@ function ShareRow({
           >
             {copiedId === share.id ? <Check size={14} className="text-admin-success" /> : <Copy size={14} />}
           </button>
-          <button
-            onClick={() => onUpdate(share.id, { is_active: !share.is_active })}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-            title={share.is_active ? 'Deactivate' : 'Activate'}
-          >
-            {share.is_active ? <Eye size={14} /> : <EyeOff size={14} />}
-          </button>
-          <TwoStateDeleteButton
-            itemId={share.id}
-            confirmId={confirmDeleteId}
-            onRequestConfirm={onRequestConfirm}
-            onConfirmDelete={onConfirmDelete}
-            onCancel={onCancelDelete}
-          />
         </div>
       </div>
 
-      {/* Label */}
+      {/* Status toggle */}
+      <div className="flex items-center justify-between">
+        <label className="admin-label mb-0">Status</label>
+        <button
+          onClick={() => onUpdate(share.id, { is_active: !share.is_active })}
+          className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+            share.is_active
+              ? 'text-admin-success border-admin-success/30 bg-admin-success-bg/20'
+              : 'text-admin-text-faint border-admin-border bg-admin-bg-hover'
+          }`}
+        >
+          {share.is_active ? 'Active' : 'Offline'}
+        </button>
+      </div>
+
+      {/* Label (internal) */}
       <div>
-        <label className="admin-label">Label</label>
+        <label className="admin-label">Label (internal)</label>
         <input
           value={label}
           onChange={e => setLabel(e.target.value)}
@@ -224,7 +282,7 @@ function ShareRow({
           onChange={e => setNotes(e.target.value)}
           onBlur={() => { if (notes !== (share.notes ?? '')) onUpdate(share.id, { notes: notes || undefined }); }}
           placeholder="Guidance for the reviewer..."
-          rows={3}
+          rows={4}
           className="admin-input w-full resize-none"
         />
       </div>
