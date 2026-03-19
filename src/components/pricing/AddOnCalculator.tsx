@@ -563,13 +563,39 @@ function PhotoSliderRow({
   );
 }
 
+// ── Per-item day stepper ─────────────────────────────────────────────────
+
+function DaysStepper({ addOnId, currentDays, onDaysChange, disabled }: {
+  addOnId: string;
+  currentDays: number;
+  onDaysChange: (id: string, days: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDaysChange(addOnId, Math.max(0.5, Math.round((currentDays - 0.5) * 100) / 100)); }}
+        disabled={disabled || currentDays <= 0.5}
+        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs disabled:opacity-30"
+      >-</button>
+      <span className="text-sm text-foreground w-14 text-center">{currentDays}d</span>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDaysChange(addOnId, Math.round((currentDays + 0.5) * 100) / 100); }}
+        disabled={disabled}
+        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+      >+</button>
+    </div>
+  );
+}
+
 function AddOnRow({
   addOn,
   selected,
   quantity,
   onToggle,
   onQuantityChange,
-  totalDays,
+  itemDays,
+  onDaysChange,
   isLocked,
   isCompare,
   isRecommended,
@@ -580,15 +606,13 @@ function AddOnRow({
   quantity: number;
   onToggle: (id: string) => void;
   onQuantityChange: (id: string, qty: number) => void;
-  totalDays: number;
+  itemDays: number;
+  onDaysChange: (id: string, days: number) => void;
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
   recommendedQuantity?: number;
 }) {
-  const perDayDisplay = addOn.perDay && totalDays > 1
-    ? ` (x${totalDays} days)`
-    : '';
 
   const lockedNotIncluded = isLocked && !selected;
   const compareAdded = isCompare && !isLocked && selected && !isRecommended;
@@ -643,9 +667,6 @@ function AddOnRow({
         <div className="min-w-0">
           <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>
             {addOn.name}
-            {selected && perDayDisplay && (
-              <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
-            )}
           </span>
           {addOn.description && (
             <span className={`text-xs block ${lockedNotIncluded ? 'text-white/10' : 'text-muted-foreground'}`}>{addOn.description}</span>
@@ -654,6 +675,9 @@ function AddOnRow({
       </div>
 
       <div className="flex items-center gap-3 flex-shrink-0">
+        {selected && addOn.perDay && !addOn.multiSlider && !isLocked && (
+          <DaysStepper addOnId={addOn.id} currentDays={itemDays} onDaysChange={onDaysChange} />
+        )}
         {addOn.quantity && (
           <div className={`flex items-center gap-2 ${selected && !isLocked ? 'visible' : 'invisible'}`} onClick={(e) => e.stopPropagation()}>
             <button
@@ -681,7 +705,8 @@ function TierToggleRow({
   tierSelection,
   onToggle,
   onTierChange,
-  totalDays,
+  itemDays,
+  onDaysChange,
   isLocked,
   isCompare,
   isRecommended,
@@ -691,13 +716,13 @@ function TierToggleRow({
   tierSelection: 'basic' | 'premium';
   onToggle: (id: string) => void;
   onTierChange: (id: string, tier: 'basic' | 'premium') => void;
-  totalDays: number;
+  itemDays: number;
+  onDaysChange: (id: string, days: number) => void;
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
 }) {
   const toggle = addOn.tierToggle!;
-  const perDayDisplay = addOn.perDay && totalDays > 1 ? ` (x${totalDays} days)` : '';
   const activePrice = tierSelection === 'premium' ? toggle.premium.price : toggle.basic.price;
 
   const lockedNotIncluded = isLocked && !selected;
@@ -751,10 +776,10 @@ function TierToggleRow({
         </div>
         <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>
           {addOn.name}
-          {selected && perDayDisplay && (
-            <span className="text-muted-foreground font-normal">{perDayDisplay}</span>
-          )}
         </span>
+        {selected && addOn.perDay && !isLocked && (
+          <DaysStepper addOnId={addOn.id} currentDays={itemDays} onDaysChange={onDaysChange} />
+        )}
         {selected && (
           <div className={`flex items-center gap-1 ml-auto mr-2 ${isLocked ? 'invisible' : ''}`} onClick={(e) => e.stopPropagation()}>
             {(['basic', 'premium'] as const).map((tier) => (
@@ -822,6 +847,7 @@ export function AddOnSection({
   onToggle,
   onQuantityChange,
   onSliderChange,
+  onDaysChange,
   fundraisingActive,
   totalDays,
   photoCount,
@@ -845,6 +871,7 @@ export function AddOnSection({
   onToggle: (id: string) => void;
   onQuantityChange: (id: string, qty: number) => void;
   onSliderChange: (id: string, val: number) => void;
+  onDaysChange?: (id: string, days: number) => void;
   fundraisingActive?: boolean;
   totalDays?: number;
   photoCount?: number;
@@ -908,7 +935,8 @@ export function AddOnSection({
           tierSelection={tierSelections?.get(addOn.id) ?? 'basic'}
           onToggle={onToggle}
           onTierChange={onTierChange}
-          totalDays={days}
+          itemDays={sliderValues.get(`${addOn.id}:days`) ?? days}
+          onDaysChange={onDaysChange ?? (() => {})}
           isLocked={isLocked}
           isCompare={isCompare}
           isRecommended={addonIsRecommended}
@@ -981,7 +1009,8 @@ export function AddOnSection({
         quantity={selectedAddOns.get(addOn.id) ?? addOn.quantity?.default ?? 1}
         onToggle={isForced ? () => {} : onToggle}
         onQuantityChange={onQuantityChange}
-        totalDays={days}
+        itemDays={sliderValues.get(`${addOn.id}:days`) ?? days}
+        onDaysChange={onDaysChange ?? (() => {})}
         isLocked={isLocked || isForced}
         isCompare={isCompare}
         isRecommended={addonIsRecommended}
@@ -1190,7 +1219,21 @@ export function AddOnCalculator() {
       next.set(id, qty);
       return next;
     });
+    // Reset all per-item day overrides when global production days changes
+    if (id === 'launch-production-days') {
+      setSliderValues((prev) => {
+        const next = new Map(prev);
+        for (const key of next.keys()) {
+          if (key.endsWith(':days')) next.delete(key);
+        }
+        return next;
+      });
+    }
   }, [checkGate]);
+
+  const handleDaysChange = useCallback((addOnId: string, days: number) => {
+    setSliderValues((prev) => new Map(prev).set(`${addOnId}:days`, days));
+  }, []);
 
   const handleSliderChange = useCallback((id: string, val: number) => {
     if (checkGate()) return;
@@ -1406,6 +1449,7 @@ export function AddOnCalculator() {
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
+                  onDaysChange={handleDaysChange}
                   expandedCategories={expandedCategories}
                   onCategoryToggle={toggleCategory}
                 />
@@ -1426,6 +1470,7 @@ export function AddOnCalculator() {
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
+                  onDaysChange={handleDaysChange}
                   fundraisingActive={false}
                   totalDays={totalDays}
                   photoCount={photoCount}

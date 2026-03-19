@@ -381,6 +381,19 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
       n.set(id, qty);
       return n;
     });
+    if (id === 'launch-production-days') {
+      setSliderValues((prev) => {
+        const n = new Map(prev);
+        for (const key of n.keys()) {
+          if (key.endsWith(':days')) n.delete(key);
+        }
+        return n;
+      });
+    }
+  }, []);
+
+  const handleDaysChange = useCallback((addOnId: string, days: number) => {
+    setSliderValues((prev) => new Map(prev).set(`${addOnId}:days`, days));
   }, []);
 
   const handleSliderChange = useCallback((id: string, val: number) => {
@@ -556,6 +569,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
+                  onDaysChange={handleDaysChange}
                   expandedCategories={expandedCategories}
                   onCategoryToggle={toggleCategory}
                   isLocked={isLocked}
@@ -582,6 +596,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
                   onToggle={handleToggle}
                   onQuantityChange={handleQuantityChange}
                   onSliderChange={handleSliderChange}
+                  onDaysChange={handleDaysChange}
                   fundraisingActive={false}
                   totalDays={totalDays}
                   photoCount={photoCount}

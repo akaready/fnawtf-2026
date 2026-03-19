@@ -59,22 +59,22 @@ export function calcTierTotal(
     if (addOn.slider) {
       if (!selectedAddOns.has(addOn.id)) continue;
       const val = sliderValues.get(addOn.id) ?? addOn.slider.default;
-      const dayMultiplier = addOn.perDay ? totalDays : 1;
-      const sliderTotal = val * dayMultiplier;
+      const itemDays = addOn.perDay ? (sliderValues.get(`${addOn.id}:days`) ?? totalDays) : 1;
+      const sliderTotal = val * itemDays;
       total += sliderTotal;
       let label = addOn.name;
-      if (addOn.perDay && totalDays > 1) label += ` x${totalDays}d`;
+      if (addOn.perDay && itemDays > 1) label += ` x${itemDays} days`;
       items.push({ name: label, price: sliderTotal });
       continue;
     }
 
     if (selectedAddOns.has(addOn.id)) {
       const qty = selectedAddOns.get(addOn.id) ?? 1;
-      const dayMultiplier = addOn.perDay ? totalDays : 1;
+      const itemDays = addOn.perDay ? (sliderValues.get(`${addOn.id}:days`) ?? totalDays) : 1;
       const unitPrice = addOn.tierToggle
         ? (tierSelections?.get(addOn.id) === 'premium' ? addOn.tierToggle.premium.price : addOn.tierToggle.basic.price)
         : addOn.price;
-      let linePrice = unitPrice * qty * dayMultiplier;
+      let linePrice = unitPrice * qty * itemDays;
 
       if (addOn.photoSlider) {
         const extraPhotos = Math.max(0, photoCount - addOn.photoSlider.included);
@@ -94,7 +94,7 @@ export function calcTierTotal(
           label += ` x${qty}`;
         }
       }
-      if (addOn.perDay && totalDays > 1) label += ` x${totalDays} days`;
+      if (addOn.perDay && itemDays > 1) label += ` x${itemDays} days`;
 
       items.push({ name: label, price: linePrice });
     }
