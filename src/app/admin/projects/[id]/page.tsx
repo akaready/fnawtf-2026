@@ -54,7 +54,7 @@ export default async function EditProjectPage({ params }: PageProps) {
       <div className="flex-1 min-h-0 overflow-y-auto admin-scrollbar px-8 pt-4 pb-8">
         <ProjectForm
           project={project as Parameters<typeof ProjectForm>[0]['project']}
-          videos={videos ?? []}
+          videos={(videos ?? []) as Parameters<typeof ProjectForm>[0]['videos']}
           credits={credits ?? []}
           btsImages={btsImages ?? []}
           tagSuggestions={tagSuggestions}

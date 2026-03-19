@@ -29,7 +29,7 @@ export async function getContractTemplates(): Promise<ContractTemplateRow[]> {
     .select('*')
     .order('sort_order', { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as ContractTemplateRow[];
+  return (data ?? []) as unknown as ContractTemplateRow[];
 }
 
 export async function getContractTemplate(id: string): Promise<ContractTemplateRow> {
@@ -40,7 +40,7 @@ export async function getContractTemplate(id: string): Promise<ContractTemplateR
     .eq('id', id)
     .single();
   if (error) throw new Error(error.message);
-  return data as ContractTemplateRow;
+  return data as unknown as ContractTemplateRow;
 }
 
 export async function createContractTemplate(input: {
@@ -135,7 +135,7 @@ export async function createContractFromTemplate(params: {
     .eq('id', params.templateId)
     .single();
   if (tErr) throw new Error(tErr.message);
-  const tmpl = template as ContractTemplateRow;
+  const tmpl = template as unknown as ContractTemplateRow;
 
   // Load linked records for merge
   const mergeFieldDefs = tmpl.merge_fields as MergeFieldDef[];

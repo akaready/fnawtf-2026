@@ -1,12 +1,13 @@
 import { getMeetings, getMeetingsConfig, getClients, getContacts } from '../actions';
 import { MeetingsManager } from '../_components/MeetingsManager';
+import type { MeetingWithRelations } from '@/types/meetings';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MeetingsPage() {
   const [meetings, config, clients, contacts] = await Promise.all([
-    getMeetings().catch(() => []),
-    getMeetingsConfig().catch(() => null),
+    getMeetings().catch(() => []) as Promise<MeetingWithRelations[]>,
+    getMeetingsConfig().catch(() => null) as Promise<import('@/types/meetings').MeetingsConfigRow | null>,
     getClients(),
     getContacts(),
   ]);

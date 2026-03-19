@@ -5,5 +5,5 @@ export const dynamic = 'force-dynamic';
 
 export default async function ScriptsPage() {
   const scripts = await getScripts();
-  return <ScriptsListClient scripts={scripts} />;
+  return <ScriptsListClient scripts={scripts as Parameters<typeof ScriptsListClient>[0]['scripts']} />;
 }

@@ -21,14 +21,14 @@ export default async function ScriptEditorPage({ params }: { params: Promise<{ i
 
   return (
     <ScriptEditorClient
-      script={script}
-      initialScenes={scenes}
-      initialBeats={beats}
-      initialCharacters={characters}
-      initialTags={tags}
-      initialLocations={locations}
-      initialReferences={references}
-      globalLocations={globalLocations}
+      script={script as Parameters<typeof ScriptEditorClient>[0]['script']}
+      initialScenes={scenes as Parameters<typeof ScriptEditorClient>[0]['initialScenes']}
+      initialBeats={beats as Parameters<typeof ScriptEditorClient>[0]['initialBeats']}
+      initialCharacters={characters as Parameters<typeof ScriptEditorClient>[0]['initialCharacters']}
+      initialTags={tags as Parameters<typeof ScriptEditorClient>[0]['initialTags']}
+      initialLocations={locations as Parameters<typeof ScriptEditorClient>[0]['initialLocations']}
+      initialReferences={references as Parameters<typeof ScriptEditorClient>[0]['initialReferences']}
+      globalLocations={globalLocations as Parameters<typeof ScriptEditorClient>[0]['globalLocations']}
     />
   );
 }

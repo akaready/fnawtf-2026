@@ -1543,7 +1543,7 @@ export async function renameTag(id: string, newName: string) {
 
   if (CLIENT_CATEGORIES.has(tag.category as TagCategory)) {
     const { data: affectedRaw } = await supabase.from('clients').select(`id, ${col}`).contains(col, [oldName]);
-    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    const affected = (affectedRaw ?? []) as unknown as Array<Record<string, unknown>>;
     await Promise.all(
       affected.map((c) => {
         const arr = ((c[col] as string[]) ?? []).map((t) => (t === oldName ? trimmed : t));
@@ -1554,7 +1554,7 @@ export async function renameTag(id: string, newName: string) {
     await supabase.from('projects').update({ [col]: trimmed } as never).eq(col, oldName);
   } else {
     const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [oldName]);
-    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    const affected = (affectedRaw ?? []) as unknown as Array<Record<string, unknown>>;
     if (affected.length > 0) {
       await Promise.all(
         affected.map((p) => {
@@ -1583,7 +1583,7 @@ export async function deleteTag(id: string) {
 
   if (CLIENT_CATEGORIES.has(tag.category as TagCategory)) {
     const { data: affectedRaw } = await supabase.from('clients').select(`id, ${col}`).contains(col, [tag.name]);
-    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    const affected = (affectedRaw ?? []) as unknown as Array<Record<string, unknown>>;
     await Promise.all(
       affected.map((c) => {
         const arr = ((c[col] as string[]) ?? []).filter((t) => t !== tag.name);
@@ -1594,7 +1594,7 @@ export async function deleteTag(id: string) {
     await supabase.from('projects').update({ [col]: null } as never).eq(col, tag.name);
   } else {
     const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [tag.name]);
-    const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+    const affected = (affectedRaw ?? []) as unknown as Array<Record<string, unknown>>;
     if (affected.length > 0) {
       await Promise.all(
         affected.map((p) => {
@@ -1629,7 +1629,7 @@ export async function mergeTags(sourceIds: string[], targetId: string) {
 
     if (CLIENT_CATEGORIES.has(target.category as TagCategory)) {
       const { data: affectedRaw } = await supabase.from('clients').select(`id, ${col}`).contains(col, [source.name]);
-      const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+      const affected = (affectedRaw ?? []) as unknown as Array<Record<string, unknown>>;
       await Promise.all(
         affected.map((c) => {
           let arr = (c[col] as string[]) ?? [];
@@ -1643,7 +1643,7 @@ export async function mergeTags(sourceIds: string[], targetId: string) {
       await supabase.from('projects').update({ [col]: target.name } as never).eq(col, source.name);
     } else {
       const { data: affectedRaw } = await supabase.from('projects').select(`id, ${col}`).contains(col, [source.name]);
-      const affected = (affectedRaw ?? []) as Array<Record<string, unknown>>;
+      const affected = (affectedRaw ?? []) as unknown as Array<Record<string, unknown>>;
       if (affected.length > 0) {
         await Promise.all(
           affected.map((p) => {
@@ -1861,7 +1861,7 @@ export async function restoreLayoutSnapshot(id: string) {
     .single();
   if (fetchErr) throw new Error(fetchErr.message);
 
-  const placements = (snapshot as { placements: SnapshotPlacement[] }).placements;
+  const placements = (snapshot as unknown as { placements: SnapshotPlacement[] }).placements;
 
   // Delete all current placements
   const { error: delErr } = await supabase
@@ -3374,7 +3374,7 @@ export async function getScriptCastMap(
     .order('featured', { ascending: false }) as { data: Array<{ contact_id: string; url: string; featured: boolean }> | null };
 
   const contactMap = new Map(
-    ((contacts ?? []) as { id: string; first_name: string; last_name: string; appearance_prompt: string | null }[]).map(c => [c.id, c]),
+    ((contacts ?? []) as unknown as { id: string; first_name: string; last_name: string; appearance_prompt: string | null }[]).map(c => [c.id, c]),
   );
   // Featured headshot per contact (first featured or first overall)
   const featuredHeadshotMap = new Map<string, string>();

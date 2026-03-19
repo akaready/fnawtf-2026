@@ -2,6 +2,11 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true, // Required for PostHog reverse proxy
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   turbopack: {
     root: process.cwd(),
   },

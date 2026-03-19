@@ -35,6 +35,7 @@ import { ScriptStylePanel } from './ScriptStylePanel';
 import { ScriptSharePanel } from './ScriptSharePanel';
 import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from './ScriptScratchPad';
 import { ScriptExtractModal } from './ScriptExtractModal';
+import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { formatScriptVersion } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
 import type {
@@ -76,6 +77,7 @@ export function ScriptEditorClient({
   initialReferences,
   globalLocations = [],
 }: Props) {
+  const { showError } = useAdminToast();
   const [script, setScript] = useState(initialScript);
   const [scenes, setScenes] = useState(initialScenes);
   const [beats, setBeats] = useState(initialBeats);
@@ -180,14 +182,14 @@ export function ScriptEditorClient({
   // Load versions when picker opens
   useEffect(() => {
     if (versionPickerOpen && script.script_group_id) {
-      getScriptVersions(script.script_group_id).then(setVersions).catch(() => {});
+      getScriptVersions(script.script_group_id).then(v => setVersions(v as typeof versions)).catch(() => {});
     }
   }, [versionPickerOpen, script.script_group_id]);
 
   // Also load versions when extract modal opens (for accurate version label)
   useEffect(() => {
     if (showExtractModal && script.script_group_id) {
-      getScriptVersions(script.script_group_id).then(setVersions).catch(() => {});
+      getScriptVersions(script.script_group_id).then(v => setVersions(v as typeof versions)).catch(() => {});
     }
   }, [showExtractModal, script.script_group_id]);
 
@@ -350,24 +352,34 @@ export function ScriptEditorClient({
   // ── Reference operations ──
   const handleUploadReference = useCallback(async (beatId: string, files: FileList) => {
     for (const file of Array.from(files)) {
-      const formData = new FormData();
-      formData.append('file', file);
-      const result = await uploadBeatReference(beatId, formData);
-      setReferences(prev => [...prev, {
-        id: result.id,
-        beat_id: beatId,
-        image_url: result.image_url,
-        storage_path: result.storage_path,
-        sort_order: prev.filter(r => r.beat_id === beatId).length,
-        created_at: new Date().toISOString(),
-      }]);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await uploadBeatReference(beatId, formData);
+        setReferences(prev => [...prev, {
+          id: result.id,
+          beat_id: beatId,
+          image_url: result.image_url,
+          storage_path: result.storage_path,
+          sort_order: prev.filter(r => r.beat_id === beatId).length,
+          created_at: new Date().toISOString(),
+        }]);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Upload failed';
+        showError('Reference upload failed', `${file.name}: ${msg}`);
+      }
     }
-  }, []);
+  }, [showError]);
 
   const handleDeleteReference = useCallback(async (refId: string) => {
-    await deleteBeatReference(refId);
-    setReferences(prev => prev.filter(r => r.id !== refId));
-  }, []);
+    try {
+      await deleteBeatReference(refId);
+      setReferences(prev => prev.filter(r => r.id !== refId));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Delete failed';
+      showError('Failed to delete reference', msg);
+    }
+  }, [showError]);
 
   // ── Storyboard frame handler ──
   const handleFrameChange = useCallback((frame: ScriptStoryboardFrameRow | null, beatId?: string) => {

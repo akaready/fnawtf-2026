@@ -101,7 +101,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
     .eq('project_id', project.id)
     .limit(1);
 
-  const videos: ProjectVideo[] = rawVideos ?? [];
+  const videos = (rawVideos ?? []) as unknown as ProjectVideo[];
   const credits: ProjectCredit[] = rawCredits ?? [];
   const btsImages: ProjectBTSImage[] = rawBtsImages ?? [];
   const testimonial = rawTestimonials?.[0] as { quote: string; person_name: string | null; person_title: string | null; display_title: string | null } | undefined;

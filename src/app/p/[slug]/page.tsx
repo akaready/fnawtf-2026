@@ -45,7 +45,7 @@ export default async function ProposalPage({ params }: Props) {
       proposal={data.proposal}
       sections={data.sections}
       videos={data.videos as ProposalVideo[]}
-      quotes={data.quotes}
+      quotes={data.quotes as Parameters<typeof ProposalPageClient>[0]['quotes']}
       milestones={data.milestones}
       viewerEmail={viewer.email}
       viewerName={viewer.name}
