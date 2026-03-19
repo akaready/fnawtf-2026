@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Plus, ExternalLink, Trash2, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
+import { X, Copy, Check, Plus, ExternalLink, EyeOff, Eye, ChevronDown, ChevronRight } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { getScriptShares, createScriptShare, updateScriptShare, archiveScriptShare, restoreScriptShare } from '@/app/admin/actions';
@@ -61,7 +61,6 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -112,7 +111,6 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
   const handleArchive = async (shareId: string) => {
     await archiveScriptShare(shareId);
     setShares(prev => prev.map(s => s.id === shareId ? { ...s, is_active: false } as ShareWithViews : s));
-    setConfirmDeleteId(null);
     // Select next active share
     const remaining = shares.filter(s => s.is_active && s.id !== shareId);
     setSelectedId(remaining[0]?.id ?? null);
@@ -152,7 +150,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="w-full flex items-center justify-center gap-1.5 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors disabled:opacity-40"
+                className="w-full flex items-center gap-1.5 px-4 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors disabled:opacity-40"
               >
                 <Plus size={12} />
                 {creating ? 'Creating...' : (isPublished ? 'New Link' : 'Publish & Share')}
@@ -171,11 +169,8 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
                   key={share.id}
                   share={share}
                   isSelected={selectedId === share.id}
-                  confirmDeleteId={confirmDeleteId}
                   onSelect={() => setSelectedId(share.id)}
-                  onRequestDelete={() => setConfirmDeleteId(share.id)}
                   onConfirmDelete={() => handleArchive(share.id)}
-                  onCancelDelete={() => setConfirmDeleteId(null)}
                 />
               ))}
 
@@ -206,10 +201,10 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
                       </button>
                       <button
                         onClick={() => handleRestore(share.id)}
-                        className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-info p-1 transition-all"
+                        className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-text-faint p-1 transition-all"
                         title="Restore"
                       >
-                        <RotateCcw size={12} />
+                        <Eye size={12} />
                       </button>
                     </div>
                   ))}
@@ -259,19 +254,13 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
 function SidebarItem({
   share,
   isSelected,
-  confirmDeleteId,
   onSelect,
-  onRequestDelete,
   onConfirmDelete,
-  onCancelDelete,
 }: {
   share: ShareWithViews;
   isSelected: boolean;
-  confirmDeleteId: string | null;
   onSelect: () => void;
-  onRequestDelete: () => void;
   onConfirmDelete: () => void;
-  onCancelDelete: () => void;
 }) {
   return (
     <div
@@ -292,24 +281,13 @@ function SidebarItem({
           </div>
         </div>
       </button>
-      {confirmDeleteId === share.id ? (
-        <div className="flex items-center gap-0.5">
-          <button onClick={onConfirmDelete} className="text-admin-danger hover:text-red-300 p-1 transition-colors" title="Confirm archive">
-            <Check size={14} />
-          </button>
-          <button onClick={onCancelDelete} className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors" title="Cancel">
-            <X size={14} />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={onRequestDelete}
-          className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-danger p-1 transition-all"
-          title="Archive"
-        >
-          <Trash2 size={14} />
-        </button>
-      )}
+      <button
+        onClick={onConfirmDelete}
+        className="opacity-0 group-hover/row:opacity-100 text-admin-text-ghost hover:text-admin-text-faint p-1 transition-all"
+        title="Hide link"
+      >
+        <EyeOff size={14} />
+      </button>
     </div>
   );
 }
