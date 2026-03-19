@@ -180,14 +180,11 @@ export function ScriptShareIntro({
           ))}
         </h1>
 
-        {/* What to look for */}
+        {/* What to look for — same position as proposal subtitle */}
         {shareNotes && (
-          <div data-notes className="max-w-lg mb-8 text-left" style={{ opacity: 0 }}>
-            <p className="text-xs tracking-[0.3em] uppercase text-white/20 font-mono mb-2">What to Look For</p>
-            <p className="text-base text-white/50 leading-relaxed whitespace-pre-wrap">
-              {shareNotes}
-            </p>
-          </div>
+          <p data-notes className="text-xl text-white/40 max-w-lg leading-relaxed mb-8 whitespace-pre-wrap" style={{ opacity: 0 }}>
+            {shareNotes}
+          </p>
         )}
 
         {/* CTA Button — directional fill */}
@@ -245,11 +242,8 @@ export function ScriptShareIntro({
         </div>
 
         {/* Instructions */}
-        <p data-instructions className="text-sm text-white/40 max-w-sm leading-relaxed mb-1" style={{ opacity: 0 }}>
-          Navigate with arrow keys, the timeline, or the left/right buttons.
-        </p>
-        <p data-instructions className="text-xs text-white/30 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
-          Please leave comments per beat — your feedback helps us get it right.
+        <p data-instructions className="text-sm text-white/40 max-w-sm leading-relaxed" style={{ opacity: 0 }}>
+          Navigate with arrow keys, the timeline, or the left/right buttons. Please leave comments per beat — your feedback helps us get it right.
         </p>
       </div>
     </section>
