@@ -251,7 +251,7 @@ export function ScriptPresentationView({
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
           {/* Logo bar */}
-          <div className="flex items-center justify-center gap-3 pt-4 pb-3 flex-shrink-0">
+          <div className="flex items-center justify-center gap-3 pt-8 pb-4 flex-shrink-0">
             <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-7" />
             {clientLogoUrl && (
               <>
@@ -262,7 +262,7 @@ export function ScriptPresentationView({
           </div>
 
           {/* Title */}
-          <div className="text-center pb-4 flex-shrink-0">
+          <div className="text-center pb-6 flex-shrink-0">
             {clientName && (
               <p className="text-[#555] text-xs uppercase tracking-widest mb-0.5">{clientName}</p>
             )}
@@ -275,20 +275,20 @@ export function ScriptPresentationView({
           {/* Storyboard image with nav arrows overlaid */}
           <div className="group/image relative w-full max-w-5xl flex-shrink-0">
             {/* Nav arrows — bottom center of image, visible on hover */}
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300">
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300">
               <button
                 onClick={(e) => { e.stopPropagation(); goPrev(); }}
                 disabled={idx === 0}
-                className="p-2 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                className="p-3 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={22} />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); goNext(); }}
                 disabled={idx >= slides.length - 1}
-                className="p-2 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                className="p-3 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={22} />
               </button>
             </div>
             <CrossfadeImage
