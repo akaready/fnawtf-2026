@@ -46,7 +46,7 @@ export function calcTierTotal(
         let label = `Location ${i + 1}`;
         if (addOn.perDay && totalDays > 1) {
           if (days.length === totalDays) {
-            label += ` x${totalDays}d`;
+            label += ` x${totalDays} ${totalDays === 1 ? 'day' : 'days'}`;
           } else {
             label += ` (D${days.join(',D')})`;
           }

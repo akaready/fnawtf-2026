@@ -578,7 +578,7 @@ function DaysStepper({ addOnId, currentDays, onDaysChange, disabled }: {
         disabled={disabled || currentDays <= 0.5}
         className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs disabled:opacity-30"
       >-</button>
-      <span className="text-sm text-foreground w-14 text-center">{currentDays}d</span>
+      <span className="text-sm text-foreground w-20 text-center">{currentDays} {currentDays === 1 ? 'day' : 'days'}</span>
       <button
         onClick={(e) => { e.stopPropagation(); onDaysChange(addOnId, Math.round((currentDays + 0.5) * 100) / 100); }}
         disabled={disabled}
