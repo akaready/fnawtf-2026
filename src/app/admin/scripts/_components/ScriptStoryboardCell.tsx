@@ -216,7 +216,8 @@ export function ScriptStoryboardCell({
           <img
             src={frame.image_url}
             alt=""
-            className="w-full aspect-video object-cover rounded"
+            className="w-full aspect-video object-cover rounded cursor-pointer"
+            onClick={() => setLightboxOpen(true)}
           />
         </div>
         {/* Hover actions */}
@@ -224,7 +225,7 @@ export function ScriptStoryboardCell({
           className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded"
           onMouseLeave={() => setConfirmDelete(false)}
         >
-            <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
+          <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
           <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
             const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
             void downloadSingleImage(frame.image_url, filename);
@@ -251,7 +252,7 @@ export function ScriptStoryboardCell({
       {lightboxOpen && (() => {
         const lightboxFrames = sceneFrames && sceneFrames.length > 0
           ? sceneFrames
-          : [{ imageUrl: frame.image_url, label: `Scene ${scene.sceneNumber} — Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel) }];
+          : [{ imageUrl: frame.image_url, label: `Scene ${scene.sceneNumber} — Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel), audioContent, visualContent }];
         const lightboxIndex = lightboxFrames.findIndex(f => f.imageUrl === frame.image_url);
         return (
           <StoryboardLightbox

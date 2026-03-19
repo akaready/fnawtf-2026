@@ -825,6 +825,7 @@ export function ScriptEditorCanvas({
                         });
                       const sceneFramesForLightbox = thisSceneFrames.map(f => {
                         const beatIdx = scene.beats.findIndex(b => b.id === f.beat_id);
+                        const beat = scene.beats[beatIdx];
                         let letter = '';
                         let n = beatIdx + 1;
                         while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
@@ -832,6 +833,8 @@ export function ScriptEditorCanvas({
                           imageUrl: f.image_url,
                           label: `Scene ${scene.sceneNumber} — Beat ${letter}`,
                           filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, letter),
+                          audioContent: beat?.audio_content ?? '',
+                          visualContent: beat?.visual_content ?? '',
                         };
                       });
                       return scene.beats.map((beat, i) => (
