@@ -1,42 +1,17 @@
-'use server';
-
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
 
 const PORTAL_COOKIE_NAME = 'portal_auth';
 const PORTAL_COOKIE_PATH = '/portal';
 const PORTAL_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
-interface PortalSession {
+export interface PortalSession {
   clientId: string;
   clientName: string;
   email: string;
   logoUrl: string | null;
 }
 
-export async function loginToPortal(
-  email: string,
-  password: string,
-): Promise<{ success: true; clientId: string; clientName: string; logoUrl: string | null } | { success: false; error: string }> {
-  const supabase = await createClient();
-
-  const { data: client } = await supabase
-    .from('clients')
-    .select('id, name, logo_url, portal_password')
-    .eq('portal_password', password)
-    .maybeSingle();
-
-  if (!client) {
-    return { success: false, error: 'Invalid access code.' };
-  }
-
-  const session: PortalSession = {
-    clientId: client.id,
-    clientName: client.name,
-    email,
-    logoUrl: client.logo_url ?? null,
-  };
-
+export async function setPortalSession(session: PortalSession): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.set(PORTAL_COOKIE_NAME, JSON.stringify(session), {
     httpOnly: true,
@@ -45,13 +20,6 @@ export async function loginToPortal(
     maxAge: PORTAL_COOKIE_MAX_AGE,
     path: PORTAL_COOKIE_PATH,
   });
-
-  return {
-    success: true,
-    clientId: client.id,
-    clientName: client.name,
-    logoUrl: client.logo_url ?? null,
-  };
 }
 
 export async function getPortalSession(): Promise<PortalSession | null> {
