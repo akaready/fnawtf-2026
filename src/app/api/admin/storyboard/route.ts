@@ -9,11 +9,19 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = process.env.STORYBOARD_MODEL ?? 'gemini-3-pro-image-preview';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
-// Absolute rules injected at the very top of every prompt — must appear before style or content.
+// Absolute rules injected into every prompt — after style, before content.
 const ABSOLUTE_RULES = `\
 ════════════════════════════════════════════════════════
 ABSOLUTE RULES — THESE OVERRIDE EVERY OTHER INSTRUCTION
 ════════════════════════════════════════════════════════
+
+NO CAMERA EQUIPMENT: No boom microphones, camera rigs, tripods, studio lights, light stands, \
+or any film/video production equipment anywhere in frame — unless the script explicitly names it.
+
+NO CREW: No camera operators, sound recordists, interviewers, or off-camera personnel visible.
+
+NO INTERVIEWER: In interview scenes, ONLY the subject being interviewed appears on camera. \
+No OTS shots, no interviewer shoulders/hands/silhouettes in frame.
 
 ZERO TEXT: No words, letters, numbers, percentages, statistics, labels, captions, \
 scene titles, dialogue, subtitles, speech bubbles, sound effects, infographics, \
@@ -44,6 +52,7 @@ interface GenerateRequest {
   beatReferenceUrls?: string[];
   castReferenceUrls?: string[];
   locationReferenceUrls?: string[];
+  consistencyFrameUrls?: string[];
 }
 
 export async function POST(request: Request) {
@@ -62,7 +71,8 @@ export async function POST(request: Request) {
   const {
     scriptId, beatId, sceneId, contentPrompt, stylePrompt,
     stylePreset, notesContent: _notesContent, aspectRatio = '16:9',
-    referenceImageUrls = [], beatReferenceUrls = [], castReferenceUrls = [], locationReferenceUrls = [],
+    referenceImageUrls = [], beatReferenceUrls = [], castReferenceUrls = [],
+    locationReferenceUrls = [], consistencyFrameUrls = [],
   } = body;
 
   if (!scriptId || (!beatId && !sceneId)) {
@@ -85,11 +95,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── Section 1: Absolute rules (top of prompt — highest enforcement weight) ──
-    const promptSections: string[] = [ABSOLUTE_RULES, ''];
-
-    // ── Section 2: Mandatory visual style ──
     const hasStyle = (stylePreset && STYLE_PRESETS[stylePreset]) || stylePrompt;
+
+    // ── Section 1: Mandatory visual style — MUST be first for style adherence ──
+    const promptSections: string[] = [];
     if (hasStyle) {
       promptSections.push('════════════════════════════════════════════════════════');
       promptSections.push('MANDATORY VISUAL STYLE — every pixel of this image MUST match:');
@@ -111,6 +120,10 @@ export async function POST(request: Request) {
       promptSections.push('');
     }
 
+    // ── Section 2: Absolute rules ──
+    promptSections.push(ABSOLUTE_RULES);
+    promptSections.push('');
+
     // ── Section 3: Scene content ──
     promptSections.push('════════════════════════════════════════════════════════');
     promptSections.push('SCENE CONTENT — generate a single storyboard frame for:');
@@ -118,7 +131,21 @@ export async function POST(request: Request) {
     promptSections.push(contentPrompt);
     promptSections.push('');
 
-    // ── Section 4: Location references (text header only — images follow inline) ──
+    // ── Section 4: Consistency reference (text header only — images follow inline) ──
+    const consistencyUrls = consistencyFrameUrls.slice(0, 2);
+    if (consistencyUrls.length > 0) {
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push('CONSISTENCY REFERENCE — PRIOR FRAMES FROM THIS SAME SEQUENCE:');
+      promptSections.push('════════════════════════════════════════════════════════');
+      promptSections.push(
+        'These images define the exact visual style, character appearance, color palette, and rendering ' +
+        'technique for this project. Your output MUST be visually indistinguishable from these — same ' +
+        'artist, same tools, same rendering. This is a continuation of an existing sequence.'
+      );
+      promptSections.push('');
+    }
+
+    // ── Section 5: Location references (text header only — images follow inline) ──
     if (locationReferenceUrls.length > 0) {
       promptSections.push('════════════════════════════════════════════════════════');
       promptSections.push('LOCATION REFERENCE PHOTOS — see attached images below:');
@@ -132,7 +159,7 @@ export async function POST(request: Request) {
       promptSections.push('');
     }
 
-    // ── Section 5: Character references (text header only — images follow inline) ──
+    // ── Section 6: Character references (text header only — images follow inline) ──
     const castUrls = castReferenceUrls.slice(0, 2);
     if (castUrls.length > 0) {
       promptSections.push('════════════════════════════════════════════════════════');
@@ -150,10 +177,12 @@ export async function POST(request: Request) {
     const textPart = promptSections.join('\n');
 
     // ── Assemble parts: text first, then reference images interleaved with labels ──
+    // Image cap: style≤4, cast≤2, consistency≤2, remaining slots for loc+beat
     const styleUrls = referenceImageUrls.slice(0, 4);
-    const locUrls = locationReferenceUrls.slice(0, 2);
-    const remainingSlots = Math.max(0, 8 - styleUrls.length - castUrls.length - locUrls.length);
-    const beatUrls = beatReferenceUrls.slice(0, remainingSlots);
+    const reservedSlots = styleUrls.length + castUrls.length + consistencyUrls.length;
+    const remainingSlots = Math.max(0, 8 - reservedSlots);
+    const locUrls = locationReferenceUrls.slice(0, Math.min(2, remainingSlots));
+    const beatUrls = beatReferenceUrls.slice(0, Math.max(0, remainingSlots - locUrls.length));
 
     const parts: Part[] = [{ text: textPart }];
 
@@ -162,6 +191,13 @@ export async function POST(request: Request) {
       parts.push({ text: 'STYLE REFERENCE IMAGES (match this visual style exactly):' });
       const styleImgs = await Promise.all(styleUrls.map(fetchImagePart));
       for (const img of styleImgs) { if (img) parts.push(img); }
+    }
+
+    // Consistency frame images — labeled group
+    if (consistencyUrls.length > 0) {
+      parts.push({ text: 'PRIOR FRAMES FROM THIS SEQUENCE (your output must be visually indistinguishable from these):' });
+      const consistencyImgs = await Promise.all(consistencyUrls.map(fetchImagePart));
+      for (const img of consistencyImgs) { if (img) parts.push(img); }
     }
 
     // Character reference images — labeled group
