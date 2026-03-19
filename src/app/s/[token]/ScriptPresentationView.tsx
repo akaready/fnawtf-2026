@@ -205,20 +205,18 @@ export function ScriptPresentationView({
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
-      <div className={`relative flex-shrink-0 h-full ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-12'}`}>
-        {/* Re-open button — visible when collapsed */}
-        {!leftOpen && (
-          <button
-            onClick={() => setLeftOpen(true)}
-            className="absolute left-2 top-2 w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
-            title="Show scenes"
-          >
-            <PanelLeftOpen size={16} />
-          </button>
-        )}
+      <div className="relative flex-shrink-0 h-full">
+        {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
+        <button
+          onClick={() => setLeftOpen(true)}
+          className={`absolute left-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          title="Show scenes"
+        >
+          <PanelLeftOpen size={16} />
+        </button>
 
         <div
-          className={`absolute inset-0 border-r border-admin-border bg-admin-bg-sidebar overflow-hidden z-10 ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
+          className={`h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden z-10 relative ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
         >
           <div className="w-56 h-full flex flex-col">
             {/* Header */}
@@ -323,7 +321,7 @@ export function ScriptPresentationView({
               duration={dissolveDuration}
             />
             {!current.storyboardImageUrl && (
-              <div className="w-full rounded-lg bg-[#0d0d0d] border border-white/[0.04] flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '16/9' }}>
+              <div className="w-full rounded-lg bg-[#0d0d0d] border border-white/[0.04] flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '16/9', maxHeight: '55vh' }}>
                 <ImageIcon size={32} className="text-[#222]" />
                 <span className="text-[#2a2a2a] text-xs font-mono">
                   {current.sceneNumber}{current.beatLetter}

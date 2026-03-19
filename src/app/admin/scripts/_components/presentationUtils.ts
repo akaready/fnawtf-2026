@@ -53,15 +53,33 @@ export function buildPresentationSlides(
   }
 
   for (const scene of scenes) {
+    const sceneName = [
+      scene.int_ext,
+      scene.location_name || 'UNTITLED LOCATION',
+      scene.time_of_day ? `— ${scene.time_of_day}` : '',
+    ].filter(Boolean).join('. ').replace('. —', ' —');
+
+    if (scene.beats.length === 0) {
+      // Empty scene — still create a slide so it appears in timeline
+      slides.push({
+        sceneNumber: scene.sceneNumber,
+        sceneName,
+        beatLetter: '',
+        audioContent: '',
+        visualContent: '',
+        notesContent: '',
+        storyboardImageUrl: null,
+        referenceImageUrls: [],
+        sceneId: scene.id,
+        beatId: `empty-${scene.id}`,
+      });
+      continue;
+    }
+
     for (let i = 0; i < scene.beats.length; i++) {
       const beat = scene.beats[i];
       const frame = framesByBeat.get(beat.id);
       const beatRefs = references[beat.id] ?? [];
-      const sceneName = [
-        scene.int_ext,
-        scene.location_name || 'UNTITLED LOCATION',
-        scene.time_of_day ? `— ${scene.time_of_day}` : '',
-      ].filter(Boolean).join('. ').replace('. —', ' —');
       slides.push({
         sceneNumber: scene.sceneNumber,
         sceneName,
