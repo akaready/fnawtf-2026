@@ -857,7 +857,7 @@ export function CalculatorSummary({
   const fundraisingResult = fundraisingEnabled ? calcTierTotal(fundraisingAddOnsList, selectedAddOns, sliderValues, 1, photoCount, tierSelections) : null;
 
   const buildBase = buildActive ? 5000 : 0;
-  const launchBase = launchActive ? 10000 : 0;
+  const launchBase = launchActive ? 5000 + (totalDays * 5000) : 0;
   const fundraisingBase = fundraisingEnabled ? 10000 : 0;
 
   const buildAddOnTotal = buildResult?.total ?? 0;

@@ -158,7 +158,7 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
   const fundResult = isFundraising ? calcTierTotal(fundAddOnsArr, sel, sliders, 1, photoCount, tiers) : null;
 
   const buildBase = buildActive ? 5000 : 0;
-  const launchBase = launchActive ? 10000 : 0;
+  const launchBase = launchActive ? 5000 + (totalDays * 5000) : 0;
   const fundBase = isFundraising ? 10000 : 0;
 
   const addOnTotal = (buildResult?.total ?? 0) + (launchResult?.total ?? 0) + (fundResult?.total ?? 0);
