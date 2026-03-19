@@ -404,6 +404,7 @@ export type ClientRow = {
   company_size: string | null;
   twitter_url: string | null;
   instagram_url: string | null;
+  portal_password?: string | null;
   created_at: string;
 };
 

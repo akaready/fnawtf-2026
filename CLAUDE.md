@@ -256,6 +256,19 @@ After any admin UI changes, run:
 
 ---
 
+## Visual Companion for UI Brainstorming
+
+When working on any UI design task (new pages, layout decisions, component choices), use the visual companion tool to show mockups in the browser during brainstorming. This dramatically improves design iteration speed — use it by default for any task involving visual decisions.
+
+**Start the server:**
+```bash
+/Users/Hobbes/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.5/skills/brainstorming/scripts/start-server.sh --project-dir .
+```
+
+Returns a `localhost` URL — tell the user to open it. Then write HTML fragments to the `screen_dir` it returns. See the brainstorming skill (`superpowers:brainstorming`) for full instructions and the visual companion guide.
+
+---
+
 ## GitHub Operations
 
 For ANY GitHub operation (PRs, issues, reviews, comments, checks), ALWAYS load the GitHub MCP tools first by calling `ToolSearch` with query `+github` before falling back to `gh` CLI. The GitHub MCP tools are deferred and must be loaded each session.

@@ -41,7 +41,8 @@ export function SiteLayoutWrapper({ children, nav, footer }: Props) {
   const isCallSheet = pathname.startsWith('/cs/');
   const isInvoice   = pathname.startsWith('/invoice/');
   const isScript    = pathname.startsWith('/s/');
-  const isImmersive = isProposalDeck || isIntakeForm || isCallSheet || isInvoice || isScript;
+  const isPortal    = pathname.startsWith('/portal');
+  const isImmersive = isProposalDeck || isIntakeForm || isCallSheet || isInvoice || isScript || isPortal;
 
   return (
     <PageTransition>

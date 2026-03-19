@@ -144,6 +144,27 @@
   --admin-letter-spacing-tight:  -0.02em;
   --admin-letter-spacing-normal: 0em;
   --admin-letter-spacing-wide:   0.05em;
+
+  /* ─── Portal Design Tokens ─────────────────────────────────────────────── */
+  --portal-bg-base:          #000000;
+  --portal-bar:              #000000;
+  --portal-border:           #1a1a1a;
+  --portal-border-subtle:    #222;
+  --portal-text-primary:     #e8e8e8;
+  --portal-text-muted:       #aaa;
+  --portal-text-faint:       #555;
+  --portal-text-separator:   #333;
+  --portal-avatar-bg:        #1e1e1e;
+  --portal-avatar-border:    #2a2a2a;
+  --portal-avatar-text:      #777;
+  --portal-crumb-active:     #c8c8c8;
+  --portal-crumb-inactive:   #484848;
+  --portal-logout-border:    #2a2a2a;
+  --portal-tile-bg:          #111111;
+  --portal-tile-border:      #222222;
+  --portal-tile-hover:       #181818;
+  --portal-accent:           #7c3aed;
+  --portal-card-bg:          #0e0e0e;
 }
 
 /* ─── Call Sheet Light Mode Override ──────────────────────────────────── */
