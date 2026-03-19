@@ -97,7 +97,7 @@ function SubmitButton({ submitting }: { submitting: boolean }) {
 
 // ── Modal ─────────────────────────────────────────────────────────────────
 
-function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ClientLoginModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [state, setState] = useState<State>('idle');
   const [authError, setAuthError] = useState('');
   const [email, setEmail] = useState('');

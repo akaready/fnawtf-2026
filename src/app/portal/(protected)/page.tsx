@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, ScrollText, Receipt, FileSignature, Inbox } from 'lucide-react';
+import { type LucideIcon, FileText, ScrollText, Receipt, FileSignature, Inbox } from 'lucide-react';
 import { getPortalSession } from '@/lib/portal/portalAuth';
 import { createClient } from '@/lib/supabase/server';
 
@@ -16,7 +16,7 @@ interface RecentItem {
 
 interface SectionTile {
   label: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  icon: LucideIcon;
   href: string;
   count: number | null;
   countLabel: string;
