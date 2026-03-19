@@ -63,7 +63,6 @@ export function ScriptStoryboardCell({
   scriptVersion,
   beatLabel,
   sceneFrames,
-  consistencyFrameUrls,
 }: Props) {
   const [generating, setGenerating] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -113,6 +112,12 @@ export function ScriptStoryboardCell({
         }
       }
 
+      // Compute consistency URLs from scene frames (exclude current frame if regenerating)
+      const computedConsistencyUrls = (sceneFrames ?? [])
+        .filter(f => f.imageUrl !== frame?.image_url)
+        .slice(-2)
+        .map(f => f.imageUrl);
+
       const res = await fetch('/api/admin/storyboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,7 +132,7 @@ export function ScriptStoryboardCell({
           beatReferenceUrls,
           castReferenceUrls,
           locationReferenceUrls,
-          consistencyFrameUrls,
+          consistencyFrameUrls: computedConsistencyUrls,
         }),
       });
 
@@ -138,7 +143,7 @@ export function ScriptStoryboardCell({
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, consistencyFrameUrls, scriptId, beatId, styleReferences, onFrameChange]);
+  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, sceneFrames, frame, scriptId, beatId, styleReferences, onFrameChange]);
 
   const handleUpload = useCallback(
     async (files: FileList | null) => {
