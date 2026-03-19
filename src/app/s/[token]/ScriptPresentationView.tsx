@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { CommentSidebar } from './CommentSidebar';
+import { CommentInput } from './CommentInput';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
@@ -88,6 +90,9 @@ export function ScriptPresentationView({
   clientLogoUrl,
   versionLabel,
   scenes,
+  shareId,
+  viewerEmail,
+  viewerName,
 }: Props) {
   const [idx, setIdx] = useState(0);
   const [colConfig, setColConfig] = useState<ScriptColumnConfig>({
@@ -100,6 +105,7 @@ export function ScriptPresentationView({
   const [chromeVisible, setChromeVisible] = useState(true);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
+  const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const chromeTimer = useRef<ReturnType<typeof setTimeout>>();
   const scrollCooldown = useRef(false);
 
@@ -423,42 +429,31 @@ export function ScriptPresentationView({
               </div>
             </div>
           )}
+
+          {/* ── Comment input ── */}
+          {current && (
+            <div className="w-full max-w-5xl flex-shrink-0 mb-4">
+              <CommentInput
+                shareId={shareId}
+                beatId={current.beatId}
+                viewerEmail={viewerEmail}
+                viewerName={viewerName}
+                onCommentAdded={() => setCommentRefreshKey(k => k + 1)}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ════ RIGHT SIDEBAR — Comments (placeholder) ════ */}
-      <div
-        className={`flex-shrink-0 h-full border-l border-border bg-[#0a0a0a] overflow-hidden ${sidebarTransition} ${rightOpen ? 'w-[260px]' : 'w-0'}`}
-      >
-        <div className="w-[260px] h-full flex flex-col">
-          {/* Sidebar header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-            <span className="text-sm font-medium text-[#888] uppercase tracking-wider">Comments</span>
-            <button
-              onClick={() => setRightOpen(false)}
-              className="p-1 rounded text-[#555] hover:text-white hover:bg-[#222] transition-colors"
-            >
-              <PanelRightClose size={14} />
-            </button>
-          </div>
-          {/* Placeholder */}
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-[#333]">Comments coming soon</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right sidebar toggle (when collapsed) */}
-      {!rightOpen && (
-        <button
-          onClick={() => setRightOpen(true)}
-          className={`absolute right-2 top-2 z-30 p-2 rounded text-[#555] hover:text-white hover:bg-[#222] transition-all duration-500 ${
-            chromeVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <PanelRightOpen size={16} />
-        </button>
-      )}
+      {/* ════ RIGHT SIDEBAR — Comments ════ */}
+      <CommentSidebar
+        shareId={shareId}
+        beatId={current?.beatId ?? null}
+        viewerEmail={viewerEmail}
+        open={rightOpen}
+        onToggle={() => setRightOpen(prev => !prev)}
+        refreshKey={commentRefreshKey}
+      />
     </div>
   );
 }

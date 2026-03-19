@@ -228,3 +228,88 @@ export async function updateScriptViewDuration(viewId: string, durationSeconds: 
     .update({ duration_seconds: durationSeconds } as never)
     .eq('id', viewId);
 }
+
+// ── Comments ─────────────────────────────────────────────────────────────
+
+export async function getComments(shareId: string, beatId: string) {
+  const service = createServiceClient();
+
+  const { data, error } = await service
+    .from('script_share_comments' as never)
+    .select('id, beat_id, viewer_email, viewer_name, content, is_admin, created_at')
+    .eq('share_id', shareId)
+    .eq('beat_id', beatId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error((error as { message: string }).message);
+
+  const rows = (data ?? []) as unknown as { id: string; beat_id: string; viewer_email: string; viewer_name: string | null; content: string; is_admin: boolean; created_at: string }[];
+
+  // Look up avatars via email match to contacts
+  const emails = [...new Set(rows.map(c => c.viewer_email).filter(Boolean))];
+  const avatarMap: Record<string, string> = {};
+
+  if (emails.length > 0) {
+    const { data: contacts } = await service
+      .from('contacts')
+      .select('email, headshot_url')
+      .in('email', emails);
+    for (const contact of (contacts ?? []) as { email: string; headshot_url: string | null }[]) {
+      if (contact.headshot_url) {
+        avatarMap[contact.email] = contact.headshot_url;
+      }
+    }
+  }
+
+  return rows.map(c => ({
+    ...c,
+    avatar_url: avatarMap[c.viewer_email] ?? null,
+  }));
+}
+
+export async function addComment(
+  shareId: string,
+  beatId: string,
+  viewerEmail: string,
+  viewerName: string | null,
+  content: string,
+) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('script_share_comments' as never)
+    .insert({
+      share_id: shareId,
+      beat_id: beatId,
+      viewer_email: viewerEmail,
+      viewer_name: viewerName,
+      content,
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error((error as { message: string }).message);
+  return (data as unknown as { id: string }).id;
+}
+
+export async function updateComment(
+  commentId: string,
+  viewerEmail: string,
+  content: string,
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('script_share_comments' as never)
+    .update({ content } as never)
+    .eq('id', commentId)
+    .eq('viewer_email', viewerEmail);
+  if (error) throw new Error((error as { message: string }).message);
+}
+
+export async function deleteComment(commentId: string, viewerEmail: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('script_share_comments' as never)
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq('id', commentId)
+    .eq('viewer_email', viewerEmail);
+  if (error) throw new Error((error as { message: string }).message);
+}
