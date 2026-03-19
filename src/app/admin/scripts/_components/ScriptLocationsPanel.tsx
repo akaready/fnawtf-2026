@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from 'react';
-import { Plus, Trash2, Check, X, Loader2, MapPin, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Check, X, Loader2, MapPin, ImagePlus, Pencil, RefreshCw, Sparkles } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -200,6 +200,9 @@ export function ScriptLocationsPanel({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
+  const [extractingRefDescription, setExtractingRefDescription] = useState(false);
+  const [editingRefAppearance, setEditingRefAppearance] = useState(false);
+  const [refAppearanceDraft, setRefAppearanceDraft] = useState('');
   const refUploadInputRef = useRef<HTMLInputElement>(null);
   // Local edits for dirty state tracking
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptLocationRow>>>({});
@@ -320,6 +323,7 @@ export function ScriptLocationsPanel({
         sort_order: locations.length,
         global_location_id: null,
         location_mode: 'place',
+        appearance_prompt: null,
         created_at: new Date().toISOString(),
       };
       onLocationsChange([...locations, newLoc]);
@@ -347,6 +351,47 @@ export function ScriptLocationsPanel({
       return next;
     });
   };
+
+  // ── Location reference description extraction ─────────────────────
+
+  const extractRefAppearance = useCallback(async (
+    locId: string,
+    refs: import('@/types/scripts').LocationReferenceRow[],
+    name: string,
+    description?: string,
+  ) => {
+    if (refs.length === 0) return;
+    setExtractingRefDescription(true);
+    try {
+      const res = await fetch('/api/admin/location-appearance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrls: refs.map(r => r.image_url),
+          metadata: { name, description },
+        }),
+      });
+      if (!res.ok) return;
+      const { appearancePrompt } = await res.json();
+      await updateLocation(locId, { appearance_prompt: appearancePrompt });
+      onLocationsChange(locations.map(l =>
+        l.id === locId ? { ...l, appearance_prompt: appearancePrompt } : l,
+      ));
+    } catch (err) {
+      console.error('Location ref appearance extraction error:', err);
+    } finally {
+      setExtractingRefDescription(false);
+    }
+  }, [locations, onLocationsChange]);
+
+  const handleSaveRefAppearance = useCallback(async () => {
+    if (!selected) return;
+    await updateLocation(selected.id, { appearance_prompt: refAppearanceDraft });
+    onLocationsChange(locations.map(l =>
+      l.id === selected.id ? { ...l, appearance_prompt: refAppearanceDraft } : l,
+    ));
+    setEditingRefAppearance(false);
+  }, [selected, refAppearanceDraft, locations, onLocationsChange]);
 
   // ── Location option handlers ──────────────────────────────────────
 
@@ -395,17 +440,26 @@ export function ScriptLocationsPanel({
   const handleUploadLocationRef = useCallback(async (file: File) => {
     if (!selected) return;
     const currentRefs = locationReferenceMap[selected.id] ?? [];
-    if (currentRefs.length >= 4) return;
+    if (currentRefs.length >= 8) return;
     setUploadingRef(true);
     try {
       const fd = new FormData();
       fd.append('file', file);
       const row = await uploadLocationReference(selected.id, fd);
-      onLocationReferenceMapChange({ ...locationReferenceMap, [selected.id]: [...currentRefs, row] });
+      const updatedRefs = [...currentRefs, row];
+      onLocationReferenceMapChange({ ...locationReferenceMap, [selected.id]: updatedRefs });
+      // Auto-generate on first upload or when no description yet
+      const currentLoc = locations.find(l => l.id === selected.id);
+      if (!currentLoc?.appearance_prompt) {
+        const edits = localEdits[selected.id];
+        const name = edits?.name ?? selected.name;
+        const description = edits?.description ?? selected.description ?? undefined;
+        await extractRefAppearance(selected.id, updatedRefs, name, description);
+      }
     } finally {
       setUploadingRef(false);
     }
-  }, [selected, locationReferenceMap, onLocationReferenceMapChange]);
+  }, [selected, locations, localEdits, locationReferenceMap, onLocationReferenceMapChange, extractRefAppearance]);
 
   const handleDeleteLocationRef = useCallback(async (ref: LocationReferenceRow) => {
     if (!selected) return;
@@ -591,8 +645,8 @@ export function ScriptLocationsPanel({
                   </div>
 
                   {(selectedWithEdits.location_mode ?? 'place') === 'references' && (
-                    /* References tab — up to 4 uploaded images */
-                    <div className="space-y-2">
+                    /* References tab — up to 8 uploaded images + auto-description */
+                    <div className="space-y-3">
                       <input
                         ref={refUploadInputRef}
                         type="file"
@@ -620,7 +674,7 @@ export function ScriptLocationsPanel({
                             </button>
                           </div>
                         ))}
-                        {(locationReferenceMap[selectedWithEdits.id] ?? []).length < 4 && (
+                        {(locationReferenceMap[selectedWithEdits.id] ?? []).length < 8 && (
                           <button
                             onClick={() => refUploadInputRef.current?.click()}
                             disabled={uploadingRef}
@@ -638,8 +692,73 @@ export function ScriptLocationsPanel({
                         )}
                       </div>
                       <p className="text-admin-sm text-admin-text-faint">
-                        Up to 4 images used as visual references for storyboard generation.
+                        Up to 8 images used as visual references for storyboard generation.
                       </p>
+                      {/* Auto-generated visual description */}
+                      {(locationReferenceMap[selectedWithEdits.id] ?? []).length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Visual Description</label>
+                          {extractingRefDescription ? (
+                            <div className="flex items-center gap-1.5 text-xs text-admin-text-faint">
+                              <Loader2 size={11} className="animate-spin" />
+                              Generating description…
+                            </div>
+                          ) : editingRefAppearance ? (
+                            <div className="space-y-1.5">
+                              <textarea
+                                value={refAppearanceDraft}
+                                onChange={e => setRefAppearanceDraft(e.target.value)}
+                                rows={5}
+                                className="admin-input w-full text-xs resize-none py-2 px-2.5 leading-relaxed"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button onClick={handleSaveRefAppearance} className="btn-primary px-4 py-2 text-xs">Save</button>
+                                <button onClick={() => setEditingRefAppearance(false)} className="btn-secondary px-4 py-2 text-xs">Cancel</button>
+                              </div>
+                            </div>
+                          ) : selectedWithEdits.appearance_prompt ? (
+                            <div className="group/refappearance space-y-1.5">
+                              <p className="text-xs text-admin-text-muted leading-relaxed line-clamp-4">
+                                {selectedWithEdits.appearance_prompt}
+                              </p>
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover/refappearance:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => { setRefAppearanceDraft(selectedWithEdits.appearance_prompt ?? ''); setEditingRefAppearance(true); }}
+                                  className="w-6 h-6 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+                                  title="Edit description"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const edits = localEdits[selectedWithEdits.id];
+                                    const name = edits?.name ?? selectedWithEdits.name;
+                                    const desc = edits?.description ?? selectedWithEdits.description ?? undefined;
+                                    extractRefAppearance(selectedWithEdits.id, locationReferenceMap[selectedWithEdits.id] ?? [], name, desc);
+                                  }}
+                                  className="w-6 h-6 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-info hover:bg-admin-bg-hover transition-colors"
+                                  title="Regenerate description"
+                                >
+                                  <RefreshCw size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const edits = localEdits[selectedWithEdits.id];
+                                const name = edits?.name ?? selectedWithEdits.name;
+                                const desc = edits?.description ?? selectedWithEdits.description ?? undefined;
+                                extractRefAppearance(selectedWithEdits.id, locationReferenceMap[selectedWithEdits.id] ?? [], name, desc);
+                              }}
+                              className="text-xs text-admin-text-ghost hover:text-admin-info transition-colors flex items-center gap-1.5"
+                            >
+                              <Sparkles size={12} />
+                              Generate description…
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

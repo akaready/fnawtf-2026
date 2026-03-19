@@ -4847,3 +4847,145 @@ export async function removeCallSheetLocation(id: string) {
   const { supabase } = await requireAuth();
   await supabase.from('call_sheet_locations' as never).delete().eq('id', id);
 }
+
+// ── Script Products ───────────────────────────────────────────────────────
+
+import type { ScriptProductRow, ProductReferenceRow } from '@/types/scripts';
+
+/** Fetch all products for a script, ordered by sort_order. */
+export async function getScriptProducts(scriptId: string): Promise<ScriptProductRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_products')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('sort_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ScriptProductRow[];
+}
+
+/** Create a new product on a script. Returns the new product id. */
+export async function createProduct(
+  scriptId: string,
+  data: { name: string; description?: string; color: string; sort_order: number },
+): Promise<string> {
+  const { supabase } = await requireAuth();
+
+  // Derive project_id from the script row
+  const { data: scriptRow } = await supabase
+    .from('scripts')
+    .select('project_id')
+    .eq('id', scriptId)
+    .single();
+  const projectId = (scriptRow as { project_id: string | null } | null)?.project_id ?? null;
+
+  const { data: row, error } = await supabase
+    .from('script_products')
+    .insert({ script_id: scriptId, project_id: projectId, ...data } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  return (row as { id: string }).id;
+}
+
+/** Update a script product. */
+export async function updateProduct(id: string, data: Partial<ScriptProductRow>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_products')
+    .update(data as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Delete a script product (cascades to product_references). */
+export async function deleteProduct(id: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_products').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Product References ────────────────────────────────────────────────────
+
+/** Bulk-load all reference images for every product in a script. */
+export async function getProductReferenceMap(
+  scriptId: string,
+): Promise<Record<string, ProductReferenceRow[]>> {
+  const { supabase } = await requireAuth();
+
+  const { data: products, error: productsErr } = await supabase
+    .from('script_products')
+    .select('id')
+    .eq('script_id', scriptId);
+  if (productsErr) throw new Error(productsErr.message);
+  const productIds = (products ?? []).map((p: { id: string }) => p.id);
+  if (productIds.length === 0) return {};
+
+  const { data: rows, error } = await supabase
+    .from('product_references')
+    .select('*')
+    .in('product_id', productIds)
+    .order('sort_order', { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const result: Record<string, ProductReferenceRow[]> = {};
+  for (const row of (rows ?? []) as ProductReferenceRow[]) {
+    (result[row.product_id] ??= []).push(row);
+  }
+  return result;
+}
+
+/** Upload a reference image for a product. */
+export async function uploadProductReference(
+  productId: string,
+  formData: FormData,
+): Promise<ProductReferenceRow> {
+  const { supabase } = await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${productId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+  const { error: uploadErr } = await serviceClient.storage
+    .from('product-references')
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: { publicUrl } } = serviceClient.storage
+    .from('product-references')
+    .getPublicUrl(path);
+
+  const { data: existing } = await supabase
+    .from('product_references')
+    .select('sort_order')
+    .eq('product_id', productId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = existing && existing.length > 0
+    ? (existing[0] as { sort_order: number }).sort_order + 1
+    : 0;
+
+  const { data: row, error: insertErr } = await supabase
+    .from('product_references')
+    .insert({ product_id: productId, image_url: publicUrl, storage_path: path, sort_order: nextOrder } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+  return row as ProductReferenceRow;
+}
+
+/** Delete a product reference image. */
+export async function deleteProductReference(referenceId: string, storagePath: string) {
+  const { supabase } = await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+  await serviceClient.storage.from('product-references').remove([storagePath]);
+  const { error } = await supabase
+    .from('product_references')
+    .delete()
+    .eq('id', referenceId);
+  if (error) throw new Error(error.message);
+}

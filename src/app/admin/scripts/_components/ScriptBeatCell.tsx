@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/scripts/parseContent';
 import { MentionDropdown } from './MentionDropdown';
-import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 interface Props {
   value: string;
@@ -15,10 +15,11 @@ interface Props {
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations?: ScriptLocationRow[];
+  products?: ScriptProductRow[];
   beatId?: string;
 }
 
-export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, isLastColumn, characters, tags, locations = [], beatId }: Props) {
+export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, isLastColumn, characters, tags, locations = [], products = [], beatId }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
   const lastValue = useRef(value);
@@ -103,7 +104,7 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
     }
   }, []);
 
-  const handleMentionSelect = useCallback((item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow) => {
+  const handleMentionSelect = useCallback((item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow | ScriptProductRow) => {
     if (!ref.current) return;
 
     const sel = window.getSelection();
@@ -124,8 +125,8 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
 
     let replacement: string;
     if (mentionState?.type === 'character') {
-      // Both characters and locations come through the @ trigger
-      const entity = item as ScriptCharacterRow | ScriptLocationRow;
+      // Characters, locations, and products all use the @ trigger
+      const entity = item as ScriptCharacterRow | ScriptLocationRow | ScriptProductRow;
       replacement = `@[${entity.name}](${entity.id})`;
     } else {
       const tag = item as ScriptTagRow;
@@ -271,6 +272,7 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
           characters={characters}
           tags={tags}
           locations={locations}
+          products={products}
           position={mentionState.position}
           onSelect={handleMentionSelect}
           onDismiss={() => setMentionState(null)}

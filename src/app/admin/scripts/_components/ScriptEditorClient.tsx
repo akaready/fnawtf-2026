@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -15,6 +15,7 @@ import {
   getScriptStyle, getStyleReferences, getStoryboardFrames,
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
   getCharacterReferenceMap, getLocationReferenceMap,
+  getScriptProducts, getProductReferenceMap,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -26,6 +27,7 @@ import { ScriptColumnToggle } from './ScriptColumnToggle';
 import { ScriptCharactersPanel } from './ScriptCharactersPanel';
 import { ScriptTagsPanel } from './ScriptTagsPanel';
 import { ScriptLocationsPanel } from './ScriptLocationsPanel';
+import { ScriptProductsPanel } from './ScriptProductsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
 import { ScriptStylePanel } from './ScriptStylePanel';
 import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from './ScriptScratchPad';
@@ -39,6 +41,7 @@ import type {
   ScriptStyleRow, ScriptStyleReferenceRow, ScriptStoryboardFrameRow,
   CharacterCastWithContact, CharacterReferenceRow,
   LocationOptionWithLocation, LocationReferenceRow,
+  ScriptProductRow, ProductReferenceRow,
 } from '@/types/scripts';
 
 interface Props {
@@ -90,6 +93,9 @@ export function ScriptEditorClient({
   const [referenceMap, setReferenceMap] = useState<Record<string, CharacterReferenceRow[]>>({});
   const [locationOptionsMap, setLocationOptionsMap] = useState<Record<string, LocationOptionWithLocation[]>>({});
   const [locationReferenceMap, setLocationReferenceMap] = useState<Record<string, LocationReferenceRow[]>>({});
+  const [showProducts, setShowProducts] = useState(false);
+  const [products, setProducts] = useState<ScriptProductRow[]>([]);
+  const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
@@ -134,13 +140,15 @@ export function ScriptEditorClient({
   useEffect(() => {
     (async () => {
       try {
-        const [style, frames, castData, locOptionsData, refData, locRefData] = await Promise.all([
+        const [style, frames, castData, locOptionsData, refData, locRefData, productsData, prodRefData] = await Promise.all([
           getScriptStyle(script.id),
           getStoryboardFrames(script.id),
           getScriptCastMap(script.id),
           getScriptLocationOptionsMap(script.id),
           getCharacterReferenceMap(script.id),
           getLocationReferenceMap(script.id),
+          getScriptProducts(script.id),
+          getProductReferenceMap(script.id),
         ]);
         if (style) {
           setScriptStyle(style as ScriptStyleRow);
@@ -152,6 +160,8 @@ export function ScriptEditorClient({
         setReferenceMap(refData);
         setLocationOptionsMap(locOptionsData);
         setLocationReferenceMap(locRefData);
+        setProducts(productsData as ScriptProductRow[]);
+        setProductReferenceMap(prodRefData as Record<string, ProductReferenceRow[]>);
       } catch { /* tables may not exist yet */ }
     })();
   }, [script.id]);
@@ -695,6 +705,7 @@ export function ScriptEditorClient({
           <div ref={toolbarSlotRef} className="w-8 h-8 flex-shrink-0" />
           <ToolbarButton icon={Users} label="" onClick={() => setShowCharacters(true)} />
           <ToolbarButton icon={MapPin} label="" onClick={() => setShowLocations(true)} />
+          <ToolbarButton icon={Package} label="" onClick={() => setShowProducts(true)} />
           <ToolbarButton icon={Hash} label="" onClick={() => setShowTags(true)} />
           <ToolbarButton icon={Paintbrush} label="" onClick={() => setShowStyle(true)} />
         </div>
@@ -750,6 +761,7 @@ export function ScriptEditorClient({
                 castMap={castMap}
                 referenceMap={referenceMap}
                 locationReferenceMap={locationReferenceMap}
+                products={products}
                 toolbarPortalRef={toolbarSlotRef}
                 onReorderScenes={handleReorderScenes}
                 scriptTitle={script.title}
@@ -804,6 +816,15 @@ export function ScriptEditorClient({
         onLocationOptionsMapChange={setLocationOptionsMap}
         locationReferenceMap={locationReferenceMap}
         onLocationReferenceMapChange={setLocationReferenceMap}
+      />
+      <ScriptProductsPanel
+        open={showProducts}
+        onClose={() => setShowProducts(false)}
+        scriptId={script.id}
+        products={products}
+        onProductsChange={setProducts}
+        productReferenceMap={productReferenceMap}
+        onProductReferenceMapChange={setProductReferenceMap}
       />
       <ScriptSettingsPanel
         open={showSettings}

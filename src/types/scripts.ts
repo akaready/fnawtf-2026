@@ -68,6 +68,7 @@ export interface ScriptCharacterRow {
   sort_order: number;
   max_cast_slots: number;
   cast_mode: 'people' | 'references';
+  appearance_prompt: string | null;
   created_at: string;
 }
 
@@ -122,6 +123,28 @@ export interface ScriptLocationRow {
   sort_order: number;
   global_location_id: string | null;
   location_mode: 'place' | 'references';
+  appearance_prompt: string | null;
+  created_at: string;
+}
+
+export interface ScriptProductRow {
+  id: string;
+  script_id: string;
+  project_id: string | null;
+  name: string;
+  description: string | null;
+  appearance_prompt: string | null;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface ProductReferenceRow {
+  id: string;
+  product_id: string;
+  image_url: string;
+  storage_path: string;
+  sort_order: number;
   created_at: string;
 }
 

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, Trash2 } from 'lucide-react';
 import { StylePresetCard } from './StylePresetCard';
 import { ColorPicker } from './ColorPicker';
-import { STYLE_PRESETS } from './ScriptStylePanel';
+import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { createScriptFromExtract, getContactsWithHeadshots } from '@/app/admin/actions';

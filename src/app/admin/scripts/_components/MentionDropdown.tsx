@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin } from 'lucide-react';
-import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import { MapPin, Package } from 'lucide-react';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 interface Props {
   type: 'character' | 'tag';
@@ -10,20 +10,22 @@ interface Props {
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations?: ScriptLocationRow[];
+  products?: ScriptProductRow[];
   position: { x: number; y: number };
-  onSelect: (item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow) => void;
+  onSelect: (item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow | ScriptProductRow) => void;
   onDismiss: () => void;
 }
 
-export function MentionDropdown({ type, query, characters, tags, locations = [], position, onSelect, onDismiss }: Props) {
+export function MentionDropdown({ type, query, characters, tags, locations = [], products = [], position, onSelect, onDismiss }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // @ trigger shows both characters and locations
-  const items: (ScriptCharacterRow | ScriptTagRow | ScriptLocationRow)[] = type === 'character'
+  // @ trigger shows characters, locations, and products
+  const items: (ScriptCharacterRow | ScriptTagRow | ScriptLocationRow | ScriptProductRow)[] = type === 'character'
     ? [
         ...characters.filter(c => c.name.toLowerCase().includes(query.toLowerCase())),
         ...locations.filter(l => l.name.toLowerCase().includes(query.toLowerCase())),
+        ...products.filter(p => p.name.toLowerCase().includes(query.toLowerCase())),
       ]
     : tags.filter(t =>
         t.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -63,11 +65,13 @@ export function MentionDropdown({ type, query, characters, tags, locations = [],
       style={{ left: position.x, top: position.y }}
     >
       {items.map((item, i) => {
-        const isLocation = type === 'character' && 'script_id' in item && !('character_type' in item);
-        const isChar = type === 'character' && !isLocation;
+        const isProduct = type === 'character' && 'project_id' in item;
+        const isLocation = type === 'character' && !isProduct && 'location_mode' in item;
+        const isChar = type === 'character' && !isProduct && !isLocation;
         const isTag = type === 'tag';
         const char = isChar ? (item as ScriptCharacterRow) : null;
         const loc = isLocation ? (item as ScriptLocationRow) : null;
+        const product = isProduct ? (item as ScriptProductRow) : null;
         const tag = isTag ? (item as ScriptTagRow) : null;
 
         return (
@@ -94,6 +98,13 @@ export function MentionDropdown({ type, query, characters, tags, locations = [],
                 <MapPin size={12} className="flex-shrink-0" style={{ color: loc.color }} />
                 <span className="truncate">@{loc.name}</span>
                 <span className="text-admin-text-faint text-xs ml-auto">location</span>
+              </>
+            )}
+            {product && (
+              <>
+                <Package size={12} className="flex-shrink-0" style={{ color: product.color }} />
+                <span className="truncate">@{product.name}</span>
+                <span className="text-admin-text-faint text-xs ml-auto">product</span>
               </>
             )}
             {tag && (

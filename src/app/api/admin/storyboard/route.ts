@@ -1,43 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { STYLE_PRESETS } from '@/app/admin/scripts/_components/ScriptStylePanel';
+import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
 import type { StoryboardStylePreset } from '@/types/scripts';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // Nano Banana Pro — built for complex multi-constraint instructions. Override via STORYBOARD_MODEL env var.
 const MODEL = process.env.STORYBOARD_MODEL ?? 'gemini-3-pro-image-preview';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-
-// Absolute rules injected into every prompt — after style, before content.
-const ABSOLUTE_RULES = `\
-════════════════════════════════════════════════════════
-ABSOLUTE RULES — THESE OVERRIDE EVERY OTHER INSTRUCTION
-════════════════════════════════════════════════════════
-
-NO CAMERA EQUIPMENT: No boom microphones, camera rigs, tripods, studio lights, light stands, \
-or any film/video production equipment anywhere in frame — unless the script explicitly names it.
-
-NO CREW: No camera operators, sound recordists, interviewers, or off-camera personnel visible.
-
-NO INTERVIEWER: In interview scenes, ONLY the subject being interviewed appears on camera. \
-No OTS shots, no interviewer shoulders/hands/silhouettes in frame.
-
-ZERO TEXT: No words, letters, numbers, percentages, statistics, labels, captions, \
-scene titles, dialogue, subtitles, speech bubbles, sound effects, infographics, \
-charts, graphs, or data visualizations anywhere in the image — not on whiteboards \
-or chalkboards (show them BLANK or with abstract scribbles only), not on screens or \
-monitors (show abstract glowing shapes only), not as statistical overlays, not as \
-frame numbers, production notes, or directional arrows. If the script mentions data \
-or statistics, represent the CONCEPT through people, objects, and environments only — \
-never as readable numbers or text.
-
-ZERO BORDERS: No storyboard panel borders, no rectangular frames drawn inside the \
-image, no decorative edges, no vignette treatments that create a frame-within-a-frame \
-effect. The illustration fills 100% of the image edge-to-edge with zero internal borders.
-
-ZERO WATERMARKS: No production logos, copyright notices, studio identifiers, or \
-frame numbering of any kind.`;
 
 interface GenerateRequest {
   scriptId: string;
@@ -95,131 +65,121 @@ export async function POST(request: Request) {
       }
     }
 
-    const hasStyle = (stylePreset && STYLE_PRESETS[stylePreset]) || stylePrompt;
+    // ── Image slot allocation (14 total — Nano Banana Pro maximum) ──
+    // Object slots (cap 6): style(2) + location(2) + beat/product(2) = 6
+    // Character slots (cap 5): cast(4)
+    // Remaining slots: consistency/nearby frames(4)
+    // Total: 2 + 4 + 2 + 2 + 4 = 14
+    const styleUrls       = referenceImageUrls.slice(0, 2);
+    const castUrls        = castReferenceUrls.slice(0, 4);
+    const consistencyUrls = consistencyFrameUrls.slice(0, 4);
+    const locUrls         = locationReferenceUrls.slice(0, 2);
+    const beatUrls        = beatReferenceUrls.slice(0, 2);
 
-    // ── Section 1: Mandatory visual style — MUST be first for style adherence ──
-    const promptSections: string[] = [];
-    if (hasStyle) {
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push('MANDATORY VISUAL STYLE — every pixel of this image MUST match:');
-      promptSections.push('════════════════════════════════════════════════════════');
-      if (stylePreset && STYLE_PRESETS[stylePreset]) {
-        promptSections.push(STYLE_PRESETS[stylePreset].prompt);
-      }
-      if (stylePrompt) {
-        promptSections.push(stylePrompt);
-      }
-      promptSections.push('');
-      promptSections.push(
-        'SEQUENCE CONSISTENCY: This is one frame in a multi-frame storyboard sequence. ' +
-        'It MUST look as if drawn by the same artist using identical tools, identical line ' +
-        'weight, identical color palette, identical shading technique, and identical rendering ' +
-        'approach as every other frame in this project. Do not introduce any new colors, ' +
-        'textures, or techniques not specified above. Do not drift.'
-      );
-      promptSections.push('');
+    // ── Build structured JSON prompt ──
+    const styleBlock = (stylePreset && STYLE_PRESETS[stylePreset])
+      ? STYLE_PRESETS[stylePreset].jsonStyle
+      : stylePrompt
+        ? { name: 'Custom style', rendering: stylePrompt, depth_of_field: 'f/2.0' }
+        : null;
+
+    // Reference image declarations numbered to match inline parts order
+    const refDeclarations: object[] = [];
+    let imgIdx = 1;
+
+    if (styleUrls.length > 0) {
+      refDeclarations.push({
+        image_ids: Array.from({ length: styleUrls.length }, (_, i) => imgIdx + i),
+        purpose: 'style reference',
+        extract: 'visual rendering technique, line weight, color palette, shading approach, overall feel',
+        apply_to: 'entire output — match this style exactly',
+      });
+      imgIdx += styleUrls.length;
     }
-
-    // ── Section 2: Absolute rules ──
-    promptSections.push(ABSOLUTE_RULES);
-    promptSections.push('');
-
-    // ── Section 3: Scene content ──
-    promptSections.push('════════════════════════════════════════════════════════');
-    promptSections.push('SCENE CONTENT — generate a single storyboard frame for:');
-    promptSections.push('════════════════════════════════════════════════════════');
-    promptSections.push(contentPrompt);
-    promptSections.push('');
-
-    // ── Section 4: Consistency reference (text header only — images follow inline) ──
-    const consistencyUrls = consistencyFrameUrls.slice(0, 2);
     if (consistencyUrls.length > 0) {
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push('CONSISTENCY REFERENCE — PRIOR FRAMES FROM THIS SAME SEQUENCE:');
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push(
-        'These images define the exact visual style, character appearance, color palette, and rendering ' +
-        'technique for this project. Your output MUST be visually indistinguishable from these — same ' +
-        'artist, same tools, same rendering. This is a continuation of an existing sequence.'
-      );
-      promptSections.push('');
+      refDeclarations.push({
+        image_ids: Array.from({ length: consistencyUrls.length }, (_, i) => imgIdx + i),
+        purpose: 'nearby frames from this storyboard sequence',
+        extract: 'visual style, line weight, color palette, rendering technique, character appearances, environment',
+        apply_to: 'entire output — your frame must be visually indistinguishable from these',
+      });
+      imgIdx += consistencyUrls.length;
     }
-
-    // ── Section 5: Location references (text header only — images follow inline) ──
-    if (locationReferenceUrls.length > 0) {
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push('LOCATION REFERENCE PHOTOS — see attached images below:');
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push(
-        'The attached photos show the actual location where this scene takes place. ' +
-        'You MUST replicate the environment\'s architecture, surfaces, lighting quality, ' +
-        'color palette, and spatial feel. This is not a "similar-looking" place — it is ' +
-        'THIS specific location. Match the reference photos exactly in every frame.'
-      );
-      promptSections.push('');
-    }
-
-    // ── Section 6: Character references (text header only — images follow inline) ──
-    const castUrls = castReferenceUrls.slice(0, 2);
     if (castUrls.length > 0) {
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push('CHARACTER REFERENCE PHOTOS — see attached images below:');
-      promptSections.push('════════════════════════════════════════════════════════');
-      promptSections.push(
-        'The attached photos define this character\'s exact appearance. You MUST replicate ' +
-        'their precise facial structure, hair color and style, eye shape, skin tone, and key ' +
-        'identifying physical features. This is not a "similar-looking" person — it is THIS ' +
-        'specific person. Match the reference photos exactly in every frame.'
-      );
-      promptSections.push('');
+      refDeclarations.push({
+        image_ids: Array.from({ length: castUrls.length }, (_, i) => imgIdx + i),
+        purpose: 'character appearance reference',
+        extract: 'exact facial structure, hair color and style, eye shape, skin tone, identifying physical features',
+        apply_to: 'character rendering — this specific person, match exactly every frame',
+      });
+      imgIdx += castUrls.length;
+    }
+    if (locUrls.length > 0) {
+      refDeclarations.push({
+        image_ids: Array.from({ length: locUrls.length }, (_, i) => imgIdx + i),
+        purpose: 'location environment reference',
+        extract: 'architecture, surfaces, spatial layout, lighting quality, color palette of this specific place',
+        apply_to: 'environment rendering — this specific location, match exactly every frame',
+      });
+      imgIdx += locUrls.length;
+    }
+    if (beatUrls.length > 0) {
+      refDeclarations.push({
+        image_ids: Array.from({ length: beatUrls.length }, (_, i) => imgIdx + i),
+        purpose: 'product or visual reference for this scene',
+        extract: 'exact appearance, shape, color, and details of this product or object',
+        apply_to: 'product or object rendering — match exactly as shown',
+      });
     }
 
-    const textPart = promptSections.join('\n');
+    const promptObj = {
+      task: 'Generate a single storyboard frame illustration',
+      ...(styleBlock && { style: styleBlock }),
+      sequence_consistency: consistencyUrls.length > 0
+        ? 'CRITICAL: This is one frame in an ongoing storyboard sequence. Your output MUST be visually indistinguishable from the nearby frames provided — same artist, same medium, same rendering technique, same character appearances. Zero drift between frames.'
+        : 'This is one frame in an ongoing storyboard sequence. Apply the style parameters above with absolute consistency — same artist, same tools, same rendering every frame.',
+      scene: {
+        content: contentPrompt,
+      },
+      ...(refDeclarations.length > 0 && { reference_images: refDeclarations }),
+      constraints: {
+        must_avoid: [
+          'any text, letters, numbers, words, or symbols rendered anywhere in the image',
+          'borders, panel frames, or rectangular outlines drawn inside the image',
+          'watermarks, production logos, or frame numbering',
+          'camera equipment — boom microphones, tripods, light stands, camera rigs',
+          'crew members, camera operators, sound recordists',
+          'interviewer presence in interview scenes — subject only on camera, no OTS shots',
+          'whiteboards or screens with readable content — show them blank or with abstract shapes only',
+        ],
+        output: 'edge-to-edge illustration filling 100% of canvas with zero internal borders',
+      },
+      output_specifications: {
+        resolution: '2K',
+        aspect_ratio: aspectRatio,
+        format: 'single storyboard frame',
+      },
+    };
 
-    // ── Assemble parts: text first, then reference images interleaved with labels ──
-    // Image cap: style≤4, cast≤2, consistency≤2, remaining slots for loc+beat
-    const styleUrls = referenceImageUrls.slice(0, 4);
-    const reservedSlots = styleUrls.length + castUrls.length + consistencyUrls.length;
-    const remainingSlots = Math.max(0, 8 - reservedSlots);
-    const locUrls = locationReferenceUrls.slice(0, Math.min(2, remainingSlots));
-    const beatUrls = beatReferenceUrls.slice(0, Math.max(0, remainingSlots - locUrls.length));
+    const textPart = JSON.stringify(promptObj, null, 2);
 
+    // ── Assemble parts: text first, then reference images in declared order ──
     const parts: Part[] = [{ text: textPart }];
 
-    // Style reference images — labeled group
-    if (styleUrls.length > 0) {
-      parts.push({ text: 'STYLE REFERENCE IMAGES (match this visual style exactly):' });
-      const styleImgs = await Promise.all(styleUrls.map(fetchImagePart));
-      for (const img of styleImgs) { if (img) parts.push(img); }
-    }
+    // Fetch all image groups in parallel
+    const [styleImgs, consistencyImgs, castImgs, locImgs, beatImgs] = await Promise.all([
+      Promise.all(styleUrls.map(fetchImagePart)),
+      Promise.all(consistencyUrls.map(fetchImagePart)),
+      Promise.all(castUrls.map(fetchImagePart)),
+      Promise.all(locUrls.map(fetchImagePart)),
+      Promise.all(beatUrls.map(fetchImagePart)),
+    ]);
 
-    // Consistency frame images — labeled group
-    if (consistencyUrls.length > 0) {
-      parts.push({ text: 'PRIOR FRAMES FROM THIS SEQUENCE (your output must be visually indistinguishable from these):' });
-      const consistencyImgs = await Promise.all(consistencyUrls.map(fetchImagePart));
-      for (const img of consistencyImgs) { if (img) parts.push(img); }
-    }
-
-    // Character reference images — labeled group
-    if (castUrls.length > 0) {
-      parts.push({ text: 'CHARACTER REFERENCE PHOTOS (replicate this face exactly — same person every frame):' });
-      const castImgs = await Promise.all(castUrls.map(fetchImagePart));
-      for (const img of castImgs) { if (img) parts.push(img); }
-    }
-
-    // Location reference images — labeled group
-    if (locUrls.length > 0) {
-      parts.push({ text: 'LOCATION REFERENCE PHOTOS (replicate this environment exactly — same location every frame):' });
-      const locImgs = await Promise.all(locUrls.map(fetchImagePart));
-      for (const img of locImgs) { if (img) parts.push(img); }
-    }
-
-    // Beat visual reference images — labeled group
-    if (beatUrls.length > 0) {
-      parts.push({ text: 'VISUAL REFERENCE for this scene:' });
-      const beatImgs = await Promise.all(beatUrls.map(fetchImagePart));
-      for (const img of beatImgs) { if (img) parts.push(img); }
-    }
+    for (const img of styleImgs)       { if (img) parts.push(img); }
+    for (const img of consistencyImgs) { if (img) parts.push(img); }
+    for (const img of castImgs)        { if (img) parts.push(img); }
+    for (const img of locImgs)         { if (img) parts.push(img); }
+    for (const img of beatImgs)        { if (img) parts.push(img); }
 
     // Call Nano Banana Pro
     const geminiRes = await fetch(ENDPOINT, {
@@ -231,7 +191,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         contents: [{ parts }],
         generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
+          responseModalities: ['IMAGE'],
           imageConfig: {
             aspectRatio,
             imageSize: '2K',

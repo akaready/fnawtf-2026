@@ -317,6 +317,9 @@ export function ScriptCharactersPanel({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [uploadingRef, setUploadingRef] = useState(false);
+  const [extractingRefDescription, setExtractingRefDescription] = useState(false);
+  const [editingRefAppearance, setEditingRefAppearance] = useState(false);
+  const [refAppearanceDraft, setRefAppearanceDraft] = useState('');
   const refUploadInputRef = useRef<HTMLInputElement>(null);
 
   // Refs for autoSave closure
@@ -451,6 +454,7 @@ export function ScriptCharactersPanel({
         sort_order: characters.length,
         max_cast_slots: 3,
         cast_mode: 'people',
+        appearance_prompt: null,
         created_at: new Date().toISOString(),
       };
       onCharactersChange([...characters, newChar]);
@@ -589,20 +593,50 @@ export function ScriptCharactersPanel({
     setEditingAppearanceId(null);
   }, [selected, appearanceDraft, selectedCast, castMap, onCastMapChange]);
 
+  const extractRefAppearance = useCallback(async (
+    charId: string,
+    refs: CharacterReferenceRow[],
+  ) => {
+    if (refs.length === 0) return;
+    setExtractingRefDescription(true);
+    try {
+      const res = await fetch('/api/admin/cast-appearance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headshotUrls: refs.map(r => r.image_url) }),
+      });
+      if (!res.ok) return;
+      const { appearancePrompt } = await res.json();
+      await updateCharacter(charId, { appearance_prompt: appearancePrompt });
+      onCharactersChange(characters.map(c =>
+        c.id === charId ? { ...c, appearance_prompt: appearancePrompt } : c,
+      ));
+    } catch (err) {
+      console.error('Character ref appearance extraction error:', err);
+    } finally {
+      setExtractingRefDescription(false);
+    }
+  }, [characters, onCharactersChange]);
+
   const handleUploadReference = useCallback(async (file: File) => {
     if (!selected) return;
     const currentRefs = referenceMap[selected.id] ?? [];
-    if (currentRefs.length >= 4) return;
+    if (currentRefs.length >= 8) return;
     setUploadingRef(true);
     try {
       const fd = new FormData();
       fd.append('file', file);
       const row = await uploadCharacterReference(selected.id, fd);
-      onReferenceMapChange({ ...referenceMap, [selected.id]: [...currentRefs, row] });
+      const updatedRefs = [...currentRefs, row];
+      onReferenceMapChange({ ...referenceMap, [selected.id]: updatedRefs });
+      // Auto-generate on first upload or when no description yet
+      if (!selected.appearance_prompt) {
+        await extractRefAppearance(selected.id, updatedRefs);
+      }
     } finally {
       setUploadingRef(false);
     }
-  }, [selected, referenceMap, onReferenceMapChange]);
+  }, [selected, referenceMap, onReferenceMapChange, extractRefAppearance]);
 
   const handleDeleteReference = useCallback(async (ref: CharacterReferenceRow) => {
     if (!selected) return;
@@ -610,6 +644,15 @@ export function ScriptCharactersPanel({
     const updated = (referenceMap[selected.id] ?? []).filter(r => r.id !== ref.id);
     onReferenceMapChange({ ...referenceMap, [selected.id]: updated });
   }, [selected, referenceMap, onReferenceMapChange]);
+
+  const handleSaveRefAppearance = useCallback(async () => {
+    if (!selected) return;
+    await updateCharacter(selected.id, { appearance_prompt: refAppearanceDraft });
+    onCharactersChange(characters.map(c =>
+      c.id === selected.id ? { ...c, appearance_prompt: refAppearanceDraft } : c,
+    ));
+    setEditingRefAppearance(false);
+  }, [selected, refAppearanceDraft, characters, onCharactersChange]);
 
   const assignedContactIds = useMemo(
     () => new Set(selectedCast.map(c => c.contact_id)),
@@ -843,8 +886,8 @@ export function ScriptCharactersPanel({
                       )}
                     </>
                   ) : (
-                    /* References tab — up to 4 uploaded images */
-                    <div className="space-y-2">
+                    /* References tab — up to 8 uploaded images + auto-description */
+                    <div className="space-y-3">
                       <input
                         ref={refUploadInputRef}
                         type="file"
@@ -856,7 +899,7 @@ export function ScriptCharactersPanel({
                           e.target.value = '';
                         }}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {(referenceMap[selected.id] ?? []).map(ref => (
                           <div key={ref.id} className="group/refslot relative w-20 h-20 flex-shrink-0">
                             <img
@@ -872,7 +915,7 @@ export function ScriptCharactersPanel({
                             </button>
                           </div>
                         ))}
-                        {(referenceMap[selected.id] ?? []).length < 4 && (
+                        {(referenceMap[selected.id] ?? []).length < 8 && (
                           <button
                             onClick={() => refUploadInputRef.current?.click()}
                             disabled={uploadingRef}
@@ -890,8 +933,63 @@ export function ScriptCharactersPanel({
                         )}
                       </div>
                       <p className="text-admin-sm text-admin-text-faint">
-                        Up to 4 images used as visual references for storyboard generation.
+                        Up to 8 images used as visual references for storyboard generation.
                       </p>
+                      {/* Auto-generated visual description */}
+                      {(referenceMap[selected.id] ?? []).length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Visual Description</label>
+                          {extractingRefDescription ? (
+                            <div className="flex items-center gap-1.5 text-xs text-admin-text-faint">
+                              <Loader2 size={11} className="animate-spin" />
+                              Generating description…
+                            </div>
+                          ) : editingRefAppearance ? (
+                            <div className="space-y-1.5">
+                              <textarea
+                                value={refAppearanceDraft}
+                                onChange={e => setRefAppearanceDraft(e.target.value)}
+                                rows={5}
+                                className="admin-input w-full text-xs resize-none py-2 px-2.5 leading-relaxed"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button onClick={handleSaveRefAppearance} className="btn-primary px-4 py-2 text-xs">Save</button>
+                                <button onClick={() => setEditingRefAppearance(false)} className="btn-secondary px-4 py-2 text-xs">Cancel</button>
+                              </div>
+                            </div>
+                          ) : selected.appearance_prompt ? (
+                            <div className="group/refappearance space-y-1.5">
+                              <p className="text-xs text-admin-text-muted leading-relaxed line-clamp-4">
+                                {selected.appearance_prompt}
+                              </p>
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover/refappearance:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => { setRefAppearanceDraft(selected.appearance_prompt ?? ''); setEditingRefAppearance(true); }}
+                                  className="w-6 h-6 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+                                  title="Edit description"
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                                <button
+                                  onClick={() => extractRefAppearance(selected.id, referenceMap[selected.id] ?? [])}
+                                  className="w-6 h-6 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-info hover:bg-admin-bg-hover transition-colors"
+                                  title="Regenerate description"
+                                >
+                                  <RefreshCw size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => extractRefAppearance(selected.id, referenceMap[selected.id] ?? [])}
+                              className="text-xs text-admin-text-ghost hover:text-admin-info transition-colors flex items-center gap-1.5"
+                            >
+                              <Sparkles size={12} />
+                              Generate description…
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

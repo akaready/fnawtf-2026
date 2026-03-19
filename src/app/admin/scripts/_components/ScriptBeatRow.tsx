@@ -4,7 +4,7 @@ import { Check, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
-import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow } from '@/types/scripts';
+import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptStoryboardCell } from './ScriptStoryboardCell';
 
@@ -40,6 +40,7 @@ interface Props {
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
   locationReferenceMap?: Record<string, LocationReferenceRow[]>;
+  products?: ScriptProductRow[];
   scriptTitle: string;
   scriptVersion: number;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
@@ -89,6 +90,7 @@ export function ScriptBeatRow({
   castMap,
   referenceMap,
   locationReferenceMap,
+  products = [],
   scriptTitle,
   scriptVersion,
   sceneFrames,
@@ -191,6 +193,7 @@ export function ScriptBeatRow({
               characters={characters}
               tags={tags}
               locations={locations}
+              products={products}
               beatId={beat.id}
             />
           )}
@@ -205,6 +208,7 @@ export function ScriptBeatRow({
               characters={characters}
               tags={tags}
               locations={locations}
+              products={products}
               beatId={beat.id}
             />
           )}
@@ -219,6 +223,7 @@ export function ScriptBeatRow({
               characters={characters}
               tags={tags}
               locations={locations}
+              products={products}
               beatId={beat.id}
             />
           )}

@@ -11,6 +11,7 @@ interface PortalNavProps {
   onToggleMode: () => void;
   proposalUrl?: string;
   contractUrl?: string;
+  showDocTabs?: boolean;
 }
 
 export function PortalNav({
@@ -21,6 +22,7 @@ export function PortalNav({
   onToggleMode,
   proposalUrl,
   contractUrl,
+  showDocTabs = true,
 }: PortalNavProps) {
   return (
     <nav className="sticky top-0 z-50 h-12 flex items-center justify-between px-5 border-b border-admin-border bg-admin-bg-nav invoice-no-print:hidden">
@@ -43,45 +45,51 @@ export function PortalNav({
         </span>
       </div>
 
-      {/* Center: doc tab strip */}
-      <div className="flex items-center gap-0.5 bg-admin-bg-inset border border-admin-border rounded-lg p-0.5">
-        {proposalUrl ? (
-          <a
-            href={proposalUrl}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-          >
-            Proposal
-          </a>
-        ) : (
-          <span className="px-3 py-1 rounded-md text-xs font-medium text-admin-text-dim cursor-not-allowed">
-            Proposal
-          </span>
-        )}
+      {/* Center: doc tab strip (optional) */}
+      {showDocTabs ? (
+        <div className="flex items-center gap-0.5 bg-admin-bg-inset border border-admin-border rounded-lg p-0.5">
+          {proposalUrl ? (
+            <a
+              href={proposalUrl}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+            >
+              Proposal
+            </a>
+          ) : (
+            <span className="px-3 py-1 rounded-md text-xs font-medium text-admin-text-dim cursor-not-allowed">
+              Proposal
+            </span>
+          )}
 
-        {contractUrl ? (
-          <a
-            href={contractUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3 py-1 rounded-md text-xs font-medium text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-          >
-            Contract
-            <ExternalLink className="w-3 h-3 opacity-60" />
-          </a>
-        ) : (
-          <span className="px-3 py-1 rounded-md text-xs font-medium text-admin-text-dim cursor-not-allowed">
-            Contract
-          </span>
-        )}
+          {contractUrl ? (
+            <a
+              href={contractUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1 rounded-md text-xs font-medium text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+            >
+              Contract
+              <ExternalLink className="w-3 h-3 opacity-60" />
+            </a>
+          ) : (
+            <span className="px-3 py-1 rounded-md text-xs font-medium text-admin-text-dim cursor-not-allowed">
+              Contract
+            </span>
+          )}
 
-        {/* Active: Invoice */}
-        <span className="px-3 py-1 rounded-md text-xs font-semibold bg-admin-bg-active text-admin-text-primary">
-          Invoice
-          <span className="font-[family-name:var(--font-mono)] font-normal text-admin-text-dim ml-1.5">
-            {invoiceNumber}
+          {/* Active: Invoice */}
+          <span className="px-3 py-1 rounded-md text-xs font-semibold bg-admin-bg-active text-admin-text-primary">
+            Invoice
+            <span className="font-[family-name:var(--font-mono)] font-normal text-admin-text-dim ml-1.5">
+              {invoiceNumber}
+            </span>
           </span>
+        </div>
+      ) : (
+        <span className="text-xs font-[family-name:var(--font-mono)] text-admin-text-dim">
+          {invoiceNumber}
         </span>
-      </div>
+      )}
 
       {/* Right: controls */}
       <div className="flex items-center gap-1.5">

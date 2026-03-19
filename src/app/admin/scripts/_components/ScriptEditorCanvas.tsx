@@ -25,7 +25,7 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow } from '@/types/scripts';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow } from '@/types/scripts';
 
 interface Props {
   scenes: ComputedScene[];
@@ -55,6 +55,7 @@ interface Props {
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
   locationReferenceMap?: Record<string, LocationReferenceRow[]>;
+  products?: ScriptProductRow[];
   toolbarPortalRef?: React.RefObject<HTMLDivElement | null>;
   onReorderScenes?: (orderedIds: string[]) => void;
   scriptTitle: string;
@@ -90,6 +91,7 @@ export function ScriptEditorCanvas({
   castMap,
   referenceMap,
   locationReferenceMap,
+  products = [],
   toolbarPortalRef,
   onReorderScenes,
   scriptTitle,
@@ -414,17 +416,20 @@ export function ScriptEditorCanvas({
             }
           }
 
-          // Consistency frames: pre-existing frames for this scene + frames generated so far this batch
-          const priorSceneFrameUrls = [
-            // Pre-existing frames from state (from before this batch started)
+          // Consistency frames: up to 2 before + up to 2 after current beat (i) in scene order
+          const beforeUrls = [
             ...storyboardFrames
-              .filter(f => scene.beats.some(b => b.id === f.beat_id) && f.beat_id !== beat.id)
+              .filter(f => { const bi = scene.beats.findIndex(b => b.id === f.beat_id); return bi >= 0 && bi < i; })
               .map(f => f.image_url),
-            // Frames generated earlier in this batch run (live, not stale state)
             ...scene.beats
-              .filter(b => b.id !== beat.id && batchFramesByBeatId.has(b.id))
+              .filter((b, bi) => bi < i && batchFramesByBeatId.has(b.id))
               .map(b => batchFramesByBeatId.get(b.id)!),
           ].slice(-2);
+          const afterUrls = storyboardFrames
+            .filter(f => { const bi = scene.beats.findIndex(b => b.id === f.beat_id); return bi > i; })
+            .map(f => f.image_url)
+            .slice(0, 2);
+          const priorSceneFrameUrls = [...beforeUrls, ...afterUrls];
 
           try {
             const res = await fetch('/api/admin/storyboard', {
@@ -620,9 +625,9 @@ export function ScriptEditorCanvas({
           {visibleColumns.map((col, idx) => (
             <div
               key={col.key}
-              className={`group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} opacity-60 border-l ${col.borderColor}`}
+              className={`group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}
             >
-              {col.label}
+              <span className="opacity-60">{col.label}</span>
               {col.key === 'visual' && (
                 <div ref={visualTipsRef} className="contents">
                   <button
@@ -633,7 +638,7 @@ export function ScriptEditorCanvas({
                     <Info size={14} />
                   </button>
                   {showVisualTips && (
-                    <div className="absolute top-full left-0 mt-1 z-30 w-80 bg-admin-bg-sidebar border border-admin-border rounded-admin-md shadow-xl p-3">
+                    <div className="absolute top-full right-0 mt-1 z-30 w-80 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl p-3">
                       <p className="text-admin-sm font-semibold text-admin-text-primary mb-2">Visual content tips</p>
                       <ul className="space-y-1.5 text-admin-text-muted text-admin-sm">
                         <li>Describe what the <strong className="text-admin-text-primary">camera sees</strong> — not the audio or dialogue</li>
@@ -863,6 +868,7 @@ export function ScriptEditorCanvas({
                         castMap={castMap}
                         referenceMap={referenceMap}
                         locationReferenceMap={locationReferenceMap}
+                        products={products}
                         scriptTitle={scriptTitle}
                         scriptVersion={scriptVersion}
                         sceneFrames={sceneFramesForLightbox}

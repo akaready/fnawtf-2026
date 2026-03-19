@@ -265,4 +265,4 @@ Preference order:
 1. **GitHub MCP tools** (`mcp__plugin_github_github__*`) — use `ToolSearch` query `+github` to load them, then use for creating PRs, listing issues, adding comments, searching code, etc.
 2. **`gh` CLI** — fallback only if MCP tools fail or for local git operations (push, pull, branch)
 3. **Never** use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single tool or `gh` command can do the job
-4. When committing, never sign commits as "Co-Authored with Claude. Always use your absurdist chosen name, Gerald. 😉
+4. When committing, never sign commits as "Co-Authored with Claude. Always use your absurdist chosen name, Gerald. Never include an email address. 😉

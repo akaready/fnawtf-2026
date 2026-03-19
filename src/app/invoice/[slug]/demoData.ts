@@ -43,7 +43,7 @@ export const demoInvoice: InvoiceData = {
     },
     {
       id: 'stage-2',
-      label: 'Final Payment',
+      label: 'Delivery',
       trigger: 'delivery',
       amount: 17100,
       percent: 60,
@@ -54,5 +54,89 @@ export const demoInvoice: InvoiceData = {
   ],
 
   notes:
-    'Thank you for choosing Friends \'n Allies. All deliverables will be provided via secure download link upon receipt of final payment. Files are licensed for use per the terms of your signed production agreement.',
+    'Deliverables provided via secure download upon receipt of final payment. Licensed per your signed production agreement.',
 };
+
+/* ── Dev mode helpers ──────────────────────────────────────────────── */
+
+export type DemoStage = 1 | 2;
+export type DemoDiscount = 'none' | 'friendly' | 'loyalty';
+
+const DISCOUNT_CFG: Record<DemoDiscount, { label?: string; percent: number }> = {
+  none:     { percent: 0 },
+  friendly: { label: 'Friendly discount (5%)', percent: 0.05 },
+  loyalty:  { label: 'Loyalty discount (10%)', percent: 0.10 },
+};
+
+export function buildDemoData(stage: DemoStage, discount: DemoDiscount): InvoiceData {
+  const base = { ...demoInvoice };
+  const discountCfg = DISCOUNT_CFG[discount];
+  const discountAmount = Math.round(base.subtotal * discountCfg.percent);
+  const total = base.subtotal - discountAmount;
+
+  const depositAmount = Math.round(total * 0.4);
+  const finalAmount = total - depositAmount;
+
+  if (stage === 1) {
+    return {
+      ...base,
+      discountAmount: discountAmount || undefined,
+      discountLabel: discountCfg.label,
+      total,
+      currentStageId: 'stage-1',
+      status: 'sent',
+      stages: [
+        {
+          id: 'stage-1',
+          label: 'Deposit',
+          trigger: 'signing',
+          amount: depositAmount,
+          percent: 40,
+          dueDate: '2026-02-15',
+          status: 'sent',
+          stripePaymentLinkUrl: '#pay',
+        },
+        {
+          id: 'stage-2',
+          label: 'Delivery',
+          trigger: 'delivery',
+          amount: finalAmount,
+          percent: 60,
+          dueDate: '2026-04-15',
+          status: 'pending',
+        },
+      ],
+    };
+  }
+
+  // Stage 2 — deposit paid, final due
+  return {
+    ...base,
+    discountAmount: discountAmount || undefined,
+    discountLabel: discountCfg.label,
+    total,
+    currentStageId: 'stage-2',
+    status: 'sent',
+    stages: [
+      {
+        id: 'stage-1',
+        label: 'Deposit',
+        trigger: 'signing',
+        amount: depositAmount,
+        percent: 40,
+        status: 'paid',
+        paidAt: '2026-02-01',
+      },
+      {
+        id: 'stage-2',
+        label: 'Delivery',
+        trigger: 'delivery',
+        amount: finalAmount,
+        percent: 60,
+        dueDate: '2026-04-15',
+        status: 'sent',
+        stripePaymentLinkUrl: '#pay',
+      },
+    ],
+  };
+}

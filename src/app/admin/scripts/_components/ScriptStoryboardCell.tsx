@@ -112,11 +112,17 @@ export function ScriptStoryboardCell({
         }
       }
 
-      // Compute consistency URLs from scene frames (exclude current frame if regenerating)
-      const computedConsistencyUrls = (sceneFrames ?? [])
-        .filter(f => f.imageUrl !== frame?.image_url)
-        .slice(-2)
-        .map(f => f.imageUrl);
+      // Compute consistency URLs: up to 2 before + up to 2 after current beat in scene order
+      const allFrames = sceneFrames ?? [];
+      const currentPos = frame?.image_url
+        ? allFrames.findIndex(f => f.imageUrl === frame.image_url)
+        : -1;
+      const computedConsistencyUrls = currentPos >= 0
+        ? [
+            ...allFrames.slice(Math.max(0, currentPos - 2), currentPos),
+            ...allFrames.slice(currentPos + 1, currentPos + 3),
+          ].map(f => f.imageUrl)
+        : allFrames.slice(-2).map(f => f.imageUrl);
 
       const res = await fetch('/api/admin/storyboard', {
         method: 'POST',

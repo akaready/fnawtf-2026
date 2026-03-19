@@ -17,6 +17,7 @@ import type {
   ScriptStyleReferenceRow,
   StoryboardStylePreset,
 } from '@/types/scripts';
+import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
 
 interface Props {
   open: boolean;
@@ -26,60 +27,6 @@ interface Props {
   onStyleChange: (style: ScriptStyleRow) => void;
   onReferencesChange: (refs: ScriptStyleReferenceRow[]) => void;
 }
-
-// Shared prohibition header prepended to every preset prompt.
-const PRESET_PROHIBITIONS = 'NO TEXT anywhere in the image — not on whiteboards (show them blank), not on screens (show abstract glowing shapes), not as captions, overlays, statistics, infographics, frame numbers, or directional arrows. NO BORDERS: no storyboard panel frames, no rectangular outlines, no decorative edges drawn within the image. Art fills every pixel edge-to-edge. ';
-
-export const STYLE_PRESETS: Record<StoryboardStylePreset, { label: string; prompt: string; image: string }> = {
-  sketch: {
-    label: 'Sketch',
-    prompt: PRESET_PROHIBITIONS +
-      'Hand-drawn pencil storyboard sketch on white paper. Strict color palette: pure black graphite lines and neutral cool-gray wash fills only — absolutely no warm tones, no sepia, no blue tints, no hue shifts of any kind. Every frame in this storyboard uses identical line weight (medium, confident strokes), identical gray wash shading, and identical white paper ground. Medium-weight pencil with cross-hatching for shadow depth. Loose perspective lines visible. Focus on composition, character blocking, and camera framing (medium shots, close-ups, wide establishing frames) rather than fine rendering detail. Slightly unfinished edges, imperfect but expressive. Evokes a traditional storyboard artist\'s rapid pre-production visualization.',
-    image: '/images/storyboard-presets/sketch.png',
-  },
-  comic: {
-    label: 'Comic',
-    prompt: PRESET_PROHIBITIONS +
-      'Full-color comic book illustration. Bold, confident ink outlines with thick-to-thin line weight variation. Cel-shaded coloring with a rich, saturated palette — strong complementary color choices, deep shadows in darker hues rather than black. Dramatic directional lighting (key light at 45°, strong rim light on opposite side). Dynamic composition: low-angle perspectives, dramatic foreshortening, purposeful negative space. Background elements present but atmospheric — color washes with simplified detail. Art fills every pixel to the frame edge; completely borderless. Feels like a single frame from a high-end graphic novel — Moebius meets modern Marvel concept art. Expressive, stylized but grounded in real human proportions.',
-    image: '/images/storyboard-presets/comic.png',
-  },
-  studio: {
-    label: 'Studio',
-    prompt: PRESET_PROHIBITIONS +
-      'Clean professional studio illustration rendered in a photorealistic style. Controlled three-point lighting setup: warm key light from upper-left, soft fill light from right, subtle rim light separating subject from background. Vibrant but naturalistic color palette with punchy saturation. Composition following rule of thirds with subjects placed at intersection points. Neutral or subtly textured backgrounds — solid gradients or minimal environmental context. Skin tones natural and well-lit with clean shadow falloff. Every element intentional and art-directed. Polished, premium, commercially viable — like a high-end advertising visual. Spatial anchors: subjects positioned clearly in relation to foreground and background elements.',
-    image: '/images/storyboard-presets/studio.png',
-  },
-  cinematic: {
-    label: 'Cinematic',
-    prompt: PRESET_PROHIBITIONS +
-      'Cinematic still rendered in the style of 35mm analog filmmaking. Shallow depth of field with creamy bokeh (f/1.4–f/2.0 fast prime). Rich color grading: warm ambers and honey tones in highlights, deep teals in shadows. Motivated practical light sources visible in frame — window light, lamp glow, street light. Subtle analog film grain throughout. Anamorphic lens characteristics: gentle horizontal lens flares, slightly oval bokeh, mild barrel distortion at frame edges. Atmospheric haze or dust particles catching shafts of light. Purposeful negative space. Feels like a still from a Terrence Malick or Roger Deakins production — contemplative, emotionally resonant. Camera language: wide establishing shots, intimate medium close-ups, low-angle perspectives.',
-    image: '/images/storyboard-presets/cinematic.png',
-  },
-  watercolor: {
-    label: 'Watercolor',
-    prompt: PRESET_PROHIBITIONS +
-      'Soft watercolor painting on textured cold-press paper. Translucent washes of muted, harmonious color bleeding organically at wet edges. Granulation effects where pigment pools in paper texture. Warm and cool tones coexist — blues and greens for backgrounds, warm ochres and rose for subjects. Composition suggested rather than rigidly defined: some areas left as bare white paper for breathing room, edges softly dissolving. Consistent loose expressive brushwork throughout — never tight or digital-feeling. Dreamy and atmospheric. Feels like a fine art storyboard from a Hayao Miyazaki pre-production bible. Every frame uses the same paper texture, same color temperature palette, same loose wet-on-wet technique.',
-    image: '/images/storyboard-presets/watercolor.png',
-  },
-  noir: {
-    label: 'Noir',
-    prompt: PRESET_PROHIBITIONS +
-      'High-contrast black and white film noir. Pure monochrome — no color, no warm or cool tinting, no sepia. Deep inky blacks and blown-out whites with minimal midtone gradation (strong chiaroscuro). Dramatic hard-shadow lighting: venetian blind shadows, single overhead practical bulb, streetlamp shaft of light. Strong Dutch angles and diagonal compositions. Environmental atmosphere: cigarette smoke, rain on glass, fog catching light. Gritty analog film grain. Feels like a still from Double Indemnity or Touch of Evil. Camera language: low-angle shots looking up, tight close-ups on faces, wide shots with dramatic foreground elements. Every frame: same high-contrast monochrome treatment, same grain texture, same hard-shadow technique.',
-    image: '/images/storyboard-presets/noir.png',
-  },
-  documentary: {
-    label: 'Documentary',
-    prompt: PRESET_PROHIBITIONS +
-      'Observational documentary photography illustration. Available natural light only — no studio setups, no artificial fill. Slightly desaturated, true-to-life color palette with honest, unmanipulated tones. Medium depth of field keeping both subject and surrounding environment readable. Candid, unposed compositions that feel captured in the moment rather than staged. Subtle motion blur on peripheral elements suggesting real-time observation. Wide-angle lens with mild barrel distortion. Camera language: handheld-feel framing with slight horizon tilt, subjects caught mid-action, environment providing context. Feels like Werner Herzog or Frederick Wiseman — deeply human, fly-on-the-wall. Every frame: same desaturated palette, same available-light quality, same candid composition approach.',
-    image: '/images/storyboard-presets/documentary.png',
-  },
-  anime: {
-    label: 'Anime',
-    prompt: PRESET_PROHIBITIONS +
-      'High-quality theatrical anime key frame illustration. Clean, precise linework with consistent medium line weight throughout. Vibrant saturated color palette with smooth gradient cel-shading — warm ambient occlusion in shadow areas, bright specular highlights. Detailed backgrounds with atmospheric perspective: foreground elements crisp, distance elements soft and desaturated. Expressive character features. Dynamic lighting: visible soft light rays, gentle bloom on highlights, environmental color cast from light sources. Feels like a key frame from Studio Ghibli, Makoto Shinkai, or Ufotable. Camera language: wide environmental establishing shots, medium character shots, dramatic low-angle hero shots. Every frame: same linework weight, same color saturation level, same cel-shading technique.',
-    image: '/images/storyboard-presets/anime.png',
-  },
-};
 
 const PRESET_KEYS = Object.keys(STYLE_PRESETS) as StoryboardStylePreset[];
 

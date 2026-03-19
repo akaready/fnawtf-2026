@@ -4,6 +4,7 @@ import { Demo1 } from './variants/Demo1';
 import { Demo2 } from './variants/Demo2';
 import { Demo3 } from './variants/Demo3';
 import { Demo4 } from './variants/Demo4';
+import { Demo5 } from './variants/Demo5';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -28,7 +29,9 @@ export default async function InvoiceRoute({
       return <Demo3 data={demoInvoice} />;
     case 'demo4':
       return <Demo4 data={demoInvoice} />;
+    case 'demo5':
+      return <Demo5 data={demoInvoice} />;
     default:
-      return <Demo4 data={demoInvoice} />;
+      return <Demo5 data={demoInvoice} />;
   }
 }

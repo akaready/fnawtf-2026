@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import { MentionDropdown } from './MentionDropdown';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/scripts/parseContent';
-import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 export interface ScratchScene {
   label: string;
@@ -165,7 +165,7 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
     }
   }, []);
 
-  const handleMentionSelect = useCallback((item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow) => {
+  const handleMentionSelect = useCallback((item: ScriptCharacterRow | ScriptTagRow | ScriptLocationRow | ScriptProductRow) => {
     if (!editorRef.current) return;
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
