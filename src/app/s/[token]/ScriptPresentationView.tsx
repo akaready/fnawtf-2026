@@ -322,7 +322,7 @@ export function ScriptPresentationView({
           </div>
 
           {/* Timeline */}
-          <div className="w-full max-w-5xl flex-shrink-0">
+          <div className="w-full max-w-5xl flex-shrink-0 mt-6 mb-4">
             <ScriptPresentationTimeline
               slides={slides}
               currentIndex={idx}
@@ -407,10 +407,10 @@ export function ScriptPresentationView({
         </div>
 
         {/* Comment input — sticky bottom of center column */}
-        {current && shareId && (
+        {current && (
           <div className="flex-shrink-0">
             <CommentInput
-              shareId={shareId}
+              shareId={shareId || ''}
               beatId={current.beatId}
               viewerEmail={viewerEmail}
               viewerName={viewerName}
