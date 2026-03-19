@@ -31,14 +31,21 @@ export function PortalLoginForm() {
     'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50 transition-colors';
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-20">
-      <div className="relative w-full max-w-md bg-surface border border-border rounded-2xl p-8 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center px-6 py-20 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[var(--portal-glow)] blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--portal-accent-muted)] to-transparent" />
+
+      <div className="relative w-full max-w-md bg-[#111]/80 backdrop-blur-xl border border-[#222] rounded-2xl p-8 shadow-[0_0_80px_-20px_var(--portal-accent-muted)]">
         <div className="text-center mb-8">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <img src="/images/logo/fna-logo.svg" alt="Friends n Allies" className="h-6 opacity-70" />
+          </div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em] mb-2">
             Client Portal
           </p>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            Friends &amp; Allies
+            Welcome
           </h1>
         </div>
 

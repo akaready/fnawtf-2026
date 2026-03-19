@@ -79,20 +79,24 @@ export function PortalTopBar({ clientName, clientLogoUrl, email }: PortalTopBarP
   }
 
   const logoLockup = (
-    <div className="flex items-center gap-2">
-      {clientLogoUrl ? (
-        <img
-          src={clientLogoUrl}
-          alt={clientName}
-          className="admin-logo h-5 object-contain"
-        />
-      ) : (
-        <span className="text-xs tracking-wide text-portal-text-muted">{clientName}</span>
+    <div className="flex items-center gap-3">
+      <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-4 opacity-60" />
+      {clientLogoUrl && (
+        <>
+          <span className="text-portal-text-separator text-xs">/</span>
+          <img
+            src={clientLogoUrl}
+            alt={clientName}
+            className="admin-logo h-5 object-contain"
+          />
+        </>
       )}
-      <span className="text-xs text-portal-text-separator">×</span>
-      <span className="text-xs tracking-widest uppercase text-portal-text-faint">
-        Friends &amp; Allies
-      </span>
+      {!clientLogoUrl && (
+        <>
+          <span className="text-portal-text-separator text-xs">/</span>
+          <span className="text-xs tracking-wide text-portal-text-muted">{clientName}</span>
+        </>
+      )}
     </div>
   );
 
