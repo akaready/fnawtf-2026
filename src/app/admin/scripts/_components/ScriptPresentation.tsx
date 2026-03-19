@@ -72,12 +72,14 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
   );
 }
 
-export function ScriptPresentation({ slides, initialIndex = 0, columnConfig: initialColConfig, onClose, scriptTitle, clientName, clientLogoUrl, versionLabel }: Props) {
+export function ScriptPresentation({ slides, initialIndex = 0, onClose, scriptTitle, clientName, clientLogoUrl, versionLabel }: Props) {
   const [idx, setIdx] = useState(initialIndex);
   const [colConfig, setColConfig] = useState<ScriptColumnConfig>({
-    ...initialColConfig,
-    reference: true,
-    notes: true,
+    audio: true,
+    visual: true,
+    notes: false,
+    reference: false,
+    storyboard: false,
   });
   const [chromeVisible, setChromeVisible] = useState(true);
   const [contentCollapsed, setContentCollapsed] = useState(false);
