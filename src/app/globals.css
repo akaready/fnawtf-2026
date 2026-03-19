@@ -160,6 +160,11 @@
   --portal-crumb-active:     #c8c8c8;
   --portal-crumb-inactive:   #484848;
   --portal-logout-border:    #2a2a2a;
+  --portal-tile-bg:          #111111;
+  --portal-tile-border:      #222222;
+  --portal-tile-hover:       #181818;
+  --portal-accent:           #7c3aed;
+  --portal-card-bg:          #0e0e0e;
 }
 
 /* ─── Call Sheet Light Mode Override ──────────────────────────────────── */

@@ -136,6 +136,11 @@ const config: Config = {
           'crumb-active':   'var(--portal-crumb-active)',
           'crumb-inactive': 'var(--portal-crumb-inactive)',
           'logout-border':  'var(--portal-logout-border)',
+          'tile-bg':        'var(--portal-tile-bg)',
+          'tile-border':    'var(--portal-tile-border)',
+          'tile-hover':     'var(--portal-tile-hover)',
+          'accent':         'var(--portal-accent)',
+          'card-bg':        'var(--portal-card-bg)',
         },
       },
       fontFamily: {
