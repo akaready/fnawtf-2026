@@ -63,23 +63,12 @@ export async function verifyScriptShareAccess(
     if (s.project_id) {
       const { data: project } = await service
         .from('projects')
-        .select('title, client_id')
+        .select('title, client_name')
         .eq('id', s.project_id)
         .single();
       if (project) {
-        const p = project as { title: string; client_id: string | null };
-        if (p.client_id) {
-          const { data: client } = await service
-            .from('clients')
-            .select('name, slack_channel_id')
-            .eq('id', p.client_id)
-            .single();
-          if (client) {
-            const c = client as { name: string; slack_channel_id: string | null };
-            companyName = c.name;
-            slackChannelId = c.slack_channel_id;
-          }
-        }
+        const p = project as { title: string; client_name: string | null };
+        companyName = p.client_name;
       }
     }
 
@@ -139,25 +128,14 @@ export async function getScriptShareData(token: string) {
   if (sc.project_id) {
     const { data: project } = await service
       .from('projects')
-      .select('title, project_number, client_id')
+      .select('title, project_number, client_name')
       .eq('id', sc.project_id)
       .single();
     if (project) {
-      const p = project as { title: string; project_number: number | null; client_id: string | null };
+      const p = project as { title: string; project_number: number | null; client_name: string | null };
       projectTitle = p.title;
       projectNumber = p.project_number;
-      if (p.client_id) {
-        const { data: client } = await service
-          .from('clients')
-          .select('name, logo_url')
-          .eq('id', p.client_id)
-          .single();
-        if (client) {
-          const c = client as { name: string; logo_url: string | null };
-          clientName = c.name;
-          clientLogoUrl = c.logo_url;
-        }
-      }
+      clientName = p.client_name;
     }
   }
 

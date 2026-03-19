@@ -42,21 +42,14 @@ export default async function ScriptPreviewPage({ params }: Props) {
   if (sc.project_id) {
     const { data: project } = await supabase
       .from('projects')
-      .select('title, project_number, client_id')
+      .select('title, project_number, client_name')
       .eq('id', sc.project_id)
       .single();
     if (project) {
-      const p = project as { title: string; project_number: number | null; client_id: string | null };
+      const p = project as { title: string; project_number: number | null; client_name: string | null };
       projectTitle = p.title;
       projectNumber = p.project_number;
-      if (p.client_id) {
-        const { data: client } = await supabase.from('clients').select('name, logo_url').eq('id', p.client_id).single();
-        if (client) {
-          const c = client as { name: string; logo_url: string | null };
-          clientName = c.name;
-          clientLogoUrl = c.logo_url;
-        }
-      }
+      clientName = p.client_name;
     }
   }
 
