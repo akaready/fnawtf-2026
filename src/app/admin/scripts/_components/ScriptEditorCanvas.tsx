@@ -353,12 +353,17 @@ export function ScriptEditorCanvas({
   // ── Batch storyboard generation ──
   const [generatingScope, setGeneratingScope] = useState<string | null>(null); // null | 'all' | sceneId
   const [generatingBeatIds, setGeneratingBeatIds] = useState<Set<string>>(new Set());
-  const abortRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const generateForScenes = useCallback(async (targetScenes: ComputedScene[], scope: string) => {
     if (!scriptStyle || generatingScope) return;
-    abortRef.current = false;
+
+    // Fresh controller for this batch — abort() cancels the current in-flight request immediately
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setGeneratingScope(scope);
+
     // Collect all beat IDs that need generation
     const queuedIds = new Set<string>();
     for (const scene of targetScenes) {
@@ -369,10 +374,15 @@ export function ScriptEditorCanvas({
       }
     }
     setGeneratingBeatIds(queuedIds);
+
+    // Local accumulator so each beat sees frames generated earlier in THIS batch run
+    // (React state won't update mid-loop — this ref is the source of truth for consistency URLs)
+    const batchFramesByBeatId = new Map<string, string>(); // beatId → image_url
+
     try {
       for (const scene of targetScenes) {
         for (let i = 0; i < scene.beats.length; i++) {
-          if (abortRef.current) break;
+          if (controller.signal.aborted) break;
           const beat = scene.beats[i];
           if (storyboardFrames.some(f => f.beat_id === beat.id)) continue;
           const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap, referenceMap);
@@ -404,16 +414,23 @@ export function ScriptEditorCanvas({
             }
           }
 
-          // Prior frames from this scene for visual consistency (exclude this beat, last 2)
-          const priorSceneFrameUrls = storyboardFrames
-            .filter(f => scene.beats.some(b => b.id === f.beat_id) && f.beat_id !== beat.id)
-            .slice(-2)
-            .map(f => f.image_url);
+          // Consistency frames: pre-existing frames for this scene + frames generated so far this batch
+          const priorSceneFrameUrls = [
+            // Pre-existing frames from state (from before this batch started)
+            ...storyboardFrames
+              .filter(f => scene.beats.some(b => b.id === f.beat_id) && f.beat_id !== beat.id)
+              .map(f => f.image_url),
+            // Frames generated earlier in this batch run (live, not stale state)
+            ...scene.beats
+              .filter(b => b.id !== beat.id && batchFramesByBeatId.has(b.id))
+              .map(b => batchFramesByBeatId.get(b.id)!),
+          ].slice(-2);
 
           try {
             const res = await fetch('/api/admin/storyboard', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
               body: JSON.stringify({
                 scriptId,
                 beatId: beat.id,
@@ -430,20 +447,24 @@ export function ScriptEditorCanvas({
             });
             if (res.ok) {
               const data = await res.json();
-              if (data.frame) onFrameGenerated(data.frame, beat.id);
+              if (data.frame) {
+                onFrameGenerated(data.frame, beat.id);
+                batchFramesByBeatId.set(beat.id, data.frame.image_url);
+              }
             }
-          } catch { /* continue */ }
+          } catch { /* aborted or network error — continue to finally cleanup */ }
           setGeneratingBeatIds(prev => {
             const next = new Set(prev);
             next.delete(beat.id);
             return next;
           });
         }
-        if (abortRef.current) break;
+        if (controller.signal.aborted) break;
       }
     } finally {
       setGeneratingScope(null);
       setGeneratingBeatIds(new Set());
+      abortControllerRef.current = null;
     }
   }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap, referenceMap, locationReferenceMap]);
 
@@ -631,7 +652,7 @@ export function ScriptEditorCanvas({
               {col.key === 'storyboard' && scriptStyle && (
                 generatingScope ? (
                   <button
-                    onClick={(e) => { e.stopPropagation(); abortRef.current = true; }}
+                    onClick={(e) => { e.stopPropagation(); abortControllerRef.current?.abort(); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
                     title="Cancel generation"
                   >
@@ -836,7 +857,7 @@ export function ScriptEditorCanvas({
                         onDragSelectStart={handleDragSelectStart}
                         selectionActive={selectionMode}
                         batchGenerating={generatingBeatIds.has(beat.id)}
-                        onCancelGeneration={() => { abortRef.current = true; }}
+                        onCancelGeneration={() => { abortControllerRef.current?.abort(); }}
                         scene={scene}
                         locations={locations}
                         castMap={castMap}
