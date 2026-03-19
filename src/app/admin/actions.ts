@@ -5003,20 +5003,24 @@ export async function deleteProductReference(referenceId: string, storagePath: s
 
 // ── Script Shares ────────────────────────────────────────────────────────
 
-/** List all share links for a script, with view counts. */
+/** List all share links for a script, with full view data. */
 export async function getScriptShares(scriptId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('script_shares')
-    .select('*, script_share_views(id)')
+    .select('*, script_share_views(id, viewer_email, viewer_name, duration_seconds, viewed_at)')
     .eq('script_id', scriptId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data as unknown as Array<Record<string, unknown>>).map((row) => ({
-    ...row,
-    view_count: Array.isArray(row.script_share_views) ? row.script_share_views.length : 0,
-    script_share_views: undefined,
-  }));
+  return (data as unknown as Array<Record<string, unknown>>).map((row) => {
+    const views = Array.isArray(row.script_share_views) ? row.script_share_views as Array<Record<string, unknown>> : [];
+    return {
+      ...row,
+      view_count: views.length,
+      views,
+      script_share_views: undefined,
+    };
+  });
 }
 
 /** Create a new share link for a published script. */
@@ -5053,12 +5057,23 @@ export async function updateScriptShare(
   revalidatePath('/admin/scripts');
 }
 
-/** Delete a script share link. */
-export async function deleteScriptShare(shareId: string) {
+/** Archive a script share link (soft-delete — sets is_active=false). */
+export async function archiveScriptShare(shareId: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase
     .from('script_shares')
-    .delete()
+    .update({ is_active: false, updated_at: new Date().toISOString() } as never)
+    .eq('id', shareId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/scripts');
+}
+
+/** Restore an archived script share link. */
+export async function restoreScriptShare(shareId: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('script_shares')
+    .update({ is_active: true, updated_at: new Date().toISOString() } as never)
     .eq('id', shareId);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/scripts');
