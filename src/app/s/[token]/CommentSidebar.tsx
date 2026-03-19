@@ -59,10 +59,11 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
       {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
       <button
         onClick={onToggle}
-        className={`absolute right-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`absolute right-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-2.5 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         title="Show comments"
       >
-        <PanelRightOpen size={16} />
+        <span className="text-[10px] font-semibold uppercase tracking-widest">Comments</span>
+        <PanelRightOpen size={14} />
       </button>
 
       {/* Sidebar */}

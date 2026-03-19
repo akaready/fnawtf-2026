@@ -2,6 +2,9 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon } from 'lucide-react';
+
+const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
+function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
 import { CommentInput } from './CommentInput';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
@@ -190,10 +193,11 @@ export function ScriptPresentationView({
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
         <button
           onClick={() => setLeftOpen(true)}
-          className={`absolute left-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`absolute left-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-2.5 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Show scenes"
         >
-          <PanelLeftOpen size={16} />
+          <PanelLeftOpen size={14} />
+          <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
         </button>
 
         <div
@@ -268,7 +272,18 @@ export function ScriptPresentationView({
             )}
             <p className="text-[#ccc] text-base font-medium">
               {scriptTitle} Script
-              {versionLabel && <span className="text-[#555] ml-2 text-base">v{versionLabel}</span>}
+              {versionLabel && (() => {
+                const major = parseInt(versionLabel) || 0;
+                const color = versionColor(major);
+                return (
+                  <span
+                    className="inline-block ml-2 px-2.5 py-0.5 text-xs font-mono font-bold rounded-full"
+                    style={{ borderColor: color + '40', backgroundColor: color + '15', color, border: '1px solid' }}
+                  >
+                    v{versionLabel}
+                  </span>
+                );
+              })()}
             </p>
           </div>
 
@@ -342,7 +357,7 @@ export function ScriptPresentationView({
           {/* ── Audio (full width, content text larger) ── */}
           <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 mb-px">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
-            <div className="text-base text-[#ccc] leading-relaxed">
+            <div className="text-lg text-[#ccc] leading-relaxed">
               {current.audioContent || <span className="text-[#333]">&mdash;</span>}
             </div>
           </div>
