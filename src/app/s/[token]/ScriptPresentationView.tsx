@@ -258,7 +258,7 @@ export function ScriptPresentationView({
       {!leftOpen && (
         <button
           onClick={() => setLeftOpen(true)}
-          className={`absolute left-2 top-2 z-30 p-2 rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-all duration-500 ${
+          className={`absolute left-2 top-2 z-[5] p-2 rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-all duration-500 ${
             chromeVisible ? 'opacity-100' : 'opacity-0'
           }`}
         >
