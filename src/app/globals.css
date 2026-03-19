@@ -146,8 +146,8 @@
   --admin-letter-spacing-wide:   0.05em;
 
   /* ─── Portal Design Tokens ─────────────────────────────────────────────── */
-  --portal-bg-base:          #0a0a0a;
-  --portal-bar:              #0d0d0d;
+  --portal-bg-base:          #000000;
+  --portal-bar:              #000000;
   --portal-border:           #1a1a1a;
   --portal-border-subtle:    #222;
   --portal-text-primary:     #e8e8e8;

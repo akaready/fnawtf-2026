@@ -31,14 +31,12 @@ export function PortalLoginForm() {
     'w-full px-3 py-2.5 bg-black border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/50 transition-colors';
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-20">
-      <div className="relative w-full max-w-md bg-surface border border-border rounded-2xl p-8 shadow-2xl">
-        <div className="text-center mb-8">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+    <div className="min-h-screen flex items-center justify-center px-6 py-20 bg-[#060606]">
+      <div className="relative w-full max-w-sm border border-[#1a1a1a] rounded-xl p-8 bg-[#0a0a0a]">
+        <div className="flex flex-col items-center mb-8">
+          <img src="/images/logo/fna-logo.svg" alt="Friends n Allies" className="h-5 mb-6 opacity-60" />
+          <h1 className="text-sm font-medium text-muted-foreground tracking-wide">
             Client Portal
-          </p>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            Friends &amp; Allies
           </h1>
         </div>
 

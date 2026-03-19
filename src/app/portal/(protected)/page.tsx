@@ -21,6 +21,7 @@ interface SectionTile {
   count: number | null;
   countLabel: string;
   hasNew: boolean;
+  color: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -165,13 +166,14 @@ function SectionTileCard({ tile }: { tile: SectionTile }) {
   return (
     <Link
       href={tile.href}
-      className="relative flex flex-col items-center justify-center gap-3 rounded-lg border border-portal-tile-border bg-portal-tile-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-colors px-4 py-6"
+      className="relative flex flex-col items-start gap-3 rounded-lg border border-portal-tile-border bg-portal-tile-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-colors px-4 py-5 border-l-2"
+      style={{ borderLeftColor: tile.color }}
     >
       {tile.hasNew && (
         <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-portal-accent" />
       )}
-      <Icon size={28} strokeWidth={1.5} className="text-portal-text-muted" />
-      <div className="flex flex-col items-center gap-0.5 text-center">
+      <Icon size={20} strokeWidth={1.5} style={{ color: tile.color }} className="opacity-60" />
+      <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium text-portal-text-primary leading-tight">
           {tile.label}
         </span>
@@ -246,6 +248,7 @@ export default async function PortalHomePage() {
       count: proposalCount,
       countLabel: proposalCount === 1 ? '1 total' : `${proposalCount} total`,
       hasNew: proposalHasNew,
+      color: '#7c3aed',
     },
     {
       label: 'Scripts',
@@ -254,6 +257,7 @@ export default async function PortalHomePage() {
       count: scriptCount,
       countLabel: scriptCount === 1 ? '1 total' : `${scriptCount} total`,
       hasNew: scriptHasNew,
+      color: '#0ea5e9',
     },
     {
       label: 'Invoices',
@@ -262,6 +266,7 @@ export default async function PortalHomePage() {
       count: null,
       countLabel: 'Coming soon',
       hasNew: false,
+      color: '#f59e0b',
     },
     {
       label: 'Contracts',
@@ -270,6 +275,7 @@ export default async function PortalHomePage() {
       count: contractCount,
       countLabel: contractCount === 1 ? '1 total' : `${contractCount} total`,
       hasNew: contractHasNew,
+      color: '#10b981',
     },
     {
       label: 'Intake',
@@ -278,6 +284,7 @@ export default async function PortalHomePage() {
       count: intakeCount,
       countLabel: intakeCount === 1 ? '1 total' : `${intakeCount} total`,
       hasNew: intakeHasNew,
+      color: '#f43f5e',
     },
   ];
 
