@@ -5,20 +5,25 @@
 
 const CDN_HOSTNAME = 'vz-6b68e26c-531.b-cdn.net';
 
+/** Direct CDN URL — use only for server-side or admin contexts */
+export function getBunnyDirectUrl(videoId: string, file: string): string {
+  return `https://${CDN_HOSTNAME}/${videoId}/${file}`;
+}
+
 export function getBunnyVideoUrl(videoId: string): string {
-  return `https://${CDN_HOSTNAME}/${videoId}/playlist.m3u8`;
+  return `/cdn/videos/${videoId}/playlist.m3u8`;
 }
 
 export function getBunnyVideoThumbnail(videoId: string): string {
-  return `https://${CDN_HOSTNAME}/${videoId}/thumbnail.jpg`;
+  return `/cdn/videos/${videoId}/thumbnail.jpg`;
 }
 
 export function getBunnyVideoPreview(videoId: string): string {
-  return `https://${CDN_HOSTNAME}/${videoId}/preview.webp`;
+  return `/cdn/videos/${videoId}/preview.webp`;
 }
 
 export function getBunnyVideoMp4Url(videoId: string, quality: '720p' | '1080p' | '360p' = '720p'): string {
-  return `https://${CDN_HOSTNAME}/${videoId}/play_${quality}.mp4`;
+  return `/cdn/videos/${videoId}/play_${quality}.mp4`;
 }
 
 /**

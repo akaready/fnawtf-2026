@@ -160,7 +160,7 @@ export function ProjectSlide({ video, contactCompany: _contactCompany, slideRef 
             <div className="h-full sm:h-auto [&>div]:h-full sm:[&>div]:h-auto">
               <ReelPlayer
                 videoSrc={getBunnyVideoMp4Url(pv.bunny_video_id, '720p')}
-                placeholderSrc={getBunnyVideoThumbnail(pv.bunny_video_id)}
+                placeholderSrc={project?.thumbnail_url || getBunnyVideoThumbnail(pv.bunny_video_id)}
                 aspectRatio={toCssRatio(pv.aspect_ratio)}
                 defaultMuted={false}
                 hoverPreview={false}

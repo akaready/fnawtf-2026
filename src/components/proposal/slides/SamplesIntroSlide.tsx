@@ -27,16 +27,19 @@ function SampleCard({
 
   const pv = v.project_video!;
   const project = pv.project;
-  const thumbnail = getBunnyVideoThumbnail(pv.bunny_video_id ?? '');
+  const thumbnail = project?.thumbnail_url || getBunnyVideoThumbnail(pv.bunny_video_id ?? '');
+  const thumbnailTime = project?.thumbnail_time ?? undefined;
   const videoSrc = getBunnyVideoMp4Url(pv.bunny_video_id ?? '', '360p');
   const title = project?.title ?? pv.title ?? '';
   const styleTags = project?.style_tags ?? [];
+
+  const startTime = thumbnailTime;
 
   const handleHover = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     if (video.readyState >= 1) {
-      video.currentTime = video.duration / 2;
+      video.currentTime = startTime ?? video.duration / 2;
     }
     const promise = video.play();
     if (promise) {
@@ -45,14 +48,14 @@ function SampleCard({
         .then(() => { playPromiseRef.current = null; })
         .catch(() => { playPromiseRef.current = null; });
     }
-  }, []);
+  }, [startTime]);
 
   const handleUnhover = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     const doPause = () => {
       video.pause();
-      video.currentTime = video.duration / 2;
+      video.currentTime = startTime ?? video.duration / 2;
     };
     if (playPromiseRef.current) {
       playPromiseRef.current.then(doPause).catch(() => {});

@@ -109,6 +109,7 @@ export async function getProposalData(slug: string) {
         id, title, subtitle, description, category, client_name,
         style_tags, assets_delivered, premium_addons, camera_techniques,
         production_days, crew_count, talent_count, location_count,
+        thumbnail_url, thumbnail_time,
         credits:project_credits(id, project_id, role, name, sort_order),
         bts_images:project_bts_images(id, project_id, image_url, caption, sort_order),
         testimonials(quote, person_name, person_title, display_title),

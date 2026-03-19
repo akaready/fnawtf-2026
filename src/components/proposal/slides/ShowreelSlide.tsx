@@ -22,6 +22,7 @@ type ProposalVideo = {
       subtitle: string | null;
       category: string | null;
       style_tags: string[] | null;
+      thumbnail_url?: string | null;
     } | null;
   } | null;
 };
@@ -93,7 +94,7 @@ export function ShowreelSlide({ videos, slideRef }: Props) {
             <div className="overflow-hidden rounded-lg">
               <ReelPlayer
                 videoSrc={getBunnyVideoMp4Url(hero.project_video!.bunny_video_id, '720p')}
-                placeholderSrc={getBunnyVideoThumbnail(hero.project_video!.bunny_video_id)}
+                placeholderSrc={hero.project_video!.project?.thumbnail_url || getBunnyVideoThumbnail(hero.project_video!.bunny_video_id)}
                 aspectRatio={toCssRatio(hero.project_video!.aspect_ratio)}
                 defaultMuted={false}
                 hoverPreview={true}
@@ -119,7 +120,7 @@ export function ShowreelSlide({ videos, slideRef }: Props) {
                   <div className="overflow-hidden rounded-lg">
                     <ReelPlayer
                       videoSrc={getBunnyVideoMp4Url(v.project_video!.bunny_video_id, '720p')}
-                      placeholderSrc={getBunnyVideoThumbnail(v.project_video!.bunny_video_id)}
+                      placeholderSrc={v.project_video!.project?.thumbnail_url || getBunnyVideoThumbnail(v.project_video!.bunny_video_id)}
                       aspectRatio={toCssRatio(v.project_video!.aspect_ratio)}
                       defaultMuted={false}
                       hoverPreview={true}

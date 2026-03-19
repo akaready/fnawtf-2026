@@ -123,6 +123,8 @@ export type ProposalVideo = {
       crew_count: number | null;
       talent_count: number | null;
       location_count: number | null;
+      thumbnail_url: string | null;
+      thumbnail_time: number | null;
       credits: Array<{ id: string; project_id: string; role: string; name: string; sort_order: number; role_id: string | null; contact_id: string | null }> | null;
       bts_images: Array<{ id: string; project_id: string; image_url: string; caption: string | null; sort_order: number }> | null;
       testimonials: Array<{ quote: string; person_name: string | null; person_title: string | null; display_title: string | null }> | null;
