@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X, Expand, Download, Check } from 'lucide-react';
+import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X, Expand, Download, Check, Pencil, GripVertical } from 'lucide-react';
 import { deleteStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
 import { StoryboardLightbox } from './StoryboardLightbox';
+import { StoryboardGenerateModal } from './StoryboardGenerateModal';
 import { buildStoryboardFilename, downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
-import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow } from '@/types/scripts';
+import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ImageDragData, ImageDropData } from '@/types/scripts';
 
 interface Props {
   frame: ScriptStoryboardFrameRow | null;
@@ -37,16 +38,17 @@ interface Props {
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
   allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
   consistencyFrameUrls?: string[];
+  onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
 }
 
 export function ScriptStoryboardCell({
   frame,
   beatId,
-  sceneId: _sceneId,
+  sceneId,
   scriptId,
   audioContent,
   visualContent,
-  notesContent: _notesContent,
+  notesContent,
   beatReferenceUrls,
   style,
   styleReferences,
@@ -65,12 +67,16 @@ export function ScriptStoryboardCell({
   beatLabel,
   sceneFrames,
   allScriptFrames,
+  consistencyFrameUrls,
+  onImageMove,
 }: Props) {
   const [generating, setGenerating] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [imageMoveOver, setImageMoveOver] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const generate = useCallback(async () => {
@@ -170,6 +176,8 @@ export function ScriptStoryboardCell({
           storage_path: result.storage_path,
           source: 'uploaded',
           prompt_used: null,
+          is_active: true,
+          reference_urls_used: [],
           created_at: new Date().toISOString(),
         };
         onFrameChange(newFrame);
@@ -186,11 +194,40 @@ export function ScriptStoryboardCell({
     onFrameChange(null);
   }, [frame, onFrameChange]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    setImageMoveOver(false);
+
+    // Check for image-move payload first
+    const moveData = e.dataTransfer.getData('application/x-image-move');
+    if (moveData) {
+      try {
+        const parsed = JSON.parse(moveData) as ImageDragData;
+        onImageMove?.(parsed, { dropType: 'storyboard-cell', beatId });
+      } catch { /* ignore parse errors */ }
+      return;
+    }
+
+    // Existing file upload logic
     handleUpload(e.dataTransfer.files);
-  };
+  }, [handleUpload, onImageMove, beatId]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.types.includes('application/x-image-move')) {
+      setImageMoveOver(true);
+      setDragOver(false);
+    } else {
+      setDragOver(true);
+      setImageMoveOver(false);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+    setImageMoveOver(false);
+  }, []);
 
   // Loading state — spinner fills entire cell, becomes red X on hover to cancel
   if (generating || uploading || batchGenerating) {
@@ -213,7 +250,12 @@ export function ScriptStoryboardCell({
   if (frame) {
     return (
       <>
-      <div className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative">
+      <div
+        className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
         <div className="mx-2 my-2">
           <img
             src={frame.image_url}
@@ -222,26 +264,63 @@ export function ScriptStoryboardCell({
             onClick={() => setLightboxOpen(true)}
           />
         </div>
-        {/* Hover actions */}
+        {/* Image-move drop indicator */}
+        {imageMoveOver && (
+          <div className="absolute inset-0 flex items-center justify-center bg-admin-info-bg/20 border-2 border-dashed border-admin-info rounded pointer-events-none z-20">
+            <GripVertical size={16} className="text-admin-info" />
+          </div>
+        )}
+        {/* Hover actions — two-row layout */}
         <div
-          className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded"
+          className="absolute inset-0 opacity-0 group-hover/sb:opacity-100 transition-opacity bg-black/30 rounded"
           onMouseLeave={() => setConfirmDelete(false)}
         >
-          <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
-          <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
-            const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
-            void downloadSingleImage(frame.image_url, filename);
-          }} />
-          <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
-          <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
-          {confirmDelete ? (
-            <>
-              <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={handleDelete} />
-              <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDelete(false)} />
-            </>
-          ) : (
-            <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDelete(true)} />
-          )}
+          {/* Drag handle — top-left */}
+          <span
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData('application/x-image-move', JSON.stringify({
+                dragType: 'storyboard',
+                imageId: frame.id,
+                sourceBeatId: beatId,
+                imageUrl: frame.image_url,
+                storagePath: frame.storage_path,
+              } satisfies ImageDragData));
+              e.dataTransfer.effectAllowed = 'move';
+              const img = (e.target as HTMLElement).closest('.group\\/sb')?.querySelector('img');
+              if (img) e.dataTransfer.setDragImage(img, 40, 22);
+            }}
+            className="absolute top-2.5 left-2.5 w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
+            title="Drag to move"
+          >
+            <GripVertical size={12} />
+          </span>
+          {/* Grouped actions — centered */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4">
+            {/* Row 1: Edit / Generate */}
+            <div className="flex items-center gap-1">
+              <ImageActionButton icon={Pencil} color="info" title="Edit generation" onClick={() => setModalOpen(true)} />
+              <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
+              <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
+            </div>
+            {/* Row 2: View / Manage */}
+            <div className="flex items-center gap-1">
+              <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
+              <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
+                const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
+                void downloadSingleImage(frame.image_url, filename);
+              }} />
+              {confirmDelete ? (
+                <>
+                  <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={handleDelete} />
+                  <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDelete(false)} />
+                </>
+              ) : (
+                <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDelete(true)} />
+              )}
+            </div>
+          </div>
         </div>
         <input
           ref={fileRef}
@@ -266,6 +345,33 @@ export function ScriptStoryboardCell({
           />
         );
       })()}
+      {modalOpen && (
+        <StoryboardGenerateModal
+          onClose={() => setModalOpen(false)}
+          beatId={beatId}
+          sceneId={sceneId}
+          scriptId={scriptId}
+          activeFrame={frame}
+          audioContent={audioContent}
+          visualContent={visualContent}
+          notesContent={notesContent}
+          beatReferenceUrls={beatReferenceUrls}
+          style={style}
+          styleReferences={styleReferences}
+          scene={scene}
+          beatIndex={beatIndex}
+          characters={characters}
+          locations={locations}
+          castMap={castMap}
+          referenceMap={referenceMap}
+          locationReferenceMap={locationReferenceMap}
+          sceneFrames={sceneFrames}
+          consistencyFrameUrls={consistencyFrameUrls}
+          onFrameChange={(newFrame) => {
+            onFrameChange(newFrame);
+          }}
+        />
+      )}
       </>
     );
   }
@@ -274,13 +380,10 @@ export function ScriptStoryboardCell({
   return (
     <div
       className={`group/sb relative min-w-0 min-h-[2.5rem] overflow-hidden border-b border-b-[#0e0e0e] transition-colors ${
-        dragOver ? 'bg-admin-info-bg/20' : ''
+        imageMoveOver ? 'bg-admin-info-bg/20' : dragOver ? 'bg-admin-info-bg/20' : ''
       }`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* Split buttons fill cell */}
@@ -294,9 +397,22 @@ export function ScriptStoryboardCell({
         </button>
         {style ? (
           <button
+            onClick={() => setModalOpen(true)}
+            className="flex-1 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-primary bg-admin-bg-hover/50 hover:bg-admin-bg-active transition-colors border-r border-admin-border-subtle"
+            title="Generate with editor"
+          >
+            <Pencil size={14} />
+          </button>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-admin-text-ghost/30 bg-admin-bg-hover/30 cursor-default border-r border-admin-border-subtle" title="Set style first">
+            <Pencil size={14} />
+          </div>
+        )}
+        {style ? (
+          <button
             onClick={generate}
             className="flex-1 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-primary bg-admin-bg-hover/50 hover:bg-admin-bg-active transition-colors"
-            title="Generate"
+            title="Quick generate"
           >
             <Sparkles size={14} />
           </button>
@@ -314,6 +430,33 @@ export function ScriptStoryboardCell({
         className="hidden"
         onChange={(e) => handleUpload(e.target.files)}
       />
+      {modalOpen && (
+        <StoryboardGenerateModal
+          onClose={() => setModalOpen(false)}
+          beatId={beatId}
+          sceneId={sceneId}
+          scriptId={scriptId}
+          activeFrame={frame}
+          audioContent={audioContent}
+          visualContent={visualContent}
+          notesContent={notesContent}
+          beatReferenceUrls={beatReferenceUrls}
+          style={style}
+          styleReferences={styleReferences}
+          scene={scene}
+          beatIndex={beatIndex}
+          characters={characters}
+          locations={locations}
+          castMap={castMap}
+          referenceMap={referenceMap}
+          locationReferenceMap={locationReferenceMap}
+          sceneFrames={sceneFrames}
+          consistencyFrameUrls={consistencyFrameUrls}
+          onFrameChange={(newFrame) => {
+            onFrameChange(newFrame);
+          }}
+        />
+      )}
     </div>
   );
 }

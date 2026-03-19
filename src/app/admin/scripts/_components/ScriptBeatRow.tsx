@@ -4,7 +4,7 @@ import { Check, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
-import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow } from '@/types/scripts';
+import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ImageDragData, ImageDropData } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptStoryboardCell } from './ScriptStoryboardCell';
 
@@ -45,6 +45,7 @@ interface Props {
   scriptVersion: number;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
   allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
+  onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
 }
 
 function beatLetter(n: number): string {
@@ -96,6 +97,7 @@ export function ScriptBeatRow({
   scriptVersion,
   sceneFrames,
   allScriptFrames,
+  onImageMove,
 }: Props) {
   const {
     attributes,
@@ -235,6 +237,7 @@ export function ScriptBeatRow({
               references={references}
               onUpload={(files) => onUploadReference(beat.id, files)}
               onDelete={onDeleteReference}
+              onImageMove={onImageMove}
             />
           )}
           {columnConfig.storyboard && (
@@ -264,6 +267,7 @@ export function ScriptBeatRow({
               beatLabel={beatLetter(beatNumber)}
               sceneFrames={sceneFrames}
               allScriptFrames={allScriptFrames}
+              onImageMove={onImageMove}
             />
           )}
         </div>

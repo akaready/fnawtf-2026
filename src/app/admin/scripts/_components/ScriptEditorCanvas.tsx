@@ -61,6 +61,7 @@ interface Props {
   scriptTitle: string;
   scriptVersion: number;
   onAllFramesDeleted?: () => void;
+  onImageMove?: (dragData: import('@/types/scripts').ImageDragData, dropData: import('@/types/scripts').ImageDropData) => void;
 }
 
 export function ScriptEditorCanvas({
@@ -97,6 +98,7 @@ export function ScriptEditorCanvas({
   scriptTitle,
   scriptVersion,
   onAllFramesDeleted,
+  onImageMove,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -902,6 +904,7 @@ export function ScriptEditorCanvas({
                         scriptVersion={scriptVersion}
                         sceneFrames={sceneFramesForLightbox}
                         allScriptFrames={allScriptFrames}
+                        onImageMove={onImageMove}
                       />
                     ));
                     })()}
