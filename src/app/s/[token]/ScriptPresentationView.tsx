@@ -205,12 +205,12 @@ export function ScriptPresentationView({
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
-      <div className="relative flex-shrink-0 h-full">
-        {/* Re-open button — behind sidebar, revealed as it collapses */}
+      <div className={`relative flex-shrink-0 h-full ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-12'}`}>
+        {/* Re-open button — visible when collapsed */}
         {!leftOpen && (
           <button
             onClick={() => setLeftOpen(true)}
-            className="absolute left-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
+            className="absolute left-2 top-2 w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
             title="Show scenes"
           >
             <PanelLeftOpen size={16} />
@@ -218,7 +218,7 @@ export function ScriptPresentationView({
         )}
 
         <div
-          className={`h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
+          className={`absolute inset-0 border-r border-admin-border bg-admin-bg-sidebar overflow-hidden z-10 ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
         >
           <div className="w-56 h-full flex flex-col">
             {/* Header */}

@@ -55,12 +55,12 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
   }, [loadComments, refreshKey]);
 
   return (
-    <div className="relative flex-shrink-0 h-full">
-      {/* Re-open button — behind sidebar so it's revealed as sidebar collapses */}
+    <div className={`relative flex-shrink-0 h-full transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[260px]' : 'w-12'}`}>
+      {/* Re-open button — visible when collapsed */}
       {!open && (
         <button
           onClick={onToggle}
-          className="absolute right-2 top-2 z-[5] w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
+          className="absolute right-2 top-2 w-8 h-8 flex items-center justify-center rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
           title="Show comments"
         >
           <PanelRightOpen size={16} />
@@ -69,7 +69,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, open, onToggle, r
 
       {/* Sidebar */}
       <div
-        className={`h-full border-l border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[260px]' : 'w-0'}`}
+        className={`absolute inset-0 border-l border-admin-border bg-admin-bg-sidebar overflow-hidden z-10 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[260px]' : 'w-0'}`}
       >
         <div className="w-[260px] h-full flex flex-col">
           {/* Header — same h-[3rem] as left sidebar */}
