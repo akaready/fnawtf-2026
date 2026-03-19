@@ -1,0 +1,252 @@
+'use server';
+
+import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { setShareAuthCookie, verifySharePassword } from '@/lib/share/auth';
+import { notifySlack } from '@/lib/slack/notify';
+import { formatScriptVersion } from '@/types/scripts';
+
+export async function verifyScriptShareAccess(
+  token: string,
+  email: string,
+  password: string,
+  firstName?: string,
+  lastName?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // Look up share
+  const { data: share, error: shareErr } = await supabase
+    .from('script_shares')
+    .select('id, access_code, script_id, is_active')
+    .eq('token', token)
+    .eq('is_active', true)
+    .single();
+
+  if (shareErr || !share) {
+    return { success: false, error: 'Share link not found or inactive.' };
+  }
+
+  const row = share as { id: string; access_code: string; script_id: string };
+
+  // Verify password
+  if (!verifySharePassword(password, row.access_code)) {
+    return { success: false, error: 'Invalid access code.' };
+  }
+
+  // Build viewer name
+  const viewerName = [firstName, lastName].filter(Boolean).join(' ') || null;
+
+  // Set cookie
+  await setShareAuthCookie('script', token, email, viewerName ?? undefined);
+
+  // Insert view record
+  await supabase.from('script_share_views').insert({
+    share_id: row.id,
+    viewer_email: email,
+    viewer_name: viewerName,
+  } as never);
+
+  // Look up script + project + client for Slack notification
+  const service = createServiceClient();
+  const { data: script } = await service
+    .from('scripts')
+    .select('id, title, major_version, minor_version, is_published, project_id')
+    .eq('id', row.script_id)
+    .single();
+
+  if (script) {
+    const s = script as { id: string; title: string; major_version: number; minor_version: number; is_published: boolean; project_id: string | null };
+    let companyName: string | null = null;
+    let slackChannelId: string | null = null;
+
+    if (s.project_id) {
+      const { data: project } = await service
+        .from('projects')
+        .select('title, client_id')
+        .eq('id', s.project_id)
+        .single();
+      if (project) {
+        const p = project as { title: string; client_id: string | null };
+        if (p.client_id) {
+          const { data: client } = await service
+            .from('clients')
+            .select('name, slack_channel_id')
+            .eq('id', p.client_id)
+            .single();
+          if (client) {
+            const c = client as { name: string; slack_channel_id: string | null };
+            companyName = c.name;
+            slackChannelId = c.slack_channel_id;
+          }
+        }
+      }
+    }
+
+    notifySlack({
+      type: 'script_viewed',
+      data: {
+        scriptId: s.id,
+        title: s.title,
+        versionLabel: formatScriptVersion(s.major_version, s.minor_version, s.is_published),
+        token,
+        viewerEmail: email,
+        viewerName,
+        companyName,
+        slackChannelId,
+      },
+    });
+  }
+
+  return { success: true };
+}
+
+export async function getScriptShareData(token: string) {
+  const supabase = await createClient();
+
+  // Fetch share (anon can read active shares via RLS)
+  const { data: share, error: shareErr } = await supabase
+    .from('script_shares')
+    .select('id, script_id, notes, token, is_active')
+    .eq('token', token)
+    .eq('is_active', true)
+    .single();
+
+  if (shareErr || !share) return null;
+
+  const s = share as { id: string; script_id: string; notes: string | null; token: string };
+
+  // Use service client to bypass RLS for script data
+  const service = createServiceClient();
+
+  // Fetch script with project + client
+  const { data: script, error: scriptErr } = await service
+    .from('scripts')
+    .select('id, title, major_version, minor_version, is_published, project_id, content_mode')
+    .eq('id', s.script_id)
+    .single();
+
+  if (scriptErr || !script) return null;
+
+  const sc = script as { id: string; title: string; major_version: number; minor_version: number; is_published: boolean; project_id: string | null; content_mode: string };
+
+  // Fetch project + client info
+  let projectTitle: string | null = null;
+  let projectNumber: number | null = null;
+  let clientName: string | null = null;
+  let clientLogoUrl: string | null = null;
+
+  if (sc.project_id) {
+    const { data: project } = await service
+      .from('projects')
+      .select('title, project_number, client_id')
+      .eq('id', sc.project_id)
+      .single();
+    if (project) {
+      const p = project as { title: string; project_number: number | null; client_id: string | null };
+      projectTitle = p.title;
+      projectNumber = p.project_number;
+      if (p.client_id) {
+        const { data: client } = await service
+          .from('clients')
+          .select('name, logo_url')
+          .eq('id', p.client_id)
+          .single();
+        if (client) {
+          const c = client as { name: string; logo_url: string | null };
+          clientName = c.name;
+          clientLogoUrl = c.logo_url;
+        }
+      }
+    }
+  }
+
+  // Fetch scenes, beats, characters, tags, locations, references, storyboard frames
+  const [
+    { data: scenes },
+    { data: characters },
+    { data: tags },
+    { data: locations },
+    { data: storyboardFrames },
+  ] = await Promise.all([
+    service.from('script_scenes').select('*').eq('script_id', sc.id).order('sort_order'),
+    service.from('script_characters').select('*').eq('script_id', sc.id).order('sort_order'),
+    service.from('script_tags').select('*').eq('script_id', sc.id),
+    service.from('script_locations').select('*').eq('script_id', sc.id).order('sort_order'),
+    service.from('script_storyboard_frames').select('*').eq('script_id', sc.id),
+  ]);
+
+  const sceneIds = (scenes ?? []).map((s: Record<string, unknown>) => s.id as string);
+
+  // Fetch beats and references for all scenes
+  let beats: Record<string, unknown>[] = [];
+  let references: Record<string, unknown>[] = [];
+
+  if (sceneIds.length > 0) {
+    const { data: beatData } = await service
+      .from('script_beats')
+      .select('*')
+      .in('scene_id', sceneIds)
+      .order('sort_order');
+    beats = (beatData ?? []) as Record<string, unknown>[];
+
+    // Now fetch references with actual beat IDs
+    const beatIds = beats.map(b => b.id as string);
+    if (beatIds.length > 0) {
+      const { data: refResult } = await service
+        .from('script_beat_references')
+        .select('*')
+        .in('beat_id', beatIds)
+        .order('sort_order');
+      references = (refResult ?? []) as Record<string, unknown>[];
+    }
+  }
+
+  return {
+    shareId: s.id,
+    shareNotes: s.notes,
+    script: {
+      id: sc.id,
+      title: sc.title,
+      majorVersion: sc.major_version,
+      minorVersion: sc.minor_version,
+      isPublished: sc.is_published,
+      contentMode: sc.content_mode,
+    },
+    projectTitle,
+    projectNumber,
+    clientName,
+    clientLogoUrl,
+    scenes: (scenes ?? []) as Record<string, unknown>[],
+    beats,
+    characters: (characters ?? []) as Record<string, unknown>[],
+    tags: (tags ?? []) as Record<string, unknown>[],
+    locations: (locations ?? []) as Record<string, unknown>[],
+    references,
+    storyboardFrames: (storyboardFrames ?? []) as Record<string, unknown>[],
+  };
+}
+
+export async function startScriptViewSession(
+  shareId: string,
+  viewerEmail: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('script_share_views')
+    .select('id')
+    .eq('share_id', shareId)
+    .eq('viewer_email', viewerEmail)
+    .order('viewed_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data ? (data as { id: string }).id : null;
+}
+
+export async function updateScriptViewDuration(viewId: string, durationSeconds: number) {
+  const supabase = await createClient();
+  await supabase
+    .from('script_share_views')
+    .update({ duration_seconds: durationSeconds } as never)
+    .eq('id', viewId);
+}

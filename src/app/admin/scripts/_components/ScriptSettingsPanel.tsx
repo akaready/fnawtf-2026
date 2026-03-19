@@ -32,7 +32,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
   const [status, setStatus] = useState(script.status);
   const [notes, setNotes] = useState(script.notes ?? '');
   const [projectSearch, setProjectSearch] = useState('');
-  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; title: string; client_name?: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const router = useRouter();
@@ -98,7 +98,7 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
     const supabase = createClient();
     supabase
       .from('projects')
-      .select('id, title')
+      .select('id, title, client_name')
       .order('title')
       .then(({ data }) => setProjects(data ?? []));
   }, [open]);
@@ -122,8 +122,14 @@ export function ScriptSettingsPanel({ open, onClose, script, onScriptChange }: P
 
   const handleProjectAssign = async (projectId: string | null) => {
     const project = projectId ? projects.find(p => p.id === projectId) ?? null : null;
-    await updateScript(script.id, { project_id: projectId });
-    onScriptChange({ ...script, project_id: projectId, project });
+    const updates: Record<string, unknown> = { project_id: projectId };
+    // Auto-inherit project title if script is still untitled
+    if (project && script.title === 'Untitled Script') {
+      updates.title = project.title;
+      setTitle(project.title);
+    }
+    await updateScript(script.id, updates);
+    onScriptChange({ ...script, ...updates, project } as typeof script);
   };
 
   const handleDelete = async () => {

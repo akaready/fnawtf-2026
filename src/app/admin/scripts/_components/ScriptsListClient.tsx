@@ -103,13 +103,24 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
       ),
     },
     {
+      key: 'client',
+      label: 'Client',
+      type: 'text',
+      sortable: true,
+      render: (row) => (
+        <span className="text-admin-text-secondary">
+          {row.project?.client_name || <span className="text-admin-text-faint">&mdash;</span>}
+        </span>
+      ),
+    },
+    {
       key: 'project',
       label: 'Project',
       type: 'text',
       sortable: true,
       render: (row) => (
         <span className="text-admin-text-secondary">
-          {row.project?.title ?? '—'}
+          {row.project?.title || <span className="text-admin-text-faint">&mdash;</span>}
         </span>
       ),
     },

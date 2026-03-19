@@ -142,6 +142,19 @@ export type SlackEvent =
         companyName?: string | null;
         slackChannelId?: string | null;
       };
+    }
+  | {
+      type: 'script_viewed';
+      data: {
+        scriptId: string;
+        title: string;
+        versionLabel: string;
+        token: string;
+        viewerEmail: string;
+        viewerName?: string | null;
+        companyName?: string | null;
+        slackChannelId?: string | null;
+      };
     };
 
 // ── Public API ──────────────────────────────────────────────────────────────
@@ -664,6 +677,18 @@ function formatMessage(event: SlackEvent): Block[] {
       return blocks;
     }
 
+    case 'script_viewed': {
+      const { scriptId, title, versionLabel, viewerEmail, viewerName } = event.data;
+      const viewer = viewerName ? `${viewerName} (${viewerEmail})` : viewerEmail;
+      const blocks: Block[] = [
+        { type: 'header', text: { type: 'plain_text', text: ':eyes:  Script Viewed', emoji: true } },
+        { type: 'section', text: { type: 'mrkdwn', text: `*${title}* — v${versionLabel}` } },
+      ];
+      pushIf(blocks, fieldPair(['Viewed by', viewer]));
+      blocks.push({ type: 'divider' }, linkBlock(adminUrl(`/admin/scripts?open=${scriptId}`)), footerBlock());
+      return blocks;
+    }
+
     case 'pricing_lead': {
       const { name, email, company, timeline, source } = event.data;
       const blocks: Block[] = [
@@ -822,6 +847,17 @@ async function _send(event: SlackEvent): Promise<string | null> {
       const channelId = await resolveClientChannel(slackChannelId, companyName);
       if (channelId) {
         await postToChannel(channelId, blocks, `Portal login: ${event.data.viewerEmail}`);
+      } else {
+        await sendToAlerts(blocks);
+      }
+      return null;
+    }
+
+    case 'script_viewed': {
+      const { slackChannelId, companyName } = event.data;
+      const channelId = await resolveClientChannel(slackChannelId, companyName);
+      if (channelId) {
+        await postToChannel(channelId, blocks, `Script viewed by ${event.data.viewerEmail}`);
       } else {
         await sendToAlerts(blocks);
       }
