@@ -47,10 +47,10 @@ export function CommentInput({ shareId, beatId, viewerEmail, viewerName, onComme
         <button
           onClick={handleSubmit}
           disabled={isPending || !text.trim()}
-          className="absolute right-3 bottom-3 w-7 h-7 flex items-center justify-center rounded text-muted-foreground/40 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+          className="absolute right-2 bottom-2 w-8 h-8 flex items-center justify-center rounded-md bg-white text-black hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
           title="Click or press Enter to send comment"
         >
-          <Send size={14} />
+          <Send size={13} />
         </button>
       </div>
     </div>

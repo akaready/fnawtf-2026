@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon } from 'lucide-react';
 import { CommentSidebar } from './CommentSidebar';
 import { CommentInput } from './CommentInput';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
@@ -317,9 +317,10 @@ export function ScriptPresentationView({
               duration={dissolveDuration}
             />
             {!current.storyboardImageUrl && (
-              <div className="w-full rounded-lg bg-[#0a0a0a] flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-                <span className="text-[#333] text-xs font-mono">
-                  Scene {current.sceneNumber} \u2014 Beat {current.beatLetter}
+              <div className="w-full rounded-lg bg-[#0d0d0d] border border-white/[0.04] flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '16/9' }}>
+                <ImageIcon size={32} className="text-[#222]" />
+                <span className="text-[#2a2a2a] text-xs font-mono">
+                  {current.sceneNumber}{current.beatLetter}
                 </span>
               </div>
             )}
@@ -396,7 +397,7 @@ export function ScriptPresentationView({
         </div>
 
         {/* Comment input — sticky bottom of center column */}
-        {current && (
+        {current && shareId && (
           <div className="flex-shrink-0">
             <CommentInput
               shareId={shareId}
