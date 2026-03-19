@@ -102,11 +102,9 @@ export function ScriptPresentationView({
     reference: true,
     storyboard: true,
   });
-  const [chromeVisible, setChromeVisible] = useState(true);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
-  const chromeTimer = useRef<ReturnType<typeof setTimeout>>();
   const scrollCooldown = useRef(false);
 
   const current = slides[idx];
@@ -161,23 +159,6 @@ export function ScriptPresentationView({
     document.addEventListener('wheel', handler, { passive: false });
     return () => document.removeEventListener('wheel', handler);
   }, [goNext, goPrev]);
-
-  /* ── Auto-hide chrome ── */
-  const resetChromeTimer = useCallback(() => {
-    setChromeVisible(true);
-    if (chromeTimer.current) clearTimeout(chromeTimer.current);
-    chromeTimer.current = setTimeout(() => setChromeVisible(false), 3000);
-  }, []);
-
-  useEffect(() => {
-    const handler = () => resetChromeTimer();
-    document.addEventListener('mousemove', handler);
-    resetChromeTimer();
-    return () => {
-      document.removeEventListener('mousemove', handler);
-      if (chromeTimer.current) clearTimeout(chromeTimer.current);
-    };
-  }, [resetChromeTimer]);
 
   /* ── Scene lookup: which scene is current? ── */
   const activeSceneId = current.sceneId;
@@ -285,32 +266,28 @@ export function ScriptPresentationView({
             {clientName && (
               <p className="text-[#555] text-xs uppercase tracking-widest mb-0.5">{clientName}</p>
             )}
-            <p className="text-[#ccc] text-sm font-medium">
-              {scriptTitle}
-              {versionLabel && <span className="text-[#444] ml-2">v{versionLabel}</span>}
+            <p className="text-[#ccc] text-base font-medium">
+              {scriptTitle} Script
+              {versionLabel && <span className="text-[#555] ml-2 text-base">v{versionLabel}</span>}
             </p>
           </div>
 
           {/* Storyboard image with nav arrows overlaid */}
-          <div className="relative w-full max-w-5xl flex-shrink-0">
-            {/* Prev arrow */}
+          <div className="group/image relative w-full max-w-5xl flex-shrink-0">
+            {/* Prev arrow — overlay on image, visible on hover */}
             {idx > 0 && (
               <button
                 onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                className={`absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white transition-all duration-300 ${
-                  chromeVisible ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"
               >
                 <ChevronLeft size={20} />
               </button>
             )}
-            {/* Next arrow */}
+            {/* Next arrow — overlay on image, visible on hover */}
             {idx < slides.length - 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); goNext(); }}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white transition-all duration-300 ${
-                  chromeVisible ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"
               >
                 <ChevronRight size={20} />
               </button>
@@ -331,7 +308,7 @@ export function ScriptPresentationView({
           </div>
 
           {/* Timeline */}
-          <div className="w-full max-w-5xl flex-shrink-0 mt-4">
+          <div className="w-full max-w-5xl flex-shrink-0">
             <ScriptPresentationTimeline
               slides={slides}
               currentIndex={idx}
