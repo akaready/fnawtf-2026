@@ -165,16 +165,12 @@ function SectionTileCard({ tile }: { tile: SectionTile }) {
   return (
     <Link
       href={tile.href}
-      className="group relative flex flex-col items-center justify-center gap-3 rounded-xl border border-portal-tile-border bg-portal-tile-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-all duration-300 px-4 py-7 overflow-hidden"
+      className="relative flex flex-col items-center justify-center gap-3 rounded-lg border border-portal-tile-border bg-portal-tile-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-colors px-4 py-6"
     >
-      {/* Subtle top-edge highlight */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--portal-tile-highlight)] to-transparent" />
       {tile.hasNew && (
-        <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-portal-accent shadow-[0_0_8px_var(--portal-accent-muted)]" />
+        <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-portal-accent" />
       )}
-      <div className="w-11 h-11 rounded-lg bg-[var(--portal-tile-highlight)] border border-portal-tile-border flex items-center justify-center group-hover:border-portal-avatar-border transition-colors">
-        <Icon size={22} strokeWidth={1.5} className="text-portal-text-muted group-hover:text-portal-text-primary transition-colors" />
-      </div>
+      <Icon size={28} strokeWidth={1.5} className="text-portal-text-muted" />
       <div className="flex flex-col items-center gap-0.5 text-center">
         <span className="text-sm font-medium text-portal-text-primary leading-tight">
           {tile.label}
@@ -194,11 +190,10 @@ function RecentItemCard({ item }: { item: RecentItem }) {
   return (
     <Link
       href={item.href}
-      className="group relative flex items-start gap-3 rounded-xl border border-portal-tile-border bg-portal-card-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-all duration-300 px-4 py-4 overflow-hidden"
+      className="flex items-start gap-3 rounded-lg border border-portal-tile-border bg-portal-card-bg hover:bg-portal-tile-hover hover:border-portal-avatar-border transition-colors px-4 py-3.5"
     >
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--portal-tile-highlight)] to-transparent" />
-      <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--portal-tile-highlight)] border border-portal-tile-border group-hover:border-portal-avatar-border transition-colors">
-        <Icon size={16} strokeWidth={1.5} className="text-portal-text-muted group-hover:text-portal-text-primary transition-colors" />
+      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md bg-portal-avatar-bg border border-portal-tile-border">
+        <Icon size={15} strokeWidth={1.5} className="text-portal-text-muted" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
@@ -206,7 +201,7 @@ function RecentItemCard({ item }: { item: RecentItem }) {
             {item.type === 'proposal' ? 'Proposal' : 'Script'}
           </span>
           {isNew && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full border border-portal-accent/40 text-portal-accent leading-none shadow-[0_0_6px_var(--portal-accent-muted)]">
+            <span className="text-xs px-1.5 py-0.5 rounded-full border border-portal-accent text-portal-accent leading-none">
               New
             </span>
           )}
@@ -288,31 +283,14 @@ export default async function PortalHomePage() {
 
   return (
     <div className="px-4 md:px-8 py-8 max-w-4xl mx-auto">
-      {/* Hero greeting */}
-      <div className="relative mb-12 py-6 -mx-4 md:-mx-8 px-4 md:px-8 overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-[var(--portal-glow)] blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-portal-tile-border to-transparent" />
-
-        <div className="relative">
-          {/* Logo lockup */}
-          <div className="flex items-center gap-3 mb-6">
-            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5 opacity-50" />
-            {session!.logoUrl && (
-              <>
-                <span className="text-portal-text-separator text-sm">/</span>
-                <img src={session!.logoUrl} alt={session!.clientName} className="admin-logo h-5 object-contain opacity-70" />
-              </>
-            )}
-          </div>
-
-          <h1 className="text-3xl font-light text-portal-text-primary tracking-tight">
-            Welcome back, {firstName}.
-          </h1>
-          <p className="mt-1.5 text-sm text-portal-text-muted">
-            {session!.clientName} &middot; Your project portal
-          </p>
-        </div>
+      {/* Greeting */}
+      <div className="mb-10">
+        <h1 className="text-3xl font-light text-portal-text-primary tracking-tight">
+          Welcome back, {firstName}.
+        </h1>
+        <p className="mt-1 text-sm text-portal-text-muted">
+          {session!.clientName} &middot; Your project portal
+        </p>
       </div>
 
       {/* Recent strip */}
