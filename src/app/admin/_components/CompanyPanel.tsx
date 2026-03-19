@@ -142,6 +142,7 @@ export function CompanyPanel({
       company_size: c.company_size,
       twitter_url: c.twitter_url,
       instagram_url: c.instagram_url,
+      portal_password: c.portal_password,
     });
     setDirty(false);
     onCompanyUpdated(c);
@@ -583,6 +584,19 @@ export function CompanyPanel({
                   <UsersIcon size={14} className="text-admin-text-placeholder flex-shrink-0" />
                   <input type="text" value={localCompany.company_size ?? ''} onChange={(e) => handleChange('company_size', e.target.value || null)} placeholder="Company size" className={inputCls} />
                 </div>
+              </div>
+
+              {/* Portal Access */}
+              <div className="space-y-1.5">
+                <label className="admin-label">Portal Access</label>
+                <p className="text-admin-sm text-admin-text-muted">Clients log in with their email + this code</p>
+                <input
+                  type="text"
+                  value={localCompany.portal_password ?? ''}
+                  onChange={(e) => handleChange('portal_password', e.target.value || null)}
+                  placeholder="Access code…"
+                  className={inputCls}
+                />
               </div>
 
               {/* Notes */}
