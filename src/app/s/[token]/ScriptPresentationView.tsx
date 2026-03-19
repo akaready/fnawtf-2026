@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftOpen } from 'lucide-react';
 import { CommentSidebar } from './CommentSidebar';
 import { CommentInput } from './CommentInput';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
@@ -84,11 +84,11 @@ interface Props {
 
 export function ScriptPresentationView({
   slides,
-  onClose,
-  scriptTitle,
-  clientName,
-  clientLogoUrl,
-  versionLabel,
+  onClose: _onClose,
+  scriptTitle: _scriptTitle,
+  clientName: _clientName,
+  clientLogoUrl: _clientLogoUrl,
+  versionLabel: _versionLabel,
   scenes,
   shareId,
   viewerEmail,
@@ -141,13 +141,12 @@ export function ScriptPresentationView({
   /* ── Keyboard nav ── */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') goNext();
       if (e.key === 'ArrowLeft') goPrev();
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onClose, goNext, goPrev]);
+  }, [goNext, goPrev]);
 
   /* ── Mouse wheel nav (debounced) ── */
   useEffect(() => {
@@ -206,55 +205,40 @@ export function ScriptPresentationView({
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
-      {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
+      {/* ════ LEFT SIDEBAR — Scene Nav (matches admin/table share sidebar exactly) ════ */}
       <div
-        className={`flex-shrink-0 h-full border-r border-border bg-[#0a0a0a] overflow-hidden ${sidebarTransition} ${leftOpen ? 'w-[220px]' : 'w-0'}`}
+        className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
       >
-        <div className="w-[220px] h-full flex flex-col">
-          {/* Sidebar header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-            <span className="text-sm font-medium text-[#888] uppercase tracking-wider">Scenes</span>
-            <button
-              onClick={() => setLeftOpen(false)}
-              className="p-1 rounded text-[#555] hover:text-white hover:bg-[#222] transition-colors"
-            >
-              <PanelLeftClose size={14} />
-            </button>
-          </div>
-          {/* Scene list */}
-          <div className="flex-1 overflow-y-auto admin-scrollbar py-2">
-            {scenes.map((scene) => {
-              const isActive = scene.id === activeSceneId;
-              return (
-                <button
-                  key={scene.id}
-                  onClick={() => jumpToScene(scene.id)}
-                  className={`w-full text-left px-4 py-2.5 transition-colors ${
-                    isActive ? 'bg-[#1a1a1a] border-l-2 border-l-white' : 'hover:bg-[#111] border-l-2 border-l-transparent'
-                  }`}
-                >
-                  <div className="flex items-baseline gap-2">
-                    <span className={`font-mono text-sm font-bold flex-shrink-0 ${isActive ? 'text-white' : 'text-[#666]'}`}>
-                      {scene.sceneNumber}
-                    </span>
-                    <span className={`text-sm uppercase tracking-wide truncate ${isActive ? 'text-[#ccc]' : 'text-[#555]'}`}>
-                      {scene.location_name || 'Untitled'}
-                    </span>
+        <div className="w-56 h-full overflow-y-auto admin-scrollbar">
+          {scenes.map((scene) => {
+            const isActive = scene.id === activeSceneId;
+            return (
+              <button
+                key={scene.id}
+                onClick={() => jumpToScene(scene.id)}
+                className={`w-full text-left flex items-center gap-1 px-2 py-3 border-b border-admin-border-subtle cursor-grab transition-colors ${
+                  isActive
+                    ? 'bg-admin-bg-active text-admin-text-primary'
+                    : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-mono text-sm font-bold">{scene.sceneNumber}</span>
                   </div>
-                  <div className="ml-6 mt-0.5">
-                    <span className="text-sm text-[#444]">
-                      {[scene.int_ext, scene.time_of_day].filter(Boolean).join(' / ')}
-                    </span>
+                  <div className="text-xs truncate uppercase tracking-wide mt-0.5 opacity-70">
+                    {scene.int_ext}. {scene.location_name || '\u2014'}
                   </div>
-                  {scene.scene_description && (
-                    <p className="ml-6 mt-1 text-sm text-[#333] leading-snug line-clamp-2">
-                      {scene.scene_description}
-                    </p>
+                  {scene.time_of_day && (
+                    <div className="text-xs text-admin-text-ghost">{scene.time_of_day}</div>
                   )}
-                </button>
-              );
-            })}
-          </div>
+                  {scene.scene_description && (
+                    <div className="text-xs text-admin-text-ghost mt-0.5">[{scene.scene_description}]</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -262,7 +246,7 @@ export function ScriptPresentationView({
       {!leftOpen && (
         <button
           onClick={() => setLeftOpen(true)}
-          className={`absolute left-2 top-2 z-30 p-2 rounded text-[#555] hover:text-white hover:bg-[#222] transition-all duration-500 ${
+          className={`absolute left-2 top-2 z-30 p-2 rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-all duration-500 ${
             chromeVisible ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -272,81 +256,49 @@ export function ScriptPresentationView({
 
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className={`absolute top-4 right-4 z-20 p-2 rounded text-[#666] hover:text-white hover:bg-[#222] transition-all duration-500 ${
-            chromeVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <X size={20} />
-        </button>
-
-        {/* Nav arrows — overlaid on image area */}
-        {idx > 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); goPrev(); }}
-            className={`absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-[#111] text-[#666] hover:bg-[#222] hover:text-white transition-all duration-500 ${
-              chromeVisible ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <ChevronLeft size={24} />
-          </button>
-        )}
-        {idx < slides.length - 1 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); goNext(); }}
-            className={`absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-[#111] text-[#666] hover:bg-[#222] hover:text-white transition-all duration-500 ${
-              chromeVisible ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <ChevronRight size={24} />
-          </button>
-        )}
-
         {/* Scrollable center content */}
-        <div className="flex-1 flex flex-col items-center px-12 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
-          {/* Logo bar */}
-          <div className="flex items-center justify-center gap-3 pt-6 pb-4 flex-shrink-0">
-            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-8" />
-            {clientLogoUrl && (
-              <>
-                <span className="text-[#555] text-xl">&times;</span>
-                <img src={clientLogoUrl} alt="" className="h-8 object-contain" />
-              </>
-            )}
-          </div>
-
-          {/* Title */}
-          <div className="text-center pb-4 flex-shrink-0">
-            {clientName && (
-              <p className="text-[#555] text-sm uppercase tracking-widest mb-0.5">{clientName}</p>
-            )}
-            <h1 className="text-[#ccc] text-sm font-medium">
-              {scriptTitle}
-              {versionLabel && <span className="text-[#444] ml-2">v{versionLabel}</span>}
-            </h1>
-          </div>
-
+        <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
           {/* Scene heading */}
           <div className="w-full max-w-5xl flex-shrink-0 mb-3">
             <div className="flex items-center gap-2 px-1">
-              <span className="text-[#555] font-mono text-sm flex-shrink-0">
+              <span className="text-[#555] font-mono text-xs flex-shrink-0">
                 {current.sceneNumber}{current.beatLetter}
               </span>
-              <span className="text-sm font-medium text-[#888] uppercase tracking-wider truncate">
+              <span className="text-xs font-medium text-[#888] uppercase tracking-wider truncate">
                 {sceneHeading}
               </span>
               {activeScene?.scene_description && (
-                <span className="text-sm text-[#444] truncate">
+                <span className="text-xs text-[#444] truncate">
                   [{activeScene.scene_description}]
                 </span>
               )}
             </div>
           </div>
 
-          {/* Storyboard image */}
-          <div className="w-full max-w-5xl flex-shrink-0">
+          {/* Storyboard image with nav arrows overlaid */}
+          <div className="relative w-full max-w-5xl flex-shrink-0">
+            {/* Prev arrow */}
+            {idx > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                className={`absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white transition-all duration-300 ${
+                  chromeVisible ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
+            {/* Next arrow */}
+            {idx < slides.length - 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); goNext(); }}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 text-white/50 hover:bg-black/60 hover:text-white transition-all duration-300 ${
+                  chromeVisible ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+            )}
             <CrossfadeImage
               src={current.storyboardImageUrl}
               alt={`Scene ${current.sceneNumber} \u2014 Beat ${current.beatLetter}`}
@@ -354,7 +306,7 @@ export function ScriptPresentationView({
             />
             {!current.storyboardImageUrl && (
               <div className="w-full rounded-lg bg-[#0a0a0a] flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-                <span className="text-[#333] text-sm font-mono">
+                <span className="text-[#333] text-xs font-mono">
                   Scene {current.sceneNumber} \u2014 Beat {current.beatLetter}
                 </span>
               </div>
@@ -380,11 +332,11 @@ export function ScriptPresentationView({
             />
           </div>
 
-          {/* ── Audio (full width, larger text) ── */}
+          {/* ── Audio (full width, content text larger) ── */}
           {showAudio && (
             <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 mb-px">
-              <p className="text-sm font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
-              <div className="text-base text-[#999] leading-relaxed">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
+              <div className="text-base text-[#ccc] leading-relaxed">
                 {current.audioContent || <span className="text-[#333]">&mdash;</span>}
               </div>
             </div>
@@ -396,7 +348,7 @@ export function ScriptPresentationView({
               <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${[showVisual, showNotes, showReference].filter(Boolean).length}, minmax(0, 1fr))` }}>
                 {showVisual && (
                   <div className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-3">
-                    <p className="text-sm font-semibold uppercase tracking-widest text-[#444] mb-1.5">Visual</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Visual</p>
                     <div className="text-sm text-[#999] leading-relaxed">
                       {current.visualContent || <span className="text-[#333]">&mdash;</span>}
                     </div>
@@ -404,7 +356,7 @@ export function ScriptPresentationView({
                 )}
                 {showNotes && (
                   <div className="border-l-2 border-l-[var(--admin-warning)] bg-[#0d0d0d] px-4 py-3">
-                    <p className="text-sm font-semibold uppercase tracking-widest text-[#444] mb-1.5">Notes</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Notes</p>
                     <div className="text-sm text-[#999] leading-relaxed">
                       {current.notesContent || <span className="text-[#333]">&mdash;</span>}
                     </div>
@@ -412,7 +364,7 @@ export function ScriptPresentationView({
                 )}
                 {showReference && (
                   <div className="border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3">
-                    <p className="text-sm font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
                     <div className="text-sm text-[#999] leading-relaxed">
                       {current.referenceImageUrls.length > 0 ? (
                         <div className="flex gap-2 flex-wrap">
