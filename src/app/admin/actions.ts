@@ -3329,21 +3329,21 @@ export async function getFrameHistoryForBeat(beatId: string) {
   return (data ?? []) as unknown as import('@/types/scripts').ScriptStoryboardFrameRow[];
 }
 
-export async function setActiveFrame(frameId: string, beatId: string) {
+export async function setActiveFrame(frameId: string, beatId: string): Promise<import('@/types/scripts').ScriptStoryboardFrameRow> {
   await requireAuth();
   const { createServiceClient } = await import('@/lib/supabase/service');
   const supabase = createServiceClient();
 
-  // Deactivate all frames for this beat
+  // Clear all slot assignments for this beat
   await supabase
     .from('script_storyboard_frames')
-    .update({ is_active: false } as never)
+    .update({ slot: null, is_active: false } as never)
     .eq('beat_id', beatId);
 
-  // Activate the chosen one
+  // Assign the selected frame to slot 1
   const { data, error } = await supabase
     .from('script_storyboard_frames')
-    .update({ is_active: true } as never)
+    .update({ slot: 1, is_active: true } as never)
     .eq('id', frameId)
     .select('*')
     .single();
@@ -3466,6 +3466,96 @@ export async function deleteAllStoryboardFrames(scriptId: string) {
     await supabase.storage.from('script-storyboards').remove(paths);
     await supabase.from('script_storyboard_frames').delete().eq('script_id', scriptId);
   }
+}
+
+export async function setFrameSlot(frameId: string, slot: number | null): Promise<void> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from('script_storyboard_frames')
+    .update({ slot, is_active: slot !== null } as never)
+    .eq('id', frameId);
+  if (error) throw new Error(error.message);
+}
+
+export async function setBeatLayout(beatId: string, layout: string): Promise<void> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from('script_beats')
+    .update({ storyboard_layout: layout } as never)
+    .eq('id', beatId);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateFrameCrop(frameId: string, crop: import('@/types/scripts').CropConfig | null): Promise<void> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from('script_storyboard_frames')
+    .update({ crop_config: crop } as never)
+    .eq('id', frameId);
+  if (error) throw new Error(error.message);
+}
+
+export async function duplicateFrame(frameId: string): Promise<import('@/types/scripts').ScriptStoryboardFrameRow> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  const { data: source, error: fetchErr } = await supabase
+    .from('script_storyboard_frames')
+    .select('*')
+    .eq('id', frameId)
+    .single();
+  if (fetchErr) throw new Error(fetchErr.message);
+  const src = source as import('@/types/scripts').ScriptStoryboardFrameRow;
+  const { data: copy, error: insertErr } = await supabase
+    .from('script_storyboard_frames')
+    .insert({
+      beat_id: src.beat_id,
+      image_url: src.image_url,
+      storage_path: src.storage_path,
+      source: src.source,
+      prompt_used: src.prompt_used,
+      slot: null,
+      is_active: false,
+      crop_config: null,
+    } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+  return copy as import('@/types/scripts').ScriptStoryboardFrameRow;
+}
+
+export async function moveFrameToBeat(frameId: string, targetBeatId: string): Promise<void> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  // Validate target has room
+  const { count, error: countErr } = await supabase
+    .from('script_storyboard_frames')
+    .select('id', { count: 'exact' })
+    .eq('beat_id', targetBeatId)
+    .not('slot', 'is', null);
+  if (countErr) throw new Error(countErr.message);
+  if ((count ?? 0) >= 4) throw new Error('Target beat already has 4 active frames');
+  // Find next available slot (1–4) on target beat
+  const { data: targetFrames, error: slotsErr } = await supabase
+    .from('script_storyboard_frames')
+    .select('slot')
+    .eq('beat_id', targetBeatId)
+    .not('slot', 'is', null);
+  if (slotsErr) throw new Error(slotsErr.message);
+  const usedSlots = new Set((targetFrames ?? []).map((f: { slot: number }) => f.slot));
+  const nextSlot = [1, 2, 3, 4].find(s => !usedSlots.has(s)) ?? 1;
+  const { error: updateErr } = await supabase
+    .from('script_storyboard_frames')
+    .update({ beat_id: targetBeatId, slot: nextSlot, is_active: true } as never)
+    .eq('id', frameId);
+  if (updateErr) throw new Error(updateErr.message);
 }
 
 // ── Locations ─────────────────────────────────────────────────────────
