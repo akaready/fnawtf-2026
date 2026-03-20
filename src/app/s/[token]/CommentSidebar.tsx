@@ -56,7 +56,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
   }, [loadComments, refreshKey]);
 
   return (
-    <div className="relative flex-shrink-0 h-full">
+    <div className="hidden md:flex md:relative md:flex-shrink-0 md:h-full">
       {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
       <button
         onClick={onToggle}

@@ -41,9 +41,9 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
           key={topLayer.key}
           src={topLayer.src}
           alt={alt}
-          className="w-full rounded-lg select-none"
+          className="w-full rounded-lg select-none max-h-[35vh] md:max-h-[55vh]"
           draggable={false}
-          style={{ maxHeight: '55vh', objectFit: 'contain' }}
+          style={{ objectFit: 'contain' }}
         />
       )}
       {bgLayer?.src && (
@@ -51,7 +51,7 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
           key={bgLayer.key}
           src={bgLayer.src}
           alt=""
-          className="absolute inset-0 w-full rounded-lg pointer-events-none select-none"
+          className="absolute inset-0 w-full rounded-lg pointer-events-none select-none max-h-[35vh] md:max-h-[55vh]"
           draggable={false}
           style={{ maxHeight: '55vh', objectFit: 'contain', opacity: 0, transition: `opacity ${duration}s cubic-bezier(0.32, 0.72, 0, 1)` }}
         />
@@ -185,7 +185,7 @@ export function ScriptPresentationView({
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
-      <div className="relative flex-shrink-0 h-full">
+      <div className="hidden md:block relative flex-shrink-0 h-full">
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
         <button
           onClick={() => setLeftOpen(true)}
@@ -228,14 +228,11 @@ export function ScriptPresentationView({
                   <div className="flex items-baseline gap-1.5">
                     <span className="font-mono text-sm font-bold">{scene.sceneNumber}</span>
                   </div>
-                  <div className="text-xs truncate uppercase tracking-wide mt-0.5 opacity-70">
-                    {scene.int_ext}. {scene.location_name || '\u2014'}
+                  <div className="text-xs uppercase tracking-wide mt-0.5 opacity-70 break-words">
+                    {scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}
                   </div>
-                  {scene.time_of_day && (
-                    <div className="text-xs text-admin-text-ghost">{scene.time_of_day}</div>
-                  )}
                   {scene.scene_description && (
-                    <div className="text-xs text-admin-text-ghost mt-0.5">[{scene.scene_description}]</div>
+                    <div className="text-xs text-admin-text-primary uppercase tracking-wide">[{scene.scene_description}]</div>
                   )}
                 </div>
               </button>
@@ -249,24 +246,24 @@ export function ScriptPresentationView({
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Scrollable center content */}
-        <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
+        <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
           {/* Logo bar — client first, FNA second */}
-          <div className="flex items-center justify-center gap-3 pt-8 pb-4 flex-shrink-0">
+          <div className="flex items-center justify-center gap-3 pt-4 pb-2 md:pt-8 md:pb-4 flex-shrink-0">
             {clientLogoUrl && (
               <>
-                <img src={clientLogoUrl} alt="" className="h-7 object-contain admin-logo" />
+                <img src={clientLogoUrl} alt="" className="h-5 md:h-7 object-contain admin-logo" />
                 <span className="text-[#555] text-lg">&times;</span>
               </>
             )}
-            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-7" />
+            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5 md:h-7" />
           </div>
 
           {/* Title */}
-          <div className="text-center pb-6 flex-shrink-0">
+          <div className="text-center pb-3 md:pb-6 flex-shrink-0">
             {clientName && (
-              <p className="text-[#555] text-xs uppercase tracking-widest mb-0.5">{clientName}</p>
+              <p className="text-[#555] text-[10px] md:text-xs uppercase tracking-widest mb-0.5">{clientName}</p>
             )}
-            <p className="text-[#ccc] text-base font-medium">
+            <p className="text-[#ccc] text-sm md:text-base font-medium">
               {scriptTitle} Script
               {versionLabel && (() => {
                 const major = parseInt(versionLabel) || 0;
@@ -286,7 +283,7 @@ export function ScriptPresentationView({
           {/* Storyboard image with nav arrows overlaid */}
           <div className="group/image relative w-full max-w-5xl flex-shrink-0">
             {/* Nav arrows — bottom center of image, visible on hover */}
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 opacity-0 group-hover/image:opacity-100 transition-opacity duration-300">
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity duration-300">
               <button
                 onClick={(e) => { e.stopPropagation(); goPrev(); }}
                 disabled={idx === 0}
@@ -308,7 +305,7 @@ export function ScriptPresentationView({
               duration={dissolveDuration}
             />
             {!current.storyboardImageUrl && (
-              <div className="w-full rounded-lg bg-[#0d0d0d] border border-white/[0.04] flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '16/9', maxHeight: '55vh' }}>
+              <div className="w-full rounded-lg bg-[#0d0d0d] border border-white/[0.04] flex flex-col items-center justify-center gap-2 max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
                 <ImageIcon size={32} className="text-[#222]" />
                 <span className="text-[#2a2a2a] text-xs font-mono">
                   {current.sceneNumber}{current.beatLetter}
@@ -318,7 +315,7 @@ export function ScriptPresentationView({
           </div>
 
           {/* Timeline */}
-          <div className="w-full max-w-5xl flex-shrink-0 mt-6 mb-4">
+          <div className="w-full max-w-5xl flex-shrink-0 mt-3 mb-2 md:mt-6 md:mb-4">
             <ScriptPresentationTimeline
               slides={slides}
               currentIndex={idx}
@@ -327,7 +324,7 @@ export function ScriptPresentationView({
           </div>
 
           {/* Column toggle dots — audio + storyboard always on */}
-          <div className="flex justify-center mt-1 mb-3 flex-shrink-0">
+          <div className="flex justify-center mt-1 mb-2 md:mb-3 flex-shrink-0">
             <ScriptColumnToggle
               config={colConfig}
               onChange={(c) => setColConfig({ ...c, audio: true, storyboard: true })}
@@ -336,7 +333,7 @@ export function ScriptPresentationView({
           </div>
 
           {/* Scene heading — matches table view scene header exactly */}
-          <div className="w-full max-w-5xl flex-shrink-0 flex items-center bg-[#141414] border-b border-border rounded-t px-4 py-3 mb-px">
+          <div className="w-full max-w-5xl flex-shrink-0 flex items-center bg-[#141414] border-b border-border rounded-t px-3 py-2 md:px-4 md:py-3 mb-px">
             <span className="text-muted-foreground font-mono text-xs flex-shrink-0 mr-2">
               {current.sceneNumber}
             </span>
@@ -353,7 +350,7 @@ export function ScriptPresentationView({
           {/* ── Audio (full width, content text larger) ── */}
           <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 mb-px">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
-            <div className="text-lg text-[#ccc] leading-relaxed">
+            <div className="text-base md:text-lg text-[#ccc] leading-relaxed">
               {current.audioContent || <span className="text-[#333]">&mdash;</span>}
             </div>
           </div>
@@ -361,7 +358,7 @@ export function ScriptPresentationView({
           {/* ── Two columns: Visual + Notes ── */}
           {(showVisual || showNotes) && (
             <div className="w-full max-w-5xl flex-shrink-0 mb-px">
-              <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${[showVisual, showNotes].filter(Boolean).length}, minmax(0, 1fr))` }}>
+              <div className={`grid gap-px grid-cols-1 ${[showVisual, showNotes].filter(Boolean).length === 2 ? 'md:grid-cols-2' : ''}`}>
                 {showVisual && (
                   <div className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-3">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Visual</p>
@@ -390,7 +387,7 @@ export function ScriptPresentationView({
                 {current.referenceImageUrls.length > 0 ? (
                   <div className="flex gap-2 flex-wrap">
                     {current.referenceImageUrls.map((url, i) => (
-                      <img key={i} src={url} alt="" className="h-16 rounded object-cover" />
+                      <img key={i} src={url} alt="" className="h-12 md:h-16 rounded object-cover" />
                     ))}
                   </div>
                 ) : (
@@ -404,9 +401,9 @@ export function ScriptPresentationView({
 
         {/* Floating comment input — fixed above content */}
         {current && (
-          <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-6 pointer-events-none">
-            <div className="w-full max-w-2xl pointer-events-auto">
-              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 p-4">
+          <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4 md:px-6 pointer-events-none">
+            <div className="w-full max-w-xl md:max-w-2xl pointer-events-auto">
+              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 p-3 md:p-4">
                 <textarea
                   ref={el => {
                     if (el) {

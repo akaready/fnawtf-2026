@@ -156,7 +156,7 @@ export function ScriptShareIntro({
         style={{ backgroundColor: 'black' }}
       />
 
-      <div ref={innerRef} className="relative z-10 flex flex-col items-center text-center px-6 sm:px-8 max-w-5xl w-full">
+      <div ref={innerRef} className="relative z-10 flex flex-col items-center text-center px-4 sm:px-6 md:px-8 max-w-5xl w-full">
         {/* Eyebrow — client name */}
         <p data-eyebrow className="text-sm tracking-[0.45em] uppercase text-white/25 font-mono mb-5" style={{ opacity: 0 }}>
           {clientName || 'Script Review'}
@@ -165,7 +165,7 @@ export function ScriptShareIntro({
         {/* Clip-reveal title */}
         <h1
           className="font-display font-bold text-white leading-[0.95] mb-6"
-          style={{ fontSize: 'clamp(3.5rem, 9vw, 10rem)' }}
+          style={{ fontSize: 'clamp(2rem, 8vw, 10rem)' }}
         >
           {titleWords.map((word, i) => (
             <span
@@ -242,7 +242,7 @@ export function ScriptShareIntro({
         </div>
 
         {/* Instructions */}
-        <p data-instructions className="text-xs text-white/40 max-w-sm whitespace-nowrap" style={{ opacity: 0 }}>
+        <p data-instructions className="text-xs text-white/40 max-w-sm" style={{ opacity: 0 }}>
           Navigate with arrow keys, the timeline, or the left/right buttons.
         </p>
       </div>
