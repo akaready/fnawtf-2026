@@ -31,6 +31,8 @@ interface Props {
   scratchpadMode?: boolean;
   scratchScenes?: ScratchScene[];
   onScrollToScene?: (label: string, sceneIndex: number) => void;
+  activeBeatId?: string | null;
+  onSelectBeat?: (beatId: string) => void;
 }
 
 export function ScriptSceneSidebar({
@@ -43,6 +45,8 @@ export function ScriptSceneSidebar({
   scratchpadMode,
   scratchScenes,
   onScrollToScene,
+  activeBeatId,
+  onSelectBeat,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
@@ -93,6 +97,8 @@ export function ScriptSceneSidebar({
                 showNumber={true}
                 showSlug={showSlug}
                 showDesc={showDesc}
+                activeBeatId={activeBeatId}
+                onSelectBeat={onSelectBeat}
               />
             ))}
           </SortableContext>
@@ -137,6 +143,8 @@ function SortableSceneItem({
   showNumber: _showNumber,
   showSlug,
   showDesc,
+  activeBeatId,
+  onSelectBeat,
 }: {
   scene: ComputedScene;
   isActive: boolean;
@@ -144,6 +152,8 @@ function SortableSceneItem({
   showNumber: boolean;
   showSlug: boolean;
   showDesc: boolean;
+  activeBeatId?: string | null;
+  onSelectBeat?: (beatId: string) => void;
 }) {
   const {
     attributes,
@@ -160,34 +170,71 @@ function SortableSceneItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Beat nav derivation
+  const beatNavItems = scene.beats.length >= 2
+    ? [...scene.beats]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((beat, i) => ({
+          beatId: beat.id,
+          label: String.fromCharCode(65 + i),
+          isActive: beat.id === activeBeatId,
+          onClick: (e: React.MouseEvent) => {
+            e.stopPropagation();
+            onSelectBeat?.(beat.id);
+          },
+        }))
+    : [];
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`group col-span-2 grid grid-cols-subgrid items-center h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group col-span-2 flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
     >
-      <span className="text-admin-border font-bebas text-[56px] leading-none translate-y-[6px] text-right pr-2">
+      <span className="w-[68px] flex-shrink-0 font-bebas text-[56px] leading-none text-right pr-2 translate-y-[6px] text-admin-border flex items-center justify-end">
         {scene.sceneNumber}
       </span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-3 flex flex-col justify-center py-2">
         {showSlug && (
-          <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
+          <span className="text-admin-sm font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
             {scene.int_ext}. {scene.location_name || '—'}{scene.time_of_day ? ` — ${scene.time_of_day}` : ''}
           </span>
         )}
         {showDesc && scene.scene_description && (
-          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
+          <span className="text-admin-sm text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
             {scene.scene_description}
           </span>
         )}
       </div>
+      {/* Beat grid — will not render in scratchpad (beats.length always < 2) */}
+      {beatNavItems.length >= 2 && (
+        <div className="self-stretch border-l border-admin-border-subtle grid grid-rows-2 grid-flow-col auto-cols-[22px] gap-px bg-admin-border-subtle flex-shrink-0">
+          {beatNavItems.map(beat => (
+            <button
+              key={beat.beatId}
+              type="button"
+              onClick={beat.onClick}
+              className={`flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
+                beat.isActive
+                  ? 'bg-admin-beat-selected-bg text-admin-beat-selected-text'
+                  : 'bg-admin-bg-sidebar text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
+              }`}
+            >
+              {beat.label}
+            </button>
+          ))}
+          {beatNavItems.length % 2 !== 0 && (
+            <span aria-hidden="true" className="bg-admin-bg-sidebar" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
