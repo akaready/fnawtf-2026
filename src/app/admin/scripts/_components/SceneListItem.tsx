@@ -34,10 +34,10 @@ export function SceneListItem({
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       } ${className}`}
     >
-      <span className="text-admin-border font-bebas text-[56px] leading-none text-right pr-2">
+      <span className="text-admin-border font-bebas text-[56px] leading-none text-right pr-2 pl-3">
         {sceneNumber}
       </span>
-      <div className="pr-1 -translate-y-[3px]">
+      <div className="pr-3 -translate-y-[3px]">
         {slug && (
           <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
             {slug}
