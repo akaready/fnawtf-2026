@@ -118,6 +118,9 @@ const config: Config = {
             indigo: 'var(--admin-toolbar-indigo)',
             violet: 'var(--admin-toolbar-violet)',
           },
+          'beat-selected-bg':   'var(--admin-beat-selected-bg)',
+          'beat-selected-text': 'var(--admin-beat-selected-text)',
+          'beat-hover-bg':      'var(--admin-beat-hover-bg)',
         },
 
         // ─── Portal Design Tokens ───────────────────────────────────

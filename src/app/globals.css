@@ -113,6 +113,11 @@
   --admin-toolbar-indigo:    #6366f1;
   --admin-toolbar-violet:    #8b46ff;
 
+  /* Beat navigation */
+  --admin-beat-selected-bg:   #000000;
+  --admin-beat-selected-text: #d4d4d8;
+  --admin-beat-hover-bg:      rgba(255, 255, 255, 0.06);
+
   /* Border radius */
   --admin-radius-sm:   0.375rem;
   --admin-radius-md:   0.5rem;
@@ -205,6 +210,11 @@
   --admin-accent-hover:      #6d28d9;
   --admin-accent-bg:         rgba(124, 58, 237, 0.08);
   --admin-accent-border:     rgba(124, 58, 237, 0.25);
+
+  /* Beat navigation */
+  --admin-beat-selected-bg:   #e5e5e5;
+  --admin-beat-selected-text: #404040;
+  --admin-beat-hover-bg:      rgba(0, 0, 0, 0.06);
 }
 
 html {
