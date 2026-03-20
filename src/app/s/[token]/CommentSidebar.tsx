@@ -75,7 +75,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
           {/* Header — same h-[3rem] as left sidebar */}
           <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
             <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">
-              Comments {comments.length > 0 && `(${comments.length})`}
+              COMMENTS ({comments.length})
             </span>
             <button
               onClick={onToggle}

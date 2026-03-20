@@ -812,9 +812,9 @@ export function ScriptEditorClient({
       <div className="flex-1 flex min-h-0">
         {/* Scene sidebar — always flush left, grid trick for auto-width animation */}
         <div
-          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[auto]' : 'grid-cols-[0fr]'}`}
+          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
-          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar">
+          <div className="overflow-hidden min-w-max border-r border-admin-border bg-admin-bg-sidebar">
             {contentMode === 'scratchpad' ? (
               <ScriptSceneSidebar
                 scenes={computedScenes}
