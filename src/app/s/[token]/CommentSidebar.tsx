@@ -63,7 +63,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
         className={`absolute right-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-2.5 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         title="Show comments"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-widest">Comments</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest">Comments ({comments.length})</span>
         <PanelRightOpen size={14} />
       </button>
 
