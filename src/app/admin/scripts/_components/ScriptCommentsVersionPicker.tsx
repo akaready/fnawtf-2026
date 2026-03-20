@@ -19,8 +19,7 @@ export function ScriptCommentsVersionPicker({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  if (shares.length === 0) return null;
-
+  const loaded = shares.length > 0;
   const selectedShare = shares.find(s => s.id === selectedShareId) ?? null;
   const isHistorical = selectedShare?.snapshot_major_version != null
     && selectedShare.snapshot_major_version !== currentMajorVersion;
@@ -28,11 +27,14 @@ export function ScriptCommentsVersionPicker({
   return (
     <div className="absolute right-2 top-1/2 -translate-y-1/2">
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}
-        className={`opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover ${
-          isHistorical ? 'text-admin-cream opacity-100' : ''
+        onClick={(e) => { if (!loaded) return; e.stopPropagation(); setOpen(o => !o); }}
+        disabled={!loaded}
+        className={`p-1 rounded transition-all duration-300 ${
+          loaded
+            ? `text-admin-cream opacity-40 group-hover/colhdr:opacity-100 hover:bg-admin-bg-hover ${isHistorical ? 'opacity-100' : ''}`
+            : 'text-admin-text-ghost opacity-20 cursor-default'
         }`}
-        title="Switch version"
+        title={loaded ? 'Switch version' : 'Loading...'}
       >
         <History size={14} />
       </button>
