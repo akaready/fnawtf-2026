@@ -8,6 +8,7 @@ import type { ComputedScene, ScriptLocationRow } from '@/types/scripts';
 
 interface Props {
   scene: ComputedScene;
+  scriptGroupId: string;
   locations?: ScriptLocationRow[];
   onUpdate: (sceneId: string, data: Record<string, unknown>) => void;
   onDelete?: (sceneId: string) => void;
@@ -33,7 +34,7 @@ const TIME_OPTIONS: { id: string; label: string }[] = [
   { id: 'LATER', label: 'LATER' },
 ];
 
-export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating, isGenerating }: Props) {
+export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating, isGenerating }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [locQuery, setLocQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -68,7 +69,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
   const handleCreateAndSelect = async () => {
     const name = locQuery.trim().toUpperCase();
     if (!name) return;
-    const id = await createLocation(scene.script_id, {
+    const id = await createLocation(scriptGroupId, {
       name,
       description: '',
       sort_order: locations.length,
@@ -239,7 +240,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
       className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden group/scene"
       id={`scene-${scene.id}`}
     >
-      <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right pr-2">
+      <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right inline-block pr-2">
         {scene.sceneNumber}
       </span>
       {hasGlobalLink && (

@@ -228,7 +228,7 @@ export function ScriptPresentationView({
                     : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
                 }`}
               >
-                <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right">
+                <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right inline-block">
                   {scene.sceneNumber}
                 </span>
                 <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
@@ -333,19 +333,22 @@ export function ScriptPresentationView({
                 <ChevronRight size={22} />
               </button>
             </div>
-            <CrossfadeImage
-              src={current.storyboardImageUrl}
-              alt={`Scene ${current.sceneNumber} \u2014 Beat ${current.beatLetter}`}
-              duration={dissolveDuration}
-            />
-            {!current.storyboardImageUrl && (
-              <div className="w-full rounded-lg bg-[#0d0d0d] border border-white/[0.04] flex flex-col items-center justify-center gap-2 max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
-                <ImageIcon size={32} className="text-[#222]" />
-                <span className="text-[#2a2a2a] text-xs font-mono">
-                  {current.sceneNumber}{current.beatLetter}
-                </span>
-              </div>
-            )}
+            <div className="w-full rounded-lg overflow-hidden bg-[#0a0a0a] max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
+              {current.storyboardImageUrl ? (
+                <CrossfadeImage
+                  src={current.storyboardImageUrl}
+                  alt={`Scene ${current.sceneNumber} \u2014 Beat ${current.beatLetter}`}
+                  duration={dissolveDuration}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                  <ImageIcon size={32} className="text-[#222]" />
+                  <span className="text-[#2a2a2a] text-xs font-mono">
+                    {current.sceneNumber}{current.beatLetter}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Timeline */}
@@ -368,7 +371,7 @@ export function ScriptPresentationView({
 
           {/* Scene heading — matches table view scene header exactly */}
           <div className="w-full max-w-5xl flex-shrink-0 flex items-center gap-0 bg-[#141414] border-b border-border rounded-t h-[44px] overflow-hidden mb-px">
-            <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right pr-2">
+            <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right inline-block pr-2">
               {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
             </span>
             <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
