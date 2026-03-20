@@ -202,66 +202,34 @@ export function ScriptEditorClient({
   useEffect(() => {
     if (!selectedShareId) { setCommentsMap(new Map()); return; }
     const share = groupShares.find(s => s.id === selectedShareId);
-    if (!share) return;
+    if (!share || !share.snapshot_script_id) { setCommentsMap(new Map()); return; }
 
-    if (share.snapshot_script_id) {
-      // New path: positional matching via snapshot beats
-      Promise.all([
-        getSnapshotBeats(share.snapshot_script_id),
-        getShareComments(share.id),
-      ]).then(([snapshotData, comments]) => {
-        const beatToPos = new Map<string, string>();
-        const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
-        sortedScenes.forEach((scene, sceneIdx) => {
-          const sceneBeats = snapshotData.beats
-            .filter(b => b.scene_id === scene.id)
-            .sort((a, b) => a.sort_order - b.sort_order);
-          sceneBeats.forEach((beat, beatIdx) => {
-            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
-          });
+    Promise.all([
+      getSnapshotBeats(share.snapshot_script_id),
+      getShareComments(share.id),
+    ]).then(([snapshotData, comments]) => {
+      const beatToPos = new Map<string, string>();
+      const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
+      sortedScenes.forEach((scene, sceneIdx) => {
+        const sceneBeats = snapshotData.beats
+          .filter(b => b.scene_id === scene.id)
+          .sort((a, b) => a.sort_order - b.sort_order);
+        sceneBeats.forEach((beat, beatIdx) => {
+          beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
         });
-        const map = new Map<string, ScriptShareCommentRow[]>();
-        for (const comment of comments) {
-          const posKey = beatToPos.get(comment.beat_id);
-          if (!posKey) continue;
-          if (!map.has(posKey)) map.set(posKey, []);
-          map.get(posKey)!.push(comment);
-        }
-        setCommentsMap(map);
-      }).catch((err) => {
-        console.error('[Comments] Failed to load snapshot comments:', err);
-        showError('Failed to load comments');
       });
-    } else {
-      // Legacy path: share has no snapshot — comments reference live beat IDs directly
-      // Use the draft's own beats for position mapping
-      Promise.all([
-        getSnapshotBeats(script.id),
-        getShareComments(share.id),
-      ]).then(([draftData, comments]) => {
-        const beatToPos = new Map<string, string>();
-        const sortedScenes = [...draftData.scenes].sort((a, b) => a.sort_order - b.sort_order);
-        sortedScenes.forEach((scene, sceneIdx) => {
-          const sceneBeats = draftData.beats
-            .filter(b => b.scene_id === scene.id)
-            .sort((a, b) => a.sort_order - b.sort_order);
-          sceneBeats.forEach((beat, beatIdx) => {
-            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
-          });
-        });
-        const map = new Map<string, ScriptShareCommentRow[]>();
-        for (const comment of comments) {
-          const posKey = beatToPos.get(comment.beat_id);
-          if (!posKey) continue;
-          if (!map.has(posKey)) map.set(posKey, []);
-          map.get(posKey)!.push(comment);
-        }
-        setCommentsMap(map);
-      }).catch((err) => {
-        console.error('[Comments] Failed to load legacy comments:', err);
-        showError('Failed to load comments');
-      });
-    }
+      const map = new Map<string, ScriptShareCommentRow[]>();
+      for (const comment of comments) {
+        const posKey = beatToPos.get(comment.beat_id);
+        if (!posKey) continue;
+        if (!map.has(posKey)) map.set(posKey, []);
+        map.get(posKey)!.push(comment);
+      }
+      setCommentsMap(map);
+    }).catch((err) => {
+      console.error('[Comments] Failed to load comments:', err);
+      showError('Failed to load comments');
+    });
   }, [selectedShareId, groupShares]);
 
   // Reset fractions to defaults when column visibility changes
