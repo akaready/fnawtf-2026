@@ -57,6 +57,7 @@ export function ScriptStoryboardCell({
   style,
   styleReferences,
   onFramesChange,
+  defaultTab,
   batchGenerating,
   onCancelGeneration,
   scene,
@@ -316,7 +317,7 @@ export function ScriptStoryboardCell({
             e.dataTransfer.clearData('application/x-image-move'); // remove old single-frame key if present
             e.dataTransfer.effectAllowed = 'move';
           }}
-          className="absolute top-1 left-1 w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing opacity-0 group-hover/sb:opacity-100"
+          className="absolute top-1 left-1 w-7 h-7 flex items-center justify-center rounded bg-admin-bg-overlay text-admin-text-primary hover:bg-admin-bg-active transition-all cursor-grab active:cursor-grabbing opacity-0 group-hover/sb:opacity-100"
           title="Drag to move"
         >
           <GripVertical size={12} />
@@ -378,7 +379,8 @@ export function ScriptStoryboardCell({
               onFramesChange?.(frames.filter(f => f.id !== frame?.id));
             }
           }}
-          // TODO Task 10: add defaultTab, frames, layout, onFramesChange props
+          // @ts-expect-error -- Task 10 will add these props to StoryboardGenerateModal
+          defaultTab={defaultTab ?? (activeFrames.length > 0 ? 'frames' : 'generate')}
         />
       )}
       </>
@@ -468,7 +470,8 @@ export function ScriptStoryboardCell({
               onFramesChange?.(frames);
             }
           }}
-          // TODO Task 10: add defaultTab, frames, layout, onFramesChange props
+          // @ts-expect-error -- Task 10 will add these props to StoryboardGenerateModal
+          defaultTab={defaultTab ?? 'generate'}
         />
       )}
     </div>
