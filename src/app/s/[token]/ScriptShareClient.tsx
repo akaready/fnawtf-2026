@@ -11,7 +11,7 @@ import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { startScriptViewSession, updateScriptViewDuration } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion } from '@/types/scripts';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
@@ -37,6 +37,7 @@ interface Props {
   characters: Record<string, unknown>[];
   tags: Record<string, unknown>[];
   locations: Record<string, unknown>[];
+  products: Record<string, unknown>[];
   references: Record<string, unknown>[];
   storyboardFrames: Record<string, unknown>[];
   viewerEmail: string;
@@ -57,6 +58,7 @@ export function ScriptShareClient({
   characters: rawCharacters,
   tags: rawTags,
   locations: rawLocations,
+  products: rawProducts,
   references: rawReferences,
   storyboardFrames: rawStoryboardFrames,
   viewerEmail,
@@ -77,6 +79,7 @@ export function ScriptShareClient({
   const typedCharacters = rawCharacters as unknown as ScriptCharacterRow[];
   const typedTags = rawTags as unknown as ScriptTagRow[];
   const typedLocations = rawLocations as unknown as ScriptLocationRow[];
+  const typedProducts = rawProducts as unknown as ScriptProductRow[];
   const typedReferences = rawReferences as unknown as { id: string; beat_id: string; image_url: string }[];
   const typedStoryboardFrames = rawStoryboardFrames as unknown as { id: string; beat_id: string | null; scene_id: string | null; image_url: string }[];
 
@@ -179,7 +182,6 @@ export function ScriptShareClient({
     return (
       <ScriptPresentationView
         slides={presentationSlides}
-        columnConfig={columnConfig}
         onClose={() => setShowIntro(true)}
         scriptTitle={script.title}
         clientName={clientName ?? undefined}
@@ -189,6 +191,10 @@ export function ScriptShareClient({
         shareId={shareId}
         viewerEmail={viewerEmail}
         viewerName={viewerName}
+        characters={typedCharacters}
+        tags={typedTags}
+        locations={typedLocations}
+        products={typedProducts}
       />
     );
   }
@@ -294,6 +300,7 @@ export function ScriptShareClient({
               characters={typedCharacters}
               tags={typedTags}
               locations={typedLocations}
+              products={typedProducts}
             />
           </div>
         </div>

@@ -10,9 +10,9 @@ import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneBottomSheet } from './SceneBottomSheet';
 import { addComment } from './actions';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
-import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
+import { markdownToHtml } from '@/lib/scripts/parseContent';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
-import type { ScriptColumnConfig } from '@/types/scripts';
+import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 /* ─── CrossfadeImage (copied from ScriptPresentation.tsx) ─── */
 
@@ -37,13 +37,13 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
   const bgLayer = layers.length > 1 ? layers[layers.length - 2] : null;
 
   return (
-    <div className="relative">
+    <div className="relative rounded-lg overflow-hidden">
       {topLayer.src && (
         <img
           key={topLayer.key}
           src={topLayer.src}
           alt={alt}
-          className="w-full rounded-lg select-none max-h-[35vh] md:max-h-[55vh]"
+          className="w-full select-none max-h-[35vh] md:max-h-[55vh]"
           draggable={false}
           style={{ objectFit: 'contain' }}
         />
@@ -53,7 +53,7 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
           key={bgLayer.key}
           src={bgLayer.src}
           alt=""
-          className="absolute inset-0 w-full rounded-lg pointer-events-none select-none max-h-[35vh] md:max-h-[55vh]"
+          className="absolute inset-0 w-full pointer-events-none select-none max-h-[35vh] md:max-h-[55vh]"
           draggable={false}
           style={{ maxHeight: '55vh', objectFit: 'contain', opacity: 0, transition: `opacity ${duration}s cubic-bezier(0.32, 0.72, 0, 1)` }}
         />
@@ -62,11 +62,29 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
   );
 }
 
+/* ─── PresentationCell — renders markdown with mention support ─── */
+
+function PresentationCell({
+  content, characters, tags, locations, products, mounted, className,
+}: {
+  content: string;
+  characters: ScriptCharacterRow[];
+  tags: ScriptTagRow[];
+  locations: ScriptLocationRow[];
+  products: ScriptProductRow[];
+  mounted: boolean;
+  className: string;
+}) {
+  const html = mounted ? markdownToHtml(content || '', characters, tags, locations, products) : '';
+  if (!mounted || !content) return <div className={className} style={{ color: '#333' }}>&mdash;</div>;
+  // markdownToHtml output is already DOMPurify-sanitized
+  return <div className={`${className} [&_strong]:font-bold`} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 /* ─── Types ─── */
 
 interface Props {
   slides: PresentationSlide[];
-  columnConfig: ScriptColumnConfig;
   onClose: () => void;
   scriptTitle: string;
   clientName?: string;
@@ -83,6 +101,10 @@ interface Props {
   shareId: string;
   viewerEmail: string;
   viewerName: string | null;
+  characters?: ScriptCharacterRow[];
+  tags?: ScriptTagRow[];
+  locations?: ScriptLocationRow[];
+  products?: ScriptProductRow[];
 }
 
 /* ─── Component ─── */
@@ -98,15 +120,14 @@ export function ScriptPresentationView({
   shareId,
   viewerEmail,
   viewerName,
+  characters = [],
+  tags = [],
+  locations = [],
+  products = [],
 }: Props) {
   const [idx, setIdx] = useState(0);
-  const [colConfig, setColConfig] = useState<ScriptColumnConfig>({
-    audio: true,
-    visual: true,
-    notes: true,
-    reference: true,
-    storyboard: true,
-  });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
@@ -171,9 +192,9 @@ export function ScriptPresentationView({
   }, [slides]);
 
   /* ── Build content panels ── */
-  const showVisual = colConfig.visual;
-  const showNotes = colConfig.notes;
-  const showReference = colConfig.reference;
+  const showVisual = !!current.visualContent.trim();
+  const showNotes = !!current.notesContent.trim();
+  const showReference = current.referenceImageUrls.length > 0;
 
   /* ── Scene heading text ── */
   const activeScene = scenes.find(s => s.id === activeSceneId);
@@ -233,8 +254,33 @@ export function ScriptPresentationView({
         </div>
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
+
+          {/* Compact title — pushes image down, keeps scene/comment buttons from overlapping */}
+          {(clientName || scriptTitle) && (
+            <div className="w-full max-w-5xl flex-shrink-0 text-center pb-3">
+              {clientName && (
+                <p className="text-[#555] text-[10px] uppercase tracking-widest mb-0.5">{clientName}</p>
+              )}
+              {scriptTitle && (
+                <p className="text-[#ccc] text-sm font-medium">
+                  {scriptTitle}
+                  {versionLabel && (() => {
+                    const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6'];
+                    const color = colors[(parseInt(versionLabel) || 0) % colors.length];
+                    return (
+                      <span className="inline-block ml-2 px-2.5 py-0.5 text-xs font-mono font-bold rounded-full"
+                        style={{ color, backgroundColor: color + '15', border: `1px solid ${color}40` }}>
+                        v{versionLabel}
+                      </span>
+                    );
+                  })()}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Storyboard image with nav arrows overlaid */}
-          <div className="group/image relative w-full max-w-5xl flex-shrink-0">
+          <div className="group/image relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden">
             {/* Nav arrows — bottom center of image, visible on hover */}
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity duration-300">
               <button
@@ -252,7 +298,7 @@ export function ScriptPresentationView({
                 <ChevronRight size={22} />
               </button>
             </div>
-            <div className="w-full rounded-lg overflow-hidden bg-[#0a0a0a] max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
+            <div className="w-full bg-[#0a0a0a] max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
               {current.storyboardImageUrl ? (
                 <CrossfadeImage
                   src={current.storyboardImageUrl}
@@ -279,77 +325,79 @@ export function ScriptPresentationView({
             />
           </div>
 
-          {/* Column toggle dots — audio + storyboard always on */}
-          <div className="flex justify-center mt-1 mb-2 md:mb-3 flex-shrink-0">
-            <ScriptColumnToggle
-              config={colConfig}
-              onChange={(c) => setColConfig({ ...c, audio: true, storyboard: true })}
-              compact
-            />
-          </div>
+          {/* ── Bordered content block: scene heading + all beat cells ── */}
+          <div className="w-full max-w-5xl flex-shrink-0 border border-border rounded-lg overflow-hidden mb-6">
+            {/* Scene heading */}
+            <div className="flex items-center gap-0 bg-[#141414] border-b border-border h-[44px]">
+              <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-1 pr-3">
+                {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
+              </span>
+              <span className="text-sm font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
+                {sceneHeading}
+                {activeScene?.scene_description && (
+                  <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{activeScene.scene_description}</span></>
+                )}
+              </span>
+            </div>
 
-          {/* Scene heading — matches table view scene header exactly */}
-          <div className="w-full max-w-5xl flex-shrink-0 flex items-center gap-0 bg-[#141414] border-b border-border rounded-t h-[44px] overflow-hidden mb-px">
-            <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[90px]">
-              {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
-            </span>
-            <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
-              {sceneHeading}
-              {activeScene?.scene_description && (
-                <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{activeScene.scene_description}</span></>
+            {/* Audio (2/3) + Visual (1/3) */}
+            <div className={`grid gap-px border-b border-[#1a1a1a] ${showVisual ? 'grid-cols-4' : 'grid-cols-1'}`}>
+              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'col-span-3' : ''}`}>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
+                <PresentationCell
+                  content={current.audioContent}
+                  characters={characters} tags={tags} locations={locations} products={products}
+                  mounted={mounted}
+                  className="text-base md:text-lg text-[#ccc] leading-relaxed"
+                />
+              </div>
+              {showVisual && (
+                <div className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Visual</p>
+                  <PresentationCell
+                    content={current.visualContent}
+                    characters={characters} tags={tags} locations={locations} products={products}
+                    mounted={mounted}
+                    className="text-sm text-[#999] leading-relaxed"
+                  />
+                </div>
               )}
-            </span>
+            </div>
+
+            {/* Notes */}
+            {showNotes && (
+              <div className="border-l-2 border-l-[var(--admin-warning)] bg-[#0d0d0d] px-4 py-3 border-b border-[#1a1a1a]">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Notes</p>
+                <PresentationCell
+                  content={current.notesContent}
+                  characters={characters} tags={tags} locations={locations} products={products}
+                  mounted={mounted}
+                  className="text-sm text-[#999] leading-relaxed"
+                />
+              </div>
+            )}
+
+            {/* Reference */}
+            {showReference && (
+              <div className="border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
+                <div className="text-sm text-[#999] leading-relaxed">
+                  {current.referenceImageUrls.length > 0 ? (
+                    <div className="flex gap-2 flex-wrap">
+                      {current.referenceImageUrls.map((url, i) => (
+                        <img key={i} src={url} alt="" className="h-12 md:h-16 rounded object-cover" />
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-[#333]">&mdash;</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* ── Audio (full width, content text larger) ── */}
-          <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 mb-px">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
-            <div className="text-base md:text-lg text-[#ccc] leading-relaxed">
-              {current.audioContent || <span className="text-[#333]">&mdash;</span>}
-            </div>
-          </div>
-
-          {/* ── Two columns: Visual + Notes ── */}
-          {(showVisual || showNotes) && (
-            <div className="w-full max-w-5xl flex-shrink-0 mb-px">
-              <div className={`grid gap-px grid-cols-1 ${[showVisual, showNotes].filter(Boolean).length === 2 ? 'md:grid-cols-2' : ''}`}>
-                {showVisual && (
-                  <div className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Visual</p>
-                    <div className="text-sm text-[#999] leading-relaxed">
-                      {current.visualContent || <span className="text-[#333]">&mdash;</span>}
-                    </div>
-                  </div>
-                )}
-                {showNotes && (
-                  <div className="border-l-2 border-l-[var(--admin-warning)] bg-[#0d0d0d] px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Notes</p>
-                    <div className="text-sm text-[#999] leading-relaxed">
-                      {current.notesContent || <span className="text-[#333]">&mdash;</span>}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Reference (full width) ── */}
-          {showReference && (
-            <div className="w-full max-w-5xl flex-shrink-0 border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3 mb-6">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
-              <div className="text-sm text-[#999] leading-relaxed">
-                {current.referenceImageUrls.length > 0 ? (
-                  <div className="flex gap-2 flex-wrap">
-                    {current.referenceImageUrls.map((url, i) => (
-                      <img key={i} src={url} alt="" className="h-12 md:h-16 rounded object-cover" />
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-[#333]">&mdash;</span>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Spacer so floating comment input doesn't block content when scrolled */}
+          <div className="flex-shrink-0 h-24" />
 
         </div>
 
