@@ -431,11 +431,11 @@ export function ScriptPresentationView({
                   onClick={handleCommentSubmit}
                   disabled={!commentText.trim() || !shareId}
                   className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg transition-all ${
-                    commentText.trim()
+                    commentText.trim() && shareId
                       ? 'bg-white text-black hover:bg-white/90'
                       : 'bg-white/10 text-white/20'
                   } disabled:cursor-not-allowed`}
-                  title="Click or press Enter to send"
+                  title={!shareId ? 'Comments available on the shared link' : 'Click or press Enter to send'}
                 >
                   <Send size={18} />
                 </button>
