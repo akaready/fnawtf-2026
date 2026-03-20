@@ -809,12 +809,9 @@ export function ScriptEditorClient({
         </div>
       </div>
 
-      <div className="flex-1 flex min-h-0">
-        {/* Scene sidebar — always flush left, grid trick for auto-width animation */}
-        <div
-          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
-        >
-          <div className="overflow-hidden border-r border-admin-border bg-admin-bg-sidebar">
+      <div className={`flex-1 min-h-0 grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[auto_1fr]' : 'grid-cols-[0fr_1fr]'}`}>
+        {/* Scene sidebar */}
+          <div className="overflow-hidden border-r border-admin-border bg-admin-bg-sidebar h-full">
             {contentMode === 'scratchpad' ? (
               <ScriptSceneSidebar
                 scenes={computedScenes}
@@ -839,10 +836,9 @@ export function ScriptEditorClient({
               />
             )}
           </div>
-        </div>
 
         {/* Main editor — constrained by container width toggle */}
-        <div className="flex-1 min-w-0 min-h-0 h-full">
+        <div className="min-w-0 min-h-0 h-full">
           <div className={`h-full flex flex-col transition-[max-width,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] border-l border-r ${containerIdx > 0 ? `${CONTAINER_WIDTHS[containerIdx]} mx-auto border-admin-border` : 'border-transparent'}`}>
             {contentMode === 'table' ? (
               <ScriptEditorCanvas
