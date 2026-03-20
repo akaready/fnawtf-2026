@@ -406,7 +406,7 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-6 pointer-events-none">
             <div className="w-full max-w-2xl pointer-events-auto">
-              <div className="bg-[#1a1a1a] border border-white/[0.12] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 px-5 py-3">
+              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 px-5 py-3">
                 <textarea
                   ref={el => {
                     if (el) {
@@ -430,14 +430,14 @@ export function ScriptPresentationView({
                 <button
                   onClick={handleCommentSubmit}
                   disabled={!commentText.trim() || !shareId}
-                  className={`flex-shrink-0 flex items-center justify-center rounded-lg transition-all ${
+                  className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg transition-all ${
                     commentText.trim()
-                      ? 'w-8 h-8 bg-white text-black hover:bg-white/90'
-                      : 'w-7 h-7 bg-white/10 text-white/20'
+                      ? 'bg-white text-black hover:bg-white/90'
+                      : 'bg-white/10 text-white/20'
                   } disabled:cursor-not-allowed`}
                   title="Click or press Enter to send"
                 >
-                  <Send size={13} />
+                  <Send size={14} />
                 </button>
               </div>
             </div>
