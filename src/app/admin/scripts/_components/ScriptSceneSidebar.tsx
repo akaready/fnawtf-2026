@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useId } from 'react';
-import { Plus, GripVertical, Trash2, Check, X, Hash, MapPin, FileText } from 'lucide-react';
+import { Plus, Hash, MapPin, FileText } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -38,7 +38,7 @@ export function ScriptSceneSidebar({
   onSelectScene,
   onAddScene,
   onReorderScenes,
-  onDeleteScene,
+  onDeleteScene: _onDeleteScene,
   scratchpadMode,
   scratchScenes,
   onScrollToScene,
@@ -98,7 +98,6 @@ export function ScriptSceneSidebar({
                 scene={scene}
                 isActive={scene.id === activeSceneId}
                 onSelect={() => onSelectScene(scene.id)}
-                onDelete={() => onDeleteScene(scene.id)}
                 showNumber={showNumber}
                 showSlug={showSlug}
                 showDesc={showDesc}
@@ -143,7 +142,6 @@ function SortableSceneItem({
   scene,
   isActive,
   onSelect,
-  onDelete,
   showNumber,
   showSlug,
   showDesc,
@@ -151,12 +149,10 @@ function SortableSceneItem({
   scene: ComputedScene;
   isActive: boolean;
   onSelect: () => void;
-  onDelete: () => void;
   showNumber: boolean;
   showSlug: boolean;
   showDesc: boolean;
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const {
     attributes,
     listeners,
@@ -178,7 +174,7 @@ function SortableSceneItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-1 pl-0.5 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group flex items-center gap-1 pl-1.5 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
@@ -200,33 +196,6 @@ function SortableSceneItem({
           </span>
         )}
       </div>
-
-      {confirmDelete ? (
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="text-admin-danger hover:text-red-300 p-1 transition-colors"
-            title="Confirm delete"
-          >
-            <Check size={14} />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
-            className="text-admin-text-faint hover:text-admin-text-primary p-1 transition-colors"
-            title="Cancel"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-          className="opacity-0 group-hover:opacity-100 text-admin-text-ghost hover:text-admin-danger p-1 transition-all"
-          title="Delete scene"
-        >
-          <Trash2 size={14} />
-        </button>
-      )}
     </div>
   );
 }
