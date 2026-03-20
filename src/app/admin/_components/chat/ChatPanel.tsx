@@ -46,10 +46,10 @@ export function ChatPanel() {
     <div className={`flex flex-col h-full bg-admin-bg-nav overflow-hidden ${
       isSidebarMode
         ? ''
-        : 'border border-admin-border rounded-2xl shadow-2xl'
+        : 'rounded-2xl'
     }`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 h-12 border-b border-admin-border flex-shrink-0">
+      <div className="flex items-center justify-between px-4 h-12 border-b border-white/20 flex-shrink-0 bg-admin-bg-sidebar">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {isChat && (
             <button

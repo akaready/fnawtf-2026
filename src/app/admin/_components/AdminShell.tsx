@@ -433,7 +433,7 @@ function AdminShellInner({ children, userEmail }: Props) {
               onMouseDown={handleDragStart}
               className="absolute left-0 top-0 w-1 h-full cursor-col-resize z-10 hover:bg-[#a14dfd]/40 transition-colors"
             />
-            <div className="h-full border-l border-admin-border-subtle" style={{ width: chatWidth }}>
+            <div className="h-full border-l border-white/20" style={{ width: chatWidth }}>
               <ChatPanel />
             </div>
           </>
