@@ -2511,12 +2511,12 @@ export async function reorderBeats(_sceneId: string, orderedIds: string[]) {
 
 // ── Script Characters ────────────────────────────────────────────────────
 
-export async function getScriptCharacters(scriptId: string) {
+export async function getScriptCharacters(scriptGroupId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('script_characters')
     .select('*')
-    .eq('script_id', scriptId)
+    .eq('script_group_id', scriptGroupId)
     .order('sort_order');
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -2555,7 +2555,7 @@ export async function getScriptTags(scriptGroupId: string) {
   const { data, error } = await supabase
     .from('script_tags')
     .select('*')
-    .eq('script_id', scriptId)
+    .eq('script_group_id', scriptGroupId)
     .order('name');
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -4419,7 +4419,7 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
   for (let i = 0; i < extractedData.characters.length; i++) {
     const ch = extractedData.characters[i];
     const { data: newChar } = await supabase.from('script_characters').insert({
-      script_id: newScriptId,
+      script_group_id: groupId,
       name: ch.name,
       description: ch.description,
       color: ch.color,
@@ -4442,7 +4442,7 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
   for (let i = 0; i < extractedData.locations.length; i++) {
     const loc = extractedData.locations[i];
     const { data: newLoc } = await supabase.from('script_locations').insert({
-      script_id: newScriptId,
+      script_group_id: groupId,
       name: loc.name,
       description: loc.description,
       color: loc.color,
@@ -4480,21 +4480,7 @@ export async function createScriptFromExtract(scriptId: string, extractedData: E
     }
   }
 
-  // 6. Clone tags from source script
-  const { data: tagsData } = await supabase
-    .from('script_tags')
-    .select('*')
-    .eq('script_id', scriptId)
-    .order('name');
-  for (const tag of (tagsData ?? [])) {
-    const t = tag as Record<string, unknown>;
-    await supabase.from('script_tags').insert({
-      script_id: newScriptId,
-      name: t.name,
-      slug: `tag-${crypto.randomUUID().slice(0, 8)}`,
-      color: t.color,
-    } as never);
-  }
+  // 6. Tags are shared via script_group_id — no cloning needed.
 
   // 7. Optionally insert style
   if (extractedData.style) {

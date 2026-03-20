@@ -286,7 +286,7 @@ export function ScriptShareClient({
                       : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
                   }`}
                 >
-                  <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
+                  <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right">
                     {scene.sceneNumber}
                   </span>
                   <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">

@@ -83,7 +83,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onJumpToScene }: Props
                   }`}
                 >
                   <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-sm font-bold flex-shrink-0">
+                    <span className="font-mono text-sm font-bold flex-shrink-0 w-[3rem] text-right">
                       {scene.sceneNumber}
                     </span>
                     <span className="text-sm uppercase tracking-wide truncate">

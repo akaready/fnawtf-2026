@@ -228,7 +228,7 @@ export function ScriptPresentationView({
                     : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
                 }`}
               >
-                <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
+                <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right">
                   {scene.sceneNumber}
                 </span>
                 <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
@@ -368,7 +368,7 @@ export function ScriptPresentationView({
 
           {/* Scene heading — matches table view scene header exactly */}
           <div className="w-full max-w-5xl flex-shrink-0 flex items-center gap-0 bg-[#141414] border-b border-border rounded-t h-[44px] overflow-hidden mb-px">
-            <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] px-2">
+            <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right pr-2">
               {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
             </span>
             <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">

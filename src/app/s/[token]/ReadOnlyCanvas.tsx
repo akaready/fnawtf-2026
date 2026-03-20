@@ -126,7 +126,7 @@ export function ReadOnlyCanvas({
                   : <ChevronDown size={13} className="text-muted-foreground" />}
               </div>
               <div className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden">
-                <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] px-2">
+                <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right pr-2">
                   {scene.sceneNumber}
                 </span>
                 <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
