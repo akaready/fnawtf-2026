@@ -283,6 +283,22 @@ export async function getComments(shareId: string, beatId: string) {
   }));
 }
 
+export async function getCommentCounts(shareId: string): Promise<Record<string, number>> {
+  if (!shareId) return {};
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from('script_share_comments' as never)
+    .select('beat_id')
+    .eq('share_id', shareId)
+    .is('deleted_at', null);
+  if (error) return {};
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as { beat_id: string }[]) {
+    counts[row.beat_id] = (counts[row.beat_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function addComment(
   shareId: string,
   beatId: string,
