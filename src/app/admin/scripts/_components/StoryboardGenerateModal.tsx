@@ -351,14 +351,15 @@ export function StoryboardGenerateModal({
   // ── Select a historical frame as active ──
   const handleUseFrame = useCallback(async (frameId: string) => {
     try {
-      const updated = await setActiveFrame(frameId, beatId);
-      setHistory(prev => prev.map(f => ({ ...f, is_active: f.id === frameId })));
+      await setActiveFrame(frameId, beatId);
+      setHistory(prev => prev.map(f => ({ ...f, is_active: f.id === frameId, slot: f.id === frameId ? 1 : null })));
       setSelectedFrameId(frameId);
-      onFrameChange(updated);
+      const frame = history.find(f => f.id === frameId);
+      if (frame) onFrameChange({ ...frame, is_active: true, slot: 1 });
     } catch (err) {
       console.error('Failed to set active frame:', err);
     }
-  }, [beatId, onFrameChange]);
+  }, [beatId, history, onFrameChange]);
 
   // ── Delete a frame from history ──
   const handleDeleteFrame = useCallback(async (frameId: string) => {
