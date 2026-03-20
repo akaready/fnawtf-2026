@@ -70,7 +70,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onJumpToScene }: Props
           </div>
 
           {/* Scene list */}
-          <div className="flex-1 overflow-y-auto px-2 pb-4">
+          <div className="flex-1 overflow-y-auto px-2 pb-4 grid grid-cols-[auto_1fr] content-start">
             {scenes.map(scene => {
               const isActive = scene.id === activeSceneId;
               return (

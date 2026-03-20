@@ -3,6 +3,9 @@
 /**
  * Shared scene list item — used in admin sidebar, share sidebars,
  * and mobile bottom sheets. Single source of truth for scene row rendering.
+ *
+ * IMPORTANT: The parent container MUST be `grid grid-cols-[auto_1fr]`
+ * so all rows share the same auto-width first column.
  */
 
 interface Props {
@@ -25,7 +28,7 @@ export function SceneListItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full grid grid-cols-[auto_1fr] items-center h-[43px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
+      className={`col-span-2 grid grid-cols-subgrid items-center h-[45px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
@@ -34,7 +37,7 @@ export function SceneListItem({
       <span className="text-admin-border-subtle font-bebas text-[50px] leading-none translate-y-[6px] text-right pr-1">
         {sceneNumber}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 pr-2">
         {slug && (
           <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
             {slug}

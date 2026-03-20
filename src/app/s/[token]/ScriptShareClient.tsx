@@ -276,7 +276,7 @@ export function ScriptShareClient({
           className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
           <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full flex flex-col">
-            <div className="flex-1 overflow-y-auto admin-scrollbar">
+            <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
               {computedScenes.map((scene) => (
                 <SceneListItem
                   key={scene.id}

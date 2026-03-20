@@ -216,7 +216,7 @@ export function ScriptPresentationView({
               </button>
             </div>
           {/* List */}
-          <div className="flex-1 overflow-y-auto admin-scrollbar">
+          <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
           {scenes.map((scene) => {
             const isActive = scene.id === activeSceneId;
             return (
