@@ -2,7 +2,10 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject } from '../actions';
 import { ThumbnailPicker } from './ThumbnailPicker';
 import { AdminCombobox } from './AdminCombobox';
@@ -33,6 +36,121 @@ interface Props {
 const inputClass = 'admin-input w-full';
 
 const VIDEO_TYPES: VideoType[] = ['flagship', 'cutdown', 'bts'];
+
+function SortableVideoRow({
+  video,
+  isThumbSource,
+  onSelectThumb,
+  onTypeChange,
+  onAspectChange,
+  onAutoDetect,
+  onPasswordToggle,
+  onPasswordChange,
+  onDelete,
+  isPending,
+}: {
+  video: VideoRow;
+  isThumbSource: boolean;
+  onSelectThumb: () => void;
+  onTypeChange: (t: VideoType) => void;
+  onAspectChange: (r: AspectRatio) => void;
+  onAutoDetect: () => void;
+  onPasswordToggle: () => void;
+  onPasswordChange: (pw: string) => void;
+  onDelete: () => void;
+  isPending: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id });
+  const style: React.CSSProperties = { transform: CSS.Translate.toString(transform), transition };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`group/vid flex items-center gap-3 p-2.5 rounded-lg transition-colors cursor-pointer touch-none ${
+        isDragging
+          ? 'border-2 border-dashed border-admin-border bg-admin-bg-subtle opacity-40'
+          : isThumbSource
+          ? 'border-2 border-accent bg-admin-bg-subtle hover:bg-admin-bg-hover'
+          : 'border border-admin-border-subtle bg-admin-bg-subtle hover:bg-admin-bg-hover'
+      }`}
+      onClick={onSelectThumb}
+    >
+      {/* Drag handle */}
+      <span {...listeners} className="text-admin-text-muted hover:text-admin-text-primary cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
+        <GripVertical size={14} />
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-admin-text-primary truncate">{video.title}</p>
+        <p className="text-xs text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
+      </div>
+
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+        <AdminCombobox
+          value={video.video_type}
+          options={VIDEO_TYPES.map((t) => ({ id: t, label: t }))}
+          onChange={(v) => { if (v) onTypeChange(v as VideoType); }}
+          nullable={false}
+          searchable={false}
+        />
+
+        <AdminCombobox
+          value={video.aspect_ratio}
+          options={ASPECT_RATIOS.map((r) => ({ id: r, label: r }))}
+          onChange={(v) => { if (v) onAspectChange(v as AspectRatio); }}
+          nullable={false}
+          searchable={false}
+        />
+
+        <button
+          type="button"
+          title="Auto-detect ratio from Bunny"
+          onClick={onAutoDetect}
+          disabled={isPending}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-muted transition-colors opacity-0 group-hover/vid:opacity-100"
+        >
+          <Scan size={13} />
+        </button>
+
+        <button
+          type="button"
+          title={video.password_protected ? 'Password protected — click to remove' : 'No password — click to protect'}
+          onClick={onPasswordToggle}
+          disabled={isPending}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+            video.password_protected
+              ? 'text-admin-warning hover:text-admin-warning bg-admin-warning-bg'
+              : 'text-admin-text-ghost hover:text-admin-text-muted opacity-0 group-hover/vid:opacity-100'
+          }`}
+        >
+          {video.password_protected ? <Lock size={13} /> : <Unlock size={13} />}
+        </button>
+
+        {video.password_protected && (
+          <input
+            type="text"
+            value={video.viewer_password ?? ''}
+            onChange={(e) => onPasswordChange(e.target.value)}
+            placeholder="password"
+            className="w-28 px-2 py-1.5 bg-admin-bg-base border border-admin-warning-border rounded-lg text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-warning-border font-mono transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isPending}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted opacity-0 group-hover/vid:opacity-100 hover:text-admin-danger hover:bg-red-500/8 transition-all"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, currentThumbnailTime }: Props) {
   const router = useRouter();
@@ -250,19 +368,22 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
     if (aspectRatio) handleAspectRatioChange(video, aspectRatio);
   };
 
-  const move = (index: number, dir: -1 | 1) => {
-    const next = [...videos];
-    const target = index + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    const updated = next.map((v, i) => ({ ...v, sort_order: i }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = videos.findIndex((v) => v.id === active.id);
+    const newIndex = videos.findIndex((v) => v.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const updated = arrayMove(videos, oldIndex, newIndex).map((v, i) => ({ ...v, sort_order: i }));
     setVideos(updated);
     startTransition(async () => {
       for (const v of updated) {
         await updateProjectVideo(v.id, { sort_order: v.sort_order });
       }
     });
-  };
+  }, [videos, startTransition]);
 
   const thumbVideo = thumbVideoId ? videos.find((v) => v.bunny_video_id === thumbVideoId) : null;
 
@@ -314,102 +435,28 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
       {videos.length === 0 ? (
         <p className="text-sm text-admin-text-faint py-2">No videos linked yet.</p>
       ) : (
-        <div className="space-y-2">
-          {videos.map((video, i) => (
-            <div
-              key={video.id}
-              className="group/vid flex items-center gap-3 p-2.5 border border-admin-border-subtle rounded-lg bg-admin-bg-subtle hover:bg-admin-bg-hover transition-colors"
-            >
-              <div className="flex flex-col gap-0.5 opacity-0 group-hover/vid:opacity-100 transition-opacity">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-admin-text-ghost hover:text-admin-text-muted disabled:opacity-20 transition-colors">
-                  <ArrowUp size={12} />
-                </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === videos.length - 1} className="text-admin-text-ghost hover:text-admin-text-muted disabled:opacity-20 transition-colors">
-                  <ArrowDown size={12} />
-                </button>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-admin-text-primary truncate">{video.title}</p>
-                <p className="text-xs text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
-              </div>
-
-              <AdminCombobox
-                value={video.video_type}
-                options={VIDEO_TYPES.map((t) => ({ id: t, label: t }))}
-                onChange={(v) => { if (v) handleTypeChange(video, v as VideoType); }}
-                nullable={false}
-                searchable={false}
-              />
-
-              {/* Aspect ratio */}
-              <AdminCombobox
-                value={video.aspect_ratio}
-                options={ASPECT_RATIOS.map((r) => ({ id: r, label: r }))}
-                onChange={(v) => { if (v) handleAspectRatioChange(video, v as AspectRatio); }}
-                nullable={false}
-                searchable={false}
-              />
-              <button
-                type="button"
-                title="Auto-detect ratio from Bunny"
-                onClick={() => handleAutoDetectRatio(video)}
-                disabled={isPending}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-muted transition-colors opacity-0 group-hover/vid:opacity-100"
-              >
-                <Scan size={13} />
-              </button>
-
-              {/* Use for thumbnail */}
-              <button
-                type="button"
-                title={thumbVideoId === video.bunny_video_id ? 'Thumbnail source' : 'Use for thumbnail'}
-                onClick={() => setThumbVideoId(video.bunny_video_id)}
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-                  thumbVideoId === video.bunny_video_id
-                    ? 'text-accent bg-accent/10'
-                    : 'text-admin-text-ghost hover:text-accent hover:bg-accent/10 opacity-0 group-hover/vid:opacity-100'
-                }`}
-              >
-                <ImageIcon size={13} />
-              </button>
-
-              {/* Password protection toggle */}
-              <button
-                type="button"
-                title={video.password_protected ? 'Password protected — click to remove' : 'No password — click to protect'}
-                onClick={() => handlePasswordToggle(video)}
-                disabled={isPending}
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-                  video.password_protected
-                    ? 'text-admin-warning hover:text-admin-warning bg-admin-warning-bg'
-                    : 'text-admin-text-ghost hover:text-admin-text-muted opacity-0 group-hover/vid:opacity-100'
-                }`}
-              >
-                {video.password_protected ? <Lock size={13} /> : <Unlock size={13} />}
-              </button>
-
-              {video.password_protected && (
-                <input
-                  type="text"
-                  value={video.viewer_password ?? ''}
-                  onChange={(e) => handlePasswordChange(video, e.target.value)}
-                  placeholder="password"
-                  className="w-28 px-2 py-1.5 bg-admin-bg-base border border-admin-warning-border rounded-lg text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-warning-border font-mono transition-colors"
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={videos.map((v) => v.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {videos.map((video) => (
+                <SortableVideoRow
+                  key={video.id}
+                  video={video}
+                  isThumbSource={thumbVideoId === video.bunny_video_id}
+                  onSelectThumb={() => setThumbVideoId(video.bunny_video_id)}
+                  onTypeChange={(v) => handleTypeChange(video, v)}
+                  onAspectChange={(v) => handleAspectRatioChange(video, v)}
+                  onAutoDetect={() => handleAutoDetectRatio(video)}
+                  onPasswordToggle={() => handlePasswordToggle(video)}
+                  onPasswordChange={(pw) => handlePasswordChange(video, pw)}
+                  onDelete={() => setConfirmDeleteId(video.id)}
+                  isPending={isPending}
                 />
-              )}
 
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteId(video.id)}
-                disabled={isPending}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted opacity-0 group-hover/vid:opacity-100 hover:text-admin-danger hover:bg-red-500/8 transition-all"
-              >
-                <Trash2 size={13} />
-              </button>
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Pending upload form */}
