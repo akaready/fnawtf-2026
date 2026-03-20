@@ -231,12 +231,18 @@ export function ScriptPresentationView({
                 <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right inline-block">
                   {scene.sceneNumber}
                 </span>
-                <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
-                  {showSlug && <>{scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}</>}
-                  {showDesc && scene.scene_description && (
-                    <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
+                <div className="flex-1 min-w-0">
+                  {showSlug && (
+                    <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
+                      {scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}
+                    </span>
                   )}
-                </span>
+                  {showDesc && scene.scene_description && (
+                    <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
+                      {scene.scene_description}
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
