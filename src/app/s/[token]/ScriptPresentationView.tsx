@@ -246,7 +246,7 @@ export function ScriptPresentationView({
         </button>
 
         <div
-          className={`h-full grid z-10 relative ${sidebarTransition} ${leftOpen ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
+          className={`h-full grid w-fit z-10 relative ${sidebarTransition} ${leftOpen ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
           <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
             <SceneNav
@@ -379,7 +379,7 @@ export function ScriptPresentationView({
               </span>
               {(commentCounts[current.beatId] ?? 0) > 0 && (
                 <div className="flex items-center gap-1.5 flex-shrink-0 mr-3">
-                  <div className="w-2 h-2 rounded-full bg-amber-400" />
+                  <div className="w-2 h-2 rounded-full bg-admin-warning" />
                   <span className="text-admin-sm text-admin-text-muted">
                     {commentCounts[current.beatId]} {commentCounts[current.beatId] === 1 ? 'comment' : 'comments'}
                   </span>
