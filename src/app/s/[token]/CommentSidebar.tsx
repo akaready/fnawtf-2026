@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useTransition } from 'react';
-import { User, Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen, Send } from 'lucide-react';
-import { getComments, addComment, updateComment, deleteComment } from './actions';
+import { User, Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { getComments, updateComment, deleteComment } from './actions';
 
 interface Comment {
   id: string;
@@ -36,7 +36,7 @@ function formatPT(dateStr: string): string {
   });
 }
 
-export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName, open, onToggle, refreshKey }: Props) {
+export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _viewerName, open, onToggle, refreshKey }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -104,16 +104,6 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName, open,
             ))}
           </div>
 
-          {/* Comment input */}
-          {beatId && (
-            <SidebarCommentInput
-              shareId={shareId}
-              beatId={beatId}
-              viewerEmail={viewerEmail}
-              viewerName={viewerName}
-              onCommentAdded={loadComments}
-            />
-          )}
         </div>
       </div>
     </div>
@@ -222,58 +212,6 @@ function CommentRow({
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Inline comment input at bottom of sidebar ────────────────────────────
-
-function SidebarCommentInput({
-  shareId,
-  beatId,
-  viewerEmail,
-  viewerName,
-  onCommentAdded,
-}: {
-  shareId: string;
-  beatId: string;
-  viewerEmail: string;
-  viewerName: string | null;
-  onCommentAdded: () => void;
-}) {
-  const [text, setText] = useState('');
-  const [isPending, startTransition] = useTransition();
-
-  const handleSubmit = () => {
-    if (!text.trim() || !shareId) return;
-    const content = text.trim();
-    setText('');
-    startTransition(async () => {
-      await addComment(shareId, beatId, viewerEmail, viewerName, content);
-      onCommentAdded();
-    });
-  };
-
-  return (
-    <div className="flex-shrink-0 border-t border-admin-border p-3">
-      <div className="relative">
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
-          placeholder="Add a comment..."
-          rows={2}
-          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-3 pr-10 py-2 text-xs text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none focus:border-white/20 transition-colors"
-        />
-        <button
-          onClick={handleSubmit}
-          disabled={isPending || !text.trim()}
-          className="absolute right-2 bottom-2 w-6 h-6 flex items-center justify-center rounded bg-white text-black hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-          title="Click or press Enter to send"
-        >
-          <Send size={11} />
-        </button>
-      </div>
     </div>
   );
 }

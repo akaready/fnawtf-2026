@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
 
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
 function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
+import { addComment } from './actions';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
@@ -106,9 +107,18 @@ export function ScriptPresentationView({
   });
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
-  // Comment sidebar refreshes internally; beat changes trigger via beatId prop
+  const [commentRefreshKey, setCommentRefreshKey] = useState(0);
+  const [commentText, setCommentText] = useState('');
 
   const current = slides[idx];
+
+  const handleCommentSubmit = useCallback(() => {
+    if (!commentText.trim() || !shareId || !current?.beatId) return;
+    const content = commentText.trim();
+    setCommentText('');
+    addComment(shareId, current.beatId, viewerEmail, viewerName, content)
+      .then(() => setCommentRefreshKey(k => k + 1));
+  }, [commentText, shareId, current?.beatId, viewerEmail, viewerName]);
   const prev = idx > 0 ? slides[idx - 1] : null;
   const isSceneChange = prev !== null && prev.sceneId !== current.sceneId;
   const dissolveDuration = isSceneChange ? 0.5 : 0.35;
@@ -390,7 +400,33 @@ export function ScriptPresentationView({
 
         </div>
 
-        {/* Comment input — sticky bottom of center column */}
+        {/* Floating comment input — sticky bottom center */}
+        {current && (
+          <div className="sticky bottom-4 z-20 flex justify-center px-6 pointer-events-none">
+            <div className="w-full max-w-2xl pointer-events-auto">
+              <div className="bg-[#111] border border-white/[0.08] rounded-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] px-4 py-3">
+                <div className="relative">
+                  <textarea
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommentSubmit(); } }}
+                    placeholder="Share your feedback on this story beat..."
+                    rows={1}
+                    className="w-full bg-transparent border-none text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none pr-10"
+                  />
+                  <button
+                    onClick={handleCommentSubmit}
+                    disabled={!commentText.trim()}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                    title="Click or press Enter to send"
+                  >
+                    <Send size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ════ RIGHT SIDEBAR — Comments ════ */}
@@ -401,7 +437,7 @@ export function ScriptPresentationView({
         viewerName={viewerName}
         open={rightOpen}
         onToggle={() => setRightOpen(prev => !prev)}
-        refreshKey={idx}
+        refreshKey={commentRefreshKey + idx}
       />
     </div>
   );
