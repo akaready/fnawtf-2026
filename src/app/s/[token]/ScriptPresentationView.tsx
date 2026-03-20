@@ -234,7 +234,7 @@ export function ScriptPresentationView({
                 <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
                   {showSlug && <>{scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}</>}
                   {showDesc && scene.scene_description && (
-                    <span className="text-admin-text-primary font-normal ml-2">[{scene.scene_description}]</span>
+                    <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
                   )}
                 </span>
               </button>
@@ -374,7 +374,7 @@ export function ScriptPresentationView({
             <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
               {sceneHeading}
               {activeScene?.scene_description && (
-                <span className="text-admin-text-primary font-normal ml-2">[{activeScene.scene_description}]</span>
+                <span className="text-admin-text-muted font-normal ml-2">{activeScene.scene_description}</span>
               )}
             </span>
           </div>

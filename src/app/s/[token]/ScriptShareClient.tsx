@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, MapPin, FileText } from 'lucide-react';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
 import { ScriptShareIntro } from './ScriptShareIntro';
@@ -65,6 +65,8 @@ export function ScriptShareClient({
     audio: true, visual: true, notes: true, reference: true, storyboard: true,
   });
   const [showSidebar, setShowSidebar] = useState(true);
+  const [showSlug, setShowSlug] = useState(true);
+  const [showDesc, setShowDesc] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -92,7 +94,7 @@ export function ScriptShareClient({
   }
 
   const computed = computeSceneNumbers(sortedScenes as never, beatsByScene as never);
-  const computedScenes = (computed as unknown as { id: string; sceneNumber: number; int_ext: string; location_name: string; time_of_day: string; beats: { id: string; audio_content: string; visual_content: string; notes_content: string }[] }[]);
+  const computedScenes = (computed as unknown as { id: string; sceneNumber: number; int_ext: string; location_name: string; time_of_day: string; scene_description?: string | null; beats: { id: string; audio_content: string; visual_content: string; notes_content: string }[] }[]);
 
   // Set initial active scene
   useEffect(() => {
@@ -270,32 +272,48 @@ export function ScriptShareClient({
       <div className="flex-1 flex min-h-0">
         {/* Sidebar */}
         <div
-          className={`flex-shrink-0 h-full border-r border-border bg-[#0a0a0a] overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-56' : 'w-0'}`}
+          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
-          <div className="w-56 h-full overflow-y-auto admin-scrollbar">
-            {computedScenes.map((scene) => (
+          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full flex flex-col">
+            <div className="flex-1 overflow-y-auto admin-scrollbar">
+              {computedScenes.map((scene) => (
+                <button
+                  key={scene.id}
+                  onClick={() => handleSceneClick(scene.id)}
+                  className={`w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
+                    activeSceneId === scene.id
+                      ? 'bg-black/40 text-admin-text-primary'
+                      : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
+                  }`}
+                >
+                  <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
+                    {scene.sceneNumber}
+                  </span>
+                  <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
+                    {showSlug && <>{scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}</>}
+                    {showDesc && scene.scene_description && (
+                      <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="flex-shrink-0 border-t border-admin-border px-3 py-2 flex items-center gap-1">
               <button
-                key={scene.id}
-                onClick={() => handleSceneClick(scene.id)}
-                className={`w-full text-left flex items-center gap-1 px-2 py-3 border-b border-border/30 transition-colors ${
-                  activeSceneId === scene.id
-                    ? 'bg-white/[0.06] text-foreground'
-                    : 'text-muted-foreground hover:bg-white/[0.03] hover:text-foreground'
-                }`}
+                onClick={() => setShowSlug(p => !p)}
+                className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showSlug ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
+                title={showSlug ? 'Hide slugs' : 'Show slugs'}
               >
-                <div className="flex-1 min-w-0 pl-1">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-sm font-bold">{scene.sceneNumber}</span>
-                  </div>
-                  <div className="text-xs truncate uppercase tracking-wide mt-0.5 opacity-70">
-                    {scene.int_ext}. {scene.location_name || '\u2014'}
-                  </div>
-                  {scene.time_of_day && (
-                    <div className="text-xs text-muted-foreground/50">{scene.time_of_day}</div>
-                  )}
-                </div>
+                <MapPin size={14} />
               </button>
-            ))}
+              <button
+                onClick={() => setShowDesc(p => !p)}
+                className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showDesc ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
+                title={showDesc ? 'Hide descriptions' : 'Show descriptions'}
+              >
+                <FileText size={14} />
+              </button>
+            </div>
           </div>
         </div>
 

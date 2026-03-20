@@ -250,7 +250,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
       <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
         {heading}
         {scene.scene_description && (
-          <span className="text-admin-text-primary font-normal ml-2">[{scene.scene_description}]</span>
+          <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
         )}
       </span>
 

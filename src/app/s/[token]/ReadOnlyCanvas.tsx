@@ -12,6 +12,7 @@ interface Scene {
   int_ext: string;
   location_name: string;
   time_of_day: string;
+  scene_description?: string | null;
   beats: Beat[];
 }
 
@@ -124,12 +125,15 @@ export function ReadOnlyCanvas({
                   ? <ChevronRight size={13} className="text-muted-foreground" />
                   : <ChevronDown size={13} className="text-muted-foreground" />}
               </div>
-              <div className="flex items-center gap-2 px-2 py-3">
-                <span className="text-muted-foreground font-mono text-xs flex-shrink-0">
+              <div className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden">
+                <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] px-2">
                   {scene.sceneNumber}
                 </span>
-                <span className="text-xs font-medium text-foreground/70 uppercase tracking-wider flex-1 min-w-0 truncate">
+                <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
                   {[scene.int_ext, scene.location_name || 'UNTITLED LOCATION', scene.time_of_day ? `\u2014 ${scene.time_of_day}` : ''].filter(Boolean).join('. ').replace('. \u2014', ' \u2014')}
+                  {scene.scene_description && (
+                    <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
+                  )}
                 </span>
               </div>
             </div>

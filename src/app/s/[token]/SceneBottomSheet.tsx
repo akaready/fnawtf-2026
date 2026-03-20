@@ -94,7 +94,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onJumpToScene }: Props
                     <div className="text-xs text-white/30 ml-6 mt-0.5">{scene.time_of_day}</div>
                   )}
                   {scene.scene_description && (
-                    <div className="text-xs text-white/25 ml-6 mt-0.5">[{scene.scene_description}]</div>
+                    <div className="text-xs text-white/25 ml-6 mt-0.5">{scene.scene_description}</div>
                   )}
                 </button>
               );

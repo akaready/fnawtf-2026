@@ -199,8 +199,8 @@ function SortableSceneItem({
           </span>
         )}
         {showDesc && scene.scene_description && (
-          <span className="text-xs text-admin-text-primary font-normal uppercase tracking-wider truncate block leading-tight">
-            [{scene.scene_description}]
+          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
+            {scene.scene_description}
           </span>
         )}
       </div>
