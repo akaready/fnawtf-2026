@@ -481,10 +481,7 @@ export function ScriptPresentationView({
         open={rightOpen}
         onToggle={() => setRightOpen(prev => !prev)}
         refreshKey={commentRefreshKey + idx}
-        clientName={clientName}
         clientLogoUrl={_clientLogoUrl}
-        scriptTitle={scriptTitle}
-        versionLabel={versionLabel}
       />
     </div>
   );
