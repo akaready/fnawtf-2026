@@ -271,7 +271,7 @@ export function ScriptStoryboardCell({
           </div>
         )}
         <div
-          className="relative mx-2 my-2 group/img cursor-pointer"
+          className="relative mx-2 my-2 group/img cursor-pointer select-none"
           onClick={() => setModalOpen(true)}
         >
           <StoryboardLayoutRenderer
@@ -281,7 +281,7 @@ export function ScriptStoryboardCell({
             gap={2}
           />
           {/* Hover overlay: drag handle left, actions right */}
-          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/25 flex items-start justify-between p-1">
+          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/25 flex items-start justify-between p-1 select-none">
             {/* Drag handle */}
             <span
               draggable
