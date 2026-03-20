@@ -3,6 +3,8 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
+import { StoryboardLayoutRenderer } from '@/app/admin/scripts/_components/StoryboardLayoutRenderer';
+import type { StoryboardSlotFrame } from '@/types/scripts';
 
 
 import { CommentSidebar } from './CommentSidebar';
@@ -316,7 +318,14 @@ export function ScriptPresentationView({
               </button>
             </div>
             <div className="w-full bg-[#0a0a0a] max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
-              {current.storyboardImageUrl ? (
+              {current.storyboardFrames && current.storyboardFrames.length > 0 ? (
+                <StoryboardLayoutRenderer
+                  layout={current.storyboard_layout ?? 'single'}
+                  frames={current.storyboardFrames as StoryboardSlotFrame[]}
+                  size="full"
+                  gap={3}
+                />
+              ) : current.storyboardImageUrl ? (
                 <CrossfadeImage
                   src={current.storyboardImageUrl}
                   alt={`Scene ${current.sceneNumber} \u2014 Beat ${current.beatLetter}`}

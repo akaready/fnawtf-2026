@@ -9,6 +9,13 @@ export interface PresentationSlide {
   referenceImageUrls: string[];
   sceneId: string;
   beatId: string;
+  storyboardFrames?: Array<{
+    id: string;
+    image_url: string;
+    slot: number;
+    crop_config: import('@/types/scripts').CropConfig | null;
+  }>;
+  storyboard_layout?: string | null;
 }
 
 function toBeatLetter(n: number): string {
@@ -29,12 +36,14 @@ interface SceneInput {
   int_ext: string;
   location_name: string;
   time_of_day: string;
-  beats: { id: string; audio_content: string; visual_content: string; notes_content: string }[];
+  beats: { id: string; audio_content: string; visual_content: string; notes_content: string; storyboard_layout?: string | null }[];
 }
 
 interface FrameInput {
   beat_id: string | null;
   image_url: string;
+  slot?: number | null;
+  crop_config?: import('@/types/scripts').CropConfig | null;
 }
 
 interface ReferenceInput {
@@ -47,9 +56,15 @@ export function buildPresentationSlides(
   references: Record<string, ReferenceInput[]>,
 ): PresentationSlide[] {
   const slides: PresentationSlide[] = [];
-  const framesByBeat = new Map<string, FrameInput>();
+
+  // Group all frames by beat_id
+  const framesByBeat = new Map<string, FrameInput[]>();
   for (const f of storyboardFrames) {
-    if (f.beat_id) framesByBeat.set(f.beat_id, f);
+    if (f.beat_id) {
+      const list = framesByBeat.get(f.beat_id) ?? [];
+      list.push(f);
+      framesByBeat.set(f.beat_id, list);
+    }
   }
 
   for (const scene of scenes) {
@@ -72,14 +87,31 @@ export function buildPresentationSlides(
         referenceImageUrls: [],
         sceneId: scene.id,
         beatId: `empty-${scene.id}`,
+        storyboardFrames: [],
+        storyboard_layout: null,
       });
       continue;
     }
 
     for (let i = 0; i < scene.beats.length; i++) {
       const beat = scene.beats[i];
-      const frame = framesByBeat.get(beat.id);
+      const beatFrames = framesByBeat.get(beat.id) ?? [];
       const beatRefs = references[beat.id] ?? [];
+
+      // Slotted frames for multi-frame layout
+      const slottedFrames = beatFrames
+        .filter(f => f.slot != null)
+        .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0))
+        .map(f => ({
+          id: (f as { id?: string }).id ?? '',
+          image_url: f.image_url,
+          slot: f.slot!,
+          crop_config: f.crop_config ?? null,
+        }));
+
+      // Fallback single image: first slotted frame or first frame
+      const primaryFrame = beatFrames.find(f => f.slot != null) ?? beatFrames[0] ?? null;
+
       slides.push({
         sceneNumber: scene.sceneNumber,
         sceneName,
@@ -87,10 +119,12 @@ export function buildPresentationSlides(
         audioContent: beat.audio_content,
         visualContent: beat.visual_content,
         notesContent: beat.notes_content,
-        storyboardImageUrl: frame?.image_url ?? null,
+        storyboardImageUrl: primaryFrame?.image_url ?? null,
         referenceImageUrls: beatRefs.map(r => r.image_url),
         sceneId: scene.id,
         beatId: beat.id,
+        storyboardFrames: slottedFrames,
+        storyboard_layout: beat.storyboard_layout ?? null,
       });
     }
   }

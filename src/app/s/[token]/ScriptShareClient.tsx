@@ -75,13 +75,13 @@ export function ScriptShareClient({
 
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
-  const typedBeats = rawBeats as unknown as { id: string; scene_id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string }[];
+  const typedBeats = rawBeats as unknown as { id: string; scene_id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string; storyboard_layout: string | null }[];
   const typedCharacters = rawCharacters as unknown as ScriptCharacterRow[];
   const typedTags = rawTags as unknown as ScriptTagRow[];
   const typedLocations = rawLocations as unknown as ScriptLocationRow[];
   const typedProducts = rawProducts as unknown as ScriptProductRow[];
   const typedReferences = rawReferences as unknown as { id: string; beat_id: string; image_url: string }[];
-  const typedStoryboardFrames = rawStoryboardFrames as unknown as { id: string; beat_id: string | null; scene_id: string | null; image_url: string }[];
+  const typedStoryboardFrames = rawStoryboardFrames as unknown as { id: string; beat_id: string | null; scene_id: string | null; image_url: string; slot: number | null; crop_config: import('@/types/scripts').CropConfig | null }[];
 
   // Sort scenes and build beats-by-scene map
   const sortedScenes = typedScenes.sort((a, b) => a.sort_order - b.sort_order);

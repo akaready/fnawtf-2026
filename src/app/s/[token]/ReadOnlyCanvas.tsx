@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getGridTemplate, getVisibleColumns } from '@/app/admin/scripts/_components/gridUtils';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
+import { StoryboardLayoutRenderer } from '@/app/admin/scripts/_components/StoryboardLayoutRenderer';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, CropConfig, StoryboardSlotFrame } from '@/types/scripts';
 
 interface Scene {
   id: string;
@@ -21,6 +22,7 @@ interface Beat {
   audio_content: string;
   visual_content: string;
   notes_content: string;
+  storyboard_layout?: string | null;
 }
 
 interface Reference {
@@ -34,6 +36,8 @@ interface StoryboardFrame {
   beat_id: string | null;
   scene_id: string | null;
   image_url: string;
+  slot?: number | null;
+  crop_config?: CropConfig | null;
 }
 
 interface Props {
@@ -87,10 +91,14 @@ export function ReadOnlyCanvas({
     refMap.set(ref.beat_id, list);
   }
 
-  // Build storyboard lookup: beatId -> StoryboardFrame
-  const frameMap = new Map<string, StoryboardFrame>();
+  // Build storyboard lookup: beatId -> StoryboardFrame[]
+  const frameMap = new Map<string, StoryboardFrame[]>();
   for (const frame of storyboardFrames) {
-    if (frame.beat_id) frameMap.set(frame.beat_id, frame);
+    if (frame.beat_id) {
+      const list = frameMap.get(frame.beat_id) ?? [];
+      list.push(frame);
+      frameMap.set(frame.beat_id, list);
+    }
   }
 
   const beatLetter = (n: number) => String.fromCharCode(64 + n); // 1=A, 2=B...
@@ -143,7 +151,7 @@ export function ReadOnlyCanvas({
             {/* Beats */}
             {!isCollapsed && scene.beats.map((beat, beatIdx) => {
               const beatRefs = refMap.get(beat.id) ?? [];
-              const frame = frameMap.get(beat.id);
+              const beatFrames = frameMap.get(beat.id) ?? [];
 
               return (
                 <div key={beat.id} id={`beat-${beat.id}`} className="relative">
@@ -180,7 +188,7 @@ export function ReadOnlyCanvas({
                         <ReadOnlyReferenceCell references={beatRefs} />
                       )}
                       {columnConfig.storyboard && (
-                        <ReadOnlyStoryboardCell frame={frame} />
+                        <ReadOnlyStoryboardCell frames={beatFrames} storyboardLayout={beat.storyboard_layout ?? null} />
                       )}
                     </div>
                   </div>
@@ -249,7 +257,27 @@ function ReadOnlyReferenceCell({ references }: { references: Reference[] }) {
 
 // ── Read-only storyboard cell ────────────────────────────────────────────
 
-function ReadOnlyStoryboardCell({ frame }: { frame?: StoryboardFrame }) {
+function ReadOnlyStoryboardCell({ frames, storyboardLayout }: { frames: StoryboardFrame[]; storyboardLayout: string | null }) {
+  const slottedFrames = frames
+    .filter(f => f.slot != null)
+    .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0)) as StoryboardSlotFrame[];
+
+  if (slottedFrames.length > 0) {
+    return (
+      <div className="min-w-0 overflow-hidden border-b border-b-[#1a1a1a]">
+        <div className="mx-2 my-2">
+          <StoryboardLayoutRenderer
+            layout={storyboardLayout ?? 'single'}
+            frames={slottedFrames}
+            size="cell"
+            gap={2}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const frame = frames[0];
   if (!frame) {
     return <div className="min-h-[2.5rem] border-b border-b-[#1a1a1a]" />;
   }

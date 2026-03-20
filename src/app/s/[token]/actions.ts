@@ -176,7 +176,7 @@ export async function getScriptShareData(token: string) {
   if (sceneIds.length > 0) {
     const { data: beatData } = await service
       .from('script_beats')
-      .select('*')
+      .select('id, scene_id, sort_order, audio_content, visual_content, notes_content, storyboard_layout, created_at, updated_at')
       .in('scene_id', sceneIds)
       .order('sort_order');
     beats = (beatData ?? []) as Record<string, unknown>[];
