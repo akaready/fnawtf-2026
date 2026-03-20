@@ -247,12 +247,14 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
           <MapPin size={10} className="text-admin-info" />
         </span>
       )}
-      <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
-        {heading}
+      <div className="flex-1 min-w-0">
+        <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block">
+          {heading}
+        </span>
         {scene.scene_description && (
-          <span className="text-admin-text-ghost font-normal ml-1.5 text-[10px] tracking-normal normal-case">[{scene.scene_description}]</span>
+          <span className="text-xs text-admin-text-primary font-normal uppercase tracking-wider truncate block">[{scene.scene_description}]</span>
         )}
-      </span>
+      </div>
 
       <div className={`flex items-center gap-0.5 flex-shrink-0 transition-opacity ${confirmDelete ? 'opacity-100' : 'opacity-0 group-hover/scene:opacity-100'}`}>
         {confirmDelete ? (
