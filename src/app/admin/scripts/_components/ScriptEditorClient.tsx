@@ -259,6 +259,7 @@ export function ScriptEditorClient({
       audio_content: '',
       visual_content: '',
       notes_content: '',
+      storyboard_layout: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -307,6 +308,7 @@ export function ScriptEditorClient({
       audio_content: '',
       visual_content: '',
       notes_content: '',
+      storyboard_layout: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

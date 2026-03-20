@@ -178,6 +178,8 @@ export function ScriptStoryboardCell({
           prompt_used: null,
           is_active: true,
           reference_urls_used: [],
+          slot: null,
+          crop_config: null,
           created_at: new Date().toISOString(),
         };
         onFrameChange(newFrame);
