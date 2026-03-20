@@ -98,6 +98,7 @@ interface Props {
     int_ext: string;
     time_of_day: string;
     scene_description: string | null;
+    beats?: { id: string; sort_order: number }[];
   }>;
   shareId: string;
   viewerEmail: string;
@@ -194,6 +195,15 @@ export function ScriptPresentationView({
     if (slideIdx >= 0) setIdx(slideIdx);
   }, [slides]);
 
+  /* ── Jump to specific beat ── */
+  const jumpToBeat = useCallback((beatId: string) => {
+    const slideIdx = slides.findIndex(s => s.beatId === beatId);
+    if (slideIdx >= 0) setIdx(slideIdx);
+  }, [slides]);
+
+  /* ── Active beat ID ── */
+  const activeBeatId = current?.beatId ?? null;
+
   /* ── Build content panels ── */
   const showVisual = !!current.visualContent.trim();
   const showNotes = !!current.notesContent.trim();
@@ -230,6 +240,8 @@ export function ScriptPresentationView({
               scenes={scenes}
               activeSceneId={activeSceneId}
               onSelectScene={jumpToScene}
+              activeBeatId={activeBeatId}
+              onSelectBeat={jumpToBeat}
               showHeader
               onCollapse={() => setLeftOpen(false)}
             />
@@ -244,7 +256,9 @@ export function ScriptPresentationView({
           <SceneBottomSheet
             scenes={scenes}
             activeSceneId={activeSceneId}
-            onJumpToScene={jumpToScene}
+            onSelectScene={jumpToScene}
+            activeBeatId={activeBeatId}
+            onSelectBeat={jumpToBeat}
           />
         </div>
         <div className="md:hidden absolute top-4 right-4 z-30">
