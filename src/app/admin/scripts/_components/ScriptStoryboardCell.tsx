@@ -260,6 +260,7 @@ export function ScriptStoryboardCell({
       <>
       <div
         className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative select-none"
+        onMouseDown={e => e.preventDefault()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
