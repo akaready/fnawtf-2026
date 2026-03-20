@@ -165,6 +165,7 @@ export function ScriptShareClient({
     int_ext: sc.int_ext,
     time_of_day: sc.time_of_day,
     scene_description: (sc as Record<string, unknown>).scene_description as string | null ?? null,
+    beats: sc.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
   }));
 
   // Intro page
