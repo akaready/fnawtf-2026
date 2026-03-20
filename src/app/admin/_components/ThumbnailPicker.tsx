@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function getProxiedMp4Url(bunnyVideoId: string, quality: '360p' | '720p' = '360p') {
   return `/cdn/videos/${bunnyVideoId}/play_${quality}.mp4`;
@@ -149,6 +150,38 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
     hiRes.load();
   }, [onSelect, isSaving]);
 
+  // ~1 frame at 24fps
+  const FRAME_STEP = 1 / 24;
+
+  const stepFrame = useCallback((dir: -1 | 1) => {
+    const vid = videoRef.current;
+    if (!vid || !durationRef.current) return;
+    const doPause = () => { vid.pause(); };
+    if (playPromiseRef.current) {
+      playPromiseRef.current.then(doPause).catch(() => {});
+      playPromiseRef.current = null;
+    } else {
+      doPause();
+    }
+    const newTime = Math.max(0, Math.min(durationRef.current, vid.currentTime + dir * FRAME_STEP));
+    vid.currentTime = newTime;
+    setCurrentTime(newTime);
+    setSliderPos(newTime / durationRef.current);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      stepFrame(-1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      stepFrame(1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      captureFrame();
+    }
+  }, [stepFrame, captureFrame]);
+
   const handleTrackMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -208,14 +241,16 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
         )}
       </div>
 
-      {/* Timeline slider */}
-      <div
-        ref={trackRef}
-        className="relative h-7 flex items-center cursor-pointer mt-2 group"
-        onMouseDown={handleTrackMouseDown}
-      >
-        {/* Track background */}
-        <div className="absolute left-0 right-0 h-1 bg-admin-bg-hover rounded-full" />
+      {/* Timeline slider + frame step buttons */}
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div className="flex items-center gap-2 mt-2" onKeyDown={handleKeyDown} tabIndex={0} style={{ outline: 'none' }}>
+        <div
+          ref={trackRef}
+          className="relative h-7 flex-1 flex items-center cursor-pointer group"
+          onMouseDown={handleTrackMouseDown}
+        >
+          {/* Track background */}
+          <div className="absolute left-0 right-0 h-1 bg-admin-bg-hover rounded-full" />
 
         {/* Saved thumbnail position marker (purple) */}
         {duration > 0 && (
@@ -259,6 +294,27 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
         )}
+        </div>
+
+        {/* Frame step buttons */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <button
+            type="button"
+            title="Previous frame (Left arrow)"
+            onClick={() => stepFrame(-1)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            type="button"
+            title="Next frame (Right arrow)"
+            onClick={() => stepFrame(1)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );

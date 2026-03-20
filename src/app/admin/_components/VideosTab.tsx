@@ -72,7 +72,7 @@ function SortableVideoRow({
         isDragging
           ? 'border-2 border-dashed border-admin-border bg-admin-bg-subtle opacity-40'
           : isThumbSource
-          ? 'border-2 border-accent bg-admin-bg-subtle hover:bg-admin-bg-hover'
+          ? 'border-2 border-accent bg-accent/5 hover:bg-accent/10'
           : 'border border-admin-border-subtle bg-admin-bg-subtle hover:bg-admin-bg-hover'
       }`}
       onClick={onSelectThumb}
