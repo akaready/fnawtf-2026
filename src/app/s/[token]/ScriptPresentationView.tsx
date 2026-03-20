@@ -246,7 +246,7 @@ export function ScriptPresentationView({
         </button>
 
         <div
-          className={`h-full grid w-fit z-10 relative ${sidebarTransition} ${leftOpen ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
+          className={`h-full grid z-10 relative ${sidebarTransition} ${leftOpen ? 'grid-cols-[320px]' : 'grid-cols-[0px]'}`}
         >
           <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
             <SceneNav
