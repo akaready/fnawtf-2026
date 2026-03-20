@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink } from 'lucide-react';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
@@ -97,7 +97,7 @@ export function ScriptShareClient({
   }
 
   const computed = computeSceneNumbers(sortedScenes as never, beatsByScene as never);
-  const computedScenes = (computed as unknown as { id: string; sceneNumber: number; int_ext: string; location_name: string; time_of_day: string; scene_description?: string | null; beats: { id: string; audio_content: string; visual_content: string; notes_content: string }[] }[]);
+  const computedScenes = (computed as unknown as { id: string; sceneNumber: number; int_ext: string; location_name: string; time_of_day: string; scene_description?: string | null; beats: { id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string }[] }[]);
 
   // Set initial active scene
   useEffect(() => {
@@ -140,6 +140,11 @@ export function ScriptShareClient({
     const el = document.getElementById(`scene-${sceneId}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const handleBeatClick = useCallback((beatId: string) => {
+    const el = document.getElementById(`beat-${beatId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const btnCls = 'w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors';
 
@@ -282,9 +287,18 @@ export function ScriptShareClient({
         >
           <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
             <SceneNav
-              scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null }))}
+              scenes={computedScenes.map(s => ({
+                id: s.id,
+                sceneNumber: s.sceneNumber,
+                int_ext: s.int_ext,
+                location_name: s.location_name,
+                time_of_day: s.time_of_day,
+                scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null,
+                beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
+              }))}
               activeSceneId={activeSceneId}
               onSelectScene={handleSceneClick}
+              onSelectBeat={handleBeatClick}
             />
           </div>
         </div>
