@@ -178,17 +178,13 @@ function SortableSceneItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group flex items-center gap-1 pl-0.5 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
     >
-      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5">
-        <GripVertical size={12} className="text-admin-text-ghost" />
-      </div>
-
       <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
         {scene.sceneNumber}
       </span>
