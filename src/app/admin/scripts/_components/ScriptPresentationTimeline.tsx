@@ -7,9 +7,11 @@ interface Props {
   slides: PresentationSlide[];
   currentIndex: number;
   onSeek: (index: number) => void;
+  /** Comment counts per beatId — used to show indicators on the timeline */
+  commentCounts?: Record<string, number>;
 }
 
-export function ScriptPresentationTimeline({ slides, currentIndex, onSeek }: Props) {
+export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, commentCounts: _commentCounts }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);

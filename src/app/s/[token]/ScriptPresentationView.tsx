@@ -11,7 +11,7 @@ import { CommentSidebar } from './CommentSidebar';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneBottomSheet } from './SceneBottomSheet';
-import { addComment } from './actions';
+import { addComment, getCommentCounts } from './actions';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
@@ -132,6 +132,11 @@ export function ScriptPresentationView({
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    getCommentCounts(shareId).then(setCommentCounts);
+  }, [shareId]);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
@@ -147,7 +152,13 @@ export function ScriptPresentationView({
     setCommentText('');
     if (commentTextareaRef.current) commentTextareaRef.current.style.height = 'auto';
     addComment(shareId, current.beatId, viewerEmail, viewerName, content)
-      .then(() => setCommentRefreshKey(k => k + 1))
+      .then(() => {
+        setCommentRefreshKey(k => k + 1);
+        setCommentCounts(prev => ({
+          ...prev,
+          [current.beatId]: (prev[current.beatId] ?? 0) + 1,
+        }));
+      })
       .catch(() => {}); // Silently fail on error
   }, [commentText, shareId, current?.beatId, viewerEmail, viewerName]);
   const prev = idx > 0 ? slides[idx - 1] : null;
@@ -244,6 +255,7 @@ export function ScriptPresentationView({
               onSelectScene={jumpToScene}
               activeBeatId={activeBeatId}
               onSelectBeat={jumpToBeat}
+              commentCounts={commentCounts}
               showHeader
               onCollapse={() => setLeftOpen(false)}
             />
@@ -348,6 +360,7 @@ export function ScriptPresentationView({
               slides={slides}
               currentIndex={idx}
               onSeek={handleSeek}
+              commentCounts={commentCounts}
             />
           </div>
 
@@ -364,6 +377,14 @@ export function ScriptPresentationView({
                   <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{activeScene.scene_description}</span></>
                 )}
               </span>
+              {(commentCounts[current.beatId] ?? 0) > 0 && (
+                <div className="flex items-center gap-1.5 flex-shrink-0 mr-3">
+                  <div className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span className="text-admin-sm text-admin-text-muted">
+                    {commentCounts[current.beatId]} {commentCounts[current.beatId] === 1 ? 'comment' : 'comments'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Audio (2/3) + Visual (1/3) */}

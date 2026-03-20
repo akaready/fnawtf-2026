@@ -49,6 +49,8 @@ interface Props {
   /** Show "New Scene" footer button (admin editor only) */
   showAddButton?: boolean;
   onAddScene?: () => void;
+  /** Comment counts per beatId — used to show indicators in the nav */
+  commentCounts?: Record<string, number>;
 }
 
 function buildSlug(scene: SceneData): string {
@@ -67,6 +69,7 @@ export function SceneNav({
   onReorder,
   showAddButton = false,
   onAddScene,
+  commentCounts: _commentCounts,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
