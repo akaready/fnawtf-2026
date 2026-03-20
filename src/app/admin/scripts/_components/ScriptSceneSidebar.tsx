@@ -174,7 +174,7 @@ function SortableSceneItem({
       }`}
       onClick={onSelect}
     >
-      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none translate-y-[6px] text-right pr-1">
+      <span className="text-admin-border font-bebas text-[56px] leading-none translate-y-[6px] text-right pr-2">
         {scene.sceneNumber}
       </span>
       <div className="flex-1 min-w-0">

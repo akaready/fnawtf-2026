@@ -34,17 +34,17 @@ export function SceneListItem({
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       } ${className}`}
     >
-      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none translate-y-[6px] text-right pr-1">
+      <span className="text-admin-border font-bebas text-[56px] leading-none translate-y-[6px] text-right pr-2">
         {sceneNumber}
       </span>
-      <div className="min-w-0 pr-2">
+      <div className="pr-3">
         {slug && (
-          <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
+          <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
             {slug}
           </span>
         )}
         {description && (
-          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
+          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
             {description}
           </span>
         )}
