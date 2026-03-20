@@ -177,6 +177,8 @@ export function ScriptStoryboardCell({
           source: 'uploaded',
           prompt_used: null,
           is_active: true,
+          slot: null,
+          crop_config: null,
           reference_urls_used: [],
           created_at: new Date().toISOString(),
         };

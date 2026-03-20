@@ -76,6 +76,7 @@ export interface ScriptBeatRow {
   audio_content: string;
   visual_content: string;
   notes_content: string;
+  storyboard_layout: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -251,6 +252,12 @@ export interface StoryboardReferenceUsed {
   purpose: 'style' | 'cast' | 'location' | 'beat' | 'consistency';
 }
 
+export interface CropConfig {
+  x: number;      // 0.0–1.0, horizontal origin (0 = left edge, 1 = right edge)
+  y: number;      // 0.0–1.0, vertical origin (0 = top, 1 = bottom)
+  scale: number;  // ≥ 1.0 (1.0 = no zoom, 1.5 = 50% zoomed in)
+}
+
 export interface ScriptStoryboardFrameRow {
   id: string;
   script_id: string;
@@ -261,9 +268,14 @@ export interface ScriptStoryboardFrameRow {
   source: StoryboardFrameSource;
   prompt_used: string | null;
   is_active: boolean;
+  slot: number | null;
+  crop_config: CropConfig | null;
   reference_urls_used: StoryboardReferenceUsed[];
   created_at: string;
 }
+
+// Frame guaranteed to have a slot assignment
+export type StoryboardSlotFrame = ScriptStoryboardFrameRow & { slot: number };
 
 export interface AiPromptLogRow {
   id: string;
