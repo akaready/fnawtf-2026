@@ -71,7 +71,7 @@ export function ScriptSceneSidebar({
               onClick={() => onScrollToScene?.(scene.label, scene.sceneIndex)}
               className="w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary transition-colors"
             >
-              <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right inline-block">
+              <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
                 {i + 1}
               </span>
               <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
@@ -181,7 +181,7 @@ function SortableSceneItem({
       }`}
       onClick={onSelect}
     >
-      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right inline-block">
+      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
         {scene.sceneNumber}
       </span>
       <div className="flex-1 min-w-0">
