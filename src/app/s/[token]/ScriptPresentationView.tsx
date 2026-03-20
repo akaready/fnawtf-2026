@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon, Send, MapPin, FileText } from 'lucide-react';
 
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
 function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
+import { CommentBottomSheet } from './CommentBottomSheet';
 import { addComment } from './actions';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
@@ -106,6 +107,8 @@ export function ScriptPresentationView({
     storyboard: true,
   });
   const [leftOpen, setLeftOpen] = useState(true);
+  const [showSlug, setShowSlug] = useState(true);
+  const [showDesc, setShowDesc] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentText, setCommentText] = useState('');
@@ -180,7 +183,7 @@ export function ScriptPresentationView({
     : current.sceneName;
 
   /* ── Sidebar transition class ── */
-  const sidebarTransition = 'transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]';
+  const sidebarTransition = 'transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]';
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
@@ -197,9 +200,9 @@ export function ScriptPresentationView({
         </button>
 
         <div
-          className={`h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden z-10 relative ${sidebarTransition} ${leftOpen ? 'w-56' : 'w-0'}`}
+          className={`h-full grid z-10 relative ${sidebarTransition} ${leftOpen ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
-          <div className="w-56 h-full flex flex-col">
+          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full flex flex-col">
             {/* Header */}
             <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
               <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
@@ -218,26 +221,40 @@ export function ScriptPresentationView({
               <button
                 key={scene.id}
                 onClick={() => jumpToScene(scene.id)}
-                className={`w-full text-left flex items-center gap-1 px-2 py-3 border-b border-admin-border-subtle transition-colors ${
+                className={`w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
                   isActive
-                    ? 'bg-admin-bg-active text-admin-text-primary'
+                    ? 'bg-black/40 text-admin-text-primary'
                     : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
                 }`}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-sm font-bold">{scene.sceneNumber}</span>
-                  </div>
-                  <div className="text-xs uppercase tracking-wide mt-0.5 opacity-70 break-words">
-                    {scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}
-                  </div>
-                  {scene.scene_description && (
-                    <div className="text-xs text-admin-text-primary uppercase tracking-wide">[{scene.scene_description}]</div>
+                <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
+                  {scene.sceneNumber}
+                </span>
+                <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
+                  {showSlug && <>{scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}</>}
+                  {showDesc && scene.scene_description && (
+                    <span className="text-admin-text-primary font-normal ml-2">[{scene.scene_description}]</span>
                   )}
-                </div>
+                </span>
               </button>
             );
           })}
+          </div>
+          <div className="flex-shrink-0 border-t border-admin-border px-3 py-2 flex items-center gap-1">
+            <button
+              onClick={() => setShowSlug(p => !p)}
+              className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showSlug ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
+              title={showSlug ? 'Hide slugs' : 'Show slugs'}
+            >
+              <MapPin size={14} />
+            </button>
+            <button
+              onClick={() => setShowDesc(p => !p)}
+              className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showDesc ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
+              title={showDesc ? 'Hide descriptions' : 'Show descriptions'}
+            >
+              <FileText size={14} />
+            </button>
           </div>
         </div>
         </div>
@@ -333,18 +350,16 @@ export function ScriptPresentationView({
           </div>
 
           {/* Scene heading — matches table view scene header exactly */}
-          <div className="w-full max-w-5xl flex-shrink-0 flex items-center bg-[#141414] border-b border-border rounded-t px-3 py-2 md:px-4 md:py-3 mb-px">
-            <span className="text-muted-foreground font-mono text-xs flex-shrink-0 mr-2">
-              {current.sceneNumber}
+          <div className="w-full max-w-5xl flex-shrink-0 flex items-center gap-0 bg-[#141414] border-b border-border rounded-t h-[44px] overflow-hidden mb-px">
+            <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] px-2">
+              {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
             </span>
-            <span className="text-xs font-medium text-foreground/70 uppercase tracking-wider flex-1 min-w-0 truncate">
+            <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
               {sceneHeading}
+              {activeScene?.scene_description && (
+                <span className="text-admin-text-primary font-normal ml-2">[{activeScene.scene_description}]</span>
+              )}
             </span>
-            {activeScene?.scene_description && (
-              <span className="text-xs text-muted-foreground/40 ml-2 truncate">
-                [{activeScene.scene_description}]
-              </span>
-            )}
           </div>
 
           {/* ── Audio (full width, content text larger) ── */}
@@ -424,6 +439,15 @@ export function ScriptPresentationView({
                   style={{ overflow: 'hidden' }}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none border-none outline-none leading-relaxed"
                 />
+                {/* Mobile: bottom sheet trigger */}
+                <div className="md:hidden flex-shrink-0">
+                  <CommentBottomSheet
+                    shareId={shareId}
+                    beatId={current?.beatId ?? null}
+                    viewerEmail={viewerEmail}
+                    refreshKey={commentRefreshKey}
+                  />
+                </div>
                 <button
                   onClick={handleCommentSubmit}
                   disabled={!commentText.trim() || !shareId}
