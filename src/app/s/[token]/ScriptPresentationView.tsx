@@ -406,7 +406,7 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-6 pointer-events-none">
             <div className="w-full max-w-2xl pointer-events-auto">
-              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 px-5 py-3">
+              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 p-4">
                 <textarea
                   ref={el => {
                     if (el) {
@@ -437,7 +437,7 @@ export function ScriptPresentationView({
                   } disabled:cursor-not-allowed`}
                   title="Click or press Enter to send"
                 >
-                  <Send size={14} />
+                  <Send size={18} />
                 </button>
               </div>
             </div>
