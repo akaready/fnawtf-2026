@@ -2382,12 +2382,21 @@ export async function getScriptVersions(scriptGroupId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('scripts')
-    .select('id, title, version, status, created_at, content_mode, major_version, minor_version, is_published')
-    .eq('script_group_id', scriptGroupId)
-    .order('major_version', { ascending: false })
-    .order('minor_version', { ascending: false });
+    .select('id, title, version, status, created_at, content_mode, major_version, minor_version, is_published, display_order')
+    .eq('script_id', scriptId)
+    .order('display_order', { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function reorderScriptVersions(orderedIds: string[]) {
+  const { supabase } = await requireAuth();
+  const updates = orderedIds.map((id, i) =>
+    supabase.from('scripts').update({ display_order: i } as never).eq('id', id)
+  );
+  const results = await Promise.all(updates);
+  const failed = results.find(r => r.error);
+  if (failed?.error) throw new Error(failed.error.message);
 }
 
 export async function deleteScript(id: string) {
@@ -2513,11 +2522,11 @@ export async function getScriptCharacters(scriptId: string) {
   return data ?? [];
 }
 
-export async function createCharacter(scriptId: string, data: Record<string, unknown>): Promise<string> {
+export async function createCharacter(scriptGroupId: string, data: Record<string, unknown>): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: char, error } = await supabase
     .from('script_characters')
-    .insert({ ...data, script_id: scriptId } as never)
+    .insert({ ...data, script_group_id: scriptGroupId } as never)
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -2541,7 +2550,7 @@ export async function deleteCharacter(id: string) {
 
 // ── Script Tags ──────────────────────────────────────────────────────────
 
-export async function getScriptTags(scriptId: string) {
+export async function getScriptTags(scriptGroupId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('script_tags')
@@ -2552,11 +2561,11 @@ export async function getScriptTags(scriptId: string) {
   return data ?? [];
 }
 
-export async function createScriptTag(scriptId: string, data: Record<string, unknown>): Promise<string> {
+export async function createScriptTag(scriptGroupId: string, data: Record<string, unknown>): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: tag, error } = await supabase
     .from('script_tags')
-    .insert({ ...data, script_id: scriptId } as never)
+    .insert({ ...data, script_group_id: scriptGroupId } as never)
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -2580,7 +2589,7 @@ export async function deleteScriptTag(id: string) {
 
 // ── Script Locations ──────────────────────────────────────────────────
 
-export async function getScriptLocations(scriptId: string) {
+export async function getScriptLocations(scriptGroupId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('script_locations')
@@ -2592,11 +2601,11 @@ export async function getScriptLocations(scriptId: string) {
   return data ?? [];
 }
 
-export async function createLocation(scriptId: string, data: Record<string, unknown>): Promise<string> {
+export async function createLocation(scriptGroupId: string, data: Record<string, unknown>): Promise<string> {
   const { supabase } = await requireAuth();
   const { data: loc, error } = await supabase
     .from('script_locations')
-    .insert({ ...data, script_id: scriptId } as never)
+    .insert({ ...data, script_group_id: scriptGroupId } as never)
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -2910,12 +2919,9 @@ async function duplicateScriptCore(
   if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
   const s = script as Record<string, unknown>;
 
-  // 2. Fetch all related data
-  const [scenesRes, charsRes, tagsRes, locsRes] = await Promise.all([
+  // 2. Fetch scenes (entities are shared via script_group_id — no cloning needed)
+  const [scenesRes] = await Promise.all([
     supabase.from('script_scenes').select('*').eq('script_id', scriptId).order('sort_order'),
-    supabase.from('script_characters').select('*').eq('script_id', scriptId).order('sort_order'),
-    supabase.from('script_tags').select('*').eq('script_id', scriptId).order('name'),
-    supabase.from('script_locations').select('*').eq('script_id', scriptId).order('sort_order'),
   ]);
 
   const scenes = scenesRes.data ?? [];
@@ -2991,57 +2997,8 @@ async function duplicateScriptCore(
     if (newBeat) beatIdMap.set(b.id as string, (newBeat as { id: string }).id);
   }
 
-  // 6. Clone characters
-  for (const char of (charsRes.data ?? [])) {
-    const c = char as Record<string, unknown>;
-    await supabase.from('script_characters').insert({
-      script_id: newScriptId,
-      name: c.name,
-      description: c.description,
-      color: c.color,
-      character_type: c.character_type,
-      sort_order: c.sort_order,
-      max_cast_slots: c.max_cast_slots,
-    } as never);
-  }
-
-  // 7. Clone tags
-  for (const tag of (tagsRes.data ?? [])) {
-    const t = tag as Record<string, unknown>;
-    await supabase.from('script_tags').insert({
-      script_id: newScriptId,
-      name: t.name,
-      slug: `tag-${crypto.randomUUID().slice(0, 8)}`,
-      color: t.color,
-    } as never);
-  }
-
-  // 8. Clone locations and remap scene location_id
-  const locationIdMap = new Map<string, string>();
-  for (const loc of (locsRes.data ?? [])) {
-    const l = loc as Record<string, unknown>;
-    const { data: newLoc } = await supabase.from('script_locations').insert({
-      script_id: newScriptId,
-      name: l.name,
-      description: l.description,
-      color: l.color,
-      sort_order: l.sort_order,
-      global_location_id: l.global_location_id,
-    } as never).select('id').single();
-    if (newLoc) locationIdMap.set(l.id as string, (newLoc as { id: string }).id);
-  }
-
-  // Remap location_id on cloned scenes
-  for (const scene of scenes) {
-    const sc = scene as Record<string, unknown>;
-    const oldLocId = sc.location_id as string | null;
-    if (oldLocId && locationIdMap.has(oldLocId)) {
-      const newSceneId = sceneIdMap.get(sc.id as string);
-      if (newSceneId) {
-        await supabase.from('script_scenes').update({ location_id: locationIdMap.get(oldLocId) } as never).eq('id', newSceneId);
-      }
-    }
-  }
+  // 6–8: Characters, tags, locations are shared via script_group_id — no cloning needed.
+  // Scene location_id references remain valid (they point to shared locations).
 
   // 9. Clone storyboard frames (active only) with mapped beat/scene IDs
   const { data: oldFrames } = await supabase
@@ -3214,6 +3171,30 @@ export async function unpublishScriptVersion(scriptId: string): Promise<string> 
   if (error) throw new Error(error.message);
 
   return scriptId;
+}
+
+/** Delete a script version (prevents deleting the last version in a group) */
+export async function deleteScriptVersion(scriptId: string) {
+  const { supabase } = await requireAuth();
+
+  const { data: script } = await supabase
+    .from('scripts')
+    .select('script_group_id')
+    .eq('id', scriptId)
+    .single();
+  if (!(script as Record<string, unknown> | null)?.script_group_id) throw new Error('Script not found');
+  const groupId = (script as Record<string, unknown>).script_group_id as string;
+
+  const { count } = await supabase
+    .from('scripts')
+    .select('id', { count: 'exact', head: true })
+    .eq('script_group_id', groupId);
+  if ((count ?? 0) <= 1) throw new Error('Cannot delete the last version');
+
+  const { error } = await supabase.from('scripts').delete().eq('id', scriptId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/admin/scripts');
 }
 
 // ── Storyboard Styles ────────────────────────────────────────────────
@@ -3678,13 +3659,13 @@ export async function getActiveLocationsForSelect(): Promise<{ id: string; name:
 
 import type { CharacterCastWithContact, LocationOptionWithLocation } from '@/types/scripts';
 
-/** Bulk-load all cast assignments for every character in a script. */
+/** Bulk-load all cast assignments for every character in a script group. */
 export async function getScriptCastMap(
-  scriptId: string,
+  scriptGroupId: string,
 ): Promise<Record<string, CharacterCastWithContact[]>> {
   const { supabase } = await requireAuth();
 
-  // Get all character IDs for this script
+  // Get all character IDs for this script group
   const { data: chars, error: charsErr } = await supabase
     .from('script_characters')
     .select('id')
@@ -3906,9 +3887,9 @@ export async function reorderCastMembers(characterId: string, orderedCastIds: st
 
 import type { CharacterReferenceRow } from '@/types/scripts';
 
-/** Bulk-load all reference images for every character in a script. */
+/** Bulk-load all reference images for every character in a script group. */
 export async function getCharacterReferenceMap(
-  scriptId: string,
+  scriptGroupId: string,
 ): Promise<Record<string, CharacterReferenceRow[]>> {
   const { supabase } = await requireAuth();
 
@@ -4007,9 +3988,9 @@ export async function setCharacterCastMode(
 
 import type { LocationReferenceRow } from '@/types/scripts';
 
-/** Bulk-load all reference images for every script location in a script. */
+/** Bulk-load all reference images for every script location in a script group. */
 export async function getLocationReferenceMap(
-  scriptId: string,
+  scriptGroupId: string,
 ): Promise<Record<string, LocationReferenceRow[]>> {
   const { supabase } = await requireAuth();
 
@@ -4092,13 +4073,13 @@ export async function deleteLocationReference(referenceId: string, storagePath: 
 
 // ── Script Location Options ───────────────────────────────────────────────
 
-/** Bulk-load all location options for every script location in a script. */
+/** Bulk-load all location options for every script location in a script group. */
 export async function getScriptLocationOptionsMap(
-  scriptId: string,
+  scriptGroupId: string,
 ): Promise<Record<string, LocationOptionWithLocation[]>> {
   const { supabase } = await requireAuth();
 
-  // Get all script_location IDs for this script
+  // Get all script_location IDs for this script group
   const { data: locs, error: locsErr } = await supabase
     .from('script_locations')
     .select('id')
@@ -5204,8 +5185,8 @@ export async function removeCallSheetLocation(id: string) {
 
 import type { ScriptProductRow, ProductReferenceRow } from '@/types/scripts';
 
-/** Fetch all products for a script, ordered by sort_order. */
-export async function getScriptProducts(scriptId: string): Promise<ScriptProductRow[]> {
+/** Fetch all products for a script group, ordered by sort_order. */
+export async function getScriptProducts(scriptGroupId: string): Promise<ScriptProductRow[]> {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
     .from('script_products')
@@ -5216,24 +5197,25 @@ export async function getScriptProducts(scriptId: string): Promise<ScriptProduct
   return (data ?? []) as ScriptProductRow[];
 }
 
-/** Create a new product on a script. Returns the new product id. */
+/** Create a new product on a script group. Returns the new product id. */
 export async function createProduct(
-  scriptId: string,
+  scriptGroupId: string,
   data: { name: string; description?: string; color: string; sort_order: number },
 ): Promise<string> {
   const { supabase } = await requireAuth();
 
-  // Derive project_id from the script row
+  // Derive project_id from any script in the group
   const { data: scriptRow } = await supabase
     .from('scripts')
     .select('project_id')
-    .eq('id', scriptId)
+    .eq('script_id', scriptId)
+    .limit(1)
     .single();
   const projectId = (scriptRow as { project_id: string | null } | null)?.project_id ?? null;
 
   const { data: row, error } = await supabase
     .from('script_products')
-    .insert({ script_id: scriptId, project_id: projectId, ...data } as never)
+    .insert({ script_group_id: scriptGroupId, project_id: projectId, ...data } as never)
     .select('id')
     .single();
   if (error) throw new Error(error.message);
@@ -5259,9 +5241,9 @@ export async function deleteProduct(id: string) {
 
 // ── Product References ────────────────────────────────────────────────────
 
-/** Bulk-load all reference images for every product in a script. */
+/** Bulk-load all reference images for every product in a script group. */
 export async function getProductReferenceMap(
-  scriptId: string,
+  scriptGroupId: string,
 ): Promise<Record<string, ProductReferenceRow[]>> {
   const { supabase } = await requireAuth();
 
