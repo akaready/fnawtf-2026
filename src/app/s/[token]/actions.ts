@@ -96,7 +96,7 @@ export async function getScriptShareData(token: string) {
   // Fetch share (anon can read active shares via RLS)
   const { data: share, error: shareErr } = await supabase
     .from('script_shares')
-    .select('id, script_id, notes, token, is_active')
+    .select('id, script_id, notes, token, is_active, share_mode')
     .eq('token', token)
     .eq('is_active', true)
     .single();
