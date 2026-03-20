@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useId } from 'react';
-import { Plus, GripVertical, Trash2, Check, X } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Check, X, Hash, MapPin, FileText } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -47,6 +47,9 @@ export function ScriptSceneSidebar({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+  const [showNumber, setShowNumber] = useState(true);
+  const [showSlug, setShowSlug] = useState(true);
+  const [showDesc, setShowDesc] = useState(true);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -66,14 +69,17 @@ export function ScriptSceneSidebar({
             <button
               key={`${scene.sceneIndex}-${i}`}
               onClick={() => onScrollToScene?.(scene.label, scene.sceneIndex)}
-              className="w-full text-left group flex items-center gap-1 px-3 py-2.5 border-b border-admin-border-subtle text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary transition-colors"
+              className="w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary transition-colors"
             >
-              <div className="flex-shrink-0 font-mono text-sm font-bold text-admin-text-ghost w-5">
+              <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
                 {i + 1}
-              </div>
-              <div className="flex-1 min-w-0 text-xs uppercase tracking-wide break-words">
+              </span>
+              <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
                 {scene.label}
-              </div>
+                {scene.description && (
+                  <span className="text-admin-text-primary font-normal ml-2">[{scene.description}]</span>
+                )}
+              </span>
             </button>
           ))}
         </div>
@@ -93,13 +99,33 @@ export function ScriptSceneSidebar({
                 isActive={scene.id === activeSceneId}
                 onSelect={() => onSelectScene(scene.id)}
                 onDelete={() => onDeleteScene(scene.id)}
+                showNumber={showNumber}
+                showSlug={showSlug}
+                showDesc={showDesc}
               />
             ))}
           </SortableContext>
         </DndContext>
       </div>
 
-      {/* New Scene — secondary button matching snippets sidebar pattern */}
+      {/* Visibility toggles */}
+      <div className="flex-shrink-0 border-t border-admin-border px-3 py-2 flex items-center gap-1">
+        <button
+          onClick={() => setShowSlug(p => !p)}
+          className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showSlug ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
+          title={showSlug ? 'Hide slugs' : 'Show slugs'}
+        >
+          <MapPin size={14} />
+        </button>
+        <button
+          onClick={() => setShowDesc(p => !p)}
+          className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showDesc ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
+          title={showDesc ? 'Hide descriptions' : 'Show descriptions'}
+        >
+          <FileText size={14} />
+        </button>
+      </div>
+      {/* New Scene */}
       <div className="flex-shrink-0 border-t border-admin-border px-3 py-3.5 flex items-center">
         <button
           onClick={onAddScene}
@@ -118,11 +144,17 @@ function SortableSceneItem({
   isActive,
   onSelect,
   onDelete,
+  showNumber,
+  showSlug,
+  showDesc,
 }: {
   scene: ComputedScene;
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  showNumber: boolean;
+  showSlug: boolean;
+  showDesc: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const {
@@ -146,9 +178,9 @@ function SortableSceneItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-1 px-2 py-3 border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
-          ? 'bg-admin-bg-active text-admin-text-primary'
+          ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
@@ -157,15 +189,19 @@ function SortableSceneItem({
         <GripVertical size={12} className="text-admin-text-ghost" />
       </div>
 
+      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
+        {scene.sceneNumber}
+      </span>
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-mono text-sm font-bold">{scene.sceneNumber}</span>
-        </div>
-        <div className="text-xs truncate uppercase tracking-wide mt-0.5 opacity-70">
-          {scene.int_ext}. {scene.location_name || '—'}
-        </div>
-        {scene.time_of_day && (
-          <div className="text-xs text-admin-text-ghost">{scene.time_of_day}</div>
+        {showSlug && (
+          <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
+            {scene.int_ext}. {scene.location_name || '—'}{scene.time_of_day ? ` — ${scene.time_of_day}` : ''}
+          </span>
+        )}
+        {showDesc && scene.scene_description && (
+          <span className="text-xs text-admin-text-primary font-normal uppercase tracking-wider truncate block leading-tight">
+            [{scene.scene_description}]
+          </span>
         )}
       </div>
 
