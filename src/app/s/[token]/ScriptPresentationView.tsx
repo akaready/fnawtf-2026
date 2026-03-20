@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon } f
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
 function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
-import { CommentInput } from './CommentInput';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
@@ -107,8 +106,7 @@ export function ScriptPresentationView({
   });
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
-  const [commentRefreshKey, setCommentRefreshKey] = useState(0);
-  const scrollCooldown = useRef(false);
+  // Comment sidebar refreshes internally; beat changes trigger via beatId prop
 
   const current = slides[idx];
   const prev = idx > 0 ? slides[idx - 1] : null;
@@ -147,20 +145,6 @@ export function ScriptPresentationView({
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [goNext, goPrev]);
-
-  /* ── Mouse wheel nav (debounced) ── */
-  useEffect(() => {
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      if (scrollCooldown.current) return;
-      scrollCooldown.current = true;
-      if (e.deltaY > 0 || e.deltaX > 0) goNext();
-      else if (e.deltaY < 0 || e.deltaX < 0) goPrev();
-      setTimeout(() => { scrollCooldown.current = false; }, 300);
-    };
-    document.addEventListener('wheel', handler, { passive: false });
-    return () => document.removeEventListener('wheel', handler);
   }, [goNext, goPrev]);
 
   /* ── Scene lookup: which scene is current? ── */
@@ -407,17 +391,6 @@ export function ScriptPresentationView({
         </div>
 
         {/* Comment input — sticky bottom of center column */}
-        {current && (
-          <div className="flex-shrink-0">
-            <CommentInput
-              shareId={shareId || ''}
-              beatId={current.beatId}
-              viewerEmail={viewerEmail}
-              viewerName={viewerName}
-              onCommentAdded={() => setCommentRefreshKey(k => k + 1)}
-            />
-          </div>
-        )}
       </div>
 
       {/* ════ RIGHT SIDEBAR — Comments ════ */}
@@ -425,9 +398,10 @@ export function ScriptPresentationView({
         shareId={shareId}
         beatId={current?.beatId ?? null}
         viewerEmail={viewerEmail}
+        viewerName={viewerName}
         open={rightOpen}
         onToggle={() => setRightOpen(prev => !prev)}
-        refreshKey={commentRefreshKey}
+        refreshKey={idx}
       />
     </div>
   );
