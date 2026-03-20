@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon, Se
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
 function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
+import { SceneListItem } from '@/app/admin/scripts/_components/SceneListItem';
 import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneBottomSheet } from './SceneBottomSheet';
 import { addComment } from './actions';
@@ -219,31 +220,14 @@ export function ScriptPresentationView({
           {scenes.map((scene) => {
             const isActive = scene.id === activeSceneId;
             return (
-              <button
+              <SceneListItem
                 key={scene.id}
+                sceneNumber={scene.sceneNumber}
+                slug={showSlug ? `${scene.int_ext}. ${scene.location_name || '\u2014'}${scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}` : undefined}
+                description={showDesc ? scene.scene_description : undefined}
+                isActive={isActive}
                 onClick={() => jumpToScene(scene.id)}
-                className={`w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
-                  isActive
-                    ? 'bg-black/40 text-admin-text-primary'
-                    : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
-                }`}
-              >
-                <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right inline-block">
-                  {scene.sceneNumber}
-                </span>
-                <div className="flex-1 min-w-0">
-                  {showSlug && (
-                    <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
-                      {scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}
-                    </span>
-                  )}
-                  {showDesc && scene.scene_description && (
-                    <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
-                      {scene.scene_description}
-                    </span>
-                  )}
-                </div>
-              </button>
+              />
             );
           })}
           </div>

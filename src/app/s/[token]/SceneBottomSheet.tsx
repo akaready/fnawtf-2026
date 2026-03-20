@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { List, X } from 'lucide-react';
+import { SceneListItem } from '@/app/admin/scripts/_components/SceneListItem';
 
 interface Scene {
   id: string;
@@ -73,30 +74,14 @@ export function SceneBottomSheet({ scenes, activeSceneId, onJumpToScene }: Props
             {scenes.map(scene => {
               const isActive = scene.id === activeSceneId;
               return (
-                <button
+                <SceneListItem
                   key={scene.id}
+                  sceneNumber={scene.sceneNumber}
+                  slug={`${scene.int_ext}. ${scene.location_name || '\u2014'}${scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}`}
+                  description={scene.scene_description}
+                  isActive={isActive}
                   onClick={() => handleSelect(scene.id)}
-                  className={`w-full text-left px-3 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-white/[0.08] text-white'
-                      : 'text-white/60 hover:bg-white/[0.04] hover:text-white/80'
-                  }`}
-                >
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-sm font-bold flex-shrink-0 w-[3rem] text-right">
-                      {scene.sceneNumber}
-                    </span>
-                    <span className="text-sm uppercase tracking-wide truncate">
-                      {scene.int_ext}. {scene.location_name || '\u2014'}
-                    </span>
-                  </div>
-                  {scene.time_of_day && (
-                    <div className="text-xs text-white/30 ml-6 mt-0.5">{scene.time_of_day}</div>
-                  )}
-                  {scene.scene_description && (
-                    <div className="text-xs text-white/25 ml-6 mt-0.5">{scene.scene_description}</div>
-                  )}
-                </button>
+                />
               );
             })}
           </div>
