@@ -126,13 +126,13 @@ export function ReadOnlyCanvas({
                   : <ChevronDown size={13} className="text-muted-foreground" />}
               </div>
               <div className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden">
-                <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[120px]">
+                <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[90px]">
                   {scene.sceneNumber}
                 </span>
                 <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
                   {[scene.int_ext, scene.location_name || 'UNTITLED LOCATION', scene.time_of_day ? `\u2014 ${scene.time_of_day}` : ''].filter(Boolean).join('. ').replace('. \u2014', ' \u2014')}
                   {scene.scene_description && (
-                    <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
+                    <span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{scene.scene_description}</span>
                   )}
                 </span>
               </div>

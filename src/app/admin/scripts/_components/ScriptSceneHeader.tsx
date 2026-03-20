@@ -240,7 +240,7 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
       className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden group/scene"
       id={`scene-${scene.id}`}
     >
-      <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[120px]">
+      <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[90px]">
         {scene.sceneNumber}
       </span>
       {hasGlobalLink && (
@@ -251,7 +251,7 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
       <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
         {heading}
         {scene.scene_description && (
-          <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
+          <span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{scene.scene_description}</span>
         )}
       </span>
 

@@ -324,13 +324,13 @@ export function ScriptPresentationView({
 
           {/* Scene heading — matches table view scene header exactly */}
           <div className="w-full max-w-5xl flex-shrink-0 flex items-center gap-0 bg-[#141414] border-b border-border rounded-t h-[44px] overflow-hidden mb-px">
-            <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[120px]">
+            <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] text-right pr-2 w-[90px]">
               {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
             </span>
             <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
               {sceneHeading}
               {activeScene?.scene_description && (
-                <span className="text-admin-text-muted font-normal ml-2">{activeScene.scene_description}</span>
+                <span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{activeScene.scene_description}</span>
               )}
             </span>
           </div>
