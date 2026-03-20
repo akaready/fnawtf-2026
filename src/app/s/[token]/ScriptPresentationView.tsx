@@ -425,7 +425,7 @@ export function ScriptPresentationView({
                   placeholder="Share your feedback on this story beat..."
                   rows={1}
                   style={{ overflow: 'hidden' }}
-                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none border-none outline-none leading-relaxed"
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none border-none outline-none leading-relaxed"
                 />
                 <button
                   onClick={handleCommentSubmit}
