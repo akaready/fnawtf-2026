@@ -23,6 +23,11 @@ interface GenerateRequest {
   castReferenceUrls?: string[];
   locationReferenceUrls?: string[];
   consistencyFrameUrls?: string[];
+  /** When set from the generation modal, overrides contentPrompt in the structured JSON */
+  promptOverride?: string;
+  /** Image modification mode — send existing image + edit instructions */
+  modifyMode?: boolean;
+  modifyImageUrl?: string;
 }
 
 export async function POST(request: Request) {
@@ -43,6 +48,8 @@ export async function POST(request: Request) {
     stylePreset, notesContent: _notesContent, aspectRatio = '16:9',
     referenceImageUrls = [], beatReferenceUrls = [], castReferenceUrls = [],
     locationReferenceUrls = [], consistencyFrameUrls = [],
+    promptOverride,
+    modifyMode, modifyImageUrl,
   } = body;
 
   if (!scriptId || (!beatId && !sceneId)) {
@@ -63,6 +70,87 @@ export async function POST(request: Request) {
       } catch {
         return null;
       }
+    }
+
+    // ── Modification mode: send existing image + edit instructions ──
+    if (modifyMode && modifyImageUrl) {
+      const modifyPromptObj = {
+        task: 'Modify this storyboard frame based on the following instructions',
+        modification: promptOverride || 'Improve this image',
+        reference_images: [{ image_ids: [1], purpose: 'source image to modify', extract: 'everything — this is the base image', apply_to: 'modify per instructions while preserving all unmentioned elements' }],
+        constraints: {
+          must_avoid: [
+            'any text, letters, numbers, words, or symbols rendered anywhere in the image',
+            'borders, panel frames, or rectangular outlines drawn inside the image',
+            'watermarks, production logos, or frame numbering',
+          ],
+          output: 'edge-to-edge illustration filling 100% of canvas with zero internal borders',
+        },
+        output_specifications: { resolution: '2K', aspect_ratio: aspectRatio, format: 'single storyboard frame' },
+      };
+
+      const modifyTextPart = JSON.stringify(modifyPromptObj, null, 2);
+      const modifyParts: Part[] = [{ text: modifyTextPart }];
+      const srcImg = await fetchImagePart(modifyImageUrl);
+      if (srcImg) modifyParts.push(srcImg);
+
+      const geminiRes = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: modifyParts }],
+          generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio, imageSize: '2K' } },
+        }),
+      });
+
+      if (!geminiRes.ok) {
+        const errText = await geminiRes.text();
+        console.error('Gemini API error (modify):', errText);
+        return NextResponse.json({ error: `Gemini API error: ${geminiRes.status}` }, { status: 502 });
+      }
+
+      const geminiData = await geminiRes.json();
+      const candidate = geminiData.candidates?.[0];
+      const imagePart = candidate?.content?.parts?.find(
+        (p: { inlineData?: { mimeType: string; data: string } }) => p.inlineData?.data
+      );
+      if (!imagePart?.inlineData) {
+        return NextResponse.json({ error: 'No image in response' }, { status: 502 });
+      }
+
+      const serviceClient = createServiceClient();
+      const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+      const folder = beatId ?? sceneId ?? 'unknown';
+      const storagePath = `frames/${folder}/${Date.now()}.png`;
+
+      const { error: uploadErr } = await serviceClient.storage
+        .from('script-storyboards')
+        .upload(storagePath, imageBuffer, { contentType: 'image/png', upsert: false });
+      if (uploadErr) throw new Error(uploadErr.message);
+
+      const { data: urlData } = serviceClient.storage.from('script-storyboards').getPublicUrl(storagePath);
+      const image_url = urlData.publicUrl;
+
+      // Deactivate existing active frame(s)
+      if (beatId) {
+        await serviceClient.from('script_storyboard_frames').update({ is_active: false } as never).eq('beat_id', beatId).eq('is_active', true);
+      } else if (sceneId) {
+        await serviceClient.from('script_storyboard_frames').update({ is_active: false } as never).eq('scene_id', sceneId).eq('is_active', true);
+      }
+
+      const { data: frame, error: insertErr } = await serviceClient
+        .from('script_storyboard_frames')
+        .insert({
+          script_id: scriptId, beat_id: beatId ?? null, scene_id: sceneId ?? null,
+          image_url, storage_path: storagePath, source: 'generated',
+          prompt_used: modifyTextPart, is_active: true,
+          reference_urls_used: [{ url: modifyImageUrl, purpose: 'beat' }],
+        } as never)
+        .select('*')
+        .single();
+      if (insertErr) throw new Error(insertErr.message);
+
+      return NextResponse.json({ frame });
     }
 
     // ── Image slot allocation (14 total — Nano Banana Pro maximum) ──
@@ -139,7 +227,7 @@ export async function POST(request: Request) {
         ? 'CRITICAL: This is one frame in an ongoing storyboard sequence. Your output MUST be visually indistinguishable from the nearby frames provided — same artist, same medium, same rendering technique, same character appearances. Zero drift between frames.'
         : 'This is one frame in an ongoing storyboard sequence. Apply the style parameters above with absolute consistency — same artist, same tools, same rendering every frame.',
       scene: {
-        content: contentPrompt,
+        content: promptOverride || contentPrompt,
       },
       ...(refDeclarations.length > 0 && { reference_images: refDeclarations }),
       constraints: {
@@ -235,28 +323,29 @@ export async function POST(request: Request) {
     const { data: urlData } = serviceClient.storage.from('script-storyboards').getPublicUrl(storagePath);
     const image_url = urlData.publicUrl;
 
-    // Delete existing frame for this beat/scene (single image per beat)
+    // Deactivate existing active frame(s) — preserve history instead of deleting
     if (beatId) {
-      const { data: old } = await serviceClient
+      await serviceClient
         .from('script_storyboard_frames')
-        .select('id, storage_path')
-        .eq('beat_id', beatId);
-      if (old && old.length > 0) {
-        const paths = (old as { storage_path: string }[]).map(r => r.storage_path);
-        await serviceClient.storage.from('script-storyboards').remove(paths);
-        await serviceClient.from('script_storyboard_frames').delete().eq('beat_id', beatId);
-      }
+        .update({ is_active: false } as never)
+        .eq('beat_id', beatId)
+        .eq('is_active', true);
     } else if (sceneId) {
-      const { data: old } = await serviceClient
+      await serviceClient
         .from('script_storyboard_frames')
-        .select('id, storage_path')
-        .eq('scene_id', sceneId);
-      if (old && old.length > 0) {
-        const paths = (old as { storage_path: string }[]).map(r => r.storage_path);
-        await serviceClient.storage.from('script-storyboards').remove(paths);
-        await serviceClient.from('script_storyboard_frames').delete().eq('scene_id', sceneId);
-      }
+        .update({ is_active: false } as never)
+        .eq('scene_id', sceneId)
+        .eq('is_active', true);
     }
+
+    // Build reference URL history for this generation
+    const referenceUrlsUsed = [
+      ...styleUrls.map(url => ({ url, purpose: 'style' })),
+      ...castUrls.map(url => ({ url, purpose: 'cast' })),
+      ...locUrls.map(url => ({ url, purpose: 'location' })),
+      ...beatUrls.map(url => ({ url, purpose: 'beat' })),
+      ...consistencyUrls.map(url => ({ url, purpose: 'consistency' })),
+    ];
 
     // Insert frame record
     const { data: frame, error: insertErr } = await serviceClient
@@ -269,6 +358,8 @@ export async function POST(request: Request) {
         storage_path: storagePath,
         source: 'generated',
         prompt_used: textPart,
+        is_active: true,
+        reference_urls_used: referenceUrlsUsed,
       } as never)
       .select('*')
       .single();

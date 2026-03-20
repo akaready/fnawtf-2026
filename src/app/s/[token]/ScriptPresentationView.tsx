@@ -7,6 +7,7 @@ const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '
 function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
 import { CommentBottomSheet } from './CommentBottomSheet';
+import { SceneBottomSheet } from './SceneBottomSheet';
 import { addComment } from './actions';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
@@ -262,6 +263,22 @@ export function ScriptPresentationView({
 
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
+        {/* Mobile: scene nav top-left, comments top-right */}
+        <div className="md:hidden absolute top-3 left-3 z-30">
+          <SceneBottomSheet
+            scenes={scenes}
+            activeSceneId={activeSceneId}
+            onJumpToScene={jumpToScene}
+          />
+        </div>
+        <div className="md:hidden absolute top-3 right-3 z-30">
+          <CommentBottomSheet
+            shareId={shareId}
+            beatId={current?.beatId ?? null}
+            viewerEmail={viewerEmail}
+            refreshKey={commentRefreshKey}
+          />
+        </div>
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
           {/* Logo bar — client first, FNA second */}
@@ -439,15 +456,6 @@ export function ScriptPresentationView({
                   style={{ overflow: 'hidden' }}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none border-none outline-none leading-relaxed"
                 />
-                {/* Mobile: bottom sheet trigger */}
-                <div className="md:hidden flex-shrink-0">
-                  <CommentBottomSheet
-                    shareId={shareId}
-                    beatId={current?.beatId ?? null}
-                    viewerEmail={viewerEmail}
-                    refreshKey={commentRefreshKey}
-                  />
-                </div>
                 <button
                   onClick={handleCommentSubmit}
                   disabled={!commentText.trim() || !shareId}

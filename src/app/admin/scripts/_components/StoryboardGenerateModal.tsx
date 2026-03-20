@@ -159,7 +159,8 @@ export function StoryboardGenerateModal({
     lastSavedPromptRef.current = next;
   }, [promptFuture, localPrompt]);
 
-  const selectedFrame = history.find(f => f.id === selectedFrameId) ?? null;
+  // Fall back to activeFrame prop if not found in history (e.g., history fetch failed)
+  const selectedFrame = history.find(f => f.id === selectedFrameId) ?? activeFrame;
 
   // ── Build initial references from cell props ──
   const buildInitialReferences = useCallback((): StoryboardReferenceUsed[] => {
@@ -211,14 +212,8 @@ export function StoryboardGenerateModal({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getFrameHistoryForBeat(beatId).then((data) => {
-      if (cancelled) return;
-      setHistory(data);
 
-      const active = data.find(f => f.is_active);
-      const sel = active ?? data[0] ?? null;
-      setSelectedFrameId(sel?.id ?? null);
-
+    const initFromFrame = (sel: ScriptStoryboardFrameRow | null) => {
       if (sel?.prompt_used) {
         try {
           const parsed = JSON.parse(sel.prompt_used);
@@ -235,24 +230,36 @@ export function StoryboardGenerateModal({
         setLocalPrompt(content);
         lastSavedPromptRef.current = content;
       }
-
       const refs = sel?.reference_urls_used?.length
         ? sel.reference_urls_used
         : buildInitialReferences();
       setLocalReferences(refs);
+    };
 
+    getFrameHistoryForBeat(beatId).then((data) => {
+      if (cancelled) return;
+
+      // If fetch returned empty but we have an activeFrame prop, seed history with it
+      const frames = data.length > 0 ? data : (activeFrame ? [activeFrame] : []);
+      setHistory(frames);
+
+      const active = frames.find(f => f.is_active);
+      const sel = active ?? frames[0] ?? null;
+      setSelectedFrameId(sel?.id ?? null);
+      initFromFrame(sel);
       setLoading(false);
     }).catch(() => {
       if (!cancelled) {
-        const content = buildInitialPrompt();
-        setLocalPrompt(content);
-        lastSavedPromptRef.current = content;
-        setLocalReferences(buildInitialReferences());
+        // Seed from activeFrame prop on fetch failure
+        const frames = activeFrame ? [activeFrame] : [];
+        setHistory(frames);
+        setSelectedFrameId(activeFrame?.id ?? null);
+        initFromFrame(activeFrame);
         setLoading(false);
       }
     });
     return () => { cancelled = true; };
-  }, [beatId, buildInitialPrompt, buildInitialReferences]);
+  }, [beatId, activeFrame, buildInitialPrompt, buildInitialReferences]);
 
   // ── Keyboard: Escape to close ──
   useEffect(() => {

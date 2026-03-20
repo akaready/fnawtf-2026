@@ -3263,6 +3263,7 @@ export async function getFrameHistoryForBeat(beatId: string) {
     .select('*')
     .eq('beat_id', beatId)
     .order('created_at', { ascending: false });
+  if (error?.message?.includes('schema cache')) return [];
   if (error) throw new Error(error.message);
   return (data ?? []) as import('@/types/scripts').ScriptStoryboardFrameRow[];
 }

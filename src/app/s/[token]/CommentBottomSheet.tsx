@@ -60,13 +60,18 @@ export function CommentBottomSheet({ shareId, beatId, viewerEmail, refreshKey }:
 
   return (
     <>
-      {/* Trigger pill — shows comment count */}
+      {/* Trigger button */}
       <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white/80 transition-colors text-xs font-medium"
+        onClick={() => { setOpen(true); loadComments(); }}
+        className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors relative"
+        title="Comments"
       >
-        <MessageCircle size={13} />
-        {comments.length > 0 ? comments.length : 'Comments'}
+        <MessageCircle size={16} />
+        {comments.length > 0 && (
+          <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center rounded-full bg-white text-black text-[9px] font-bold">
+            {comments.length}
+          </span>
+        )}
       </button>
 
       {/* Backdrop */}
