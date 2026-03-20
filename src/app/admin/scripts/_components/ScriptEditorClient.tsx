@@ -24,6 +24,7 @@ import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { DEFAULT_FRACTIONS } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
 import { ScriptSceneSidebar } from './ScriptSceneSidebar';
+import { SceneNav } from './SceneNav';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
 import { ScriptPresentation } from './ScriptPresentation';
 import { buildPresentationSlides } from './presentationUtils';
@@ -809,11 +810,9 @@ export function ScriptEditorClient({
       </div>
 
       <div className="flex-1 flex min-h-0">
-        {/* Scene sidebar — always flush left, grid trick for auto-width animation */}
-        <div
-          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
-        >
-          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar">
+        {/* Scene sidebar — slides left via negative margin to free layout space */}
+        <div className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[margin-left,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${showSidebar ? 'ml-0 opacity-100' : '-ml-[100%] opacity-0'}`}>
+          {contentMode === 'scratchpad' ? (
             <ScriptSceneSidebar
               scenes={computedScenes}
               activeSceneId={activeSceneId}
@@ -821,11 +820,21 @@ export function ScriptEditorClient({
               onAddScene={handleAddScene}
               onReorderScenes={handleReorderScenes}
               onDeleteScene={handleDeleteScene}
-              scratchpadMode={contentMode === 'scratchpad'}
+              scratchpadMode
               scratchScenes={scratchScenes}
               onScrollToScene={(label, sceneIndex) => scratchPadRef.current?.scrollToScene(label, sceneIndex)}
             />
-          </div>
+          ) : (
+            <SceneNav
+              scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null }))}
+              activeSceneId={activeSceneId}
+              onSelectScene={setActiveSceneId}
+              draggable
+              onReorder={handleReorderScenes}
+              showAddButton
+              onAddScene={handleAddScene}
+            />
+          )}
         </div>
 
         {/* Main editor — constrained by container width toggle */}

@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, ImageIcon, Send, MapPin, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
 
 const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
 function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
 import { CommentSidebar } from './CommentSidebar';
-import { SceneListItem } from '@/app/admin/scripts/_components/SceneListItem';
+import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneBottomSheet } from './SceneBottomSheet';
 import { addComment } from './actions';
@@ -109,8 +109,6 @@ export function ScriptPresentationView({
     storyboard: true,
   });
   const [leftOpen, setLeftOpen] = useState(true);
-  const [showSlug, setShowSlug] = useState(true);
-  const [showDesc, setShowDesc] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentText, setCommentText] = useState('');
@@ -204,50 +202,15 @@ export function ScriptPresentationView({
         <div
           className={`h-full grid z-10 relative ${sidebarTransition} ${leftOpen ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
-          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full flex flex-col">
-            {/* Header */}
-            <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
-              <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
-              <button
-                onClick={() => setLeftOpen(false)}
-                className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-              >
-                <PanelLeftClose size={14} />
-              </button>
-            </div>
-          {/* List */}
-          <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
-          {scenes.map((scene) => {
-            const isActive = scene.id === activeSceneId;
-            return (
-              <SceneListItem
-                key={scene.id}
-                sceneNumber={scene.sceneNumber}
-                slug={showSlug ? `${scene.int_ext}. ${scene.location_name || '\u2014'}${scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}` : undefined}
-                description={showDesc ? scene.scene_description : undefined}
-                isActive={isActive}
-                onClick={() => jumpToScene(scene.id)}
-              />
-            );
-          })}
+          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
+            <SceneNav
+              scenes={scenes}
+              activeSceneId={activeSceneId}
+              onSelectScene={jumpToScene}
+              showHeader
+              onCollapse={() => setLeftOpen(false)}
+            />
           </div>
-          <div className="flex-shrink-0 border-t border-admin-border px-3 py-2 flex items-center gap-1">
-            <button
-              onClick={() => setShowSlug(p => !p)}
-              className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showSlug ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
-              title={showSlug ? 'Hide slugs' : 'Show slugs'}
-            >
-              <MapPin size={14} />
-            </button>
-            <button
-              onClick={() => setShowDesc(p => !p)}
-              className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showDesc ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
-              title={showDesc ? 'Hide descriptions' : 'Show descriptions'}
-            >
-              <FileText size={14} />
-            </button>
-          </div>
-        </div>
         </div>
       </div>
 

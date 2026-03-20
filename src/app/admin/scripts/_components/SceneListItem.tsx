@@ -28,16 +28,16 @@ export function SceneListItem({
   return (
     <button
       onClick={onClick}
-      className={`col-span-2 grid grid-cols-subgrid items-center h-[45px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
+      className={`text-left col-span-2 grid grid-cols-subgrid items-center h-[45px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       } ${className}`}
     >
-      <span className="text-admin-border font-bebas text-[56px] leading-none translate-y-[6px] text-right pr-2">
+      <span className="text-admin-border font-bebas text-[56px] leading-none text-right pr-2">
         {sceneNumber}
       </span>
-      <div className="pr-1 -translate-y-1">
+      <div className="pr-1 -translate-y-[3px]">
         {slug && (
           <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
             {slug}

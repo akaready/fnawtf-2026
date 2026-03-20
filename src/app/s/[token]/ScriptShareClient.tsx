@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, MapPin, FileText } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink } from 'lucide-react';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
 import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
-import { SceneListItem } from '@/app/admin/scripts/_components/SceneListItem';
+import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { startScriptViewSession, updateScriptViewDuration } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion } from '@/types/scripts';
@@ -66,8 +66,6 @@ export function ScriptShareClient({
     audio: true, visual: true, notes: true, reference: true, storyboard: true,
   });
   const [showSidebar, setShowSidebar] = useState(true);
-  const [showSlug, setShowSlug] = useState(true);
-  const [showDesc, setShowDesc] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -275,35 +273,12 @@ export function ScriptShareClient({
         <div
           className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
-          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full flex flex-col">
-            <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
-              {computedScenes.map((scene) => (
-                <SceneListItem
-                  key={scene.id}
-                  sceneNumber={scene.sceneNumber}
-                  slug={showSlug ? `${scene.int_ext}. ${scene.location_name || '\u2014'}${scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}` : undefined}
-                  description={showDesc ? scene.scene_description : undefined}
-                  isActive={activeSceneId === scene.id}
-                  onClick={() => handleSceneClick(scene.id)}
-                />
-              ))}
-            </div>
-            <div className="flex-shrink-0 border-t border-admin-border px-3 py-2 flex items-center gap-1">
-              <button
-                onClick={() => setShowSlug(p => !p)}
-                className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showSlug ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
-                title={showSlug ? 'Hide slugs' : 'Show slugs'}
-              >
-                <MapPin size={14} />
-              </button>
-              <button
-                onClick={() => setShowDesc(p => !p)}
-                className={`w-8 h-8 flex items-center justify-center rounded transition-colors ${showDesc ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}
-                title={showDesc ? 'Hide descriptions' : 'Show descriptions'}
-              >
-                <FileText size={14} />
-              </button>
-            </div>
+          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
+            <SceneNav
+              scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null }))}
+              activeSceneId={activeSceneId}
+              onSelectScene={handleSceneClick}
+            />
           </div>
         </div>
 
