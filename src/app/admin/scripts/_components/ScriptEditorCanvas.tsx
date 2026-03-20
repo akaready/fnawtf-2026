@@ -798,7 +798,21 @@ export function ScriptEditorCanvas({
                   }
                 }}
               >
-                <div className="group/scenegutter flex-shrink-0 w-10 flex items-center justify-center py-3 text-admin-text-faint">
+                <div className="flex-1 min-w-0">
+                  <ScriptSceneHeader
+                    scene={scene}
+                    scriptGroupId={scriptGroupId}
+                    locations={locations}
+                    onUpdate={(id, data) => onUpdateScene(id, data)}
+                    onDelete={onDeleteScene}
+                    editing={isEditing}
+                    onEditingChange={(editing) => setEditingSceneId(editing ? scene.id : null)}
+                    onGenerate={columnConfig.storyboard && scriptStyle ? () => handleGenerateScene(scene.id) : undefined}
+                    generating={generatingScope === scene.id}
+                    isGenerating={generatingScope !== null && generatingScope !== scene.id && scene.beats.some(b => generatingBeatIds.has(b.id))}
+                  />
+                </div>
+                <div className="group/scenegutter flex-shrink-0 flex items-center justify-center py-3 px-2 text-admin-text-faint">
                   {(() => {
                     if (selectionMode) {
                       const sceneBeatIds = scene.beats.map(b => b.id);
@@ -816,33 +830,18 @@ export function ScriptEditorCanvas({
                         </div>
                       );
                     }
-                    // Normal mode: grip on hover — drag handle for scene reorder
                     return (
                       <div
-                        className="opacity-0 group-hover/scenegutter:opacity-100 transition-opacity cursor-grab"
+                        className="cursor-grab hover:text-white transition-colors"
                         {...sceneDragListeners}
                       >
-                        <GripVertical size={12} className="text-admin-text-ghost" />
+                        <GripVertical size={12} />
                       </div>
                     );
                   })()}
                 </div>
-                <div className="flex-shrink-0 text-admin-text-faint mr-1">
+                <div className="flex-shrink-0 text-admin-text-faint pl-1 pr-3 hover:text-white transition-colors">
                   {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <ScriptSceneHeader
-                    scene={scene}
-                    scriptGroupId={scriptGroupId}
-                    locations={locations}
-                    onUpdate={(id, data) => onUpdateScene(id, data)}
-                    onDelete={onDeleteScene}
-                    editing={isEditing}
-                    onEditingChange={(editing) => setEditingSceneId(editing ? scene.id : null)}
-                    onGenerate={columnConfig.storyboard && scriptStyle ? () => handleGenerateScene(scene.id) : undefined}
-                    generating={generatingScope === scene.id}
-                    isGenerating={generatingScope !== null && generatingScope !== scene.id && scene.beats.some(b => generatingBeatIds.has(b.id))}
-                  />
                 </div>
               </div>
 
