@@ -13,12 +13,12 @@ import type { ScriptTagRow } from '@/types/scripts';
 interface Props {
   open: boolean;
   onClose: () => void;
-  scriptId: string;
+  scriptGroupId: string;
   tags: ScriptTagRow[];
   onTagsChange: (tags: ScriptTagRow[]) => void;
 }
 
-export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }: Props) {
+export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChange }: Props) {
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
     try {
       const slug = `tag-${crypto.randomUUID().slice(0, 8)}`;
       const color = newColor;
-      const id = await createScriptTag(scriptId, {
+      const id = await createScriptTag(scriptGroupId, {
         name: newName.trim(),
         slug,
         category: 'general',
@@ -83,7 +83,7 @@ export function ScriptTagsPanel({ open, onClose, scriptId, tags, onTagsChange }:
       });
       const newTag: ScriptTagRow = {
         id,
-        script_id: scriptId,
+        script_group_id: scriptGroupId,
         name: newName.trim(),
         slug,
         category: 'general',

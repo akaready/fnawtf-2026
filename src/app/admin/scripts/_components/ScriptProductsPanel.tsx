@@ -16,7 +16,7 @@ import type { ScriptProductRow, ProductReferenceRow } from '@/types/scripts';
 interface Props {
   open: boolean;
   onClose: () => void;
-  scriptId: string;
+  scriptGroupId: string;
   products: ScriptProductRow[];
   onProductsChange: (products: ScriptProductRow[]) => void;
   productReferenceMap: Record<string, ProductReferenceRow[]>;
@@ -26,7 +26,7 @@ interface Props {
 // ── Main Panel ────────────────────────────────────────────────────────────
 
 export function ScriptProductsPanel({
-  open, onClose, scriptId, products, onProductsChange,
+  open, onClose, scriptGroupId, products, onProductsChange,
   productReferenceMap, onProductReferenceMapChange,
 }: Props) {
   const [adding, setAdding] = useState(false);
@@ -101,14 +101,14 @@ export function ScriptProductsPanel({
     setAdding(true);
     try {
       const color = PRESET_COLORS[products.length % PRESET_COLORS.length];
-      const id = await createProduct(scriptId, {
+      const id = await createProduct(scriptGroupId, {
         name: 'New Product',
         color,
         sort_order: products.length,
       });
       const newProduct: ScriptProductRow = {
         id,
-        script_id: scriptId,
+        script_group_id: scriptGroupId,
         project_id: null,
         name: 'New Product',
         description: null,

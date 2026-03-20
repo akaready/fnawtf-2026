@@ -2754,7 +2754,7 @@ export type Database = {
           id: string
           max_cast_slots: number
           name: string
-          script_id: string
+          script_group_id: string
           sort_order: number
         }
         Insert: {
@@ -2767,7 +2767,7 @@ export type Database = {
           id?: string
           max_cast_slots?: number
           name: string
-          script_id: string
+          script_group_id: string
           sort_order?: number
         }
         Update: {
@@ -2780,18 +2780,10 @@ export type Database = {
           id?: string
           max_cast_slots?: number
           name?: string
-          script_id?: string
+          script_group_id?: string
           sort_order?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "script_characters_script_id_fkey"
-            columns: ["script_id"]
-            isOneToOne: false
-            referencedRelation: "scripts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       script_location_options: {
         Row: {
@@ -2883,7 +2875,7 @@ export type Database = {
           id: string
           location_mode: string
           name: string
-          script_id: string
+          script_group_id: string
           sort_order: number
         }
         Insert: {
@@ -2895,7 +2887,7 @@ export type Database = {
           id?: string
           location_mode?: string
           name: string
-          script_id: string
+          script_group_id: string
           sort_order?: number
         }
         Update: {
@@ -2907,7 +2899,7 @@ export type Database = {
           id?: string
           location_mode?: string
           name?: string
-          script_id?: string
+          script_group_id?: string
           sort_order?: number
         }
         Relationships: [
@@ -2916,13 +2908,6 @@ export type Database = {
             columns: ["global_location_id"]
             isOneToOne: false
             referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "script_locations_script_id_fkey"
-            columns: ["script_id"]
-            isOneToOne: false
-            referencedRelation: "scripts"
             referencedColumns: ["id"]
           },
         ]
@@ -2936,7 +2921,7 @@ export type Database = {
           id: string
           name: string
           project_id: string | null
-          script_id: string
+          script_group_id: string
           sort_order: number
         }
         Insert: {
@@ -2947,7 +2932,7 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string | null
-          script_id: string
+          script_group_id: string
           sort_order?: number
         }
         Update: {
@@ -2958,7 +2943,7 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string | null
-          script_id?: string
+          script_group_id?: string
           sort_order?: number
         }
         Relationships: [
@@ -2967,13 +2952,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "script_products_script_id_fkey"
-            columns: ["script_id"]
-            isOneToOne: false
-            referencedRelation: "scripts"
             referencedColumns: ["id"]
           },
         ]
@@ -2985,6 +2963,7 @@ export type Database = {
           int_ext: string
           location_id: string | null
           location_name: string
+          scene_description: string | null
           scene_notes: string | null
           script_id: string
           sort_order: number
@@ -2996,6 +2975,7 @@ export type Database = {
           int_ext?: string
           location_id?: string | null
           location_name?: string
+          scene_description?: string | null
           scene_notes?: string | null
           script_id: string
           sort_order?: number
@@ -3007,6 +2987,7 @@ export type Database = {
           int_ext?: string
           location_id?: string | null
           location_name?: string
+          scene_description?: string | null
           scene_notes?: string | null
           script_id?: string
           sort_order?: number
@@ -3025,6 +3006,50 @@ export type Database = {
             columns: ["script_id"]
             isOneToOne: false
             referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_share_comments: {
+        Row: {
+          beat_id: string
+          content: string
+          created_at: string | null
+          deleted_at: string | null
+          id: string
+          is_admin: boolean
+          share_id: string
+          viewer_email: string
+          viewer_name: string | null
+        }
+        Insert: {
+          beat_id: string
+          content: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_admin?: boolean
+          share_id: string
+          viewer_email: string
+          viewer_name?: string | null
+        }
+        Update: {
+          beat_id?: string
+          content?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_admin?: boolean
+          share_id?: string
+          viewer_email?: string
+          viewer_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_share_comments_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "script_shares"
             referencedColumns: ["id"]
           },
         ]
@@ -3074,6 +3099,7 @@ export type Database = {
           label: string
           notes: string | null
           script_id: string
+          share_mode: string
           token: string
           updated_at: string | null
         }
@@ -3086,6 +3112,7 @@ export type Database = {
           label?: string
           notes?: string | null
           script_id: string
+          share_mode?: string
           token: string
           updated_at?: string | null
         }
@@ -3098,6 +3125,7 @@ export type Database = {
           label?: string
           notes?: string | null
           script_id?: string
+          share_mode?: string
           token?: string
           updated_at?: string | null
         }
@@ -3117,7 +3145,9 @@ export type Database = {
           created_at: string | null
           id: string
           image_url: string
+          is_active: boolean
           prompt_used: string | null
+          reference_urls_used: Json | null
           scene_id: string | null
           script_id: string
           source: string
@@ -3128,7 +3158,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url: string
+          is_active?: boolean
           prompt_used?: string | null
+          reference_urls_used?: Json | null
           scene_id?: string | null
           script_id: string
           source?: string
@@ -3139,7 +3171,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url?: string
+          is_active?: boolean
           prompt_used?: string | null
+          reference_urls_used?: Json | null
           scene_id?: string | null
           script_id?: string
           source?: string
@@ -3252,7 +3286,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
-          script_id: string
+          script_group_id: string
           slug: string
         }
         Insert: {
@@ -3261,7 +3295,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
-          script_id: string
+          script_group_id: string
           slug: string
         }
         Update: {
@@ -3270,24 +3304,17 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
-          script_id?: string
+          script_group_id?: string
           slug?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "script_tags_script_id_fkey"
-            columns: ["script_id"]
-            isOneToOne: false
-            referencedRelation: "scripts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       scripts: {
         Row: {
           content_mode: string
           created_at: string | null
           created_by: string | null
+          display_order: number
           id: string
           is_published: boolean
           major_version: number
@@ -3305,6 +3332,7 @@ export type Database = {
           content_mode?: string
           created_at?: string | null
           created_by?: string | null
+          display_order?: number
           id?: string
           is_published?: boolean
           major_version?: number
@@ -3322,6 +3350,7 @@ export type Database = {
           content_mode?: string
           created_at?: string | null
           created_by?: string | null
+          display_order?: number
           id?: string
           is_published?: boolean
           major_version?: number

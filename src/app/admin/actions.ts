@@ -2383,7 +2383,7 @@ export async function getScriptVersions(scriptGroupId: string) {
   const { data, error } = await supabase
     .from('scripts')
     .select('id, title, version, status, created_at, content_mode, major_version, minor_version, is_published, display_order')
-    .eq('script_id', scriptId)
+    .eq('script_group_id', scriptGroupId)
     .order('display_order', { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -2594,7 +2594,7 @@ export async function getScriptLocations(scriptGroupId: string) {
   const { data, error } = await supabase
     .from('script_locations')
     .select('*')
-    .eq('script_id', scriptId)
+    .eq('script_group_id', scriptGroupId)
     .order('sort_order');
   if (error?.message?.includes('schema cache')) return [];
   if (error) throw new Error(error.message);
@@ -3669,7 +3669,7 @@ export async function getScriptCastMap(
   const { data: chars, error: charsErr } = await supabase
     .from('script_characters')
     .select('id')
-    .eq('script_id', scriptId);
+    .eq('script_group_id', scriptGroupId);
   if (charsErr) throw new Error(charsErr.message);
   const charIds = (chars ?? []).map((c: { id: string }) => c.id);
   if (charIds.length === 0) return {};
@@ -3896,7 +3896,7 @@ export async function getCharacterReferenceMap(
   const { data: chars, error: charsErr } = await supabase
     .from('script_characters')
     .select('id')
-    .eq('script_id', scriptId);
+    .eq('script_group_id', scriptGroupId);
   if (charsErr) throw new Error(charsErr.message);
   const charIds = (chars ?? []).map((c: { id: string }) => c.id);
   if (charIds.length === 0) return {};
@@ -3997,7 +3997,7 @@ export async function getLocationReferenceMap(
   const { data: locs, error: locsErr } = await supabase
     .from('script_locations')
     .select('id')
-    .eq('script_id', scriptId);
+    .eq('script_group_id', scriptGroupId);
   if (locsErr) throw new Error(locsErr.message);
   const locIds = (locs ?? []).map((l: { id: string }) => l.id);
   if (locIds.length === 0) return {};
@@ -4083,7 +4083,7 @@ export async function getScriptLocationOptionsMap(
   const { data: locs, error: locsErr } = await supabase
     .from('script_locations')
     .select('id')
-    .eq('script_id', scriptId);
+    .eq('script_group_id', scriptGroupId);
   if (locsErr) throw new Error(locsErr.message);
   const locIds = (locs ?? []).map((l: { id: string }) => l.id);
   if (locIds.length === 0) return {};
@@ -5177,10 +5177,10 @@ export async function getScriptProducts(scriptGroupId: string): Promise<ScriptPr
   const { data, error } = await supabase
     .from('script_products')
     .select('*')
-    .eq('script_id', scriptId)
+    .eq('script_group_id', scriptGroupId)
     .order('sort_order', { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as ScriptProductRow[];
+  return (data ?? []) as unknown as ScriptProductRow[];
 }
 
 /** Create a new product on a script group. Returns the new product id. */
@@ -5194,7 +5194,7 @@ export async function createProduct(
   const { data: scriptRow } = await supabase
     .from('scripts')
     .select('project_id')
-    .eq('script_id', scriptId)
+    .eq('script_group_id', scriptGroupId)
     .limit(1)
     .single();
   const projectId = (scriptRow as { project_id: string | null } | null)?.project_id ?? null;
@@ -5236,7 +5236,7 @@ export async function getProductReferenceMap(
   const { data: products, error: productsErr } = await supabase
     .from('script_products')
     .select('id')
-    .eq('script_id', scriptId);
+    .eq('script_group_id', scriptGroupId);
   if (productsErr) throw new Error(productsErr.message);
   const productIds = (products ?? []).map((p: { id: string }) => p.id);
   if (productIds.length === 0) return {};

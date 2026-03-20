@@ -5,12 +5,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function ScriptEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [script, scenes, characters, tags, locations, globalLocations] = await Promise.all([
-    getScriptById(id),
+  const script = await getScriptById(id);
+  const groupId = (script as { script_group_id: string }).script_group_id;
+  const [scenes, characters, tags, locations, globalLocations] = await Promise.all([
     getScriptScenes(id),
-    getScriptCharacters(id),
-    getScriptTags(id),
-    getScriptLocations(id),
+    getScriptCharacters(groupId),
+    getScriptTags(groupId),
+    getScriptLocations(groupId),
     getActiveLocationsForSelect(),
   ]);
 
@@ -24,9 +25,9 @@ export default async function ScriptEditorPage({ params }: { params: Promise<{ i
       script={script as Parameters<typeof ScriptEditorClient>[0]['script']}
       initialScenes={scenes as Parameters<typeof ScriptEditorClient>[0]['initialScenes']}
       initialBeats={beats as Parameters<typeof ScriptEditorClient>[0]['initialBeats']}
-      initialCharacters={characters as Parameters<typeof ScriptEditorClient>[0]['initialCharacters']}
-      initialTags={tags as Parameters<typeof ScriptEditorClient>[0]['initialTags']}
-      initialLocations={locations as Parameters<typeof ScriptEditorClient>[0]['initialLocations']}
+      initialCharacters={characters as unknown as Parameters<typeof ScriptEditorClient>[0]['initialCharacters']}
+      initialTags={tags as unknown as Parameters<typeof ScriptEditorClient>[0]['initialTags']}
+      initialLocations={locations as unknown as Parameters<typeof ScriptEditorClient>[0]['initialLocations']}
       initialReferences={references as Parameters<typeof ScriptEditorClient>[0]['initialReferences']}
       globalLocations={globalLocations as Parameters<typeof ScriptEditorClient>[0]['globalLocations']}
     />

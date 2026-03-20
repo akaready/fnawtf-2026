@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, Loader2, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package, Share2, Play } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package, Share2, Play } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import {
   updateScript, createScene, updateScene, deleteScene, reorderScenes,
   createBeat, updateBeat, deleteBeat, reorderBeats,
-  createScriptVersion, publishScriptVersion, unpublishScriptVersion, getScriptVersions,
+  publishScriptVersion, unpublishScriptVersion, getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   moveReference, moveStoryboardFrame, swapStoryboardFrames, convertRefToStoryboard, convertStoryboardToRef,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
@@ -34,10 +34,11 @@ import { ScriptProductsPanel } from './ScriptProductsPanel';
 import { ScriptSettingsPanel } from './ScriptSettingsPanel';
 import { ScriptStylePanel } from './ScriptStylePanel';
 import { ScriptSharePanel } from './ScriptSharePanel';
+import { ScriptVersionsPanel } from './ScriptVersionsPanel';
 import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from './ScriptScratchPad';
 import { ScriptExtractModal } from './ScriptExtractModal';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
-import { formatScriptVersion } from '@/types/scripts';
+import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
 import type {
   ScriptRow, ScriptSceneRow, ScriptBeatRow,
@@ -58,14 +59,6 @@ interface Props {
   initialLocations: ScriptLocationRow[];
   initialReferences: ScriptBeatReferenceRow[];
   globalLocations?: { id: string; name: string; featured_image: string | null }[];
-}
-
-/** Rainbow version pill colors — cycles red → orange → yellow → green → cyan → blue → violet */
-const VERSION_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6',
-];
-function versionColor(majorVersion: number): string {
-  return VERSION_COLORS[majorVersion % VERSION_COLORS.length];
 }
 
 export function ScriptEditorClient({
@@ -101,6 +94,7 @@ export function ScriptEditorClient({
   const [locationReferenceMap, setLocationReferenceMap] = useState<Record<string, LocationReferenceRow[]>>({});
   const [showProducts, setShowProducts] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showVersions, setShowVersions] = useState(false);
   const [products, setProducts] = useState<ScriptProductRow[]>([]);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
@@ -109,7 +103,6 @@ export function ScriptEditorClient({
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
-  const [versioning, setVersioning] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
@@ -148,15 +141,16 @@ export function ScriptEditorClient({
   useEffect(() => {
     (async () => {
       try {
+        const groupId = script.script_group_id!;
         const [style, frames, castData, locOptionsData, refData, locRefData, productsData, prodRefData] = await Promise.all([
           getScriptStyle(script.id),
           getStoryboardFrames(script.id),
-          getScriptCastMap(script.id),
-          getScriptLocationOptionsMap(script.id),
-          getCharacterReferenceMap(script.id),
-          getLocationReferenceMap(script.id),
-          getScriptProducts(script.id),
-          getProductReferenceMap(script.id),
+          getScriptCastMap(groupId),
+          getScriptLocationOptionsMap(groupId),
+          getCharacterReferenceMap(groupId),
+          getLocationReferenceMap(groupId),
+          getScriptProducts(groupId),
+          getProductReferenceMap(groupId),
         ]);
         if (style) {
           setScriptStyle(style as ScriptStyleRow);
@@ -542,18 +536,6 @@ export function ScriptEditorClient({
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
 
-  // ── Create new version ──
-  const handleNewVersion = useCallback(async () => {
-    setVersioning(true);
-    try {
-      await handleSaveAll();
-      const newId = await createScriptVersion(script.id);
-      router.push(`/admin/scripts/${newId}`);
-    } finally {
-      setVersioning(false);
-    }
-  }, [handleSaveAll, script.id, router]);
-
   // ── Publish / Unpublish (toggle client-portal visibility) ──
   const handlePublish = useCallback(async () => {
     setPublishing(true);
@@ -655,10 +637,7 @@ export function ScriptEditorClient({
                     <div
                       className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 animate-dropdown-in"
                     >
-                      {versions
-                        .slice()
-                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                        .map(v => (
+                      {versions.map(v => (
                         <button
                           key={v.id}
                           onClick={() => {
@@ -701,12 +680,11 @@ export function ScriptEditorClient({
               <Share2 size={14} />
             </button>
             <button
-              onClick={handleNewVersion}
-              disabled={versioning}
+              onClick={() => setShowVersions(true)}
               className="btn-secondary px-2.5"
-              title="New version"
+              title="Versions"
             >
-              {versioning ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={14} />}
+              <CopyPlus size={14} />
             </button>
             <button onClick={() => setShowSettings(true)} className="btn-secondary px-2.5" title="Settings">
               <Settings size={14} />
@@ -831,21 +809,23 @@ export function ScriptEditorClient({
       </div>
 
       <div className="flex-1 flex min-h-0">
-        {/* Scene sidebar — always flush left */}
+        {/* Scene sidebar — always flush left, grid trick for auto-width animation */}
         <div
-          className={`flex-shrink-0 h-full border-r border-admin-border bg-admin-bg-sidebar overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-56' : 'w-0'}`}
+          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
         >
-          <ScriptSceneSidebar
-            scenes={computedScenes}
-            activeSceneId={activeSceneId}
-            onSelectScene={setActiveSceneId}
-            onAddScene={handleAddScene}
-            onReorderScenes={handleReorderScenes}
-            onDeleteScene={handleDeleteScene}
-            scratchpadMode={contentMode === 'scratchpad'}
-            scratchScenes={scratchScenes}
-            onScrollToScene={(label, sceneIndex) => scratchPadRef.current?.scrollToScene(label, sceneIndex)}
-          />
+          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar">
+            <ScriptSceneSidebar
+              scenes={computedScenes}
+              activeSceneId={activeSceneId}
+              onSelectScene={setActiveSceneId}
+              onAddScene={handleAddScene}
+              onReorderScenes={handleReorderScenes}
+              onDeleteScene={handleDeleteScene}
+              scratchpadMode={contentMode === 'scratchpad'}
+              scratchScenes={scratchScenes}
+              onScrollToScene={(label, sceneIndex) => scratchPadRef.current?.scrollToScene(label, sceneIndex)}
+            />
+          </div>
         </div>
 
         {/* Main editor — constrained by container width toggle */}
@@ -865,6 +845,7 @@ export function ScriptEditorClient({
                 scriptStyle={scriptStyle}
                 styleReferences={styleReferences}
                 scriptId={script.id}
+                scriptGroupId={script.script_group_id!}
                 onFrameGenerated={handleFrameChange}
                 activeSceneId={activeSceneId}
                 onUpdateScene={handleUpdateScene}
@@ -896,6 +877,7 @@ export function ScriptEditorClient({
                 characters={characters}
                 tags={tags}
                 locations={locations}
+                products={products}
                 onContentChange={handleScratchChange}
                 onScenesDetected={setScratchScenes}
               />
@@ -908,7 +890,7 @@ export function ScriptEditorClient({
       <ScriptCharactersPanel
         open={showCharacters}
         onClose={() => setShowCharacters(false)}
-        scriptId={script.id}
+        scriptGroupId={script.script_group_id!}
         characters={characters}
         beats={beats}
         onCharactersChange={setCharacters}
@@ -920,14 +902,14 @@ export function ScriptEditorClient({
       <ScriptTagsPanel
         open={showTags}
         onClose={() => setShowTags(false)}
-        scriptId={script.id}
+        scriptGroupId={script.script_group_id!}
         tags={tags}
         onTagsChange={setTags}
       />
       <ScriptLocationsPanel
         open={showLocations}
         onClose={() => setShowLocations(false)}
-        scriptId={script.id}
+        scriptGroupId={script.script_group_id!}
         locations={locations}
         scenes={scenes}
         onLocationsChange={setLocations}
@@ -940,7 +922,7 @@ export function ScriptEditorClient({
       <ScriptProductsPanel
         open={showProducts}
         onClose={() => setShowProducts(false)}
-        scriptId={script.id}
+        scriptGroupId={script.script_group_id!}
         products={products}
         onProductsChange={setProducts}
         productReferenceMap={productReferenceMap}
@@ -966,6 +948,13 @@ export function ScriptEditorClient({
         scriptId={script.id}
         isPublished={script.is_published}
         onPublish={handlePublish}
+      />
+      <ScriptVersionsPanel
+        open={showVersions}
+        onClose={() => setShowVersions(false)}
+        scriptId={script.id}
+        scriptGroupId={script.script_group_id!}
+        onNavigate={(id) => { setShowVersions(false); router.push(`/admin/scripts/${id}`); }}
       />
       {showPresentation && (
         <ScriptPresentation

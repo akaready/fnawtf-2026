@@ -7,6 +7,8 @@ import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProduct
 
 export interface ScratchScene {
   label: string;
+  /** Scene description extracted from [BRACKETED TEXT] in the heading */
+  description?: string;
   /** Index among all detected scenes (0-based), used as a stable key for scroll targeting */
   sceneIndex: number;
 }
@@ -21,6 +23,7 @@ interface Props {
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
+  products?: ScriptProductRow[];
   onContentChange: (content: string) => void;
   onScenesDetected?: (scenes: ScratchScene[]) => void;
 }
@@ -47,16 +50,23 @@ function detectScenes(md: string): ScratchScene[] {
     if (!line) continue;
     // Strip mention markup for detection: @[Name](id) → Name
     const plain = line.replace(/@\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/#\[[^\]]+\]/g, '');
-    // Must have at least 2 uppercase letters, no lowercase
-    if (/[A-Z]{2,}/.test(plain) && !/[a-z]/.test(plain)) {
-      scenes.push({ label: plain, sceneIndex: sceneIdx++ });
+    // Must have at least 2 uppercase letters, no lowercase (outside brackets)
+    // Extract [DESCRIPTION] if present
+    const bracketMatch = plain.match(/\[([^\]]+)\]/);
+    const withoutBrackets = plain.replace(/\[[^\]]*\]/g, '').trim();
+    if (/[A-Z]{2,}/.test(withoutBrackets) && !/[a-z]/.test(withoutBrackets)) {
+      scenes.push({
+        label: withoutBrackets,
+        description: bracketMatch ? bracketMatch[1] : undefined,
+        sceneIndex: sceneIdx++,
+      });
     }
   }
   return scenes;
 }
 
 export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
-  function ScriptScratchPad({ initialContent, characters, tags, locations, onContentChange, onScenesDetected }, ref) {
+  function ScriptScratchPad({ initialContent, characters, tags, locations, products = [], onContentChange, onScenesDetected }, ref) {
   const editorRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastValue = useRef(initialContent);
@@ -92,8 +102,8 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
     if (!editorRef.current) return;
     const cleaned = stripBoldMarkdown(md);
     // markdownToHtml sanitizes via DOMPurify — safe for innerHTML
-    editorRef.current.innerHTML = markdownToHtml(cleaned, characters, tags, locations);
-  }, [characters, tags, locations]);
+    editorRef.current.innerHTML = markdownToHtml(cleaned, characters, tags, locations, products);
+  }, [characters, tags, locations, products]);
 
   // Render on mount and whenever characters/tags/locations change (re-colors existing mentions)
   useEffect(() => {

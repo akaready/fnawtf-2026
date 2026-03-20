@@ -24,6 +24,8 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
   const isComposing = useRef(false);
   const lastValue = useRef(value);
 
+  const mentionJustSelected = useRef(false);
+
   // Mention state
   const [mentionState, setMentionState] = useState<{
     type: 'character' | 'tag';
@@ -35,9 +37,9 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
   const setContent = useCallback((md: string) => {
     if (!ref.current) return;
     // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML
-    const sanitizedHtml = markdownToHtml(md, characters, tags, locations);
+    const sanitizedHtml = markdownToHtml(md, characters, tags, locations, products);
     ref.current.innerHTML = sanitizedHtml;
-  }, [characters, tags, locations]);
+  }, [characters, tags, locations, products]);
 
   // Set initial content on mount
   useEffect(() => {
@@ -142,6 +144,8 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
     sel.addRange(range);
 
     setMentionState(null);
+    mentionJustSelected.current = true;
+    setTimeout(() => { mentionJustSelected.current = false; }, 50);
 
     // Re-render with proper mention styling (sanitized)
     const md = htmlToMarkdown(ref.current.innerHTML);
@@ -167,27 +171,33 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
       return;
     }
 
-    // Cmd+Enter = new scene
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !mentionState) {
+    // Skip Enter if mention was just selected (dropdown handled it)
+    if (e.key === 'Enter' && mentionJustSelected.current) {
+      e.preventDefault();
+      return;
+    }
+
+    // Cmd+Shift+Enter = new scene
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.shiftKey && !mentionState) {
       e.preventDefault();
       emitChange();
       onAddScene?.();
       return;
     }
 
-    // Shift+Enter = line break within beat
-    if (e.key === 'Enter' && e.shiftKey && !mentionState) {
-      e.preventDefault();
-      document.execCommand('insertLineBreak');
-      emitChange();
-      return;
-    }
-
-    // Enter = new beat
-    if (e.key === 'Enter' && !mentionState) {
+    // Cmd+Enter = new beat
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !mentionState) {
       e.preventDefault();
       emitChange();
       onAddBeat?.();
+      return;
+    }
+
+    // Enter / Shift+Enter = line break within beat
+    if (e.key === 'Enter' && !mentionState) {
+      e.preventDefault();
+      document.execCommand('insertLineBreak');
+      emitChange();
       return;
     }
 

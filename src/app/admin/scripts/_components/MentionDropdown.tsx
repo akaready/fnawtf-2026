@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Package } from 'lucide-react';
+import { Users, MapPin, Package } from 'lucide-react';
 import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 interface Props {
@@ -20,11 +20,10 @@ export function MentionDropdown({ type, query, characters, tags, locations = [],
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // @ trigger shows characters, locations, and products
+  // @ trigger shows characters and products
   const items: (ScriptCharacterRow | ScriptTagRow | ScriptLocationRow | ScriptProductRow)[] = type === 'character'
     ? [
         ...characters.filter(c => c.name.toLowerCase().includes(query.toLowerCase())),
-        ...locations.filter(l => l.name.toLowerCase().includes(query.toLowerCase())),
         ...products.filter(p => p.name.toLowerCase().includes(query.toLowerCase())),
       ]
     : tags.filter(t =>
@@ -86,25 +85,20 @@ export function MentionDropdown({ type, query, characters, tags, locations = [],
           >
             {char && (
               <>
-                <span
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: char.color }}
-                />
-                <span className="truncate">@{char.name}</span>
+                <Users size={12} className="flex-shrink-0" style={{ color: char.color }} />
+                <span className="truncate">{char.name}</span>
               </>
             )}
             {loc && (
               <>
                 <MapPin size={12} className="flex-shrink-0" style={{ color: loc.color }} />
-                <span className="truncate">@{loc.name}</span>
-                <span className="text-admin-text-faint text-xs ml-auto">location</span>
+                <span className="truncate">{loc.name}</span>
               </>
             )}
             {product && (
               <>
                 <Package size={12} className="flex-shrink-0" style={{ color: product.color }} />
-                <span className="truncate">@{product.name}</span>
-                <span className="text-admin-text-faint text-xs ml-auto">product</span>
+                <span className="truncate">{product.name}</span>
               </>
             )}
             {tag && (

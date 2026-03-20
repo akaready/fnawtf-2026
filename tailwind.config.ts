@@ -148,6 +148,7 @@ const config: Config = {
         body: ['var(--font-manrope)', 'sans-serif'],
         mono: ['var(--font-space-mono)', 'monospace'],
         marker: ['var(--font-permanent-marker)', 'cursive'],
+        bebas: ['var(--font-bebas-neue)', 'sans-serif'],
         // Admin typography tokens
         'admin-display': ['var(--admin-font-display)'],
         'admin-body':    ['var(--admin-font-body)'],

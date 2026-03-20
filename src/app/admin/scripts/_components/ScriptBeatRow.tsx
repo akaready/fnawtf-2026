@@ -34,6 +34,8 @@ interface Props {
   isSelected?: boolean;
   onSelect?: (beatId: string, shiftKey: boolean, metaKey: boolean) => void;
   onDragSelectStart?: (beatId: string) => void;
+  onActivateSelection?: (beatId: string) => void;
+  onExitSelection?: () => void;
   selectionActive?: boolean;
   batchGenerating?: boolean;
   onCancelGeneration?: () => void;
@@ -86,6 +88,8 @@ export function ScriptBeatRow({
   isSelected,
   onSelect,
   onDragSelectStart,
+  onActivateSelection,
+  onExitSelection,
   selectionActive,
   batchGenerating,
   onCancelGeneration,
@@ -128,17 +132,24 @@ export function ScriptBeatRow({
     >
       {/* Beat gutter — checkbox + grip */}
       <div
-        className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#0e0e0e] select-none"
+        className={`group/gutter absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#0e0e0e] select-none ${selectionActive ? '' : 'cursor-grab'}`}
         data-beat-gutter={beat.id}
+        {...(selectionActive ? {} : { ...attributes, ...listeners })}
         onMouseDown={(e) => {
           if (e.button !== 0) return;
-          if ((e.target as HTMLElement).closest('[data-grip]')) return;
+          if (!selectionActive) return;
           onDragSelectStart?.(beat.id);
         }}
         onClick={(e) => {
           e.stopPropagation();
-          if ((e.target as HTMLElement).closest('[data-grip]')) return;
+          if (!selectionActive) return;
           onSelect?.(beat.id, e.shiftKey, e.metaKey || e.ctrlKey);
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (!selectionActive) {
+            onActivateSelection?.(beat.id);
+          }
         }}
       >
         {selectionActive ? (
@@ -153,18 +164,12 @@ export function ScriptBeatRow({
             {isSelected && <Check size={10} className="text-black" strokeWidth={3} />}
           </div>
         ) : (
-          /* Normal mode: beat letter, grip on hover */
+          /* Normal mode: beat letter, grip icon on cell hover */
           <>
-            <span className="text-[10px] text-admin-text-ghost font-mono group-hover/beat:hidden">
+            <span className="text-admin-border-subtle font-bebas text-2xl leading-[0] group-hover/gutter:hidden">
               {beatLetter(beatNumber)}
             </span>
-            <div
-              data-grip
-              {...attributes}
-              {...listeners}
-              className="hidden group-hover/beat:flex items-center cursor-grab"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
+            <div className="hidden group-hover/gutter:flex items-center pointer-events-none">
               <GripVertical size={12} className="text-admin-text-ghost" />
             </div>
           </>
@@ -172,7 +177,10 @@ export function ScriptBeatRow({
       </div>
 
       {/* Content grid */}
-      <div className="relative ml-10 min-w-0 border-r border-admin-border">
+      <div
+        className="relative ml-10 min-w-0 border-r border-admin-border"
+        onClick={() => { if (selectionActive) onExitSelection?.(); }}
+      >
         {/* Vertical column accent lines — overlay, above horizontal borders */}
         <div
           className="absolute inset-0 z-10 pointer-events-none grid"

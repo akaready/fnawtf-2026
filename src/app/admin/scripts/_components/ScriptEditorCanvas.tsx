@@ -40,6 +40,7 @@ interface Props {
   scriptStyle: ScriptStyleRow | null;
   styleReferences: ScriptStyleReferenceRow[];
   scriptId: string;
+  scriptGroupId: string;
   onFrameGenerated: (frame: ScriptStoryboardFrameRow | null, beatId?: string) => void;
   activeSceneId: string | null;
   onUpdateScene: (sceneId: string, data: Partial<ScriptSceneRow>) => void;
@@ -77,6 +78,7 @@ export function ScriptEditorCanvas({
   scriptStyle,
   styleReferences,
   scriptId,
+  scriptGroupId,
   onFrameGenerated,
   activeSceneId,
   onUpdateScene,
@@ -563,6 +565,19 @@ export function ScriptEditorCanvas({
     });
   }, [scenes, selectedBeatIds, selectionMode]);
 
+  // Double-click gutter: enter selection mode and select that beat
+  const handleActivateSelection = useCallback((beatId: string) => {
+    setSelectionMode(true);
+    setSelectedBeatIds(new Set([beatId]));
+    lastSelectedBeatId.current = beatId;
+  }, []);
+
+  // Click content cell: exit selection mode
+  const handleExitSelection = useCallback(() => {
+    setSelectedBeatIds(new Set());
+    setSelectionMode(false);
+  }, []);
+
   // Reset confirm state when selection clears
   useEffect(() => {
     if (selectedBeatIds.size === 0) setConfirmBatchDelete(false);
@@ -818,6 +833,7 @@ export function ScriptEditorCanvas({
                 <div className="flex-1 min-w-0">
                   <ScriptSceneHeader
                     scene={scene}
+                    scriptGroupId={scriptGroupId}
                     locations={locations}
                     onUpdate={(id, data) => onUpdateScene(id, data)}
                     onDelete={onDeleteScene}
@@ -891,6 +907,8 @@ export function ScriptEditorCanvas({
                         isSelected={selectedBeatIds.has(beat.id)}
                         onSelect={handleBeatSelect}
                         onDragSelectStart={handleDragSelectStart}
+                        onActivateSelection={handleActivateSelection}
+                        onExitSelection={handleExitSelection}
                         selectionActive={selectionMode}
                         batchGenerating={generatingBeatIds.has(beat.id)}
                         onCancelGeneration={() => { abortControllerRef.current?.abort(); }}

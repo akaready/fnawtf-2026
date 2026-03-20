@@ -7,6 +7,7 @@ import { buildPresentationSlides } from '@/app/admin/scripts/_components/present
 import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
+import { SceneListItem } from '@/app/admin/scripts/_components/SceneListItem';
 import { startScriptViewSession, updateScriptViewDuration } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion } from '@/types/scripts';
@@ -277,25 +278,14 @@ export function ScriptShareClient({
           <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full flex flex-col">
             <div className="flex-1 overflow-y-auto admin-scrollbar">
               {computedScenes.map((scene) => (
-                <button
+                <SceneListItem
                   key={scene.id}
+                  sceneNumber={scene.sceneNumber}
+                  slug={showSlug ? `${scene.int_ext}. ${scene.location_name || '\u2014'}${scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}` : undefined}
+                  description={showDesc ? scene.scene_description : undefined}
+                  isActive={activeSceneId === scene.id}
                   onClick={() => handleSceneClick(scene.id)}
-                  className={`w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle transition-colors ${
-                    activeSceneId === scene.id
-                      ? 'bg-black/40 text-admin-text-primary'
-                      : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
-                  }`}
-                >
-                  <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px] w-[70px] text-right inline-block">
-                    {scene.sceneNumber}
-                  </span>
-                  <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
-                    {showSlug && <>{scene.int_ext}. {scene.location_name || '\u2014'}{scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}</>}
-                    {showDesc && scene.scene_description && (
-                      <span className="text-admin-text-muted font-normal ml-2">{scene.scene_description}</span>
-                    )}
-                  </span>
-                </button>
+                />
               ))}
             </div>
             <div className="flex-shrink-0 border-t border-admin-border px-3 py-2 flex items-center gap-1">

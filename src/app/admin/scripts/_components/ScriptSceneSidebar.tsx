@@ -2,6 +2,7 @@
 
 import { useState, useId } from 'react';
 import { Plus, Hash, MapPin, FileText } from 'lucide-react';
+import { SceneListItem } from './SceneListItem';
 import {
   DndContext,
   closestCenter,
@@ -66,21 +67,13 @@ export function ScriptSceneSidebar({
       <div className="bg-admin-bg-sidebar flex flex-col h-full">
         <div className="flex-1 overflow-y-auto admin-scrollbar">
           {scratchScenes.map((scene, i) => (
-            <button
+            <SceneListItem
               key={`${scene.sceneIndex}-${i}`}
+              sceneNumber={i + 1}
+              slug={scene.label}
+              description={scene.description}
               onClick={() => onScrollToScene?.(scene.label, scene.sceneIndex)}
-              className="w-full text-left flex items-center gap-1 pl-1 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary transition-colors"
-            >
-              <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
-                {i + 1}
-              </span>
-              <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
-                {scene.label}
-                {scene.description && (
-                  <span className="text-admin-text-primary font-normal ml-2">[{scene.description}]</span>
-                )}
-              </span>
-            </button>
+            />
           ))}
         </div>
       </div>
@@ -174,14 +167,14 @@ function SortableSceneItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex items-center gap-1 pl-1.5 pr-1.5 h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group grid grid-cols-[70px_1fr] items-center h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
     >
-      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none flex-shrink-0 translate-y-[6px]">
+      <span className="text-admin-border-subtle font-bebas text-[50px] leading-none translate-y-[6px] text-right pr-1">
         {scene.sceneNumber}
       </span>
       <div className="flex-1 min-w-0">

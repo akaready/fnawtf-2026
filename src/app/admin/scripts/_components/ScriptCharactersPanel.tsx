@@ -38,7 +38,7 @@ import type { ContactRow } from '@/types/proposal';
 interface Props {
   open: boolean;
   onClose: () => void;
-  scriptId: string;
+  scriptGroupId: string;
   characters: ScriptCharacterRow[];
   beats: ScriptBeatRow[];
   onCharactersChange: (chars: ScriptCharacterRow[]) => void;
@@ -297,7 +297,7 @@ function CastPickerPopover({
 // ── Main Panel ────────────────────────────────────────────────────────────
 
 export function ScriptCharactersPanel({
-  open, onClose, scriptId, characters, beats, onCharactersChange,
+  open, onClose, scriptGroupId, characters, beats, onCharactersChange,
   castMap, onCastMapChange,
   referenceMap, onReferenceMapChange,
 }: Props) {
@@ -345,7 +345,7 @@ export function ScriptCharactersPanel({
   const { setPanelContext } = useChatContext();
 
   useEffect(() => {
-    if (!scriptId) return;
+    if (!scriptGroupId) return;
     const lines: string[] = [];
     lines.push(`Total Characters: ${characters.length}`);
     characters.forEach(char => {
@@ -369,12 +369,12 @@ export function ScriptCharactersPanel({
     });
     setPanelContext({
       recordType: 'script-characters',
-      recordId: scriptId,
+      recordId: scriptGroupId,
       recordLabel: `Characters (${characters.length})`,
       summary: lines.join('\n'),
     });
     return () => setPanelContext(null);
-  }, [scriptId, characters, castMap, beats, setPanelContext]);
+  }, [scriptGroupId, characters, castMap, beats, setPanelContext]);
 
   // Auto-select first character, or clear if deleted
   useEffect(() => {
@@ -438,7 +438,7 @@ export function ScriptCharactersPanel({
     setAdding(true);
     try {
       const color = PRESET_COLORS[characters.length % PRESET_COLORS.length];
-      const id = await createCharacter(scriptId, {
+      const id = await createCharacter(scriptGroupId, {
         name: 'New Character',
         description: '',
         color,
@@ -446,7 +446,7 @@ export function ScriptCharactersPanel({
       });
       const newChar: ScriptCharacterRow = {
         id,
-        script_id: scriptId,
+        script_group_id: scriptGroupId,
         name: 'New Character',
         description: null,
         color,

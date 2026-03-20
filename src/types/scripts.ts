@@ -24,6 +24,14 @@ export function formatScriptVersion(major: number, minor: number, isPublished: b
   return isPublished ? `${major}` : `${major}.${minor}`;
 }
 
+/** Rainbow version pill colors — cycles red → orange → yellow → green → cyan → blue → violet */
+const VERSION_COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6',
+];
+export function versionColor(majorVersion: number): string {
+  return VERSION_COLORS[majorVersion % VERSION_COLORS.length];
+}
+
 /** Payload carried during image drag-and-drop between beat rows */
 export interface ImageDragData {
   dragType: 'reference' | 'storyboard';
@@ -76,7 +84,7 @@ export type ScriptCharacterType = 'vo' | 'actor' | 'animated';
 
 export interface ScriptCharacterRow {
   id: string;
-  script_id: string;
+  script_group_id: string;
   name: string;
   description: string | null;
   color: string;
@@ -132,7 +140,7 @@ export interface LocationReferenceRow {
 
 export interface ScriptLocationRow {
   id: string;
-  script_id: string;
+  script_group_id: string;
   name: string;
   description: string | null;
   color: string;
@@ -145,7 +153,7 @@ export interface ScriptLocationRow {
 
 export interface ScriptProductRow {
   id: string;
-  script_id: string;
+  script_group_id: string;
   project_id: string | null;
   name: string;
   description: string | null;
@@ -189,7 +197,7 @@ export interface LocationOptionWithLocation extends ScriptLocationOptionRow {
 
 export interface ScriptTagRow {
   id: string;
-  script_id: string;
+  script_group_id: string;
   name: string;
   slug: string;
   category: string;

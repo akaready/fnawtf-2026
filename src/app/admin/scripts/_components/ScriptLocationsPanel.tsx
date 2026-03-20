@@ -32,7 +32,7 @@ import type { ScriptLocationRow, ScriptSceneRow, LocationOptionWithLocation, Loc
 interface Props {
   open: boolean;
   onClose: () => void;
-  scriptId: string;
+  scriptGroupId: string;
   locations: ScriptLocationRow[];
   scenes: ScriptSceneRow[];
   onLocationsChange: (locs: ScriptLocationRow[]) => void;
@@ -191,7 +191,7 @@ function LocationPickerPopover({
 // ── Main Panel ────────────────────────────────────────────────────────────
 
 export function ScriptLocationsPanel({
-  open, onClose, scriptId, locations, scenes, onLocationsChange,
+  open, onClose, scriptGroupId, locations, scenes, onLocationsChange,
   globalLocations = [], locationOptionsMap, onLocationOptionsMapChange,
   locationReferenceMap, onLocationReferenceMapChange,
 }: Props) {
@@ -241,7 +241,7 @@ export function ScriptLocationsPanel({
   const { setPanelContext } = useChatContext();
 
   useEffect(() => {
-    if (!scriptId) return;
+    if (!scriptGroupId) return;
     const lines: string[] = [];
     lines.push(`Total Locations: ${locations.length}`);
     locations.forEach(loc => {
@@ -268,12 +268,12 @@ export function ScriptLocationsPanel({
     });
     setPanelContext({
       recordType: 'script-locations',
-      recordId: scriptId,
+      recordId: scriptGroupId,
       recordLabel: `Locations (${locations.length})`,
       summary: lines.join('\n'),
     });
     return () => setPanelContext(null);
-  }, [scriptId, locations, localEdits, scenes, locationOptionsMap, setPanelContext]);
+  }, [scriptGroupId, locations, localEdits, scenes, locationOptionsMap, setPanelContext]);
 
   const sceneCountByLocation = (locationId: string) =>
     scenes.filter(s => s.location_id === locationId).length;
@@ -309,14 +309,14 @@ export function ScriptLocationsPanel({
   const handleAdd = async () => {
     setAdding(true);
     try {
-      const id = await createLocation(scriptId, {
+      const id = await createLocation(scriptGroupId, {
         name: 'New Location',
         description: '',
         sort_order: locations.length,
       });
       const newLoc: ScriptLocationRow = {
         id,
-        script_id: scriptId,
+        script_group_id: scriptGroupId,
         name: 'New Location',
         description: null,
         color: '#38bdf8',

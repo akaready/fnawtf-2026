@@ -756,6 +756,11 @@ a[data-btn-hover]:hover {
   .call-sheet-print [class*="bg-[var(--muted"] { background: #f3f4f6 !important; }
   .call-sheet-print [class*="text-[var(--muted-foreground"] { color: #6b7280 !important; }
   .call-sheet-print [class*="text-[var(--accent"] { color: #7c3aed !important; }
+
+  /* Invoice print: drop invert so white logos print as dark */
+  .invoice-print-invert {
+    filter: brightness(0) !important;
+  }
 }
 
 /* Accessibility */
