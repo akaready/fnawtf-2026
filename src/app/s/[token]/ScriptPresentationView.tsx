@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
 
 
@@ -212,7 +213,7 @@ export function ScriptPresentationView({
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
         <button
           onClick={() => setLeftOpen(true)}
-          className={`absolute left-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`absolute left-4 top-4 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Show scenes"
         >
           <PanelLeftOpen size={16} />
@@ -237,14 +238,14 @@ export function ScriptPresentationView({
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Mobile: scene nav top-left, comments top-right */}
-        <div className="md:hidden absolute top-3 left-3 z-30">
+        <div className="md:hidden absolute top-4 left-4 z-30">
           <SceneBottomSheet
             scenes={scenes}
             activeSceneId={activeSceneId}
             onJumpToScene={jumpToScene}
           />
         </div>
-        <div className="md:hidden absolute top-3 right-3 z-30">
+        <div className="md:hidden absolute top-4 right-4 z-30">
           <CommentBottomSheet
             shareId={shareId}
             beatId={current?.beatId ?? null}
@@ -341,7 +342,7 @@ export function ScriptPresentationView({
             </div>
 
             {/* Audio (2/3) + Visual (1/3) */}
-            <div className={`grid gap-px border-b border-[#1a1a1a] ${showVisual ? 'grid-cols-4' : 'grid-cols-1'}`}>
+            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showVisual ? 'grid-cols-4' : 'grid-cols-1'}`}>
               <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'col-span-3' : ''}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
                 <PresentationCell
@@ -351,49 +352,76 @@ export function ScriptPresentationView({
                   className="text-base md:text-lg text-[#ccc] leading-relaxed"
                 />
               </div>
-              {showVisual && (
-                <div className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Visual</p>
+              <AnimatePresence>
+                {showVisual && (
+                  <motion.div
+                    key="visual"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="border-l-2 border-l-[var(--admin-info)] bg-[#0d0d0d] px-4 py-3"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Visual</p>
+                    <PresentationCell
+                      content={current.visualContent}
+                      characters={characters} tags={tags} locations={locations} products={products}
+                      mounted={mounted}
+                      className="text-sm text-[#999] leading-relaxed"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Notes */}
+            <AnimatePresence>
+              {showNotes && (
+                <motion.div
+                  key="notes"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-l-2 border-l-[var(--admin-warning)] bg-[#0d0d0d] px-4 py-3 border-b border-[#1a1a1a]"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Notes</p>
                   <PresentationCell
-                    content={current.visualContent}
+                    content={current.notesContent}
                     characters={characters} tags={tags} locations={locations} products={products}
                     mounted={mounted}
                     className="text-sm text-[#999] leading-relaxed"
                   />
-                </div>
+                </motion.div>
               )}
-            </div>
-
-            {/* Notes */}
-            {showNotes && (
-              <div className="border-l-2 border-l-[var(--admin-warning)] bg-[#0d0d0d] px-4 py-3 border-b border-[#1a1a1a]">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Notes</p>
-                <PresentationCell
-                  content={current.notesContent}
-                  characters={characters} tags={tags} locations={locations} products={products}
-                  mounted={mounted}
-                  className="text-sm text-[#999] leading-relaxed"
-                />
-              </div>
-            )}
+            </AnimatePresence>
 
             {/* Reference */}
-            {showReference && (
-              <div className="border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
-                <div className="text-sm text-[#999] leading-relaxed">
-                  {current.referenceImageUrls.length > 0 ? (
-                    <div className="flex gap-2 flex-wrap">
-                      {current.referenceImageUrls.map((url, i) => (
-                        <img key={i} src={url} alt="" className="h-12 md:h-16 rounded object-cover" />
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-[#333]">&mdash;</span>
-                  )}
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {showReference && (
+                <motion.div
+                  key="reference"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-l-2 border-l-[var(--admin-danger)] bg-[#0d0d0d] px-4 py-3"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-1.5">Reference</p>
+                  <div className="text-sm text-[#999] leading-relaxed">
+                    {current.referenceImageUrls.length > 0 ? (
+                      <div className="flex gap-2 flex-wrap">
+                        {current.referenceImageUrls.map((url, i) => (
+                          <img key={i} src={url} alt="" className="h-12 md:h-16 rounded object-cover" />
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[#333]">&mdash;</span>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Spacer so floating comment input doesn't block content when scrolled */}
