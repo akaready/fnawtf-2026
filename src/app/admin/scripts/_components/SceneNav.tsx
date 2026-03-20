@@ -123,7 +123,7 @@ export function SceneNav({
   );
 
   return (
-    <div className="bg-admin-bg-sidebar flex flex-col h-full">
+    <div className="min-w-max bg-admin-bg-sidebar flex flex-col h-full">
       {showHeader && (
         <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
           <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
