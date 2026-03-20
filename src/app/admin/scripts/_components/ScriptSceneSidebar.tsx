@@ -167,7 +167,7 @@ function SortableSceneItem({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group grid grid-cols-[70px_1fr] items-center h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`group grid grid-cols-[auto_1fr] items-center h-[43px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
