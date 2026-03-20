@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useId } from 'react';
-import { Plus, Hash, MapPin, FileText } from 'lucide-react';
+import { Plus, MapPin, FileText } from 'lucide-react';
 import { SceneListItem } from './SceneListItem';
 import {
   DndContext,
@@ -48,7 +48,6 @@ export function ScriptSceneSidebar({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
-  const [showNumber, setShowNumber] = useState(true);
   const [showSlug, setShowSlug] = useState(true);
   const [showDesc, setShowDesc] = useState(true);
 
@@ -91,7 +90,7 @@ export function ScriptSceneSidebar({
                 scene={scene}
                 isActive={scene.id === activeSceneId}
                 onSelect={() => onSelectScene(scene.id)}
-                showNumber={showNumber}
+                showNumber={true}
                 showSlug={showSlug}
                 showDesc={showDesc}
               />
@@ -135,7 +134,7 @@ function SortableSceneItem({
   scene,
   isActive,
   onSelect,
-  showNumber,
+  showNumber: _showNumber,
   showSlug,
   showDesc,
 }: {
