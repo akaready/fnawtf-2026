@@ -176,7 +176,7 @@ function SortableSceneRow({
       }`}
       onClick={onSelect}
     >
-      <span className="text-admin-border font-bebas text-[44px] leading-none text-right pr-1 pl-3">
+      <span className="text-admin-border font-bebas text-[44px] leading-none text-right pr-1 pl-3 translate-y-[2px]">
         {scene.sceneNumber}
       </span>
       <div className="pr-5">
