@@ -5493,9 +5493,9 @@ export async function createScriptShare(scriptId: string): Promise<string> {
   return (data as { id: string }).id;
 }
 
-/** Fetch all share links that have snapshots across an entire script group.
+/** Fetch all share links across an entire script group (including legacy shares without snapshots).
  *  Used by the editor Comments column version picker. */
-export async function getScriptSharesByGroup(scriptGroupId: string): Promise<import('@/types/scripts').ScriptShareWithSnapshot[]> {
+export async function getScriptSharesByGroup(scriptGroupId: string): Promise<import('@/types/scripts').ScriptShareRow[]> {
   const { supabase } = await requireAuth();
   const { data: scripts, error: scriptsError } = await supabase
     .from('scripts')
@@ -5508,10 +5508,9 @@ export async function getScriptSharesByGroup(scriptGroupId: string): Promise<imp
     .from('script_shares')
     .select('id, script_id, snapshot_script_id, snapshot_major_version, label, is_active, share_mode, token, access_code, notes, created_by, created_at, updated_at')
     .in('script_id', scriptIds)
-    .not('snapshot_script_id', 'is', null)
     .order('snapshot_major_version', { ascending: false });
   if (error) throw new Error(error.message);
-  return (shares ?? []) as unknown as import('@/types/scripts').ScriptShareWithSnapshot[];
+  return (shares ?? []) as unknown as import('@/types/scripts').ScriptShareRow[];
 }
 
 /** Fetch scenes + beats of a published snapshot script for position-map building. */

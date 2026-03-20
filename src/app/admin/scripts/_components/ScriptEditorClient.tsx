@@ -43,7 +43,7 @@ import { ScriptExtractModal } from './ScriptExtractModal';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
-import type { ScriptShareWithSnapshot, ScriptShareCommentRow } from '@/types/scripts';
+import type { ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
 import type {
   ScriptRow, ScriptSceneRow, ScriptBeatRow,
   ScriptCharacterRow, ScriptTagRow, ScriptLocationRow,
@@ -125,7 +125,7 @@ export function ScriptEditorClient({
   const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false, comments: false };
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>(defaultColumns);
   const [columnFractions, setColumnFractions] = useState<Record<string, number>>(DEFAULT_FRACTIONS);
-  const [groupShares, setGroupShares] = useState<ScriptShareWithSnapshot[]>([]);
+  const [groupShares, setGroupShares] = useState<ScriptShareRow[]>([]);
   const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
   const sharesLoadedRef = useRef(false);
@@ -188,6 +188,7 @@ export function ScriptEditorClient({
     getScriptSharesByGroup(script.script_group_id).then((shares) => {
       setGroupShares(shares);
       const defaultShare = shares.find(s => s.snapshot_major_version === script.major_version)
+        ?? shares.find(s => s.snapshot_major_version !== null)
         ?? shares[0]
         ?? null;
       if (defaultShare) setSelectedShareId(defaultShare.id);
@@ -203,33 +204,64 @@ export function ScriptEditorClient({
     const share = groupShares.find(s => s.id === selectedShareId);
     if (!share) return;
 
-    Promise.all([
-      getSnapshotBeats(share.snapshot_script_id),
-      getShareComments(share.id),
-    ]).then(([snapshotData, comments]) => {
-      const beatToPos = new Map<string, string>();
-      const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
-      sortedScenes.forEach((scene, sceneIdx) => {
-        const sceneBeats = snapshotData.beats
-          .filter(b => b.scene_id === scene.id)
-          .sort((a, b) => a.sort_order - b.sort_order);
-        sceneBeats.forEach((beat, beatIdx) => {
-          beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
+    if (share.snapshot_script_id) {
+      // New path: positional matching via snapshot beats
+      Promise.all([
+        getSnapshotBeats(share.snapshot_script_id),
+        getShareComments(share.id),
+      ]).then(([snapshotData, comments]) => {
+        const beatToPos = new Map<string, string>();
+        const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
+        sortedScenes.forEach((scene, sceneIdx) => {
+          const sceneBeats = snapshotData.beats
+            .filter(b => b.scene_id === scene.id)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          sceneBeats.forEach((beat, beatIdx) => {
+            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
+          });
         });
+        const map = new Map<string, ScriptShareCommentRow[]>();
+        for (const comment of comments) {
+          const posKey = beatToPos.get(comment.beat_id);
+          if (!posKey) continue;
+          if (!map.has(posKey)) map.set(posKey, []);
+          map.get(posKey)!.push(comment);
+        }
+        setCommentsMap(map);
+      }).catch((err) => {
+        console.error('[Comments] Failed to load snapshot comments:', err);
+        showError('Failed to load comments');
       });
-
-      const map = new Map<string, ScriptShareCommentRow[]>();
-      for (const comment of comments) {
-        const posKey = beatToPos.get(comment.beat_id);
-        if (!posKey) continue;
-        if (!map.has(posKey)) map.set(posKey, []);
-        map.get(posKey)!.push(comment);
-      }
-      setCommentsMap(map);
-    }).catch((err) => {
-      console.error('[ScriptCommentsCell] Failed to load comments:', err);
-      showError('Failed to load comments');
-    });
+    } else {
+      // Legacy path: share has no snapshot — comments reference live beat IDs directly
+      // Use the draft's own beats for position mapping
+      Promise.all([
+        getSnapshotBeats(script.id),
+        getShareComments(share.id),
+      ]).then(([draftData, comments]) => {
+        const beatToPos = new Map<string, string>();
+        const sortedScenes = [...draftData.scenes].sort((a, b) => a.sort_order - b.sort_order);
+        sortedScenes.forEach((scene, sceneIdx) => {
+          const sceneBeats = draftData.beats
+            .filter(b => b.scene_id === scene.id)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          sceneBeats.forEach((beat, beatIdx) => {
+            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
+          });
+        });
+        const map = new Map<string, ScriptShareCommentRow[]>();
+        for (const comment of comments) {
+          const posKey = beatToPos.get(comment.beat_id);
+          if (!posKey) continue;
+          if (!map.has(posKey)) map.set(posKey, []);
+          map.get(posKey)!.push(comment);
+        }
+        setCommentsMap(map);
+      }).catch((err) => {
+        console.error('[Comments] Failed to load legacy comments:', err);
+        showError('Failed to load comments');
+      });
+    }
   }, [selectedShareId, groupShares]);
 
   // Reset fractions to defaults when column visibility changes

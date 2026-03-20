@@ -1,10 +1,10 @@
 'use client';
 
 import { AdminCombobox } from '@/app/admin/_components/AdminCombobox';
-import type { ScriptShareWithSnapshot } from '@/types/scripts';
+import type { ScriptShareRow } from '@/types/scripts';
 
 interface Props {
-  shares: ScriptShareWithSnapshot[];
+  shares: ScriptShareRow[];
   selectedShareId: string | null;
   currentMajorVersion: number;
   onSelect: (shareId: string) => void;
@@ -26,11 +26,14 @@ export function ScriptCommentsVersionPicker({
 
   const options = shares.map((s) => ({
     id: s.id,
-    label: `v${s.snapshot_major_version}${s.label ? ` · ${s.label}` : ''}`,
+    label: s.snapshot_major_version
+      ? `v${s.snapshot_major_version}${s.label ? ` · ${s.label}` : ''}`
+      : s.label || 'Unversioned share',
   }));
 
   const selectedShare = shares.find(s => s.id === selectedShareId) ?? null;
   const isHistorical = selectedShare !== null
+    && selectedShare.snapshot_major_version !== null
     && selectedShare.snapshot_major_version !== currentMajorVersion;
 
   return (

@@ -25,7 +25,7 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ScriptShareWithSnapshot, ScriptShareCommentRow } from '@/types/scripts';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
 import { ScriptCommentsVersionPicker } from './ScriptCommentsVersionPicker';
 
 interface Props {
@@ -66,7 +66,7 @@ interface Props {
   scriptVersion: number;
   onAllFramesDeleted?: () => void;
   onImageMove?: (dragData: import('@/types/scripts').ImageDragData, dropData: import('@/types/scripts').ImageDropData) => void;
-  groupShares: ScriptShareWithSnapshot[];
+  groupShares: ScriptShareRow[];
   selectedShareId: string | null;
   onSelectShare: (shareId: string) => void;
   commentsMap: Map<string, ScriptShareCommentRow[]>;
