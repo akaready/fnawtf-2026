@@ -16,7 +16,7 @@ interface Props {
   onDismiss: () => void;
 }
 
-export function MentionDropdown({ type, query, characters, tags, locations = [], products = [], position, onSelect, onDismiss }: Props) {
+export function MentionDropdown({ type, query, characters, tags, locations: _locations = [], products = [], position, onSelect, onDismiss }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
