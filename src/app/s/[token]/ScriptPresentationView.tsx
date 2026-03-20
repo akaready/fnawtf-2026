@@ -250,15 +250,15 @@ export function ScriptPresentationView({
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
-          {/* Logo bar */}
+          {/* Logo bar — client first, FNA second */}
           <div className="flex items-center justify-center gap-3 pt-8 pb-4 flex-shrink-0">
-            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-7" />
             {clientLogoUrl && (
               <>
-                <span className="text-[#555] text-lg">&times;</span>
                 <img src={clientLogoUrl} alt="" className="h-7 object-contain admin-logo" />
+                <span className="text-[#555] text-lg">&times;</span>
               </>
             )}
+            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-7" />
           </div>
 
           {/* Title */}
@@ -406,7 +406,7 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-6 pointer-events-none">
             <div className="w-full max-w-2xl pointer-events-auto">
-              <div className="bg-[#111] border border-white/[0.08] rounded-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] flex items-end gap-3 px-4 py-3">
+              <div className="bg-[#1a1a1a] border border-white/[0.12] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-end gap-3 px-4 py-3">
                 <textarea
                   ref={el => {
                     if (el) {
