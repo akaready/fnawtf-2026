@@ -60,6 +60,7 @@ export function ScriptShareClient({
   references: rawReferences,
   storyboardFrames: rawStoryboardFrames,
   viewerEmail,
+  viewerName,
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
@@ -187,7 +188,7 @@ export function ScriptShareClient({
         scenes={presentationScenes}
         shareId={shareId}
         viewerEmail={viewerEmail}
-        viewerName={null}
+        viewerName={viewerName}
       />
     );
   }

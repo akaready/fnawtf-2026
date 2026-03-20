@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
-import { User, Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
+import { User, Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen, Mail } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
+import gsap from 'gsap';
 import { getComments, updateComment, deleteComment } from './actions';
+
+const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
+function versionColor(label: string): string {
+  const major = parseInt(label) || 0;
+  return VERSION_COLORS[major % VERSION_COLORS.length];
+}
 
 interface Comment {
   id: string;
@@ -23,6 +32,10 @@ interface Props {
   open: boolean;
   onToggle: () => void;
   refreshKey: number;
+  clientName?: string;
+  clientLogoUrl?: string | null;
+  scriptTitle?: string;
+  versionLabel?: string;
 }
 
 function formatPT(dateStr: string): string {
@@ -36,9 +49,30 @@ function formatPT(dateStr: string): string {
   });
 }
 
-export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _viewerName, open, onToggle, refreshKey }: Props) {
+const iconVariants = {
+  hidden: { opacity: 0, x: -6, width: 0, marginRight: -6 },
+  visible: { opacity: 1, x: 0, width: 'auto', marginRight: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+};
+
+export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _viewerName, open, onToggle, refreshKey, clientName, clientLogoUrl, scriptTitle, versionLabel }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
+  const emailBtnRef = useRef<HTMLAnchorElement>(null);
+  const emailFillRef = useRef<HTMLDivElement>(null);
+  const [isEmailHovered, setIsEmailHovered] = useState(false);
+
+  useDirectionalFill(emailBtnRef, emailFillRef, {
+    onFillStart: () => {
+      setIsEmailHovered(true);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    },
+    onFillEnd: () => {
+      setIsEmailHovered(false);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    },
+  });
 
   const loadComments = useCallback(async () => {
     if (!beatId) return;
@@ -60,11 +94,11 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
       {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
       <button
         onClick={onToggle}
-        className={`absolute right-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-2.5 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`absolute right-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         title="Show comments"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-widest">Comments ({comments.length})</span>
-        <PanelRightOpen size={14} />
+        <span className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap">Comments ({comments.length})</span>
+        <PanelRightOpen size={16} />
       </button>
 
       {/* Sidebar */}
@@ -79,9 +113,9 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
             </span>
             <button
               onClick={onToggle}
-              className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
             >
-              <PanelRightClose size={14} />
+              <PanelRightClose size={16} />
             </button>
           </div>
 
@@ -102,6 +136,67 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
                 viewerEmail={viewerEmail}
               />
             ))}
+          </div>
+
+          {/* Footer — logos + script info + email */}
+          <div className="flex-shrink-0 border-t border-admin-border px-4 pt-3 pb-4 space-y-3">
+            {/* Logos */}
+            {(clientLogoUrl) && (
+              <div className="flex items-center justify-center gap-3 pt-1">
+                <img src={clientLogoUrl} alt="" className="h-5 object-contain admin-logo" />
+                <span className="text-white/20 text-sm">&times;</span>
+                <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
+              </div>
+            )}
+            {/* Script info */}
+            {(clientName || scriptTitle) && (
+              <div className="text-center space-y-0.5">
+                {clientName && (
+                  <p className="text-xs uppercase tracking-widest text-admin-text-faint font-mono">{clientName}</p>
+                )}
+                {scriptTitle && (
+                  <p className="text-sm text-admin-text-muted font-medium leading-snug">
+                    {scriptTitle}
+                    {versionLabel && (() => {
+                      const color = versionColor(versionLabel);
+                      return (
+                        <span
+                          className="inline-block ml-1.5 px-2 py-0.5 text-xs font-mono font-bold rounded-full"
+                          style={{ color, backgroundColor: color + '18', border: `1px solid ${color}40` }}
+                        >
+                          v{versionLabel}
+                        </span>
+                      );
+                    })()}
+                  </p>
+                )}
+              </div>
+            )}
+            {/* Email button */}
+            <div className="flex justify-center">
+              <a
+                ref={emailBtnRef}
+                href="mailto:hi@fna.wtf"
+                className="relative px-5 py-2.5 text-sm font-medium text-white border border-white/20 rounded-lg overflow-hidden flex items-center gap-2"
+              >
+                <div
+                  ref={emailFillRef}
+                  className="absolute inset-0 bg-white pointer-events-none"
+                  style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+                />
+                <span className="relative flex items-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
+                  <motion.span
+                    variants={iconVariants}
+                    initial="hidden"
+                    animate={isEmailHovered ? 'visible' : 'hidden'}
+                    className="flex items-center"
+                  >
+                    <Mail size={14} strokeWidth={1.5} />
+                  </motion.span>
+                  hi@fna.wtf
+                </span>
+              </a>
+            </div>
           </div>
 
         </div>
@@ -149,9 +244,8 @@ function CommentRow({
 
   return (
     <div className="group/comment px-4 py-3 border-b border-border/20 hover:bg-white/[0.02] transition-colors">
-      {/* Header: avatar + name + time */}
+      {/* Header: avatar + name + time + actions */}
       <div className="flex items-center gap-2 mb-1.5">
-        {/* Avatar */}
         {comment.avatar_url ? (
           <img src={comment.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
         ) : (
@@ -161,6 +255,28 @@ function CommentRow({
         )}
         <span className="text-xs font-medium text-foreground/80">{firstName}</span>
         <span className="text-[10px] text-muted-foreground/40 ml-auto">{formatPT(comment.created_at)}</span>
+        {isOwn && !editing && (
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+            {confirmDelete ? (
+              <button onClick={handleDelete} disabled={isPending} className="text-red-400 hover:text-red-300 p-0.5 transition-colors" title="Confirm delete">
+                <Check size={11} />
+              </button>
+            ) : (
+              <button onClick={() => { setEditing(true); setEditText(comment.content); }} className="text-muted-foreground/30 hover:text-foreground/60 p-0.5 transition-colors" title="Edit">
+                <Pencil size={11} />
+              </button>
+            )}
+            {confirmDelete ? (
+              <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground/40 hover:text-foreground/60 p-0.5 transition-colors" title="Cancel">
+                <X size={11} />
+              </button>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} className="text-muted-foreground/30 hover:text-red-400 p-0.5 transition-colors" title="Delete">
+                <Trash2 size={11} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -180,37 +296,6 @@ function CommentRow({
         </div>
       ) : (
         <p className="text-xs text-foreground/70 leading-relaxed whitespace-pre-wrap">{comment.content}</p>
-      )}
-
-      {/* Actions — own comments only, on hover */}
-      {isOwn && !editing && (
-        <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover/comment:opacity-100 transition-opacity">
-          <button
-            onClick={() => { setEditing(true); setEditText(comment.content); }}
-            className="text-muted-foreground/30 hover:text-foreground/60 p-0.5 transition-colors"
-            title="Edit"
-          >
-            <Pencil size={11} />
-          </button>
-          {confirmDelete ? (
-            <>
-              <button onClick={handleDelete} disabled={isPending} className="text-red-400 hover:text-red-300 p-0.5 transition-colors" title="Confirm delete">
-                <Check size={11} />
-              </button>
-              <button onClick={() => setConfirmDelete(false)} className="text-muted-foreground/40 hover:text-foreground/60 p-0.5 transition-colors" title="Cancel">
-                <X size={11} />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-muted-foreground/30 hover:text-red-400 p-0.5 transition-colors"
-              title="Delete"
-            >
-              <Trash2 size={11} />
-            </button>
-          )}
-        </div>
       )}
     </div>
   );

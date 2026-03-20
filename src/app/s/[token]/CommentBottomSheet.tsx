@@ -168,7 +168,7 @@ function MobileCommentRow({
 
   return (
     <div className="py-3 border-b border-white/[0.06] last:border-0">
-      {/* Header */}
+      {/* Header: avatar + name + time + actions */}
       <div className="flex items-center gap-2 mb-1.5">
         {comment.avatar_url ? (
           <img src={comment.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
@@ -179,6 +179,28 @@ function MobileCommentRow({
         )}
         <span className="text-sm font-medium text-white/80">{firstName}</span>
         <span className="text-xs text-white/30 ml-auto">{formatPT(comment.created_at)}</span>
+        {isOwn && !editing && (
+          <div className="flex items-center gap-1">
+            {confirmDelete ? (
+              <button onClick={handleDelete} disabled={isPending} className="text-red-400 hover:text-red-300 p-1 transition-colors" title="Confirm delete">
+                <Check size={13} />
+              </button>
+            ) : (
+              <button onClick={() => { setEditing(true); setEditText(comment.content); }} className="text-white/25 hover:text-white/60 p-1 transition-colors" title="Edit">
+                <Pencil size={13} />
+              </button>
+            )}
+            {confirmDelete ? (
+              <button onClick={() => setConfirmDelete(false)} className="text-white/30 hover:text-white/60 p-1 transition-colors" title="Cancel">
+                <X size={13} />
+              </button>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} className="text-white/25 hover:text-red-400 p-1 transition-colors" title="Delete">
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -198,32 +220,6 @@ function MobileCommentRow({
         </div>
       ) : (
         <p className="text-sm text-white/60 leading-relaxed whitespace-pre-wrap ml-8">{comment.content}</p>
-      )}
-
-      {/* Actions */}
-      {isOwn && !editing && (
-        <div className="flex items-center gap-2 mt-2 ml-8">
-          <button
-            onClick={() => { setEditing(true); setEditText(comment.content); }}
-            className="text-white/25 hover:text-white/60 p-1 transition-colors"
-          >
-            <Pencil size={13} />
-          </button>
-          {confirmDelete ? (
-            <>
-              <button onClick={handleDelete} disabled={isPending} className="text-red-400 hover:text-red-300 p-1 transition-colors">
-                <Check size={13} />
-              </button>
-              <button onClick={() => setConfirmDelete(false)} className="text-white/30 hover:text-white/60 p-1 transition-colors">
-                <X size={13} />
-              </button>
-            </>
-          ) : (
-            <button onClick={() => setConfirmDelete(true)} className="text-white/25 hover:text-red-400 p-1 transition-colors">
-              <Trash2 size={13} />
-            </button>
-          )}
-        </div>
       )}
     </div>
   );

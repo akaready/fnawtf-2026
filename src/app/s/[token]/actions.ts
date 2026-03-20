@@ -286,7 +286,7 @@ export async function addComment(
   content: string,
 ) {
   if (!shareId || !beatId) throw new Error('Missing share or beat ID');
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('script_share_comments' as never)
     .insert({
@@ -307,7 +307,7 @@ export async function updateComment(
   viewerEmail: string,
   content: string,
 ) {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('script_share_comments' as never)
     .update({ content } as never)
@@ -317,7 +317,7 @@ export async function updateComment(
 }
 
 export async function deleteComment(commentId: string, viewerEmail: string) {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('script_share_comments' as never)
     .update({ deleted_at: new Date().toISOString() } as never)

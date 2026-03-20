@@ -3,8 +3,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
 
-const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
-function versionColor(major: number): string { return VERSION_COLORS[major % VERSION_COLORS.length]; }
+
 import { CommentSidebar } from './CommentSidebar';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { CommentBottomSheet } from './CommentBottomSheet';
@@ -93,7 +92,7 @@ export function ScriptPresentationView({
   onClose: _onClose,
   scriptTitle,
   clientName,
-  clientLogoUrl,
+  clientLogoUrl: _clientLogoUrl,
   versionLabel,
   scenes,
   shareId,
@@ -192,11 +191,11 @@ export function ScriptPresentationView({
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
         <button
           onClick={() => setLeftOpen(true)}
-          className={`absolute left-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-2.5 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`absolute left-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Show scenes"
         >
-          <PanelLeftOpen size={14} />
-          <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
+          <PanelLeftOpen size={16} />
+          <span className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap">Scenes</span>
         </button>
 
         <div
@@ -234,39 +233,6 @@ export function ScriptPresentationView({
         </div>
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
-          {/* Logo bar — client first, FNA second */}
-          <div className="flex items-center justify-center gap-3 pt-4 pb-2 md:pt-8 md:pb-4 flex-shrink-0">
-            {clientLogoUrl && (
-              <>
-                <img src={clientLogoUrl} alt="" className="h-5 md:h-7 object-contain admin-logo" />
-                <span className="text-[#555] text-lg">&times;</span>
-              </>
-            )}
-            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5 md:h-7" />
-          </div>
-
-          {/* Title */}
-          <div className="text-center pb-3 md:pb-6 flex-shrink-0">
-            {clientName && (
-              <p className="text-[#555] text-[10px] md:text-xs uppercase tracking-widest mb-0.5">{clientName}</p>
-            )}
-            <p className="text-[#ccc] text-sm md:text-base font-medium">
-              {scriptTitle} Script
-              {versionLabel && (() => {
-                const major = parseInt(versionLabel) || 0;
-                const color = versionColor(major);
-                return (
-                  <span
-                    className="inline-block ml-2 px-2.5 py-0.5 text-xs font-mono font-bold rounded-full"
-                    style={{ borderColor: color + '40', backgroundColor: color + '15', color, border: '1px solid' }}
-                  >
-                    v{versionLabel}
-                  </span>
-                );
-              })()}
-            </p>
-          </div>
-
           {/* Storyboard image with nav arrows overlaid */}
           <div className="group/image relative w-full max-w-5xl flex-shrink-0">
             {/* Nav arrows — bottom center of image, visible on hover */}
@@ -439,6 +405,10 @@ export function ScriptPresentationView({
         open={rightOpen}
         onToggle={() => setRightOpen(prev => !prev)}
         refreshKey={commentRefreshKey + idx}
+        clientName={clientName}
+        clientLogoUrl={_clientLogoUrl}
+        scriptTitle={scriptTitle}
+        versionLabel={versionLabel}
       />
     </div>
   );

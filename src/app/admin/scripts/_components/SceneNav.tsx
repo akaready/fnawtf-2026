@@ -110,9 +110,9 @@ export function SceneNav({
           {onCollapse && (
             <button
               onClick={onCollapse}
-              className="w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
             >
-              <PanelLeftClose size={14} />
+              <PanelLeftClose size={16} />
             </button>
           )}
         </div>
