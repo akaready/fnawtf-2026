@@ -2975,18 +2975,20 @@ async function duplicateScriptCore(
     sceneIdMap.set(sc.id as string, (newScene as { id: string }).id);
   }
 
-  // 5. Clone beats with mapped scene IDs
+  // 5. Clone beats with mapped scene IDs — track old→new beat mapping
+  const beatIdMap = new Map<string, string>();
   for (const beat of allBeats) {
     const b = beat as Record<string, unknown>;
     const newSceneId = sceneIdMap.get(b.scene_id as string);
     if (!newSceneId) continue;
-    await supabase.from('script_beats').insert({
+    const { data: newBeat } = await supabase.from('script_beats').insert({
       scene_id: newSceneId,
       sort_order: b.sort_order,
       audio_content: b.audio_content,
       visual_content: b.visual_content,
       notes_content: b.notes_content,
-    } as never);
+    } as never).select('id').single();
+    if (newBeat) beatIdMap.set(b.id as string, (newBeat as { id: string }).id);
   }
 
   // 6. Clone characters
@@ -3037,6 +3039,84 @@ async function duplicateScriptCore(
       const newSceneId = sceneIdMap.get(sc.id as string);
       if (newSceneId) {
         await supabase.from('script_scenes').update({ location_id: locationIdMap.get(oldLocId) } as never).eq('id', newSceneId);
+      }
+    }
+  }
+
+  // 9. Clone storyboard frames (active only) with mapped beat/scene IDs
+  const { data: oldFrames } = await supabase
+    .from('script_storyboard_frames')
+    .select('*')
+    .eq('script_id', scriptId)
+    .eq('is_active', true);
+  for (const frame of (oldFrames ?? [])) {
+    const f = frame as Record<string, unknown>;
+    const newBeatId = f.beat_id ? beatIdMap.get(f.beat_id as string) : null;
+    const newSceneId = f.scene_id ? sceneIdMap.get(f.scene_id as string) : null;
+    if (!newBeatId && !newSceneId) continue;
+    await supabase.from('script_storyboard_frames').insert({
+      script_id: newScriptId,
+      beat_id: newBeatId ?? null,
+      scene_id: newSceneId ?? null,
+      image_url: f.image_url,
+      storage_path: f.storage_path,
+      source: f.source,
+      prompt_used: f.prompt_used,
+      is_active: true,
+      reference_urls_used: f.reference_urls_used ?? [],
+    } as never);
+  }
+
+  // 10. Clone beat references with mapped beat IDs
+  if (beatIdMap.size > 0) {
+    const oldBeatIds = Array.from(beatIdMap.keys());
+    const { data: oldRefs } = await supabase
+      .from('script_beat_references')
+      .select('*')
+      .in('beat_id', oldBeatIds);
+    for (const ref of (oldRefs ?? [])) {
+      const r = ref as Record<string, unknown>;
+      const newBeatId = beatIdMap.get(r.beat_id as string);
+      if (!newBeatId) continue;
+      await supabase.from('script_beat_references').insert({
+        beat_id: newBeatId,
+        image_url: r.image_url,
+        storage_path: r.storage_path,
+        sort_order: r.sort_order,
+      } as never);
+    }
+  }
+
+  // 11. Clone script style + style references
+  const { data: oldStyle } = await supabase
+    .from('script_styles')
+    .select('*')
+    .eq('script_id', scriptId)
+    .single();
+  if (oldStyle) {
+    const st = oldStyle as Record<string, unknown>;
+    const { data: newStyle } = await supabase.from('script_styles').insert({
+      script_id: newScriptId,
+      prompt: st.prompt,
+      aspect_ratio: st.aspect_ratio,
+      generation_mode: st.generation_mode,
+      style_preset: st.style_preset,
+    } as never).select('id').single();
+    if (newStyle) {
+      const newStyleId = (newStyle as { id: string }).id;
+      const { data: oldStyleRefs } = await supabase
+        .from('script_style_references')
+        .select('*')
+        .eq('style_id', st.id as string)
+        .order('sort_order');
+      for (const ref of (oldStyleRefs ?? [])) {
+        const r = ref as Record<string, unknown>;
+        await supabase.from('script_style_references').insert({
+          style_id: newStyleId,
+          image_url: r.image_url,
+          storage_path: r.storage_path,
+          sort_order: r.sort_order,
+        } as never);
       }
     }
   }
