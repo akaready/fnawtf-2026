@@ -67,7 +67,7 @@ export function ScriptShareClient({
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
-    audio: true, visual: true, notes: true, reference: true, storyboard: true,
+    audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: true,
   });
   const [showSidebar, setShowSidebar] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);

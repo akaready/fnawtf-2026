@@ -120,7 +120,7 @@ export function ScriptEditorClient({
   const [modeConfirm, setModeConfirm] = useState<{ message: string; targetMode: 'table' | 'scratchpad' } | null>(null);
   const router = useRouter();
 
-  const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false };
+  const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false, comments: false };
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>(defaultColumns);
   const [columnFractions, setColumnFractions] = useState<Record<string, number>>(DEFAULT_FRACTIONS);
 

@@ -12,20 +12,22 @@ interface Props {
 }
 
 const columns: { key: keyof ScriptColumnConfig; label: string; color: string }[] = [
-  { key: 'audio', label: 'Audio', color: 'bg-[var(--admin-accent)]' },
-  { key: 'visual', label: 'Visual', color: 'bg-[var(--admin-info)]' },
-  { key: 'notes', label: 'Notes', color: 'bg-[var(--admin-warning)]' },
-  { key: 'reference', label: 'Reference', color: 'bg-[var(--admin-danger)]' },
+  { key: 'audio',      label: 'Audio',      color: 'bg-[var(--admin-accent)]' },
+  { key: 'visual',     label: 'Visual',     color: 'bg-[var(--admin-info)]' },
+  { key: 'notes',      label: 'Notes',      color: 'bg-[var(--admin-warning)]' },
+  { key: 'reference',  label: 'Reference',  color: 'bg-[var(--admin-danger)]' },
   { key: 'storyboard', label: 'Storyboard', color: 'bg-[var(--admin-success)]' },
+  { key: 'comments',   label: 'Comments',   color: 'bg-[var(--admin-cream)]' },
 ];
 
 export function ScriptColumnToggle({ config, onChange, compact, exclude }: Props) {
   const visibleColumns = exclude ? columns.filter(c => !exclude.includes(c.key)) : columns;
 
   const toggle = (key: keyof ScriptColumnConfig) => {
-    // Prevent disabling all columns
     const next = { ...config, [key]: !config[key] };
-    if (!next.audio && !next.visual && !next.notes && !next.reference && !next.storyboard) return;
+    // Prevent disabling all columns
+    const anyOn = (Object.keys(next) as (keyof ScriptColumnConfig)[]).some(k => next[k]);
+    if (!anyOn) return;
     onChange(next);
   };
 
@@ -40,7 +42,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude }: Props
             >
               <span className={`block w-2.5 h-2.5 rounded-full transition-colors ${config[key] ? color : 'bg-admin-text-ghost'}`} />
             </button>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-[10px] font-medium text-white bg-[#222] border border-white/10 rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-admin-sm font-medium text-admin-text-primary bg-admin-bg-overlay border border-admin-border rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
               {label}
             </span>
           </div>
@@ -51,11 +53,11 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude }: Props
 
   return (
     <div className="flex items-center gap-1">
-      {columns.map(({ key, label, color }) => (
+      {visibleColumns.map(({ key, label, color }) => (
         <button
           key={key}
           onClick={() => toggle(key)}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-admin-sm font-medium transition-colors ${
             config[key]
               ? 'bg-admin-bg-active text-admin-text-primary'
               : 'text-admin-text-ghost hover:text-admin-text-muted'

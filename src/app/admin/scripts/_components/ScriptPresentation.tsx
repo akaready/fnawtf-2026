@@ -80,6 +80,7 @@ export function ScriptPresentation({ slides, initialIndex = 0, onClose, scriptTi
     notes: false,
     reference: false,
     storyboard: false,
+    comments: false,
   });
   const [chromeVisible, setChromeVisible] = useState(true);
   const [contentCollapsed, setContentCollapsed] = useState(false);
