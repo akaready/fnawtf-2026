@@ -158,7 +158,7 @@ export function ScriptEditorClient({
           const refs = await getStyleReferences(style.id);
           setStyleReferences(refs as ScriptStyleReferenceRow[]);
         }
-        setStoryboardFrames(frames as ScriptStoryboardFrameRow[]);
+        setStoryboardFrames(frames as unknown as ScriptStoryboardFrameRow[]);
         setCastMap(castData);
         setReferenceMap(refData);
         setLocationOptionsMap(locOptionsData);
