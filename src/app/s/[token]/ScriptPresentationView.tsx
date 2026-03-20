@@ -113,11 +113,13 @@ export function ScriptPresentationView({
   const current = slides[idx];
 
   const handleCommentSubmit = useCallback(() => {
-    if (!commentText.trim() || !shareId || !current?.beatId) return;
+    if (!commentText.trim() || !current?.beatId) return;
+    if (!shareId) return; // Preview mode — no submissions
     const content = commentText.trim();
     setCommentText('');
     addComment(shareId, current.beatId, viewerEmail, viewerName, content)
-      .then(() => setCommentRefreshKey(k => k + 1));
+      .then(() => setCommentRefreshKey(k => k + 1))
+      .catch(() => {}); // Silently fail on error
   }, [commentText, shareId, current?.beatId, viewerEmail, viewerName]);
   const prev = idx > 0 ? slides[idx - 1] : null;
   const isSceneChange = prev !== null && prev.sceneId !== current.sceneId;
@@ -404,25 +406,28 @@ export function ScriptPresentationView({
         {current && (
           <div className="sticky bottom-4 z-20 flex justify-center px-6 pointer-events-none">
             <div className="w-full max-w-2xl pointer-events-auto">
-              <div className="bg-[#111] border border-white/[0.08] rounded-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] px-4 py-3">
-                <div className="relative">
-                  <textarea
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommentSubmit(); } }}
-                    placeholder="Share your feedback on this story beat..."
-                    rows={1}
-                    className="w-full bg-transparent border-none text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none pr-10"
-                  />
-                  <button
-                    onClick={handleCommentSubmit}
-                    disabled={!commentText.trim()}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                    title="Click or press Enter to send"
-                  >
-                    <Send size={13} />
-                  </button>
-                </div>
+              <div className="bg-[#111] border border-white/[0.08] rounded-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] flex items-end gap-3 px-4 py-3">
+                <textarea
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCommentSubmit();
+                    }
+                  }}
+                  placeholder="Share your feedback on this story beat..."
+                  rows={2}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none border-none outline-none"
+                />
+                <button
+                  onClick={handleCommentSubmit}
+                  disabled={!commentText.trim() || !shareId}
+                  className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors mb-0.5"
+                  title="Click or press Enter to send"
+                >
+                  <Send size={14} />
+                </button>
               </div>
             </div>
           </div>
