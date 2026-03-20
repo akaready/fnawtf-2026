@@ -7,6 +7,8 @@ import { ScriptBeatCell } from './ScriptBeatCell';
 import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ImageDragData, ImageDropData } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptStoryboardCell } from './ScriptStoryboardCell';
+import { ScriptCommentsCell } from './ScriptCommentsCell';
+import type { ScriptShareCommentRow } from '@/types/scripts';
 
 interface Props {
   beat: BeatRow;
@@ -51,6 +53,7 @@ interface Props {
   allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
   scenes?: import('@/types/scripts').ComputedScene[];
+  beatComments?: ScriptShareCommentRow[];
 }
 
 function beatLetter(n: number): string {
@@ -108,6 +111,7 @@ export function ScriptBeatRow({
   allScriptFrames,
   onImageMove,
   scenes,
+  beatComments,
 }: Props) {
   const {
     attributes,
@@ -197,6 +201,7 @@ export function ScriptBeatRow({
           {columnConfig.notes && <div className="border-l border-l-[var(--admin-warning)]" />}
           {columnConfig.reference && <div className="border-l border-l-[var(--admin-danger)]" />}
           {columnConfig.storyboard && <div className="border-l border-l-[var(--admin-success)]" />}
+          {columnConfig.comments && <div className="border-l border-l-[var(--admin-cream)]" />}
         </div>
 
         <div className="grid items-stretch" style={{ gridTemplateColumns: gridTemplate }}>
@@ -287,6 +292,9 @@ export function ScriptBeatRow({
               onImageMove={onImageMove}
               scenes={scenes}
             />
+          )}
+          {columnConfig.comments && (
+            <ScriptCommentsCell comments={beatComments ?? []} />
           )}
         </div>
       </div>
