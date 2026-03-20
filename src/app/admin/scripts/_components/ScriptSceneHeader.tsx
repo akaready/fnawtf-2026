@@ -101,7 +101,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
   if (editing) {
     return (
       <div
-        className="flex items-center gap-2 py-2 pr-2 flex-wrap"
+        className="flex items-center gap-2 py-2 pr-2"
         id={`scene-${scene.id}`}
         onClick={e => e.stopPropagation()}
         onBlur={e => {
@@ -195,6 +195,16 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
           />
         </div>
 
+        {/* Scene description — inline after time-of-day */}
+        <span className="text-admin-text-faint text-xs">[</span>
+        <input
+          value={scene.scene_description ?? ''}
+          onChange={e => onUpdate(scene.id, { scene_description: e.target.value || null })}
+          placeholder="SCENE DESCRIPTION"
+          className={`${fieldClass} w-60`}
+        />
+        <span className="text-admin-text-faint text-xs">]</span>
+
         <div className="flex-1" />
         <button
           onClick={() => onEditingChange?.(false)}
@@ -210,16 +220,6 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
         >
           <X size={14} />
         </button>
-
-        {/* Scene description row */}
-        <div className="w-full pl-[5.5rem] ml-2">
-          <input
-            value={scene.scene_description ?? ''}
-            onChange={e => onUpdate(scene.id, { scene_description: e.target.value || null })}
-            placeholder="Scene description"
-            className={`${fieldClass} w-60 normal-case`}
-          />
-        </div>
       </div>
     );
   }
@@ -236,10 +236,10 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
 
   return (
     <div
-      className="flex items-center gap-2 px-2 py-3 group/scene"
+      className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden group/scene"
       id={`scene-${scene.id}`}
     >
-      <span className="text-admin-text-faint font-mono text-xs flex-shrink-0">
+      <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] px-2">
         {scene.sceneNumber}
       </span>
       {hasGlobalLink && (
@@ -247,10 +247,10 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
           <MapPin size={10} className="text-admin-info" />
         </span>
       )}
-      <span className="text-xs font-medium text-admin-text-secondary uppercase tracking-wider flex-1 min-w-0 truncate">
+      <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
         {heading}
         {scene.scene_description && (
-          <span className="text-admin-text-faint font-normal normal-case ml-2">[{scene.scene_description}]</span>
+          <span className="text-admin-text-ghost font-normal ml-1.5 text-[10px] tracking-normal normal-case">[{scene.scene_description}]</span>
         )}
       </span>
 
