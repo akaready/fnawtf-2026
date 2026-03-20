@@ -408,6 +408,12 @@ export function ScriptPresentationView({
             <div className="w-full max-w-2xl pointer-events-auto">
               <div className="bg-[#111] border border-white/[0.08] rounded-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] flex items-end gap-3 px-4 py-3">
                 <textarea
+                  ref={el => {
+                    if (el) {
+                      el.style.height = 'auto';
+                      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+                    }
+                  }}
                   value={commentText}
                   onChange={e => setCommentText(e.target.value)}
                   onKeyDown={e => {
@@ -417,7 +423,8 @@ export function ScriptPresentationView({
                     }
                   }}
                   placeholder="Share your feedback on this story beat..."
-                  rows={2}
+                  rows={1}
+                  style={{ overflow: 'hidden' }}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none border-none outline-none"
                 />
                 <button
