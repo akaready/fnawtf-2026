@@ -217,17 +217,17 @@ function SortableSceneRow({
       style={style}
       {...attributes}
       {...listeners}
-      className={`text-left flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`text-left flex items-stretch min-h-[45px] border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
     >
-      <span className="w-[52px] flex-shrink-0 font-bebas text-[44px] leading-none text-right pr-1 pl-3 translate-y-[2px] text-admin-border flex items-center justify-end">
+      <span className="w-[80px] flex-shrink-0 font-bebas text-[44px] leading-none text-right pr-1 pl-2 translate-y-[2px] text-admin-border flex items-center justify-end">
         {scene.sceneNumber}
       </span>
-      <div className="flex-1 min-w-0 pr-3 flex flex-col justify-center py-2">
+      <div className="flex-1 min-w-0 pr-1 flex flex-col justify-center py-2">
         <span className="text-admin-sm font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
           {buildSlug(scene)}
         </span>

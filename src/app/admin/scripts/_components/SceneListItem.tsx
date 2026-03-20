@@ -52,7 +52,7 @@ export function SceneListItem({
       } ${className}`}
     >
       {/* Scene number — fixed w-[52px] keeps alignment across all rows */}
-      <span className="w-[52px] flex-shrink-0 font-bebas text-[44px] leading-none text-right pr-1 pl-3 translate-y-[2px] text-admin-border flex items-center justify-end">
+      <span className="w-[96px] flex-shrink-0 font-bebas text-[44px] leading-none text-right pr-2 pl-3 translate-y-[2px] text-admin-border flex items-center justify-end">
         {sceneNumber}
       </span>
 

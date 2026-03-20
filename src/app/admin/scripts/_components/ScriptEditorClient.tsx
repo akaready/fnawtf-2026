@@ -399,6 +399,14 @@ export function ScriptEditorClient({
     }
   }, []);
 
+  // ── Multi-frame batch update (Frames tab save) ──
+  const handleFramesBatchChange = useCallback((frames: ScriptStoryboardFrameRow[], beatId: string) => {
+    setStoryboardFrames(prev => [
+      ...prev.filter(f => f.beat_id !== beatId),
+      ...frames,
+    ]);
+  }, []);
+
   // ── Image move / swap between beat rows ──
   const handleImageMove = useCallback(async (
     dragData: import('@/types/scripts').ImageDragData,
@@ -816,8 +824,8 @@ export function ScriptEditorClient({
 
       <div className="flex-1 flex min-h-0">
         {/* Scene sidebar */}
-        <div className={`h-full overflow-hidden flex-shrink-0 border-r border-admin-border transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-[320px]' : 'w-0'}`}>
-          <div className="h-full w-[320px] bg-admin-bg-sidebar">
+        <div className={`h-full overflow-hidden flex-shrink-0 border-r border-admin-border transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-[360px]' : 'w-0'}`}>
+          <div className="h-full w-[360px] bg-admin-bg-sidebar">
             {contentMode === 'scratchpad' ? (
               <ScriptSceneSidebar
                 scenes={computedScenes}
@@ -869,6 +877,7 @@ export function ScriptEditorClient({
                 scriptId={script.id}
                 scriptGroupId={script.script_group_id!}
                 onFrameGenerated={handleFrameChange}
+                onFramesBatchChange={handleFramesBatchChange}
                 activeSceneId={activeSceneId}
                 activeBeatId={activeBeatId}
                 onUpdateScene={handleUpdateScene}
