@@ -42,6 +42,7 @@ interface Props {
   scriptId: string;
   scriptGroupId: string;
   onFrameGenerated: (frame: ScriptStoryboardFrameRow | null, beatId?: string) => void;
+  onFramesBatchChange?: (frames: ScriptStoryboardFrameRow[], beatId: string) => void;
   activeSceneId: string | null;
   activeBeatId?: string | null;
   onUpdateScene: (sceneId: string, data: Partial<ScriptSceneRow>) => void;
@@ -81,6 +82,7 @@ export function ScriptEditorCanvas({
   scriptId,
   scriptGroupId,
   onFrameGenerated,
+  onFramesBatchChange,
   activeSceneId,
   activeBeatId,
   onUpdateScene,
@@ -575,23 +577,6 @@ export function ScriptEditorCanvas({
     }
   }, [selectionMode, allSelected, scenes]);
 
-  const handleSelectScene = useCallback((sceneId: string) => {
-    const scene = scenes.find(s => s.id === sceneId);
-    if (!scene) return;
-    if (!selectionMode) setSelectionMode(true);
-    const sceneBeatIds = scene.beats.map(b => b.id);
-    const allSceneSelected = sceneBeatIds.every(id => selectedBeatIds.has(id));
-    setSelectedBeatIds(prev => {
-      const next = new Set(prev);
-      if (allSceneSelected) {
-        for (const id of sceneBeatIds) next.delete(id);
-      } else {
-        for (const id of sceneBeatIds) next.add(id);
-      }
-      return next;
-    });
-  }, [scenes, selectedBeatIds, selectionMode]);
-
   // Double-click gutter: enter selection mode and select that beat
   const handleActivateSelection = useCallback((beatId: string) => {
     setSelectionMode(true);
@@ -843,33 +828,8 @@ export function ScriptEditorCanvas({
                     isGenerating={generatingScope !== null && generatingScope !== scene.id && scene.beats.some(b => generatingBeatIds.has(b.id))}
                   />
                 </div>
-                <div className="group/scenegutter flex-shrink-0 flex items-center justify-center py-3 px-2 text-admin-text-faint">
-                  {(() => {
-                    if (selectionMode) {
-                      const sceneBeatIds = scene.beats.map(b => b.id);
-                      const allSceneSelected = sceneBeatIds.length > 0 && sceneBeatIds.every(id => selectedBeatIds.has(id));
-                      return (
-                        <div
-                          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors cursor-pointer ${
-                            allSceneSelected
-                              ? 'bg-white border-white'
-                              : 'border-admin-text-ghost hover:border-admin-text-faint'
-                          }`}
-                          onClick={(e) => { e.stopPropagation(); handleSelectScene(scene.id); }}
-                        >
-                          {allSceneSelected && <Check size={10} className="text-black" strokeWidth={3} />}
-                        </div>
-                      );
-                    }
-                    return (
-                      <div
-                        className="cursor-grab hover:text-white transition-colors"
-                        {...sceneDragListeners}
-                      >
-                        <GripVertical size={12} />
-                      </div>
-                    );
-                  })()}
+                <div className="flex-shrink-0 flex items-center justify-center py-3 px-2 text-admin-text-faint cursor-grab hover:text-white transition-colors" {...sceneDragListeners}>
+                  <GripVertical size={12} />
                 </div>
                 <div className="flex-shrink-0 text-admin-text-faint pl-1 pr-3 hover:text-white transition-colors">
                   {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
@@ -927,8 +887,12 @@ export function ScriptEditorCanvas({
                         scriptId={scriptId}
                         sceneId={scene.id}
                         onFramesChange={(updatedFrames) => {
-                          const latest = updatedFrames[updatedFrames.length - 1] ?? null;
-                          onFrameGenerated(latest, beat.id);
+                          if (onFramesBatchChange) {
+                            onFramesBatchChange(updatedFrames, beat.id);
+                          } else {
+                            const latest = updatedFrames[updatedFrames.length - 1] ?? null;
+                            onFrameGenerated(latest, beat.id);
+                          }
                         }}
                         onUpdate={onUpdateBeat}
                         onDelete={onDeleteBeat}
