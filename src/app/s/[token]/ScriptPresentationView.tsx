@@ -406,7 +406,7 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-6 pointer-events-none">
             <div className="w-full max-w-2xl pointer-events-auto">
-              <div className="bg-[#1a1a1a] border border-white/[0.12] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-end gap-3 px-4 py-3">
+              <div className="bg-[#1a1a1a] border border-white/[0.12] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 px-5 py-3">
                 <textarea
                   ref={el => {
                     if (el) {
@@ -425,15 +425,19 @@ export function ScriptPresentationView({
                   placeholder="Share your feedback on this story beat..."
                   rows={1}
                   style={{ overflow: 'hidden' }}
-                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none border-none outline-none"
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none border-none outline-none leading-relaxed"
                 />
                 <button
                   onClick={handleCommentSubmit}
                   disabled={!commentText.trim() || !shareId}
-                  className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white text-black hover:bg-white/90 disabled:opacity-20 disabled:cursor-not-allowed transition-colors mb-0.5"
+                  className={`flex-shrink-0 flex items-center justify-center rounded-lg transition-all ${
+                    commentText.trim()
+                      ? 'w-8 h-8 bg-white text-black hover:bg-white/90'
+                      : 'w-7 h-7 bg-white/10 text-white/20'
+                  } disabled:cursor-not-allowed`}
                   title="Click or press Enter to send"
                 >
-                  <Send size={14} />
+                  <Send size={13} />
                 </button>
               </div>
             </div>
