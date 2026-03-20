@@ -109,6 +109,13 @@ const config: Config = {
             bg:          'var(--admin-accent-bg)',
             border:      'var(--admin-accent-border)',
           },
+          cream: {
+            DEFAULT:  'var(--admin-cream)',
+            bg:       'var(--admin-cream-bg)',
+            border:   'var(--admin-cream-border)',
+            text:     'var(--admin-cream-text)',
+            label:    'var(--admin-cream-label)',
+          },
           toolbar: {
             red:    'var(--admin-toolbar-red)',
             orange: 'var(--admin-toolbar-orange)',

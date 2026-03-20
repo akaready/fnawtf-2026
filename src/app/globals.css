@@ -104,6 +104,14 @@
   --admin-accent-bg:         rgba(161, 77, 253, 0.15);
   --admin-accent-border:     rgba(161, 77, 253, 0.30);
 
+  /* Comments column — warm off-white */
+  --admin-cream:             #f5f0e8;
+  --admin-cream-bg:          rgba(245, 240, 232, 0.08);
+  --admin-cream-border:      rgba(245, 240, 232, 0.25);
+  /* Inverted header state (cream bg, dark text) */
+  --admin-cream-text:        #1a1410;
+  --admin-cream-label:       #6b5c40;
+
   /* Toolbar accent colors (ROYGBIV) */
   --admin-toolbar-red:       #ef4444;
   --admin-toolbar-orange:    #ff6f2c;
