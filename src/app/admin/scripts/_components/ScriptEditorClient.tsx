@@ -191,6 +191,9 @@ export function ScriptEditorClient({
         ?? shares[0]
         ?? null;
       if (defaultShare) setSelectedShareId(defaultShare.id);
+    }).catch((err) => {
+      console.error('[ScriptCommentsCell] Failed to load shares:', err);
+      showError('Failed to load shares');
     });
   }, [columnConfig.comments, script.script_group_id, script.major_version]);
 
@@ -223,6 +226,9 @@ export function ScriptEditorClient({
         map.get(posKey)!.push(comment);
       }
       setCommentsMap(map);
+    }).catch((err) => {
+      console.error('[ScriptCommentsCell] Failed to load comments:', err);
+      showError('Failed to load comments');
     });
   }, [selectedShareId, groupShares]);
 
