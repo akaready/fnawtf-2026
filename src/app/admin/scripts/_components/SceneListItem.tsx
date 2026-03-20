@@ -39,7 +39,12 @@ export function SceneListItem({
       role="button"
       tabIndex={0}
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       className={`text-left col-span-2 flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle transition-colors cursor-pointer ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
@@ -54,12 +59,12 @@ export function SceneListItem({
       {/* Info column — flex:1 pushes beat grid to right */}
       <div className="flex-1 min-w-0 pr-3 flex flex-col justify-center py-2">
         {slug && (
-          <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
+          <span className="text-admin-sm font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
             {slug}
           </span>
         )}
         {description && (
-          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
+          <span className="text-admin-sm text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
             {description}
           </span>
         )}
@@ -71,8 +76,9 @@ export function SceneListItem({
           {beats.map(beat => (
             <button
               key={beat.beatId}
+              type="button"
               onClick={beat.onClick}
-              className={`flex items-center justify-center font-bebas text-[12px] leading-none transition-colors ${
+              className={`flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
                 beat.isActive
                   ? 'bg-admin-beat-selected-bg text-admin-beat-selected-text'
                   : 'bg-admin-bg-sidebar text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
