@@ -63,17 +63,15 @@ export function SceneListItem({
             {slug}
           </span>
         )}
+        {hasSceneComment && (
+          <div className="w-2 h-2 rounded-full bg-admin-warning mt-0.5" />
+        )}
         {description && (
           <span className="text-admin-sm text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
             {description}
           </span>
         )}
       </div>
-
-      {/* Scene-level comment indicator */}
-      {hasSceneComment && (
-        <div className="w-2 h-2 rounded-full bg-admin-warning flex-shrink-0 self-center mx-1" />
-      )}
 
       {/* Beat grid — only on 2+ beat scenes, always flush right */}
       {beats && beats.length >= 2 && (

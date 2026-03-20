@@ -237,7 +237,7 @@ function SortableSceneRow({
           </span>
         )}
       </div>
-      {/* Beat grid */}
+      {/* Beat grid — comment indicators intentionally omitted (admin drag path, no commentCounts) */}
       {beatNavItems.length >= 2 && (
         <div className="self-stretch border-l border-admin-border-subtle grid grid-rows-2 grid-flow-col auto-cols-[22px] gap-px bg-admin-border-subtle flex-shrink-0">
           {beatNavItems.map(beat => (
