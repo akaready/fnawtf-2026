@@ -890,12 +890,18 @@ export function ScriptEditorCanvas({
                         characters={characters}
                         tags={tags}
                         references={references[beat.id] ?? []}
-                        storyboardFrame={storyboardFrames.find(f => f.beat_id === beat.id) ?? null}
+                        storyboardFrames={storyboardFrames.filter(f => f.beat_id === beat.id)}
+                        storyboardLayout={null}
                         scriptStyle={scriptStyle}
                         styleReferences={styleReferences}
                         scriptId={scriptId}
                         sceneId={scene.id}
-                        onFrameChange={(frame) => onFrameGenerated(frame, beat.id)}
+                        onFramesChange={(newFrames) => {
+                          // Adapter: find the most recently added/changed frame and notify parent
+                          const prev = storyboardFrames.filter(f => f.beat_id === beat.id);
+                          const added = newFrames.find(f => !prev.some(p => p.id === f.id));
+                          onFrameGenerated(added ?? newFrames[0] ?? null, beat.id);
+                        }}
                         onUpdate={onUpdateBeat}
                         onDelete={onDeleteBeat}
                         onAddBeat={() => onAddBeat(scene.id)}
