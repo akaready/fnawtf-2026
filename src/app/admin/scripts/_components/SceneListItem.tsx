@@ -37,7 +37,7 @@ export function SceneListItem({
       <span className="text-admin-border font-bebas text-[56px] leading-none translate-y-[6px] text-right pr-2">
         {sceneNumber}
       </span>
-      <div className="pr-3">
+      <div className="pr-1 -translate-y-1">
         {slug && (
           <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
             {slug}
