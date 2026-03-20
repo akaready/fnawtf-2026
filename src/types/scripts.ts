@@ -221,6 +221,7 @@ export interface ScriptColumnConfig {
   notes: boolean;
   reference: boolean;
   storyboard: boolean;
+  comments: boolean;
 }
 
 export interface CropConfig {
@@ -307,6 +308,8 @@ export type ShareMode = 'presentation' | 'table';
 export interface ScriptShareRow {
   id: string;
   script_id: string;
+  snapshot_script_id: string | null;
+  snapshot_major_version: number | null;
   token: string;
   access_code: string;
   notes: string | null;
@@ -316,6 +319,12 @@ export interface ScriptShareRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A share that has a confirmed published snapshot — returned by getScriptSharesByGroup */
+export interface ScriptShareWithSnapshot extends ScriptShareRow {
+  snapshot_script_id: string;
+  snapshot_major_version: number;
 }
 
 export interface ScriptShareCommentRow {
