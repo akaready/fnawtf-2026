@@ -239,7 +239,7 @@ export function ScriptSceneHeader({ scene, locations = [], onUpdate, onDelete, e
       className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden group/scene"
       id={`scene-${scene.id}`}
     >
-      <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] px-2">
+      <span className="text-admin-border font-bebas text-[56px] leading-none flex-shrink-0 translate-y-[6px] w-[80px] text-right pr-2">
         {scene.sceneNumber}
       </span>
       {hasGlobalLink && (
