@@ -19,8 +19,7 @@ export function ScriptCommentsVersionPicker({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  // Only render if there are multiple shares to choose from
-  if (shares.length <= 1) return null;
+  if (shares.length === 0) return null;
 
   const selectedShare = shares.find(s => s.id === selectedShareId) ?? null;
   const isHistorical = selectedShare?.snapshot_major_version != null
