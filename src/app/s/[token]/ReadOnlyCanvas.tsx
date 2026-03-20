@@ -146,7 +146,7 @@ export function ReadOnlyCanvas({
               const frame = frameMap.get(beat.id);
 
               return (
-                <div key={beat.id} className="relative">
+                <div key={beat.id} id={`beat-${beat.id}`} className="relative">
                   {/* Beat letter gutter */}
                   <div className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#1a1a1a]">
                     <span className="text-[10px] text-muted-foreground/30 font-mono">
