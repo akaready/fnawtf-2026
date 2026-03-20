@@ -69,7 +69,7 @@ export function SceneNav({
   onReorder,
   showAddButton = false,
   onAddScene,
-  commentCounts: _commentCounts,
+  commentCounts,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
@@ -100,29 +100,36 @@ export function SceneNav({
       </SortableContext>
     </DndContext>
   ) : (
-    scenes.map(scene => (
-      <SceneListItem
-        key={scene.id}
-        sceneNumber={scene.sceneNumber}
-        slug={buildSlug(scene)}
-        description={scene.scene_description}
-        isActive={scene.id === activeSceneId}
-        onClick={() => onSelectScene(scene.id)}
-        beats={(scene.beats ?? []).length >= 2
-          ? [...(scene.beats ?? [])]
-              .sort((a, b) => a.sort_order - b.sort_order)
-              .map((beat, i) => ({
-                beatId: beat.id,
-                label: String.fromCharCode(65 + i),
-                isActive: beat.id === (activeBeatId ?? null),
-                onClick: (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  onSelectBeat?.(beat.id);
-                },
-              }))
-          : undefined}
-      />
-    ))
+    scenes.map(scene => {
+      const sceneBeats = scene.beats ?? [];
+      const hasSceneComment = sceneBeats.some(b => (commentCounts?.[b.id] ?? 0) > 0);
+      return (
+        <SceneListItem
+          key={scene.id}
+          sceneNumber={scene.sceneNumber}
+          slug={buildSlug(scene)}
+          description={scene.scene_description}
+          isActive={scene.id === activeSceneId}
+          onClick={() => onSelectScene(scene.id)}
+          hasSceneComment={hasSceneComment}
+          beats={sceneBeats.length >= 2
+            ? sceneBeats
+                .slice()
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((beat, i) => ({
+                  beatId: beat.id,
+                  label: String.fromCharCode(65 + i),
+                  isActive: beat.id === (activeBeatId ?? null),
+                  hasComment: (commentCounts?.[beat.id] ?? 0) > 0,
+                  onClick: (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onSelectBeat?.(beat.id);
+                  },
+                }))
+            : undefined}
+        />
+      );
+    })
   );
 
   return (

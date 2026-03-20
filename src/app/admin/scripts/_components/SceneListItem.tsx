@@ -9,6 +9,7 @@ interface BeatNav {
   beatId: string;
   label: string;       // "A", "B", "C" — derived by parent
   isActive: boolean;
+  hasComment?: boolean;
   onClick: (e: React.MouseEvent) => void;  // must call e.stopPropagation()
 }
 
@@ -20,6 +21,7 @@ interface Props {
   onClick?: () => void;
   className?: string;
   beats?: BeatNav[];   // omit or [] = no beat column rendered
+  hasSceneComment?: boolean;
 }
 
 export function SceneListItem({
@@ -30,6 +32,7 @@ export function SceneListItem({
   onClick,
   className = '',
   beats,
+  hasSceneComment,
 }: Props) {
   return (
     <div
@@ -67,6 +70,11 @@ export function SceneListItem({
         )}
       </div>
 
+      {/* Scene-level comment indicator */}
+      {hasSceneComment && (
+        <div className="w-2 h-2 rounded-full bg-admin-warning flex-shrink-0 self-center mx-1" />
+      )}
+
       {/* Beat grid — only on 2+ beat scenes, always flush right */}
       {beats && beats.length >= 2 && (
         <div className="self-stretch border-l border-admin-border-subtle grid grid-rows-2 grid-flow-col auto-cols-[22px] gap-px bg-admin-border-subtle flex-shrink-0">
@@ -75,13 +83,16 @@ export function SceneListItem({
               key={beat.beatId}
               type="button"
               onClick={beat.onClick}
-              className={`flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
+              className={`relative flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
                 beat.isActive
                   ? 'bg-admin-beat-selected-bg text-admin-beat-selected-text'
                   : 'bg-admin-bg-sidebar text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
               }`}
             >
               {beat.label}
+              {beat.hasComment && (
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-admin-warning border border-admin-bg-sidebar" />
+              )}
             </button>
           ))}
           {beats.length % 2 !== 0 && (
