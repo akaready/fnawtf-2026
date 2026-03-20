@@ -81,6 +81,7 @@ export function ScriptEditorClient({
   const [locations, setLocations] = useState(initialLocations);
   const [references, setReferences] = useState(initialReferences);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(scenes[0]?.id ?? null);
+  const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
   const [showCharacters, setShowCharacters] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
@@ -829,9 +830,11 @@ export function ScriptEditorClient({
               />
             ) : (
               <SceneNav
-                scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null }))}
+                scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null, beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })) }))}
                 activeSceneId={activeSceneId}
                 onSelectScene={setActiveSceneId}
+                activeBeatId={activeBeatId}
+                onSelectBeat={setActiveBeatId}
                 draggable
                 onReorder={handleReorderScenes}
                 showAddButton

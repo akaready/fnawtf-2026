@@ -31,12 +31,15 @@ interface SceneData {
   location_name: string;
   time_of_day: string;
   scene_description: string | null;
+  beats?: { id: string; sort_order: number }[];
 }
 
 interface Props {
   scenes: SceneData[];
   activeSceneId: string | null;
   onSelectScene: (id: string) => void;
+  activeBeatId?: string | null;
+  onSelectBeat?: (beatId: string) => void;
   /** Show "SCENES" header with collapse button */
   showHeader?: boolean;
   onCollapse?: () => void;
@@ -56,6 +59,8 @@ export function SceneNav({
   scenes,
   activeSceneId,
   onSelectScene,
+  activeBeatId,
+  onSelectBeat,
   showHeader = false,
   onCollapse,
   draggable = false,
@@ -83,8 +88,10 @@ export function SceneNav({
           <SortableSceneRow
             key={scene.id}
             scene={scene}
-            isActive={scene.id === activeSceneId}
+            isActive={activeSceneId === scene.id}
             onSelect={() => onSelectScene(scene.id)}
+            activeBeatId={activeBeatId ?? null}
+            onSelectBeat={onSelectBeat ?? (() => {})}
           />
         ))}
       </SortableContext>
@@ -98,6 +105,19 @@ export function SceneNav({
         description={scene.scene_description}
         isActive={scene.id === activeSceneId}
         onClick={() => onSelectScene(scene.id)}
+        beats={(scene.beats ?? []).length >= 2
+          ? [...(scene.beats ?? [])]
+              .sort((a, b) => a.sort_order - b.sort_order)
+              .map((beat, i) => ({
+                beatId: beat.id,
+                label: String.fromCharCode(65 + i),
+                isActive: beat.id === (activeBeatId ?? null),
+                onClick: (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onSelectBeat?.(beat.id);
+                },
+              }))
+          : undefined}
       />
     ))
   );
@@ -143,10 +163,14 @@ function SortableSceneRow({
   scene,
   isActive,
   onSelect,
+  activeBeatId,
+  onSelectBeat,
 }: {
   scene: SceneData;
   isActive: boolean;
   onSelect: () => void;
+  activeBeatId: string | null;
+  onSelectBeat: (beatId: string) => void;
 }) {
   const {
     attributes,
@@ -163,32 +187,68 @@ function SortableSceneRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const beatNavItems = (scene.beats ?? []).length >= 2
+    ? [...(scene.beats ?? [])]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((beat, i) => ({
+          beatId: beat.id,
+          label: String.fromCharCode(65 + i),
+          isActive: beat.id === activeBeatId,
+          onClick: (e: React.MouseEvent) => {
+            e.stopPropagation();
+            onSelectBeat(beat.id);
+          },
+        }))
+    : [];
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`text-left col-span-2 grid grid-cols-subgrid items-center h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`text-left col-span-2 flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
     >
-      <span className="text-admin-border font-bebas text-[44px] leading-none text-right pr-1 pl-3 translate-y-[2px]">
+      <span className="w-[52px] flex-shrink-0 font-bebas text-[44px] leading-none text-right pr-1 pl-3 translate-y-[2px] text-admin-border flex items-center justify-end">
         {scene.sceneNumber}
       </span>
-      <div className="pr-5">
-        <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
+      <div className="flex-1 min-w-0 pr-3 flex flex-col justify-center py-2">
+        <span className="text-admin-sm font-medium text-admin-text-faint uppercase tracking-wider whitespace-nowrap block leading-tight">
           {buildSlug(scene)}
         </span>
         {scene.scene_description && (
-          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
+          <span className="text-admin-sm text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
             {scene.scene_description}
           </span>
         )}
       </div>
+      {/* Beat grid */}
+      {beatNavItems.length >= 2 && (
+        <div className="self-stretch border-l border-admin-border-subtle grid grid-rows-2 grid-flow-col auto-cols-[22px] gap-px bg-admin-border-subtle flex-shrink-0">
+          {beatNavItems.map(beat => (
+            <button
+              key={beat.beatId}
+              type="button"
+              onClick={beat.onClick}
+              className={`flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
+                beat.isActive
+                  ? 'bg-admin-beat-selected-bg text-admin-beat-selected-text'
+                  : 'bg-admin-bg-sidebar text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
+              }`}
+            >
+              {beat.label}
+            </button>
+          ))}
+          {beatNavItems.length % 2 !== 0 && (
+            <span aria-hidden="true" className="bg-admin-bg-sidebar" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
