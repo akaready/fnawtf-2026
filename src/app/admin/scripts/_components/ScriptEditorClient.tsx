@@ -834,7 +834,11 @@ export function ScriptEditorClient({
                 activeSceneId={activeSceneId}
                 onSelectScene={setActiveSceneId}
                 activeBeatId={activeBeatId}
-                onSelectBeat={setActiveBeatId}
+                onSelectBeat={(beatId) => {
+                  setActiveBeatId(beatId);
+                  const scene = computedScenes.find(s => s.beats.some(b => b.id === beatId));
+                  if (scene) setActiveSceneId(scene.id);
+                }}
                 draggable
                 onReorder={handleReorderScenes}
                 showAddButton
@@ -864,6 +868,7 @@ export function ScriptEditorClient({
                 scriptGroupId={script.script_group_id!}
                 onFrameGenerated={handleFrameChange}
                 activeSceneId={activeSceneId}
+                activeBeatId={activeBeatId}
                 onUpdateScene={handleUpdateScene}
                 onAddScene={handleAddScene}
                 onAddBeat={handleAddBeat}

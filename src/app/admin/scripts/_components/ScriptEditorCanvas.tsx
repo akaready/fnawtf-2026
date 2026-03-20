@@ -43,6 +43,7 @@ interface Props {
   scriptGroupId: string;
   onFrameGenerated: (frame: ScriptStoryboardFrameRow | null, beatId?: string) => void;
   activeSceneId: string | null;
+  activeBeatId?: string | null;
   onUpdateScene: (sceneId: string, data: Partial<ScriptSceneRow>) => void;
   onAddScene: () => void;
   onAddBeat: (sceneId: string) => void;
@@ -81,6 +82,7 @@ export function ScriptEditorCanvas({
   scriptGroupId,
   onFrameGenerated,
   activeSceneId,
+  activeBeatId,
   onUpdateScene,
   onAddScene,
   onAddBeat,
@@ -174,6 +176,31 @@ export function ScriptEditorCanvas({
       container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
     });
   }, [activeSceneId]);
+
+  // Scroll to active beat when selected from sidebar
+  useEffect(() => {
+    if (!activeBeatId || !scrollRef.current) return;
+    const container = scrollRef.current;
+    const colH = colHeaderRef.current?.offsetHeight ?? 0;
+    // Uncollapse the scene containing this beat
+    const sceneForBeat = scenes.find(s => s.beats.some(b => b.id === activeBeatId));
+    if (sceneForBeat) {
+      setCollapsedScenes(prev => {
+        if (!prev.has(sceneForBeat.id)) return prev;
+        const next = new Set(prev);
+        next.delete(sceneForBeat.id);
+        return next;
+      });
+    }
+    requestAnimationFrame(() => {
+      const beatEl = container.querySelector(`[data-beat-id="${activeBeatId}"]`) as HTMLElement | null;
+      if (!beatEl) return;
+      const elTop = beatEl.getBoundingClientRect().top;
+      const containerTop = container.getBoundingClientRect().top;
+      const scrollTarget = container.scrollTop + (elTop - containerTop) - colH;
+      container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+    });
+  }, [activeBeatId, scenes]);
 
   // Keyboard handler for batch delete, Cmd+Delete instant delete, and deselect
   useEffect(() => {
