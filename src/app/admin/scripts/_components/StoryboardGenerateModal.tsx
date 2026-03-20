@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Sparkles, Trash2, Check, Plus, ImageIcon, Info, Undo2, Redo2, Wand2 } from 'lucide-react';
-import { getFrameHistoryForBeat, setActiveFrame, deleteStoryboardFrame } from '@/app/admin/actions';
+import { X, Loader2, Sparkles, Trash2, Check, Plus, ImageIcon, Info, Undo2, Redo2, Wand2, LayoutGrid } from 'lucide-react';
+import { getFrameHistoryForBeat, setActiveFrame, deleteStoryboardFrame, setFrameSlot, setBeatLayout, updateFrameCrop, duplicateFrame, moveFrameToBeat } from '@/app/admin/actions';
 import { buildRichPrompt } from './storyboardUtils';
 import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
+import { StoryboardFramesTab } from './StoryboardFramesTab';
+import { STORYBOARD_LAYOUTS } from './storyboardLayouts';
+import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 import type {
   ScriptStoryboardFrameRow,
   ScriptStyleRow,
@@ -18,6 +21,7 @@ import type {
   CharacterReferenceRow,
   LocationReferenceRow,
   StoryboardReferenceUsed,
+  CropConfig,
 } from '@/types/scripts';
 
 // ── Helpers ──
@@ -48,7 +52,7 @@ function formatLA(date: string) {
 
 // ── Types ──
 
-type ModalTab = 'generate' | 'modify';
+type ModalTab = 'generate' | 'modify' | 'frames';
 
 interface Props {
   onClose: () => void;
@@ -72,6 +76,13 @@ interface Props {
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
   consistencyFrameUrls?: string[];
   onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
+  // Multi-frame support
+  scenes?: ComputedScene[];                           // full script scenes for beat picker
+  allBeatFrames?: ScriptStoryboardFrameRow[];         // all frames across entire script
+  frames?: ScriptStoryboardFrameRow[];                // all frames for this beat (active + history)
+  layout?: string | null;                             // beat's current storyboard_layout
+  defaultTab?: ModalTab;                              // which tab to open on
+  onFramesChange?: (frames: ScriptStoryboardFrameRow[]) => void;
 }
 
 export function StoryboardGenerateModal({
@@ -95,9 +106,17 @@ export function StoryboardGenerateModal({
   sceneFrames: _sceneFrames,
   consistencyFrameUrls,
   onFrameChange,
+  scenes = [],
+  allBeatFrames,
+  frames: framesProp,
+  layout,
+  defaultTab,
+  onFramesChange,
 }: Props) {
   // ── Core state ──
-  const [activeTab, setActiveTab] = useState<ModalTab>('generate');
+  const [activeTab, setActiveTab] = useState<ModalTab>(
+    defaultTab ?? ((framesProp ?? []).some(f => f.slot !== null) ? 'frames' : 'generate')
+  );
   const [history, setHistory] = useState<ScriptStoryboardFrameRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(activeFrame?.id ?? null);
@@ -118,6 +137,19 @@ export function StoryboardGenerateModal({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showModifyInfo, setShowModifyInfo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Draft state for Frames tab (not persisted until Save)
+  const [draftLayout, setDraftLayout] = useState<string>(layout ?? 'single');
+  const [draftSlots, setDraftSlots] = useState<Map<number, string>>(() => {
+    const map = new Map<number, string>();
+    framesProp?.filter(f => f.slot !== null).forEach(f => map.set(f.slot!, f.id));
+    return map;
+  });
+  const [draftCrops, setDraftCrops] = useState<Map<string, CropConfig>>(() => {
+    const map = new Map<string, CropConfig>();
+    framesProp?.filter(f => f.crop_config != null).forEach(f => map.set(f.id, f.crop_config!));
+    return map;
+  });
 
   // ── Undo/Redo for content prompt ──
   const [promptHistory, setPromptHistory] = useState<string[]>([]);
@@ -158,6 +190,22 @@ export function StoryboardGenerateModal({
     setLocalPrompt(next);
     lastSavedPromptRef.current = next;
   }, [promptFuture, localPrompt]);
+
+  // ── Frames tab: layout change handler ──
+  const handleLayoutChange = useCallback((newLayout: string) => {
+    setDraftLayout(newLayout);
+    // Remove slot assignments that exceed the new layout's slot count
+    const def = STORYBOARD_LAYOUTS.find(l => l.id === newLayout);
+    if (def) {
+      setDraftSlots(prev => {
+        const next = new Map(prev);
+        for (const slot of next.keys()) {
+          if (slot > def.slotCount) next.delete(slot);
+        }
+        return next;
+      });
+    }
+  }, []);
 
   // Fall back to activeFrame prop if not found in history (e.g., history fetch failed)
   const selectedFrame = history.find(f => f.id === selectedFrameId) ?? activeFrame;
@@ -430,8 +478,31 @@ export function StoryboardGenerateModal({
     if (selectedFrame && !selectedFrame.is_active) {
       await handleUseFrame(selectedFrame.id);
     }
+
+    // Flush Frames tab draft state
+    const savedLayout = layout ?? 'single';
+    if (draftLayout !== savedLayout) {
+      await setBeatLayout(beatId, draftLayout);
+    }
+    // Assign slots for all frames in draftSlots
+    const activeIds = new Set(draftSlots.values());
+    for (const [slot, frameId] of draftSlots) {
+      await setFrameSlot(frameId, slot);
+    }
+    // Clear slots for frames no longer in draftSlots
+    for (const frame of history) {
+      if (frame.slot !== null && !activeIds.has(frame.id)) {
+        await setFrameSlot(frame.id, null);
+      }
+    }
+    // Flush crop changes
+    for (const [frameId, crop] of draftCrops) {
+      await updateFrameCrop(frameId, crop);
+    }
+
+    onFramesChange?.(history);
     onClose();
-  }, [selectedFrame, handleUseFrame, onClose]);
+  }, [selectedFrame, handleUseFrame, layout, draftLayout, draftSlots, draftCrops, history, beatId, onFramesChange, onClose]);
 
   // ── Derived ──
   const refGroups = groupByPurpose(localReferences);
@@ -451,6 +522,7 @@ export function StoryboardGenerateModal({
             {([
               { id: 'generate' as ModalTab, label: 'Generate', icon: Sparkles },
               { id: 'modify' as ModalTab, label: 'Modify', icon: Wand2 },
+              { id: 'frames' as ModalTab, label: 'Frames', icon: LayoutGrid },
             ]).map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -478,6 +550,50 @@ export function StoryboardGenerateModal({
           </div>
         ) : (
           <div className="flex-1 flex overflow-hidden">
+            {activeTab === 'frames' ? (
+              <StoryboardFramesTab
+                beatId={beatId}
+                scenes={scenes}
+                allScriptFrames={allBeatFrames ?? []}
+                frames={history}
+                draftLayout={draftLayout}
+                draftSlots={draftSlots}
+                draftCrops={draftCrops}
+                onLayoutChange={handleLayoutChange}
+                onSlotAssign={(slot, frameId) =>
+                  setDraftSlots(prev => new Map(prev).set(slot, frameId))
+                }
+                onReframe={(frameId, crop) =>
+                  setDraftCrops(prev => new Map(prev).set(frameId, crop))
+                }
+                onDuplicate={async (frameId) => {
+                  const newFrame = await duplicateFrame(frameId);
+                  setHistory(prev => [newFrame, ...prev]);
+                }}
+                onMoveToBeat={async (frameId, targetBeatId) => {
+                  await moveFrameToBeat(frameId, targetBeatId);
+                  setHistory(prev => prev.filter(f => f.id !== frameId));
+                  setDraftSlots(prev => {
+                    const next = new Map(prev);
+                    for (const [s, id] of next) { if (id === frameId) next.delete(s); }
+                    return next;
+                  });
+                }}
+                onDownload={(frame) => {
+                  void downloadSingleImage(frame.image_url, `frame-${frame.id}.jpg`);
+                }}
+                onDelete={async (frameId) => {
+                  await deleteStoryboardFrame(frameId);
+                  setHistory(prev => prev.filter(f => f.id !== frameId));
+                  setDraftSlots(prev => {
+                    const next = new Map(prev);
+                    for (const [s, id] of next) { if (id === frameId) next.delete(s); }
+                    return next;
+                  });
+                }}
+              />
+            ) : (
+            <>
             {/* ── Left column ── */}
             <div className="flex-1 overflow-y-auto admin-scrollbar-auto px-6 py-5 space-y-5">
               {/* Image preview */}
@@ -761,6 +877,8 @@ export function StoryboardGenerateModal({
                 </div>
               )}
             </div>
+            </>
+            )}
           </div>
         )}
 
