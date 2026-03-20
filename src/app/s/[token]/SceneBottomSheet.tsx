@@ -76,7 +76,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeB
           <div className="flex-1 overflow-y-auto px-2 pb-4 grid grid-cols-[auto_1fr] content-start">
             {scenes.map(scene => {
               const beatNavItems = (scene.beats ?? []).length >= 2
-                ? [...(scene.beats ?? [])]
+                ? [...scene.beats!]
                     .sort((a, b) => a.sort_order - b.sort_order)
                     .map((beat, i) => ({
                       beatId: beat.id,

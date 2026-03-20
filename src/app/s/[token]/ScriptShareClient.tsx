@@ -294,7 +294,7 @@ export function ScriptShareClient({
                 int_ext: s.int_ext,
                 location_name: s.location_name,
                 time_of_day: s.time_of_day,
-                scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null,
+                scene_description: s.scene_description ?? null,
                 beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
               }))}
               activeSceneId={activeSceneId}
