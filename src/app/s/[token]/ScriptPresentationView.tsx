@@ -254,7 +254,7 @@ export function ScriptPresentationView({
           />
         </div>
         {/* Scrollable center content */}
-        <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-auto admin-scrollbar">
+        <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-scroll admin-scrollbar">
 
           {/* Compact title — pushes image down, keeps scene/comment buttons from overlapping */}
           {(clientName || scriptTitle) && (
