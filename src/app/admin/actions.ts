@@ -5497,10 +5497,11 @@ export async function createScriptShare(scriptId: string): Promise<string> {
  *  Used by the editor Comments column version picker. */
 export async function getScriptSharesByGroup(scriptGroupId: string): Promise<import('@/types/scripts').ScriptShareWithSnapshot[]> {
   const { supabase } = await requireAuth();
-  const { data: scripts } = await supabase
+  const { data: scripts, error: scriptsError } = await supabase
     .from('scripts')
     .select('id')
     .eq('script_group_id', scriptGroupId);
+  if (scriptsError) throw new Error(scriptsError.message);
   if (!scripts || scripts.length === 0) return [];
   const scriptIds = (scripts as { id: string }[]).map(s => s.id);
   const { data: shares, error } = await supabase
