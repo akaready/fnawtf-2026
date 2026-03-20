@@ -74,8 +74,7 @@ function SlotPanel({
       style={{ gridArea: area }}
       className={[
         'relative overflow-hidden rounded-admin-lg',
-        !frame ? 'border-2 border-dashed border-admin-border' : '',
-        isDragOver ? 'ring-2 ring-admin-info ring-offset-1' : '',
+        isDragOver ? 'ring-2 ring-admin-info' : '',
       ].join(' ')}
       onDragOver={e => { if (onSlotDrop) { e.preventDefault(); setIsDragOver(true); } }}
       onDragLeave={() => setIsDragOver(false)}
@@ -84,7 +83,7 @@ function SlotPanel({
         const frameId = e.dataTransfer.getData('application/x-frame-id');
         if (frameId && onSlotDrop) { e.preventDefault(); onSlotDrop(slot, frameId); }
       }}
-      onClick={() => { if (!frame) onSlotClick?.(slot); }}
+      onClick={() => onSlotClick?.(slot)}
     >
       {frame
         ? <FrameImage frame={frame} interactive={interactive} onReframe={onReframe} />
@@ -102,6 +101,8 @@ function FrameImage({
   onReframe?: (frameId: string, crop: CropConfig) => void;
 }) {
   const [crop, setCrop] = React.useState<CropConfig>(frame.crop_config ?? DEFAULT_CROP_CONFIG);
+  const cropRef = React.useRef<CropConfig>(crop);
+  cropRef.current = crop;
   const dragRef = React.useRef<{ mx: number; my: number; cx: number; cy: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -124,7 +125,7 @@ function FrameImage({
         if (Math.abs(nx - s) < 0.03) nx = s;
         if (Math.abs(ny - s) < 0.03) ny = s;
       });
-      const next = { ...crop, x: nx, y: ny };
+      const next = { ...cropRef.current, x: nx, y: ny };
       setCrop(next);
       onReframe?.(frame.id, next);
     };
@@ -135,7 +136,7 @@ function FrameImage({
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [interactive, crop, frame.id, onReframe]);
+  }, [interactive, frame.id, onReframe]);
 
   const handleWheel = (e: React.WheelEvent) => {
     if (!interactive) return;
@@ -170,7 +171,7 @@ function FrameImage({
 function EmptySlot({ size }: { size: 'cell' | 'stage' | 'full' }) {
   if (size === 'cell') return <div className="w-full h-full bg-admin-bg-inset" />;
   return (
-    <div className="w-full h-full flex items-center justify-center text-admin-text-faint">
+    <div className="w-full h-full flex items-center justify-center text-admin-text-faint border-2 border-dashed border-admin-border rounded-admin-lg">
       <Plus size={size === 'stage' ? 20 : 32} />
     </div>
   );
