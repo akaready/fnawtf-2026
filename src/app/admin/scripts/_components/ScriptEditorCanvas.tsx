@@ -666,12 +666,15 @@ export function ScriptEditorCanvas({
               className={`${['storyboard', 'visual'].includes(col.key) ? '@container ' : ''}group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}
             >
               {col.key === 'comments' ? (
-                <ScriptCommentsVersionPicker
-                  shares={groupShares}
-                  selectedShareId={selectedShareId}
-                  currentMajorVersion={scriptVersion}
-                  onSelect={onSelectShare}
-                />
+                <>
+                  <span className="opacity-60">{col.label}</span>
+                  <ScriptCommentsVersionPicker
+                    shares={groupShares}
+                    selectedShareId={selectedShareId}
+                    currentMajorVersion={scriptVersion}
+                    onSelect={onSelectShare}
+                  />
+                </>
               ) : (
                 <span className={`opacity-60 ${['storyboard', 'visual'].includes(col.key) ? 'hidden @[140px]:inline' : 'block truncate'}`}>{col.label}</span>
               )}

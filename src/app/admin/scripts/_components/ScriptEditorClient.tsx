@@ -179,9 +179,9 @@ export function ScriptEditorClient({
     })();
   }, [script.id]);
 
-  // Load share list when comments column is enabled
+  // Load share list on mount
   useEffect(() => {
-    if (!columnConfig.comments || !script.script_group_id) return;
+    if (!script.script_group_id) return;
     if (sharesLoadedRef.current) return;
     sharesLoadedRef.current = true;
 
@@ -191,12 +191,38 @@ export function ScriptEditorClient({
         ?? shares.find(s => s.snapshot_major_version !== null)
         ?? shares[0]
         ?? null;
-      if (defaultShare) setSelectedShareId(defaultShare.id);
+      if (!defaultShare) return;
+      setSelectedShareId(defaultShare.id);
+      if (!defaultShare.snapshot_script_id) return;
+      // Preload comments immediately for the default share
+      Promise.all([
+        getSnapshotBeats(defaultShare.snapshot_script_id),
+        getShareComments(defaultShare.id),
+      ]).then(([snapshotData, comments]) => {
+        const beatToPos = new Map<string, string>();
+        const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
+        sortedScenes.forEach((scene, sceneIdx) => {
+          const sceneBeats = snapshotData.beats
+            .filter(b => b.scene_id === scene.id)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          sceneBeats.forEach((beat, beatIdx) => {
+            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
+          });
+        });
+        const map = new Map<string, ScriptShareCommentRow[]>();
+        for (const comment of comments) {
+          const posKey = beatToPos.get(comment.beat_id);
+          if (!posKey) continue;
+          if (!map.has(posKey)) map.set(posKey, []);
+          map.get(posKey)!.push(comment);
+        }
+        setCommentsMap(map);
+      }).catch(err => console.error('[Comments] preload failed:', err));
     }).catch((err) => {
       console.error('[ScriptCommentsCell] Failed to load shares:', err);
       showError('Failed to load shares');
     });
-  }, [columnConfig.comments, script.script_group_id, script.major_version]);
+  }, [script.script_group_id, script.major_version]);
 
   // Build comments map when selected share changes
   useEffect(() => {

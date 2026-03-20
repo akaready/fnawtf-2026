@@ -21,7 +21,7 @@ export interface ScriptRow {
 }
 
 export function formatScriptVersion(major: number, minor: number, isPublished: boolean): string {
-  return isPublished ? `${major}` : `${major}.${minor}`;
+  return isPublished ? `v${major}` : `v${major}.${minor}`;
 }
 
 /** Rainbow version pill colors — cycles red → orange → yellow → green → cyan → blue → violet */
