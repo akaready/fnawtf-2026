@@ -1,4 +1,4 @@
-import { getScriptById, getScriptScenes, getScriptBeats, getScriptCharacters, getScriptTags, getScriptLocations, getBeatReferences, getActiveLocationsForSelect } from '../../actions';
+import { getScriptById, getScriptScenes, getScriptBeats, getScriptCharacters, getScriptTags, getScriptLocations, getBeatReferences, getActiveLocationsForSelect, getScriptProducts } from '../../actions';
 import { ScriptEditorClient } from '../_components/ScriptEditorClient';
 
 export const dynamic = 'force-dynamic';
@@ -7,12 +7,13 @@ export default async function ScriptEditorPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const script = await getScriptById(id);
   const groupId = (script as { script_group_id: string }).script_group_id;
-  const [scenes, characters, tags, locations, globalLocations] = await Promise.all([
+  const [scenes, characters, tags, locations, globalLocations, products] = await Promise.all([
     getScriptScenes(id),
     getScriptCharacters(groupId),
     getScriptTags(groupId),
     getScriptLocations(groupId),
     getActiveLocationsForSelect(),
+    getScriptProducts(groupId),
   ]);
 
   const sceneIds = scenes.map((s: { id: string }) => s.id);
@@ -30,6 +31,7 @@ export default async function ScriptEditorPage({ params }: { params: Promise<{ i
       initialLocations={locations as unknown as Parameters<typeof ScriptEditorClient>[0]['initialLocations']}
       initialReferences={references as Parameters<typeof ScriptEditorClient>[0]['initialReferences']}
       globalLocations={globalLocations as Parameters<typeof ScriptEditorClient>[0]['globalLocations']}
+      initialProducts={products as unknown as Parameters<typeof ScriptEditorClient>[0]['initialProducts']}
     />
   );
 }

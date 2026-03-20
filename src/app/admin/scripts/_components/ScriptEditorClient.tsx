@@ -60,6 +60,7 @@ interface Props {
   initialLocations: ScriptLocationRow[];
   initialReferences: ScriptBeatReferenceRow[];
   globalLocations?: { id: string; name: string; featured_image: string | null }[];
+  initialProducts?: ScriptProductRow[];
 }
 
 export function ScriptEditorClient({
@@ -71,6 +72,7 @@ export function ScriptEditorClient({
   initialLocations,
   initialReferences,
   globalLocations = [],
+  initialProducts = [],
 }: Props) {
   const { showError } = useAdminToast();
   const [script, setScript] = useState(initialScript);
@@ -97,7 +99,7 @@ export function ScriptEditorClient({
   const [showProducts, setShowProducts] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
-  const [products, setProducts] = useState<ScriptProductRow[]>([]);
+  const [products, setProducts] = useState<ScriptProductRow[]>(initialProducts);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
