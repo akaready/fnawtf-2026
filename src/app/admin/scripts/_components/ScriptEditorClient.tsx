@@ -809,9 +809,9 @@ export function ScriptEditorClient({
         </div>
       </div>
 
-      <div className={`flex-1 min-h-0 grid transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[minmax(0,1fr)_3fr]' : 'grid-cols-[0fr_3fr]'}`}>
+      <div className={`flex-1 min-h-0 grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[auto_1fr]' : 'grid-cols-[0fr_1fr]'}`}>
         {/* Scene sidebar */}
-          <div className="overflow-hidden border-r border-admin-border bg-admin-bg-sidebar h-full min-w-max">
+          <div className="overflow-hidden border-r border-admin-border bg-admin-bg-sidebar h-full">
             {contentMode === 'scratchpad' ? (
               <ScriptSceneSidebar
                 scenes={computedScenes}
