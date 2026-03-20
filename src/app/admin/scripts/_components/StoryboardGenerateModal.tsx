@@ -290,6 +290,10 @@ export function StoryboardGenerateModal({
       // If fetch returned empty but we have an activeFrame prop, seed history with it
       const frames = data.length > 0 ? data : (activeFrame ? [activeFrame] : []);
       setHistory(frames);
+      // Seed Frames tab draft state from DB data
+      setDraftSlots(new Map(frames.filter(f => f.slot !== null).map(f => [f.slot!, f.id])));
+      setDraftCrops(new Map(frames.filter(f => f.crop_config != null).map(f => [f.id, f.crop_config!])));
+      if (frames.some(f => f.slot !== null) && !defaultTab) setActiveTab('frames');
 
       const active = frames.find(f => f.is_active);
       const sel = active ?? frames[0] ?? null;

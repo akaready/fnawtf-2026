@@ -83,7 +83,8 @@ function SlotPanel({
     <div
       style={{ gridArea: area }}
       className={[
-        'relative overflow-hidden rounded-admin-lg',
+        'relative overflow-hidden',
+        size === 'cell' ? 'rounded' : 'rounded-admin-lg',
         !frame && size !== 'cell' ? 'border-2 border-dashed border-admin-border' : '',
         isDragOver ? 'ring-2 ring-admin-info' : '',
       ].join(' ')}
@@ -165,7 +166,7 @@ function FrameImage({
       className="absolute inset-0"
       onMouseDown={handleMouseDown}
       onWheel={handleWheel}
-      style={{ cursor: interactive ? 'grab' : 'default' }}
+      style={{ cursor: interactive ? 'grab' : 'inherit' }}
     >
       <div
         style={{

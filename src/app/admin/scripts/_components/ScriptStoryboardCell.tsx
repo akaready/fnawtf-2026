@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, ImagePlus, Loader2, X, Expand, GripVertical, Pencil } from 'lucide-react';
+import { Sparkles, ImagePlus, Loader2, X, Expand, GripVertical, Pencil, RefreshCw } from 'lucide-react';
 import { uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
@@ -280,9 +280,9 @@ export function ScriptStoryboardCell({
             size="cell"
             gap={2}
           />
-          {/* Drag handle + Expand button on hover */}
-          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none flex items-start justify-between p-1">
-            {/* Drag handle — pointer-events-auto so it's draggable */}
+          {/* Hover overlay: drag handle left, actions right */}
+          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/25 flex items-start justify-between p-1">
+            {/* Drag handle */}
             <span
               draggable
               onDragStart={(e) => {
@@ -295,19 +295,16 @@ export function ScriptStoryboardCell({
                 }));
                 e.dataTransfer.effectAllowed = 'move';
               }}
-              className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded bg-admin-bg-overlay text-admin-text-primary hover:bg-admin-bg-active transition-all cursor-grab active:cursor-grabbing"
+              className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded bg-black/50 text-white hover:bg-black/70 transition-all cursor-grab active:cursor-grabbing"
               title="Drag to move layout"
             >
               <GripVertical size={12} />
             </span>
-            {/* Expand button */}
-            <div className="pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-              <ImageActionButton
-                icon={Expand}
-                color="info"
-                title="View fullscreen"
-                onClick={() => setLightboxOpen(true)}
-              />
+            {/* Action buttons */}
+            <div className="pointer-events-auto flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+              <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
+              <ImageActionButton icon={Pencil} color="info" title="Edit in modal" onClick={() => setModalOpen(true)} />
+              <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
             </div>
           </div>
         </div>
@@ -343,6 +340,8 @@ export function ScriptStoryboardCell({
           sceneId={sceneId}
           scriptId={scriptId}
           activeFrame={primaryFrame}
+          frames={frames}
+          layout={layout}
           audioContent={audioContent}
           visualContent={visualContent}
           notesContent={notesContent}
@@ -360,7 +359,6 @@ export function ScriptStoryboardCell({
           consistencyFrameUrls={consistencyFrameUrls}
           onFrameChange={(newFrame) => {
             if (newFrame) {
-              // Update or add the frame in the local frames list
               const exists = frames.some(f => f.id === newFrame.id);
               if (exists) {
                 onFramesChange?.(frames.map(f => f.id === newFrame.id ? newFrame : f));
@@ -369,6 +367,7 @@ export function ScriptStoryboardCell({
               }
             }
           }}
+          onFramesChange={onFramesChange}
         />
       )}
       </>
@@ -436,6 +435,8 @@ export function ScriptStoryboardCell({
           sceneId={sceneId}
           scriptId={scriptId}
           activeFrame={null}
+          frames={frames}
+          layout={layout}
           audioContent={audioContent}
           visualContent={visualContent}
           notesContent={notesContent}
@@ -456,6 +457,7 @@ export function ScriptStoryboardCell({
               onFramesChange?.([...frames, newFrame]);
             }
           }}
+          onFramesChange={onFramesChange}
         />
       )}
     </div>
