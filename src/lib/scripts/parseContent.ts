@@ -31,20 +31,20 @@ export function markdownToHtml(
   html = html.replace(/@\[(.+?)\]\((.+?)\)/g, (_match, name, id) => {
     const loc = locations.find(l => l.id === id);
     if (loc) {
-      return `<span class="script-mention script-location" data-location-id="${id}" style="color:${loc.color};font-weight:600" contenteditable="false">${locIcon(loc.color)}${name}</span>`;
+      return `<span class="script-mention script-location" data-location-id="${id}" style="color:${loc.color};font-weight:600;white-space:nowrap" contenteditable="false">${locIcon(loc.color)}${name}</span>`;
     }
     const product = products.find(p => p.id === id);
     if (product) {
       const color = product.color ?? '#a14dfd';
-      return `<span class="script-mention script-product" data-product-id="${id}" style="color:${color};font-weight:600" contenteditable="false">${prodIcon(color)}${name}</span>`;
+      return `<span class="script-mention script-product" data-product-id="${id}" style="color:${color};font-weight:600;white-space:nowrap" contenteditable="false">${prodIcon(color)}${name}</span>`;
     }
     const char = characters.find(c => c.id === id);
     if (char) {
-      return `<span class="script-mention" data-character-id="${id}" style="color:${char.color};font-weight:600" contenteditable="false">${castIcon(char.color)}${name}</span>`;
+      return `<span class="script-mention" data-character-id="${id}" style="color:${char.color};font-weight:600;white-space:nowrap" contenteditable="false">${castIcon(char.color)}${name}</span>`;
     }
     // No match found — show warning
     const warnIcon = `<span style="${iconWrap}"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></span>`;
-    return `<span class="script-mention script-broken" style="color:#f59e0b;font-weight:600;opacity:0.7" contenteditable="false" title="Reference not found: ${name}">${warnIcon}${name}</span>`;
+    return `<span class="script-mention script-broken" style="color:#f59e0b;font-weight:600;opacity:0.7;white-space:nowrap" contenteditable="false" title="Reference not found: ${name}">${warnIcon}${name}</span>`;
   });
 
   // Tag references: #[slug] → colored span

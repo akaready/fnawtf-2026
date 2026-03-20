@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getGridTemplate, getVisibleColumns } from '@/app/admin/scripts/_components/gridUtils';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 interface Scene {
   id: string;
@@ -44,6 +44,7 @@ interface Props {
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
+  products: ScriptProductRow[];
 }
 
 export function ReadOnlyCanvas({
@@ -54,6 +55,7 @@ export function ReadOnlyCanvas({
   characters,
   tags,
   locations,
+  products,
 }: Props) {
   const [collapsedScenes, setCollapsedScenes] = useState<Set<string>>(new Set());
   const colHeaderRef = useRef<HTMLDivElement>(null);
@@ -166,13 +168,13 @@ export function ReadOnlyCanvas({
                     {/* Grid cells */}
                     <div className="grid items-stretch" style={{ gridTemplateColumns: gridTemplate }}>
                       {columnConfig.audio && (
-                        <ReadOnlyCell content={beat.audio_content} characters={characters} tags={tags} locations={locations} />
+                        <ReadOnlyCell content={beat.audio_content} characters={characters} tags={tags} locations={locations} products={products} />
                       )}
                       {columnConfig.visual && (
-                        <ReadOnlyCell content={beat.visual_content} characters={characters} tags={tags} locations={locations} />
+                        <ReadOnlyCell content={beat.visual_content} characters={characters} tags={tags} locations={locations} products={products} />
                       )}
                       {columnConfig.notes && (
-                        <ReadOnlyCell content={beat.notes_content} characters={characters} tags={tags} locations={locations} />
+                        <ReadOnlyCell content={beat.notes_content} characters={characters} tags={tags} locations={locations} products={products} />
                       )}
                       {columnConfig.reference && (
                         <ReadOnlyReferenceCell references={beatRefs} />
@@ -200,19 +202,21 @@ function ReadOnlyCell({
   characters,
   tags,
   locations,
+  products,
 }: {
   content: string;
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
+  products: ScriptProductRow[];
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   // markdownToHtml uses DOMPurify which requires a browser DOM — skip during SSR
   const html = useMemo(
-    () => (mounted ? markdownToHtml(content || '', characters, tags, locations) : ''),
-    [mounted, content, characters, tags, locations],
+    () => (mounted ? markdownToHtml(content || '', characters, tags, locations, products) : ''),
+    [mounted, content, characters, tags, locations, products],
   );
 
   return (

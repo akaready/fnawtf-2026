@@ -280,6 +280,7 @@ Preference order:
 2. **`gh` CLI** — fallback only if MCP tools fail or for local git operations (push, pull, branch)
 3. **Never** use raw `curl`, `git` commands with GitHub API URLs, or multi-step bash scripts when a single tool or `gh` command can do the job
 4. When committing, never sign commits as "Co-Authored with Claude. Always use your absurdist chosen name, Gerald. NEVER include an email address like noreply@anthropic.com.
+5. ONLY PUSH TO MAIN/LIVE WHEN REQUESTED. 
 
 ---
 

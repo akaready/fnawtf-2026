@@ -7,12 +7,6 @@ import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import gsap from 'gsap';
 import { getComments, updateComment, deleteComment } from './actions';
 
-const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
-function versionColor(label: string): string {
-  const major = parseInt(label) || 0;
-  return VERSION_COLORS[major % VERSION_COLORS.length];
-}
-
 interface Comment {
   id: string;
   beat_id: string;
@@ -32,10 +26,7 @@ interface Props {
   open: boolean;
   onToggle: () => void;
   refreshKey: number;
-  clientName?: string;
   clientLogoUrl?: string | null;
-  scriptTitle?: string;
-  versionLabel?: string;
 }
 
 function formatPT(dateStr: string): string {
@@ -54,7 +45,7 @@ const iconVariants = {
   visible: { opacity: 1, x: 0, width: 'auto', marginRight: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
 };
 
-export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _viewerName, open, onToggle, refreshKey, clientName, clientLogoUrl, scriptTitle, versionLabel }: Props) {
+export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _viewerName, open, onToggle, refreshKey, clientLogoUrl }: Props) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
@@ -94,7 +85,7 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
       {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
       <button
         onClick={onToggle}
-        className={`absolute right-2 top-2 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        className={`absolute right-4 top-4 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         title="Show comments"
       >
         <span className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap">Comments ({comments.length})</span>
@@ -138,38 +129,14 @@ export function CommentSidebar({ shareId, beatId, viewerEmail, viewerName: _view
             ))}
           </div>
 
-          {/* Footer — logos + script info + email */}
-          <div className="flex-shrink-0 border-t border-admin-border px-4 pt-3 pb-4 space-y-3">
+          {/* Footer — logos + email */}
+          <div className="flex-shrink-0 border-t border-admin-border px-4 pt-5 pb-5 space-y-4">
             {/* Logos */}
-            {(clientLogoUrl) && (
-              <div className="flex items-center justify-center gap-3 pt-1">
-                <img src={clientLogoUrl} alt="" className="h-5 object-contain admin-logo" />
-                <span className="text-white/20 text-sm">&times;</span>
-                <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
-              </div>
-            )}
-            {/* Script info */}
-            {(clientName || scriptTitle) && (
-              <div className="text-center space-y-0.5">
-                {clientName && (
-                  <p className="text-xs uppercase tracking-widest text-admin-text-faint font-mono">{clientName}</p>
-                )}
-                {scriptTitle && (
-                  <p className="text-sm text-admin-text-muted font-medium leading-snug">
-                    {scriptTitle}
-                    {versionLabel && (() => {
-                      const color = versionColor(versionLabel);
-                      return (
-                        <span
-                          className="inline-block ml-1.5 px-2 py-0.5 text-xs font-mono font-bold rounded-full"
-                          style={{ color, backgroundColor: color + '18', border: `1px solid ${color}40` }}
-                        >
-                          v{versionLabel}
-                        </span>
-                      );
-                    })()}
-                  </p>
-                )}
+            {clientLogoUrl && (
+              <div className="flex items-center justify-center gap-3 py-1">
+                <img src={clientLogoUrl} alt="" className="h-6 object-contain admin-logo" />
+                <span className="text-white/20 text-base">&times;</span>
+                <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-6" />
               </div>
             )}
             {/* Email button */}

@@ -42,9 +42,9 @@ const showReference = current.referenceImageUrls.length > 0
 ### Animation
 
 **Audio+Visual grid row:**
-The grid div already has `grid-cols-3` / `grid-cols-1` toggling based on `showVisual`. Add a CSS grid transition so Audio expands/contracts smoothly instead of snapping:
+The grid div already has `grid-cols-4` / `grid-cols-1` toggling based on `showVisual` (Audio is `col-span-3`, Visual is 1 column — a 75/25 split). Add a CSS grid transition so Audio expands/contracts smoothly instead of snapping:
 ```tsx
-<div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showVisual ? 'grid-cols-3' : 'grid-cols-1'}`}>
+<div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showVisual ? 'grid-cols-4' : 'grid-cols-1'}`}>
 ```
 
 Wrap the Visual cell in `AnimatePresence` + `motion.div` for a fade in/out:
