@@ -133,6 +133,7 @@ export function ScriptPresentationView({
   const [rightOpen, setRightOpen] = useState(true);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentText, setCommentText] = useState('');
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const current = slides[idx];
 
@@ -141,6 +142,7 @@ export function ScriptPresentationView({
     if (!shareId) return; // Preview mode — no submissions
     const content = commentText.trim();
     setCommentText('');
+    if (commentTextareaRef.current) commentTextareaRef.current.style.height = 'auto';
     addComment(shareId, current.beatId, viewerEmail, viewerName, content)
       .then(() => setCommentRefreshKey(k => k + 1))
       .catch(() => {}); // Silently fail on error
@@ -433,16 +435,16 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4 md:px-6 pointer-events-none">
             <div className="w-full max-w-xl md:max-w-2xl pointer-events-auto">
-              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 p-3 md:p-4">
+              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 pl-4 pr-2 py-2">
                 <textarea
-                  ref={el => {
-                    if (el) {
-                      el.style.height = 'auto';
-                      el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-                    }
-                  }}
+                  ref={commentTextareaRef}
                   value={commentText}
-                  onChange={e => setCommentText(e.target.value)}
+                  onChange={e => {
+                    setCommentText(e.target.value);
+                    const el = e.target;
+                    el.style.height = 'auto';
+                    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
