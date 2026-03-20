@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 
 function getProxiedMp4Url(bunnyVideoId: string, quality: '360p' | '720p' = '360p') {
   return `/cdn/videos/${bunnyVideoId}/play_${quality}.mp4`;
@@ -199,8 +199,6 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
       setIsDragging(false);
       const p = getPctFromEvent(ev);
       seekTo(p);
-      // Use setTimeout to ensure the video has seeked before capturing
-      setTimeout(() => captureFrame(), 100);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -208,6 +206,7 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
   }, [getPctFromEvent, seekTo, captureFrame]);
 
   const displayPct = sliderPos ?? savedPct;
+  const hasUnsavedChange = sliderPos !== null && Math.abs(sliderPos - savedPct) > 0.001;
   const videoSrc = getProxiedMp4Url(video.bunny_video_id, '360p');
 
   return (
@@ -296,7 +295,7 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
         )}
         </div>
 
-        {/* Frame step buttons */}
+        {/* Frame step + confirm buttons */}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
             type="button"
@@ -313,6 +312,21 @@ export function ThumbnailPicker({ video, thumbnailTime, isSaving, onSelect }: Th
             className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
           >
             <ChevronRight size={14} />
+          </button>
+
+          {/* Confirm / set thumbnail */}
+          <button
+            type="button"
+            title="Set thumbnail here (Enter)"
+            onClick={() => captureFrame()}
+            disabled={!hasUnsavedChange || isSaving}
+            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
+              hasUnsavedChange
+                ? 'text-admin-success hover:bg-admin-success-bg'
+                : 'text-admin-text-ghost opacity-30 cursor-default'
+            }`}
+          >
+            <Check size={14} strokeWidth={2.5} />
           </button>
         </div>
       </div>
