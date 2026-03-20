@@ -25,7 +25,8 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow } from '@/types/scripts';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ScriptShareWithSnapshot, ScriptShareCommentRow } from '@/types/scripts';
+import { ScriptCommentsVersionPicker } from './ScriptCommentsVersionPicker';
 
 interface Props {
   scenes: ComputedScene[];
@@ -65,6 +66,10 @@ interface Props {
   scriptVersion: number;
   onAllFramesDeleted?: () => void;
   onImageMove?: (dragData: import('@/types/scripts').ImageDragData, dropData: import('@/types/scripts').ImageDropData) => void;
+  groupShares: ScriptShareWithSnapshot[];
+  selectedShareId: string | null;
+  onSelectShare: (shareId: string) => void;
+  commentsMap: Map<string, ScriptShareCommentRow[]>;
 }
 
 export function ScriptEditorCanvas({
@@ -105,6 +110,10 @@ export function ScriptEditorCanvas({
   scriptVersion,
   onAllFramesDeleted,
   onImageMove,
+  groupShares,
+  selectedShareId,
+  onSelectShare,
+  commentsMap,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -656,7 +665,18 @@ export function ScriptEditorCanvas({
               key={col.key}
               className={`${['storyboard', 'visual'].includes(col.key) ? '@container ' : ''}group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}
             >
-              <span className={`opacity-60 ${['storyboard', 'visual'].includes(col.key) ? 'hidden @[140px]:inline' : 'block truncate'}`}>{col.label}</span>
+              {col.key === 'comments' ? (
+                <div className="pr-6">
+                  <ScriptCommentsVersionPicker
+                    shares={groupShares}
+                    selectedShareId={selectedShareId}
+                    currentMajorVersion={scriptVersion}
+                    onSelect={onSelectShare}
+                  />
+                </div>
+              ) : (
+                <span className={`opacity-60 ${['storyboard', 'visual'].includes(col.key) ? 'hidden @[140px]:inline' : 'block truncate'}`}>{col.label}</span>
+              )}
               <div className="hidden @[50px]:block">
               {col.key === 'visual' && (
                 <div ref={visualTipsRef} className="contents">
@@ -871,7 +891,10 @@ export function ScriptEditorCanvas({
                           visualContent: beat?.visual_content ?? '',
                         };
                       });
-                      return scene.beats.map((beat, i) => (
+                      return scene.beats.map((beat, i) => {
+                        const posKey = `${scene.sceneIndex}:${i}`;
+                        const beatComments = commentsMap.get(posKey) ?? [];
+                        return (
                       <ScriptBeatRow
                         key={beat.id}
                         beat={beat}
@@ -923,8 +946,10 @@ export function ScriptEditorCanvas({
                         allScriptFrames={allScriptFrames}
                         onImageMove={onImageMove}
                         scenes={scenes}
+                        beatComments={beatComments}
                       />
-                    ));
+                        );
+                      });
                     })()}
                   </SortableContext>
                 </DndContext>
