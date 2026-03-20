@@ -20,14 +20,15 @@ interface Props {
   onAddScene?: () => void;
   onUploadReference: (beatId: string, files: FileList) => void;
   onDeleteReference: (refId: string) => void;
-  storyboardFrame: ScriptStoryboardFrameRow | null;
+  storyboardFrames: ScriptStoryboardFrameRow[];
+  storyboardLayout: string | null;
   scriptStyle: ScriptStyleRow | null;
   styleReferences: ScriptStyleReferenceRow[];
   scriptId: string;
   sceneId: string;
   scene: import('@/types/scripts').ComputedScene;
   locations: import('@/types/scripts').ScriptLocationRow[];
-  onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
+  onFramesChange: (frames: ScriptStoryboardFrameRow[]) => void;
   gridTemplate: string;
   isOnly: boolean;
   beatNumber: number;
@@ -74,14 +75,15 @@ export function ScriptBeatRow({
   onUploadReference,
   onDeleteReference,
   references,
-  storyboardFrame,
+  storyboardFrames,
+  storyboardLayout,
   scriptStyle,
   styleReferences,
   scriptId,
   sceneId,
   scene,
   locations,
-  onFrameChange,
+  onFramesChange,
   gridTemplate,
   isOnly: _isOnly,
   beatNumber,
@@ -250,7 +252,8 @@ export function ScriptBeatRow({
           )}
           {columnConfig.storyboard && (
             <ScriptStoryboardCell
-              frame={storyboardFrame}
+              frames={storyboardFrames}
+              layout={storyboardLayout}
               beatId={beat.id}
               sceneId={sceneId}
               scriptId={scriptId}
@@ -260,7 +263,7 @@ export function ScriptBeatRow({
               beatReferenceUrls={references.map(r => r.image_url)}
               style={scriptStyle}
               styleReferences={styleReferences}
-              onFrameChange={onFrameChange}
+              onFramesChange={onFramesChange}
               batchGenerating={batchGenerating}
               onCancelGeneration={onCancelGeneration}
               scene={scene}

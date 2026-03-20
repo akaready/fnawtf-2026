@@ -893,12 +893,16 @@ export function ScriptEditorCanvas({
                         characters={characters}
                         tags={tags}
                         references={references[beat.id] ?? []}
-                        storyboardFrame={storyboardFrames.find(f => f.beat_id === beat.id) ?? null}
+                        storyboardFrames={storyboardFrames.filter(f => f.beat_id === beat.id)}
+                        storyboardLayout={beat.storyboard_layout ?? null}
                         scriptStyle={scriptStyle}
                         styleReferences={styleReferences}
                         scriptId={scriptId}
                         sceneId={scene.id}
-                        onFrameChange={(frame) => onFrameGenerated(frame, beat.id)}
+                        onFramesChange={(updatedFrames) => {
+                          const latest = updatedFrames[updatedFrames.length - 1] ?? null;
+                          onFrameGenerated(latest, beat.id);
+                        }}
                         onUpdate={onUpdateBeat}
                         onDelete={onDeleteBeat}
                         onAddBeat={() => onAddBeat(scene.id)}

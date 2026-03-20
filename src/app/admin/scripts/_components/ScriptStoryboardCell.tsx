@@ -1,28 +1,29 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, ImagePlus, RefreshCw, Upload, Trash2, Loader2, X, Expand, Download, Check, Pencil, GripVertical } from 'lucide-react';
-import { deleteStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
+import { Sparkles, ImagePlus, Loader2, X, Expand, GripVertical, Pencil } from 'lucide-react';
+import { uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
 import { StoryboardLightbox } from './StoryboardLightbox';
 import { StoryboardGenerateModal } from './StoryboardGenerateModal';
-import { buildStoryboardFilename, downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
-import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ImageDragData, ImageDropData } from '@/types/scripts';
+import { StoryboardLayoutRenderer } from './StoryboardLayoutRenderer';
+import { buildStoryboardFilename } from '@/lib/scripts/downloadStoryboards';
+import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ImageDragData, ImageDropData, StoryboardSlotFrame } from '@/types/scripts';
 
 interface Props {
-  frame: ScriptStoryboardFrameRow | null;
+  frames: ScriptStoryboardFrameRow[];
+  layout: string | null;
   beatId: string;
   sceneId: string;
   scriptId: string;
-  /** Beat content for generation prompt */
   audioContent: string;
   visualContent: string;
   notesContent: string;
   beatReferenceUrls: string[];
   style: ScriptStyleRow | null;
   styleReferences: ScriptStyleReferenceRow[];
-  onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
+  onFramesChange?: (frames: ScriptStoryboardFrameRow[]) => void;
   batchGenerating?: boolean;
   onCancelGeneration?: () => void;
   scene: ComputedScene;
@@ -42,7 +43,8 @@ interface Props {
 }
 
 export function ScriptStoryboardCell({
-  frame,
+  frames,
+  layout,
   beatId,
   sceneId,
   scriptId,
@@ -52,7 +54,7 @@ export function ScriptStoryboardCell({
   beatReferenceUrls,
   style,
   styleReferences,
-  onFrameChange,
+  onFramesChange,
   batchGenerating,
   onCancelGeneration,
   scene,
@@ -66,7 +68,6 @@ export function ScriptStoryboardCell({
   scriptVersion,
   beatLabel,
   sceneFrames,
-  allScriptFrames,
   consistencyFrameUrls,
   onImageMove,
 }: Props) {
@@ -75,9 +76,16 @@ export function ScriptStoryboardCell({
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [imageMoveOver, setImageMoveOver] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Derive active slot frames
+  const activeFrames = frames
+    .filter((f): f is StoryboardSlotFrame => f.slot !== null)
+    .sort((a, b) => a.slot - b.slot);
+  const hasImage = activeFrames.length > 0;
+  // The "primary" frame for backward-compat (modal still uses single-frame API)
+  const primaryFrame = activeFrames[0] ?? null;
 
   const generate = useCallback(async () => {
     if (generating || !style) return;
@@ -122,8 +130,8 @@ export function ScriptStoryboardCell({
 
       // Compute consistency URLs: up to 2 before + up to 2 after current beat in scene order
       const allFrames = sceneFrames ?? [];
-      const currentPos = frame?.image_url
-        ? allFrames.findIndex(f => f.imageUrl === frame.image_url)
+      const currentPos = primaryFrame?.image_url
+        ? allFrames.findIndex(f => f.imageUrl === primaryFrame.image_url)
         : -1;
       const computedConsistencyUrls = currentPos >= 0
         ? [
@@ -152,12 +160,16 @@ export function ScriptStoryboardCell({
 
       if (res.ok) {
         const data = await res.json();
-        if (data.frame) onFrameChange(data.frame);
+        if (data.frame) {
+          const newFrame = data.frame as ScriptStoryboardFrameRow;
+          // New frame gets slot=null initially; caller can assign via modal
+          onFramesChange?.([...frames, newFrame]);
+        }
       }
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, sceneFrames, frame, scriptId, beatId, styleReferences, onFrameChange]);
+  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, sceneFrames, primaryFrame, scriptId, beatId, styleReferences, onFramesChange, frames]);
 
   const handleUpload = useCallback(
     async (files: FileList | null) => {
@@ -176,25 +188,19 @@ export function ScriptStoryboardCell({
           storage_path: result.storage_path,
           source: 'uploaded',
           prompt_used: null,
-          is_active: true,
-          reference_urls_used: [],
+          is_active: false,
           slot: null,
           crop_config: null,
+          reference_urls_used: [],
           created_at: new Date().toISOString(),
         };
-        onFrameChange(newFrame);
+        onFramesChange?.([...frames, newFrame]);
       } finally {
         setUploading(false);
       }
     },
-    [scriptId, beatId, onFrameChange],
+    [scriptId, beatId, onFramesChange, frames],
   );
-
-  const handleDelete = useCallback(async () => {
-    if (!frame) return;
-    await deleteStoryboardFrame(frame.id);
-    onFrameChange(null);
-  }, [frame, onFrameChange]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -248,8 +254,8 @@ export function ScriptStoryboardCell({
     );
   }
 
-  // With image
-  if (frame) {
+  // With image — use StoryboardLayoutRenderer for multi-frame layout
+  if (hasImage) {
     return (
       <>
       <div
@@ -264,59 +270,44 @@ export function ScriptStoryboardCell({
             <GripVertical size={16} className="text-admin-info" />
           </div>
         )}
-        <div className="relative mx-2 my-2 group/img">
-          <img
-            src={frame.image_url}
-            alt=""
-            className="w-full aspect-video object-cover rounded cursor-pointer"
-            onClick={() => setLightboxOpen(true)}
+        <div
+          className="relative mx-2 my-2 group/img cursor-pointer"
+          onClick={() => setModalOpen(true)}
+        >
+          <StoryboardLayoutRenderer
+            layout={layout}
+            frames={activeFrames}
+            size="cell"
+            gap={2}
           />
-          {/* Hover actions — overlay on image only */}
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 rounded"
-            onMouseLeave={() => setConfirmDelete(false)}
-          >
-            {/* Row 1: Move / Edit / Generate */}
-            <div className="flex items-center gap-1">
-              <span
-                draggable
-                onDragStart={(e) => {
-                  e.stopPropagation();
-                  e.dataTransfer.setData('application/x-image-move', JSON.stringify({
-                    dragType: 'storyboard',
-                    imageId: frame.id,
-                    sourceBeatId: beatId,
-                    imageUrl: frame.image_url,
-                    storagePath: frame.storage_path,
-                  } satisfies ImageDragData));
-                  e.dataTransfer.effectAllowed = 'move';
-                  const img = (e.target as HTMLElement).closest('.group\\/img')?.querySelector('img');
-                  if (img) e.dataTransfer.setDragImage(img, 40, 22);
-                }}
-                className="w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
-                title="Drag to move"
-              >
-                <GripVertical size={12} />
-              </span>
-              <ImageActionButton icon={Pencil} color="info" title="Edit generation" onClick={() => setModalOpen(true)} />
-              <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
-              <ImageActionButton icon={Upload} color="info" title="Upload photo" onClick={() => fileRef.current?.click()} />
-            </div>
-            {/* Row 2: View / Manage */}
-            <div className="flex items-center gap-1">
-              <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
-              <ImageActionButton icon={Download} color="info" title="Download" onClick={() => {
-                const filename = buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel);
-                void downloadSingleImage(frame.image_url, filename);
-              }} />
-              {confirmDelete ? (
-                <>
-                  <ImageActionButton icon={Check} color="danger" title="Confirm delete" onClick={handleDelete} />
-                  <ImageActionButton icon={X} color="neutral" title="Cancel" onClick={() => setConfirmDelete(false)} />
-                </>
-              ) : (
-                <ImageActionButton icon={Trash2} color="danger" title="Delete" onClick={() => setConfirmDelete(true)} />
-              )}
+          {/* Drag handle + Expand button on hover */}
+          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none flex items-start justify-between p-1">
+            {/* Drag handle — pointer-events-auto so it's draggable */}
+            <span
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData('application/x-storyboard-layout', JSON.stringify({
+                  dragType: 'storyboard-layout',
+                  sourceBeatId: beatId,
+                  activeFrameIds: activeFrames.map(f => f.id),
+                  layout: layout ?? 'single',
+                }));
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded bg-admin-bg-overlay text-admin-text-primary hover:bg-admin-bg-active transition-all cursor-grab active:cursor-grabbing"
+              title="Drag to move layout"
+            >
+              <GripVertical size={12} />
+            </span>
+            {/* Expand button */}
+            <div className="pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+              <ImageActionButton
+                icon={Expand}
+                color="info"
+                title="View fullscreen"
+                onClick={() => setLightboxOpen(true)}
+              />
             </div>
           </div>
         </div>
@@ -329,16 +320,18 @@ export function ScriptStoryboardCell({
         />
       </div>
       {lightboxOpen && (() => {
-        const lightboxFrames = allScriptFrames && allScriptFrames.length > 0
-          ? allScriptFrames.map(f => ({ imageUrl: f.imageUrl, label: f.label, filename: f.filename }))
-          : sceneFrames && sceneFrames.length > 0
-            ? sceneFrames
-            : [{ imageUrl: frame.image_url, label: `Scene ${scene.sceneNumber} — Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel) }];
-        const lightboxIndex = lightboxFrames.findIndex(f => f.imageUrl === frame.image_url);
+        // Lightbox: show active frames one at a time in slot order
+        const lightboxFrames = activeFrames.length > 0
+          ? activeFrames.map((f, i) => ({
+              imageUrl: f.image_url,
+              label: `Scene ${scene.sceneNumber} \u2014 Beat ${beatLabel} (${i + 1}/${activeFrames.length})`,
+              filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, `${beatLabel}-${i + 1}`),
+            }))
+          : [{ imageUrl: primaryFrame!.image_url, label: `Scene ${scene.sceneNumber} \u2014 Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel) }];
         return (
           <StoryboardLightbox
             frames={lightboxFrames}
-            initialIndex={Math.max(0, lightboxIndex)}
+            initialIndex={0}
             onClose={() => setLightboxOpen(false)}
           />
         );
@@ -349,7 +342,7 @@ export function ScriptStoryboardCell({
           beatId={beatId}
           sceneId={sceneId}
           scriptId={scriptId}
-          activeFrame={frame}
+          activeFrame={primaryFrame}
           audioContent={audioContent}
           visualContent={visualContent}
           notesContent={notesContent}
@@ -366,7 +359,15 @@ export function ScriptStoryboardCell({
           sceneFrames={sceneFrames}
           consistencyFrameUrls={consistencyFrameUrls}
           onFrameChange={(newFrame) => {
-            onFrameChange(newFrame);
+            if (newFrame) {
+              // Update or add the frame in the local frames list
+              const exists = frames.some(f => f.id === newFrame.id);
+              if (exists) {
+                onFramesChange?.(frames.map(f => f.id === newFrame.id ? newFrame : f));
+              } else {
+                onFramesChange?.([...frames, newFrame]);
+              }
+            }
           }}
         />
       )}
@@ -374,7 +375,7 @@ export function ScriptStoryboardCell({
     );
   }
 
-  // Empty state — split cell: upload left, generate right
+  // Empty state — split cell: upload left, generate-with-editor middle, quick-generate right
   return (
     <div
       className={`group/sb relative min-w-0 min-h-[2.5rem] overflow-hidden border-b border-b-[#0e0e0e] transition-colors ${
@@ -434,7 +435,7 @@ export function ScriptStoryboardCell({
           beatId={beatId}
           sceneId={sceneId}
           scriptId={scriptId}
-          activeFrame={frame}
+          activeFrame={null}
           audioContent={audioContent}
           visualContent={visualContent}
           notesContent={notesContent}
@@ -451,7 +452,9 @@ export function ScriptStoryboardCell({
           sceneFrames={sceneFrames}
           consistencyFrameUrls={consistencyFrameUrls}
           onFrameChange={(newFrame) => {
-            onFrameChange(newFrame);
+            if (newFrame) {
+              onFramesChange?.([...frames, newFrame]);
+            }
           }}
         />
       )}
