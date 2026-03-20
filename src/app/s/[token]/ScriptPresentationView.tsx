@@ -402,9 +402,9 @@ export function ScriptPresentationView({
 
         </div>
 
-        {/* Floating comment input — sticky bottom center */}
+        {/* Floating comment input — fixed above content */}
         {current && (
-          <div className="sticky bottom-4 z-20 flex justify-center px-6 pointer-events-none">
+          <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-6 pointer-events-none">
             <div className="w-full max-w-2xl pointer-events-auto">
               <div className="bg-[#111] border border-white/[0.08] rounded-xl shadow-[0_-4px_30px_rgba(0,0,0,0.5)] flex items-end gap-3 px-4 py-3">
                 <textarea
