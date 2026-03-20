@@ -259,7 +259,7 @@ export function ScriptStoryboardCell({
     return (
       <>
       <div
-        className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative"
+        className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative select-none"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
