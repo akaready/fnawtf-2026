@@ -275,7 +275,7 @@ export function ScriptPresentation({ slides, initialIndex = 0, onClose, scriptTi
               config={colConfig}
               onChange={setColConfig}
               compact
-              exclude={['storyboard']}
+              exclude={['storyboard', 'comments']}
             />
           </div>
 
