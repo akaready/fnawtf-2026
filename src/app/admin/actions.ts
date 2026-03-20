@@ -3326,7 +3326,7 @@ export async function getFrameHistoryForBeat(beatId: string) {
     .order('created_at', { ascending: false });
   if (error?.message?.includes('schema cache')) return [];
   if (error) throw new Error(error.message);
-  return (data ?? []) as import('@/types/scripts').ScriptStoryboardFrameRow[];
+  return (data ?? []) as unknown as import('@/types/scripts').ScriptStoryboardFrameRow[];
 }
 
 export async function setActiveFrame(frameId: string, beatId: string) {
