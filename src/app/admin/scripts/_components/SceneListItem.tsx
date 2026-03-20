@@ -3,9 +3,6 @@
 /**
  * Shared scene list item — used in admin sidebar, share sidebars,
  * and mobile bottom sheets. Single source of truth for scene row rendering.
- *
- * IMPORTANT: The parent container MUST be `grid grid-cols-[auto_1fr]`
- * so all rows share the same auto-width first column.
  */
 
 interface BeatNav {
@@ -45,7 +42,7 @@ export function SceneListItem({
           onClick?.();
         }
       }}
-      className={`text-left col-span-2 flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle transition-colors cursor-pointer ${
+      className={`text-left flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle transition-colors cursor-pointer ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
