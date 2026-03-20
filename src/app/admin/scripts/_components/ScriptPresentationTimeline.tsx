@@ -101,7 +101,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
               ? 'w-1 h-1 bg-white'
               : (commentCounts?.[slides[i].beatId] ?? 0) > 0
                 ? 'w-1.5 h-1.5 bg-admin-warning shadow-[0_0_4px_rgba(245,158,11,0.6)]'
-                : 'w-1 h-1 bg-[#444]';
+                : 'w-1 h-1 bg-admin-text-faint';
             return (
               <div
                 key={i}
