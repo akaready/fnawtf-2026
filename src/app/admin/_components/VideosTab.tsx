@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject } from '../actions';
 import { ThumbnailPicker } from './ThumbnailPicker';
 import { AdminCombobox } from './AdminCombobox';
@@ -298,26 +298,6 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
             </div>
           </div>
 
-          {/* Video selector tabs */}
-          {videos.length > 1 && (
-            <div className="flex gap-1 flex-wrap">
-              {videos.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setThumbVideoId(v.bunny_video_id)}
-                  className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
-                    thumbVideoId === v.bunny_video_id
-                      ? 'bg-admin-bg-active text-admin-text-primary'
-                      : 'text-admin-text-muted hover:text-admin-text-secondary hover:bg-admin-bg-hover'
-                  }`}
-                >
-                  {v.title}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Thumbnail picker */}
           {thumbVideo && (
             <ThumbnailPicker
@@ -378,6 +358,20 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-muted transition-colors opacity-0 group-hover/vid:opacity-100"
               >
                 <Scan size={13} />
+              </button>
+
+              {/* Use for thumbnail */}
+              <button
+                type="button"
+                title={thumbVideoId === video.bunny_video_id ? 'Thumbnail source' : 'Use for thumbnail'}
+                onClick={() => setThumbVideoId(video.bunny_video_id)}
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+                  thumbVideoId === video.bunny_video_id
+                    ? 'text-accent bg-accent/10'
+                    : 'text-admin-text-ghost hover:text-accent hover:bg-accent/10 opacity-0 group-hover/vid:opacity-100'
+                }`}
+              >
+                <ImageIcon size={13} />
               </button>
 
               {/* Password protection toggle */}
