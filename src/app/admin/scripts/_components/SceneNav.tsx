@@ -141,7 +141,7 @@ export function SceneNav({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
+      <div className="flex-1 overflow-y-auto admin-scrollbar flex flex-col">
         {listContent}
       </div>
 
@@ -210,7 +210,7 @@ function SortableSceneRow({
       style={style}
       {...attributes}
       {...listeners}
-      className={`text-left col-span-2 flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
+      className={`text-left flex items-stretch min-h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
           ? 'bg-black/40 text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
