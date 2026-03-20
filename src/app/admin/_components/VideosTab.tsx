@@ -2,9 +2,9 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { Trash2, ArrowUp, ArrowDown, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle } from 'lucide-react';
 import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject } from '../actions';
-import { ThumbnailScrubCard } from './ThumbnailScrubCard';
+import { ThumbnailPicker } from './ThumbnailPicker';
 import { AdminCombobox } from './AdminCombobox';
 
 type VideoType = 'flagship' | 'cutdown' | 'bts' | 'pitch';
@@ -27,13 +27,14 @@ interface Props {
   projectId: string;
   initialVideos: VideoRow[];
   currentThumbnailUrl?: string;
+  currentThumbnailTime?: number | null;
 }
 
 const inputClass = 'admin-input w-full';
 
 const VIDEO_TYPES: VideoType[] = ['flagship', 'cutdown', 'bts'];
 
-export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Props) {
+export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, currentThumbnailTime }: Props) {
   const router = useRouter();
   const [videos, setVideos] = useState<VideoRow[]>(initialVideos);
   const [isPending, startTransition] = useTransition();
@@ -58,20 +59,14 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
     return match?.bunny_video_id ?? (initialVideos.length > 0 ? initialVideos[0].bunny_video_id : null);
   });
   const [savingThumb, setSavingThumb] = useState<string | null>(null);
-  const [framePreview, setFramePreview] = useState<string | null>(null);
-  const [previewBroken, setPreviewBroken] = useState(false);
   const [thumbStatus, setThumbStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [thumbError, setThumbError] = useState<string | null>(null);
-  const [selectedThumbVideoId, setSelectedThumbVideoId] = useState<string | null>(() => {
-    const match = initialVideos.find((v) => currentThumbnailUrl?.includes(v.bunny_video_id));
-    return match?.bunny_video_id ?? null;
-  });
+  const [currentThumbTime, setCurrentThumbTime] = useState<number | null>(currentThumbnailTime ?? null);
 
   const handleThumbSelect = useCallback(async (bunnyVideoId: string, thumbnailTimeMs: number, frameDataUrl: string) => {
     setSavingThumb(bunnyVideoId);
     setThumbStatus('saving');
     setThumbError(null);
-    if (frameDataUrl) { setFramePreview(frameDataUrl); setPreviewBroken(false); }
 
     try {
       let blob: Blob | null = null;
@@ -101,7 +96,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
       const thumbnailTimeSec = thumbnailTimeMs / 1000;
       await updateProject(projectId, { thumbnail_url: thumbnailUrl, thumbnail_time: thumbnailTimeSec });
 
-      setSelectedThumbVideoId(bunnyVideoId);
+      setCurrentThumbTime(thumbnailTimeSec);
       setThumbStatus('saved');
       router.refresh();
       setTimeout(() => setThumbStatus('idle'), 3000);
@@ -269,7 +264,6 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
     });
   };
 
-  const previewSrc = framePreview || (!previewBroken && currentThumbnailUrl ? currentThumbnailUrl : null);
   const thumbVideo = thumbVideoId ? videos.find((v) => v.bunny_video_id === thumbVideoId) : null;
 
   return (
@@ -277,49 +271,30 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
       {/* Thumbnail picker */}
       {videos.length > 0 && (
         <section className="space-y-3 pb-4 border-b border-admin-border-subtle">
-          <div className="flex items-center gap-3">
-            <div
-              className="relative w-32 rounded-lg overflow-hidden border border-admin-border bg-admin-bg-base flex-shrink-0"
-              style={{ aspectRatio: '16/9' }}
-            >
-              {previewSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewSrc}
-                  alt="Current thumbnail"
-                  className="w-full h-full object-cover"
-                  onError={() => setPreviewBroken(true)}
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-admin-text-ghost gap-1">
-                  <ImageIcon className="w-5 h-5" strokeWidth={1} />
-                  <span className="text-[10px]">No thumbnail</span>
-                </div>
-              )}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-admin-text-faint font-medium mb-0.5">Thumbnail</p>
+              <p className="text-xs text-admin-text-muted">Hover to preview, drag slider to pick frame</p>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs uppercase tracking-widest text-admin-text-faint font-medium mb-1.5">Thumbnail</p>
-              <p className="text-xs text-admin-text-muted">Hover to scrub, click to set</p>
-              <div className="mt-1">
-                {thumbStatus === 'saving' && (
-                  <p className="text-xs text-accent flex items-center gap-1.5">
-                    <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                    Uploading…
-                  </p>
-                )}
-                {thumbStatus === 'saved' && (
-                  <p className="text-xs text-admin-success flex items-center gap-1.5">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    Saved!
-                  </p>
-                )}
-                {thumbStatus === 'error' && (
-                  <p className="text-xs text-admin-danger flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {thumbError || 'Save failed'}
-                  </p>
-                )}
-              </div>
+            <div>
+              {thumbStatus === 'saving' && (
+                <p className="text-xs text-accent flex items-center gap-1.5">
+                  <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  Uploading...
+                </p>
+              )}
+              {thumbStatus === 'saved' && (
+                <p className="text-xs text-admin-success flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Saved!
+                </p>
+              )}
+              {thumbStatus === 'error' && (
+                <p className="text-xs text-admin-danger flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {thumbError || 'Save failed'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -343,11 +318,11 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl }: Pro
             </div>
           )}
 
-          {/* Scrub card for selected video */}
+          {/* Thumbnail picker */}
           {thumbVideo && (
-            <ThumbnailScrubCard
+            <ThumbnailPicker
               video={{ id: thumbVideo.id, bunny_video_id: thumbVideo.bunny_video_id, title: thumbVideo.title, video_type: thumbVideo.video_type }}
-              isSelected={selectedThumbVideoId === thumbVideo.bunny_video_id}
+              thumbnailTime={currentThumbTime}
               isSaving={savingThumb === thumbVideo.bunny_video_id}
               onSelect={handleThumbSelect}
             />

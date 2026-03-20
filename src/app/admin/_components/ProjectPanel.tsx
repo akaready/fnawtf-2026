@@ -306,7 +306,7 @@ export function ProjectPanel({
 
         {/* Videos tab */}
         {activeTab === 'videos' && projectId && (
-          loadingRelated ? <LoadingSkeleton /> : <VideosTab projectId={projectId} initialVideos={videos} currentThumbnailUrl={String(project?.thumbnail_url ?? '')} />
+          loadingRelated ? <LoadingSkeleton /> : <VideosTab projectId={projectId} initialVideos={videos} currentThumbnailUrl={String(project?.thumbnail_url ?? '')} currentThumbnailTime={project?.thumbnail_time != null ? Number(project.thumbnail_time) : null} />
         )}
 
         {/* Credits tab: always mounted after load to preserve edits */}
