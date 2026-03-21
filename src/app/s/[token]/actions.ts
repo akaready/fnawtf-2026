@@ -96,14 +96,24 @@ export async function getScriptShareData(token: string) {
   // Fetch share (anon can read active shares via RLS)
   const { data: share, error: shareErr } = await supabase
     .from('script_shares')
-    .select('id, script_id, notes, token, is_active, share_mode')
+    .select('id, script_id, snapshot_script_id, notes, token, is_active, share_mode')
     .eq('token', token)
     .eq('is_active', true)
     .single();
 
   if (shareErr || !share) return null;
 
-  const s = share as unknown as { id: string; script_id: string; notes: string | null; token: string; share_mode: string };
+  const s = share as unknown as {
+    id: string;
+    script_id: string;
+    snapshot_script_id: string | null;
+    notes: string | null;
+    token: string;
+    share_mode: string;
+  };
+
+  // Use the published snapshot if one exists; fall back to live script for old shares
+  const resolvedScriptId = s.snapshot_script_id ?? s.script_id;
 
   // Use service client to bypass RLS for script data
   const service = createServiceClient();
@@ -112,7 +122,7 @@ export async function getScriptShareData(token: string) {
   const { data: script, error: scriptErr } = await service
     .from('scripts')
     .select('id, title, major_version, minor_version, is_published, project_id, content_mode, script_group_id')
-    .eq('id', s.script_id)
+    .eq('id', resolvedScriptId)
     .single();
 
   if (scriptErr || !script) return null;

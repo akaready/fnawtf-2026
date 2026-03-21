@@ -5438,12 +5438,50 @@ export async function getScriptShares(scriptId: string) {
 /** Create a new share link for a published script. */
 export async function createScriptShare(scriptId: string): Promise<string> {
   const { supabase, userId } = await requireAuth();
+
+  // Fetch the current script to determine its group
+  const { data: currentScript, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('id, script_group_id, major_version, minor_version')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !currentScript) throw new Error('Script not found');
+  const sc = currentScript as { id: string; script_group_id: string | null; major_version: number; minor_version: number };
+
+  // Compute the next whole-number major version for this group
+  let nextMajor = 1;
+  if (sc.script_group_id) {
+    const { data: versions } = await supabase
+      .from('scripts')
+      .select('major_version')
+      .eq('script_group_id', sc.script_group_id);
+    if (versions && versions.length > 0) {
+      nextMajor = Math.max(...(versions as { major_version: number }[]).map(v => v.major_version)) + 1;
+    }
+  }
+
+  // Duplicate current script as published snapshot (vN.0)
+  const snapshotId = await duplicateScriptCore(scriptId, {
+    major_version: nextMajor,
+    minor_version: 0,
+    is_published: true,
+  });
+
+  // Bump the working draft to vN.1
+  await supabase
+    .from('scripts')
+    .update({ major_version: nextMajor, minor_version: 1, updated_at: new Date().toISOString() } as never)
+    .eq('id', scriptId);
+
+  // Create the share record pointing at the snapshot
   const token = crypto.randomUUID().slice(0, 8);
   const accessCode = crypto.randomUUID().slice(0, 6).toUpperCase();
   const { data, error } = await supabase
     .from('script_shares')
     .insert({
       script_id: scriptId,
+      snapshot_script_id: snapshotId,
+      snapshot_major_version: nextMajor,
       token,
       access_code: accessCode,
       created_by: userId,
@@ -5453,6 +5491,63 @@ export async function createScriptShare(scriptId: string): Promise<string> {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/scripts');
   return (data as { id: string }).id;
+}
+
+/** Fetch all share links across an entire script group (including legacy shares without snapshots).
+ *  Used by the editor Comments column version picker. */
+export async function getScriptSharesByGroup(scriptGroupId: string): Promise<import('@/types/scripts').ScriptShareRow[]> {
+  const { supabase } = await requireAuth();
+  const { data: scripts, error: scriptsError } = await supabase
+    .from('scripts')
+    .select('id')
+    .eq('script_group_id', scriptGroupId);
+  if (scriptsError) throw new Error(scriptsError.message);
+  if (!scripts || scripts.length === 0) return [];
+  const scriptIds = (scripts as { id: string }[]).map(s => s.id);
+  const { data: shares, error } = await supabase
+    .from('script_shares')
+    .select('id, script_id, snapshot_script_id, snapshot_major_version, label, is_active, share_mode, token, access_code, notes, created_by, created_at, updated_at')
+    .in('script_id', scriptIds)
+    .order('snapshot_major_version', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (shares ?? []) as unknown as import('@/types/scripts').ScriptShareRow[];
+}
+
+/** Fetch scenes + beats of a published snapshot script for position-map building. */
+export async function getSnapshotBeats(snapshotScriptId: string): Promise<{
+  scenes: import('@/types/scripts').ScriptSceneRow[];
+  beats: import('@/types/scripts').ScriptBeatRow[];
+}> {
+  const { supabase } = await requireAuth();
+  const { data: scenes } = await supabase
+    .from('script_scenes')
+    .select('*')
+    .eq('script_id', snapshotScriptId)
+    .order('sort_order');
+  const sceneIds = (scenes ?? []).map((s: Record<string, unknown>) => s.id as string);
+  if (sceneIds.length === 0) return { scenes: [], beats: [] };
+  const { data: beats } = await supabase
+    .from('script_beats')
+    .select('*')
+    .in('scene_id', sceneIds)
+    .order('sort_order');
+  return {
+    scenes: (scenes ?? []) as import('@/types/scripts').ScriptSceneRow[],
+    beats: (beats ?? []) as import('@/types/scripts').ScriptBeatRow[],
+  };
+}
+
+/** Fetch all non-deleted comments for a share in chronological order. */
+export async function getShareComments(shareId: string): Promise<import('@/types/scripts').ScriptShareCommentRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_share_comments')
+    .select('*')
+    .eq('share_id', shareId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('@/types/scripts').ScriptShareCommentRow[];
 }
 
 /** Update a script share link. */

@@ -67,7 +67,7 @@ export function ScriptShareClient({
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
-    audio: true, visual: true, notes: true, reference: true, storyboard: true,
+    audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: false,
   });
   const [showSidebar, setShowSidebar] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
@@ -276,7 +276,7 @@ export function ScriptShareClient({
         {/* Dots — absolutely centered to match header centering */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto">
-            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
+            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={['comments']} />
           </div>
         </div>
       </div>

@@ -99,7 +99,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     }
   };
 
-  const handleUpdate = async (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => {
+  const handleUpdate = async (shareId: string, updates: { notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => {
     await updateScriptShare(shareId, updates);
     setShares(prev => prev.map(s => s.id === shareId ? { ...s, ...updates } as ShareWithViews : s));
   };
@@ -174,13 +174,13 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
                     <span className={`flex-shrink-0 w-2.5 h-2.5 rounded-full ${
                       share.is_active ? 'bg-admin-success' : 'border border-admin-success'
                     }`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-admin-base font-medium truncate">
-                        {share.label || share.token}
-                      </div>
-                      <div className="text-xs text-admin-text-faint">
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span className="text-admin-base font-bold text-admin-cream">
+                        {share.snapshot_major_version ? `v${share.snapshot_major_version}` : 'Legacy'}
+                      </span>
+                      <span className="text-admin-sm text-admin-text-faint">
                         {share.view_count} view{share.view_count !== 1 ? 's' : ''}
-                      </div>
+                      </span>
                     </div>
                   </button>
                   <span className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
@@ -268,17 +268,15 @@ function ShareDetail({
   share: ShareWithViews;
   copiedId: string | null;
   onCopyLink: (token: string, id: string) => void;
-  onUpdate: (shareId: string, updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => void;
+  onUpdate: (shareId: string, updates: { notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => void;
 }) {
-  const [label, setLabel] = useState(share.label);
   const [accessCode, setAccessCode] = useState(share.access_code);
   const [notes, setNotes] = useState(share.notes ?? '');
 
   useEffect(() => {
-    setLabel(share.label);
     setAccessCode(share.access_code);
     setNotes(share.notes ?? '');
-  }, [share.id, share.label, share.access_code, share.notes]);
+  }, [share.id, share.access_code, share.notes]);
 
   const fullUrl = `fna.wtf/s/${share.token}`;
 
@@ -321,20 +319,18 @@ function ShareDetail({
         </div>
       </div>
 
+      {/* Version header */}
+      <div className="flex items-center gap-3 py-1">
+        <span className="text-admin-lg font-bold text-admin-cream">
+          {share.snapshot_major_version ? `v${share.snapshot_major_version}` : 'Legacy share'}
+        </span>
+        <span className="text-admin-sm text-admin-text-faint">
+          Created {new Date(share.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </span>
+      </div>
+
       {/* Divider */}
       <div className="border-t border-admin-border-subtle" />
-
-      {/* Internal label */}
-      <div className="space-y-1.5">
-        <label className="admin-label">Internal Label</label>
-        <input
-          value={label}
-          onChange={e => setLabel(e.target.value)}
-          onBlur={() => { if (label !== share.label) onUpdate(share.id, { label }); }}
-          placeholder="e.g. Client review round 1"
-          className="admin-input w-full"
-        />
-      </div>
 
       {/* Access code */}
       <div className="space-y-1.5">
@@ -401,10 +397,6 @@ function ShareDetail({
         )}
       </div>
 
-      {/* Meta */}
-      <div className="text-xs text-admin-text-ghost">
-        Created {new Date(share.created_at).toLocaleDateString()}
-      </div>
     </div>
   );
 }

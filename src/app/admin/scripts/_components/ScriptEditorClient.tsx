@@ -17,6 +17,7 @@ import {
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
   getCharacterReferenceMap, getLocationReferenceMap,
   getScriptProducts, getProductReferenceMap,
+  getScriptSharesByGroup, getSnapshotBeats, getShareComments,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -42,6 +43,7 @@ import { ScriptExtractModal } from './ScriptExtractModal';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
+import type { ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
 import type {
   ScriptRow, ScriptSceneRow, ScriptBeatRow,
   ScriptCharacterRow, ScriptTagRow, ScriptLocationRow,
@@ -120,9 +122,13 @@ export function ScriptEditorClient({
   const [modeConfirm, setModeConfirm] = useState<{ message: string; targetMode: 'table' | 'scratchpad' } | null>(null);
   const router = useRouter();
 
-  const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false };
+  const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false, comments: false };
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>(defaultColumns);
   const [columnFractions, setColumnFractions] = useState<Record<string, number>>(DEFAULT_FRACTIONS);
+  const [groupShares, setGroupShares] = useState<ScriptShareRow[]>([]);
+  const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
+  const sharesLoadedRef = useRef(false);
 
   // Hydrate from localStorage after mount to avoid SSR mismatch
   useEffect(() => {
@@ -172,6 +178,85 @@ export function ScriptEditorClient({
       } catch { /* tables may not exist yet */ }
     })();
   }, [script.id]);
+
+  // Load share list on mount
+  useEffect(() => {
+    if (!script.script_group_id) return;
+    if (sharesLoadedRef.current) return;
+    sharesLoadedRef.current = true;
+
+    getScriptSharesByGroup(script.script_group_id).then((shares) => {
+      setGroupShares(shares);
+      const defaultShare = shares.find(s => s.snapshot_major_version === script.major_version)
+        ?? shares.find(s => s.snapshot_major_version !== null)
+        ?? shares[0]
+        ?? null;
+      if (!defaultShare) return;
+      setSelectedShareId(defaultShare.id);
+      if (!defaultShare.snapshot_script_id) return;
+      // Preload comments immediately for the default share
+      Promise.all([
+        getSnapshotBeats(defaultShare.snapshot_script_id),
+        getShareComments(defaultShare.id),
+      ]).then(([snapshotData, comments]) => {
+        const beatToPos = new Map<string, string>();
+        const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
+        sortedScenes.forEach((scene, sceneIdx) => {
+          const sceneBeats = snapshotData.beats
+            .filter(b => b.scene_id === scene.id)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          sceneBeats.forEach((beat, beatIdx) => {
+            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
+          });
+        });
+        const map = new Map<string, ScriptShareCommentRow[]>();
+        for (const comment of comments) {
+          const posKey = beatToPos.get(comment.beat_id);
+          if (!posKey) continue;
+          if (!map.has(posKey)) map.set(posKey, []);
+          map.get(posKey)!.push(comment);
+        }
+        setCommentsMap(map);
+      }).catch(err => console.error('[Comments] preload failed:', err));
+    }).catch((err) => {
+      console.error('[ScriptCommentsCell] Failed to load shares:', err);
+      showError('Failed to load shares');
+    });
+  }, [script.script_group_id, script.major_version]);
+
+  // Build comments map when selected share changes
+  useEffect(() => {
+    if (!selectedShareId) { setCommentsMap(new Map()); return; }
+    const share = groupShares.find(s => s.id === selectedShareId);
+    if (!share || !share.snapshot_script_id) { setCommentsMap(new Map()); return; }
+
+    Promise.all([
+      getSnapshotBeats(share.snapshot_script_id),
+      getShareComments(share.id),
+    ]).then(([snapshotData, comments]) => {
+      const beatToPos = new Map<string, string>();
+      const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
+      sortedScenes.forEach((scene, sceneIdx) => {
+        const sceneBeats = snapshotData.beats
+          .filter(b => b.scene_id === scene.id)
+          .sort((a, b) => a.sort_order - b.sort_order);
+        sceneBeats.forEach((beat, beatIdx) => {
+          beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
+        });
+      });
+      const map = new Map<string, ScriptShareCommentRow[]>();
+      for (const comment of comments) {
+        const posKey = beatToPos.get(comment.beat_id);
+        if (!posKey) continue;
+        if (!map.has(posKey)) map.set(posKey, []);
+        map.get(posKey)!.push(comment);
+      }
+      setCommentsMap(map);
+    }).catch((err) => {
+      console.error('[Comments] Failed to load comments:', err);
+      showError('Failed to load comments');
+    });
+  }, [selectedShareId, groupShares]);
 
   // Reset fractions to defaults when column visibility changes
   const handleColumnConfigChange = useCallback((config: ScriptColumnConfig) => {
@@ -899,6 +984,10 @@ export function ScriptEditorClient({
                 scriptVersion={script.major_version}
                 onAllFramesDeleted={() => setStoryboardFrames([])}
                 onImageMove={handleImageMove}
+                groupShares={groupShares}
+                selectedShareId={selectedShareId}
+                onSelectShare={setSelectedShareId}
+                commentsMap={commentsMap}
               />
             ) : (
               <ScriptScratchPad
