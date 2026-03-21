@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import type { CropConfig, StoryboardSlotFrame } from '@/types/scripts';
 import { getLayout, DEFAULT_CROP_CONFIG } from './storyboardLayouts';
 
@@ -10,11 +10,15 @@ interface Props {
   frames: StoryboardSlotFrame[];           // already sorted by slot asc
   size: 'cell' | 'stage' | 'full';
   interactive?: boolean;                   // enable reframe drag (stage only)
+  selectedSlot?: number;                   // which slot to overlay zoomControls on
+  cropOverrides?: Map<string, CropConfig>; // external crop state (from zoom buttons)
   onReframe?: (frameId: string, crop: CropConfig) => void;
   /** Called when a frame is dragged from the sidebar and dropped on a slot */
   onSlotDrop?: (slot: number, frameId: string) => void;
   onSlotClick?: (slot: number) => void;
   gap?: number;                            // gap between panels in px, default 4
+  /** Overlay rendered inside the selected slot (e.g. zoom controls) */
+  zoomControls?: React.ReactNode;
 }
 
 export function StoryboardLayoutRenderer({
@@ -22,10 +26,13 @@ export function StoryboardLayoutRenderer({
   frames,
   size,
   interactive = false,
+  selectedSlot,
+  cropOverrides,
   onReframe,
   onSlotDrop,
   onSlotClick,
   gap = 4,
+  zoomControls,
 }: Props) {
   const def = getLayout(layout);
   const slotMap = new Map<number, StoryboardSlotFrame>();
@@ -37,7 +44,8 @@ export function StoryboardLayoutRenderer({
       style={{
         aspectRatio: '16/9',
         display: 'grid',
-        gridTemplate: def.gridTemplate,
+        gridTemplateRows: def.gridTemplate.split('/')[0].trim(),
+        gridTemplateColumns: def.gridTemplate.split('/')[1].trim(),
         gridTemplateAreas: def.templateAreas,
         gap: `${gap}px`,
       }}
@@ -47,15 +55,18 @@ export function StoryboardLayoutRenderer({
         const frame = slotMap.get(slot) ?? null;
         return (
           <SlotPanel
-            key={area}
+            key={`${def.id}-${area}`}
             area={area}
             slot={slot}
             frame={frame}
             size={size}
             interactive={interactive}
+            selectedSlot={selectedSlot}
+            cropOverride={frame ? cropOverrides?.get(frame.id) : undefined}
             onReframe={onReframe}
             onSlotDrop={onSlotDrop}
             onSlotClick={onSlotClick}
+            zoomControls={slot === selectedSlot ? zoomControls : undefined}
           />
         );
       })}
@@ -66,27 +77,37 @@ export function StoryboardLayoutRenderer({
 // ── SlotPanel ────────────────────────────────────────────────────────────────
 
 function SlotPanel({
-  area, slot, frame, size, interactive, onReframe, onSlotDrop, onSlotClick,
+  area, slot, frame, size, interactive, selectedSlot, cropOverride, onReframe, onSlotDrop, onSlotClick, zoomControls,
 }: {
   area: string;
   slot: number;
   frame: StoryboardSlotFrame | null;
   size: 'cell' | 'stage' | 'full';
   interactive: boolean;
+  selectedSlot?: number;
+  cropOverride?: CropConfig;
   onReframe?: (frameId: string, crop: CropConfig) => void;
   onSlotDrop?: (slot: number, frameId: string) => void;
   onSlotClick?: (slot: number) => void;
+  zoomControls?: React.ReactNode;
 }) {
   const [isDragOver, setIsDragOver] = React.useState(false);
 
   return (
     <div
-      style={{ gridArea: area }}
+      style={{
+        gridArea: area,
+        outline: size !== 'cell'
+          ? (isDragOver || slot === selectedSlot
+            ? '3px solid var(--admin-accent)'
+            : !frame ? '3px dashed var(--admin-border)' : 'none')
+          : 'none',
+        outlineOffset: '-1px',
+      }}
       className={[
         'relative overflow-hidden',
-        size === 'cell' ? 'rounded' : 'rounded-admin-lg',
-        !frame && size !== 'cell' ? 'border-2 border-dashed border-admin-border' : '',
-        isDragOver ? 'ring-2 ring-admin-info' : '',
+        size === 'cell' ? 'rounded' : 'rounded-admin-md',
+        onSlotClick && size !== 'cell' ? 'cursor-pointer' : '',
       ].join(' ')}
       onDragOver={e => { if (onSlotDrop) { e.preventDefault(); setIsDragOver(true); } }}
       onDragLeave={() => setIsDragOver(false)}
@@ -95,12 +116,19 @@ function SlotPanel({
         const frameId = e.dataTransfer.getData('application/x-frame-id');
         if (frameId && onSlotDrop) { e.preventDefault(); onSlotDrop(slot, frameId); }
       }}
-      onClick={() => { onSlotClick?.(slot); }}
+      onClick={() => { if (onSlotClick) onSlotClick(slot); }}
     >
       {frame
-        ? <FrameImage frame={frame} interactive={interactive} onReframe={onReframe} />
+        ? <FrameImage frame={frame} interactive={interactive} cropOverride={cropOverride} onReframe={onReframe} />
         : <EmptySlot size={size} />
       }
+      {zoomControls && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-2 right-2 pointer-events-auto">
+            {zoomControls}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -108,10 +136,11 @@ function SlotPanel({
 // ── FrameImage ───────────────────────────────────────────────────────────────
 
 function FrameImage({
-  frame, interactive, onReframe,
+  frame, interactive, cropOverride, onReframe,
 }: {
   frame: StoryboardSlotFrame;
   interactive: boolean;
+  cropOverride?: CropConfig;
   onReframe?: (frameId: string, crop: CropConfig) => void;
 }) {
   const cropRef = React.useRef<CropConfig>(frame.crop_config ?? DEFAULT_CROP_CONFIG);
@@ -122,10 +151,15 @@ function FrameImage({
   // Keep cropRef in sync with crop state so event handlers always see current value
   React.useEffect(() => { cropRef.current = crop; }, [crop]);
 
+  // Sync from external zoom/reset buttons
+  React.useEffect(() => {
+    if (cropOverride) { setCrop(cropOverride); }
+  }, [cropOverride]);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!interactive) return;
     e.preventDefault();
-    dragRef.current = { mx: e.clientX, my: e.clientY, cx: crop.x, cy: crop.y };
+    dragRef.current = { mx: e.clientX, my: e.clientY, cx: cropRef.current.x, cy: cropRef.current.y };
   };
 
   React.useEffect(() => {
@@ -152,32 +186,30 @@ function FrameImage({
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [interactive, frame.id, onReframe]);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (!interactive) return;
-    e.preventDefault();
-    const next = { ...cropRef.current, scale: Math.max(1.0, Math.min(3.0, cropRef.current.scale - e.deltaY * 0.001)) };
-    setCrop(next);
-    onReframe?.(frame.id, next);
-  };
-
   return (
     <div
       ref={containerRef}
       className="absolute inset-0"
       onMouseDown={handleMouseDown}
-      onWheel={handleWheel}
       style={{ cursor: interactive ? 'grab' : 'inherit' }}
     >
-      <div
+      {/* Image is centered and covers the slot. objectPosition drives panning so
+          the full original image is always available — no blank edges on pan. */}
+      <img
+        src={frame.image_url}
         style={{
           position: 'absolute',
           inset: 0,
-          transform: `scale(${crop.scale}) translate(${(0.5 - crop.x) * 100}%, ${(0.5 - crop.y) * 100}%)`,
-          transformOrigin: 'center center',
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: `${crop.x * 100}% ${crop.y * 100}%`,
+          transform: `scale(${crop.scale})`,
+          transformOrigin: `${crop.x * 100}% ${crop.y * 100}%`,
         }}
-      >
-        <img src={frame.image_url} className="w-full h-full object-cover" alt="" draggable={false} />
-      </div>
+        alt=""
+        draggable={false}
+      />
     </div>
   );
 }
@@ -187,8 +219,11 @@ function FrameImage({
 function EmptySlot({ size }: { size: 'cell' | 'stage' | 'full' }) {
   if (size === 'cell') return <div className="w-full h-full bg-admin-bg-inset" />;
   return (
-    <div className="w-full h-full flex items-center justify-center text-admin-text-faint">
-      <Plus size={size === 'stage' ? 20 : 32} />
+    <div className="w-full h-full flex items-center justify-center text-admin-text-faint bg-admin-bg-inset">
+      <div className="text-center">
+        <LayoutGrid size={36} className="mx-auto mb-3 opacity-40" />
+        <p className="text-admin-sm">Drop a frame here.</p>
+      </div>
     </div>
   );
 }

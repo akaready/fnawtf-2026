@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { Sparkles, ImagePlus, Loader2, X, Expand, GripVertical, Pencil } from 'lucide-react';
 import { uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
@@ -91,6 +91,11 @@ export function ScriptStoryboardCell({
     .filter((f): f is StoryboardSlotFrame => f.slot !== null)
     .sort((a, b) => a.slot - b.slot);
   const hasImage = activeFrames.length > 0;
+  const cropOverridesMap = useMemo(
+    () => new Map(activeFrames.map(f => [f.id, f.crop_config ?? { x: 0.5, y: 0.5, scale: 1.0 }])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeFrames.map(f => `${f.id}:${JSON.stringify(f.crop_config)}`).join(',')]
+  );
   // The "primary" frame for backward-compat (modal still uses single-frame API)
   const primaryFrame = activeFrames[0] ?? null;
 
@@ -272,6 +277,7 @@ export function ScriptStoryboardCell({
             frames={activeFrames}
             size="cell"
             gap={4}
+            cropOverrides={cropOverridesMap}
           />
           {/* Hover overlay: centered icons matching reference cell */}
           <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/30 rounded flex items-center justify-center gap-1 select-none">

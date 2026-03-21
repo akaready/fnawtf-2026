@@ -831,31 +831,8 @@ export function StoryboardGenerateModal({
               </div>
             ) : (
             <div className="flex-1 admin-scrollbar px-6 py-5 space-y-8" style={{ overflowY: 'scroll' }}>
-              {/* Image preview — only shown on modify tab */}
-              {activeTab === 'modify' && previewImageUrl && !generating ? (
-                <div className="aspect-video rounded-admin-md overflow-hidden">
-                  <img src={previewImageUrl} className="w-full h-full object-cover" alt="" />
-                </div>
-              ) : activeTab === 'modify' && selectedFrame && !generating ? (
-                <StoryboardLayoutRenderer
-                  layout="single"
-                  frames={[{ ...selectedFrame, slot: 1 }]}
-                  size="stage"
-                  interactive={true}
-                  cropOverrides={draftCrops}
-                  onReframe={(frameId, crop) =>
-                    setDraftCrops(prev => new Map(prev).set(frameId, crop))
-                  }
-                  gap={0}
-                />
-              ) : activeTab === 'modify' && !selectedFrame && !generating ? (
-                <div className="aspect-video rounded-admin-md border-[3px] border-dashed border-admin-border bg-admin-bg-inset flex items-center justify-center">
-                  <div className="text-center text-admin-text-faint">
-                    <Wand2 size={36} className="mx-auto mb-3 opacity-40" />
-                    <p className="text-admin-sm">Select an image from history to modify.</p>
-                  </div>
-                </div>
-              ) : flipping ? (
+              {/* Flipping / Modifying overlays — shown on ALL tabs */}
+              {flipping ? (
                 <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset">
                   {selectedFrame && (
                     <img
@@ -889,6 +866,29 @@ export function StoryboardGenerateModal({
                       <Loader2 size={36} className="mx-auto mb-3 animate-spin opacity-70" />
                       <p className="text-admin-sm opacity-70">Modifying…</p>
                     </div>
+                  </div>
+                </div>
+              ) : activeTab === 'modify' && previewImageUrl ? (
+                <div className="aspect-video rounded-admin-md overflow-hidden">
+                  <img src={previewImageUrl} className="w-full h-full object-cover" alt="" />
+                </div>
+              ) : activeTab === 'modify' && selectedFrame ? (
+                <StoryboardLayoutRenderer
+                  layout="single"
+                  frames={[{ ...selectedFrame, slot: 1 }]}
+                  size="stage"
+                  interactive={true}
+                  cropOverrides={draftCrops}
+                  onReframe={(frameId, crop) =>
+                    setDraftCrops(prev => new Map(prev).set(frameId, crop))
+                  }
+                  gap={0}
+                />
+              ) : activeTab === 'modify' && !selectedFrame ? (
+                <div className="aspect-video rounded-admin-md border-[3px] border-dashed border-admin-border bg-admin-bg-inset flex items-center justify-center">
+                  <div className="text-center text-admin-text-faint">
+                    <Wand2 size={36} className="mx-auto mb-3 opacity-40" />
+                    <p className="text-admin-sm">Select an image from history to modify.</p>
                   </div>
                 </div>
               ) : (
