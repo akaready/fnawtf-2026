@@ -1254,6 +1254,7 @@ export function StoryboardGenerateModal({
                       onClick={() => { if (!generating) handleFrameClick(id, imageUrl); }}
                       onDeleted={() => {
                         setHistory(prev => prev.filter(f => f.id !== id));
+                        setAllFramesForScript(prev => (prev ?? []).filter(f => f.id !== id));
                         setDraftSlots(prev => {
                           const next = new Map(prev);
                           for (const [s, fid] of next) { if (fid === id) next.delete(s); }
@@ -1631,7 +1632,7 @@ function SidebarFrameItem({
           <div className={`flex items-center transition-opacity flex-shrink-0 ml-1 ${confirmDelete ? 'opacity-100' : 'opacity-0 group-hover/sf:opacity-100'}`}>
             {confirmDelete ? (
               <>
-                <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); void (async () => { await deleteStoryboardFrame(id); onDeleted(); })(); }} title="Confirm delete" className={`${btnCls} hover:!text-admin-danger`}><Check size={11} /></button>
+                <button onClick={async (e) => { e.stopPropagation(); e.preventDefault(); try { await deleteStoryboardFrame(id); onDeleted(); } catch(err) { console.error('Delete failed:', err); } }} title="Confirm delete" className={`${btnCls} hover:!text-admin-danger`}><Check size={11} /></button>
                 <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} title="Cancel" className={btnCls}><X size={11} /></button>
               </>
             ) : (
