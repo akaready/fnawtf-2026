@@ -26,8 +26,10 @@ export interface InvoiceData {
   projectId?: string;
   proposalId?: string;
   clientName: string;
+  clientTitle?: string;
   clientCompany?: string;
   clientEmail: string;
+  clientPhone?: string;
   clientLogoUrl?: string;
   projectTitle: string;
   projectType?: string;
