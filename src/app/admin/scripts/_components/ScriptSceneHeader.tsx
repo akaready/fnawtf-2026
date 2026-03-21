@@ -255,7 +255,7 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
         )}
       </span>
 
-      <div className={`flex items-center gap-0.5 flex-shrink-0 transition-opacity ${confirmDelete ? 'opacity-100' : 'opacity-0 group-hover/scene:opacity-100'}`}>
+      <div className={`group/actions flex items-center gap-0.5 flex-shrink-0 rounded-admin-sm transition-all ${confirmDelete ? 'opacity-100' : 'opacity-0 hover:opacity-100'} hover:bg-admin-bg-hover`}>
         {confirmDelete ? (
           <>
             <button

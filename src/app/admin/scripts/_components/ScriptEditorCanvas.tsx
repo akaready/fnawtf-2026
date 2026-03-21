@@ -662,7 +662,7 @@ export function ScriptEditorCanvas({
                 <div ref={visualTipsRef} className="contents">
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowVisualTips(v => !v); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                     title="Visual content best practices"
                   >
                     <Info size={14} />
@@ -690,7 +690,7 @@ export function ScriptEditorCanvas({
                 generatingScope ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); abortControllerRef.current?.abort(); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-admin-danger"
                     title="Cancel generation"
                   >
                     <X size={14} />
@@ -699,14 +699,14 @@ export function ScriptEditorCanvas({
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); void handleDeleteAll(); }}
-                      className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                      className="absolute right-8 top-1/2 -translate-y-1/2 p-1 text-admin-danger"
                       title="Confirm — delete all storyboards"
                     >
                       <Check size={14} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(false); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
                       title="Cancel"
                     >
                       <X size={14} />
@@ -718,14 +718,14 @@ export function ScriptEditorCanvas({
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(true); }}
-                          className="absolute right-[3.5rem] top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                          className="absolute right-[3.5rem] top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                           title="Delete all storyboards"
                         >
                           <Trash2 size={14} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
-                          className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                          className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                           title="Download all storyboards"
                         >
                           <Download size={14} />
@@ -734,7 +734,7 @@ export function ScriptEditorCanvas({
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                       title="Generate all storyboards"
                     >
                       <Sparkles size={14} />
@@ -921,6 +921,7 @@ export function ScriptEditorCanvas({
                         sceneFrames={sceneFramesForLightbox}
                         allScriptFrames={allScriptFrames}
                         onImageMove={onImageMove}
+                        scenes={scenes}
                       />
                     ));
                     })()}
