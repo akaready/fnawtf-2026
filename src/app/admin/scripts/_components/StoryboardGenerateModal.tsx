@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Sparkles, Trash2, Check, Plus, ImageIcon, Info, Undo2, Redo2, Wand2, LayoutGrid } from 'lucide-react';
-import { getFrameHistoryForBeat, setActiveFrame, deleteStoryboardFrame, setFrameSlot, setBeatLayout, updateFrameCrop, duplicateFrame, moveFrameToBeat } from '@/app/admin/actions';
+import { X, Loader2, Sparkles, Plus, ImageIcon, Info, Wand2, LayoutGrid, Trash2, Download, Clipboard, ArrowRight, Check, EyeOff, Eye, ChevronDown, Copy } from 'lucide-react';
+import { getFrameHistoryForBeat, getAllStoryboardFrames as fetchAllScriptFrames, setActiveFrame, setFrameSlot, setBeatLayout, updateFrameCrop, updateBeat, deleteStoryboardFrame, moveFrameToBeat, duplicateFrame, archiveStoryboardFrame, unarchiveStoryboardFrame } from '@/app/admin/actions';
 import { buildRichPrompt } from './storyboardUtils';
 import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
 import { StoryboardFramesTab } from './StoryboardFramesTab';
+import { StoryboardLayoutRenderer } from './StoryboardLayoutRenderer';
 import { STORYBOARD_LAYOUTS } from './storyboardLayouts';
-import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
+import { ScriptBeatCell } from './ScriptBeatCell';
 import type {
   ScriptStoryboardFrameRow,
   ScriptStyleRow,
@@ -17,6 +18,8 @@ import type {
   ComputedScene,
   ScriptCharacterRow,
   ScriptLocationRow,
+  ScriptTagRow,
+  ScriptProductRow,
   CharacterCastWithContact,
   CharacterReferenceRow,
   LocationReferenceRow,
@@ -42,17 +45,13 @@ function groupByPurpose(refs: StoryboardReferenceUsed[]) {
   return groups;
 }
 
-function formatLA(date: string) {
-  const d = new Date(date);
-  return {
-    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' }),
-    time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }),
-  };
-}
 
 // ── Types ──
 
 type ModalTab = 'generate' | 'modify' | 'frames';
+
+// Per-beat persistent state (survives modal close/reopen within session)
+const beatModalState = new Map<string, { lastTab?: ModalTab; collapsedSections?: Set<string> }>();
 
 interface Props {
   onClose: () => void;
@@ -70,10 +69,12 @@ interface Props {
   beatIndex: number;
   characters: ScriptCharacterRow[];
   locations: ScriptLocationRow[];
+  products?: ScriptProductRow[];
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
   locationReferenceMap?: Record<string, LocationReferenceRow[]>;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
+  allScriptFrames?: { imageUrl: string; label: string; filename: string }[];
   consistencyFrameUrls?: string[];
   onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
   // Multi-frame support
@@ -88,11 +89,12 @@ interface Props {
 export function StoryboardGenerateModal({
   onClose,
   beatId,
-  sceneId: _sceneId,
+  sceneId,
   scriptId,
   activeFrame,
   audioContent,
   visualContent,
+  notesContent,
   beatReferenceUrls,
   style,
   styleReferences,
@@ -100,29 +102,62 @@ export function StoryboardGenerateModal({
   beatIndex,
   characters,
   locations,
+  products = [],
   castMap,
   referenceMap,
   locationReferenceMap,
   sceneFrames: _sceneFrames,
+  allScriptFrames: _allScriptFrames,
   consistencyFrameUrls,
   onFrameChange,
-  scenes = [],
-  allBeatFrames,
+  scenes,
+  allBeatFrames: _allBeatFrames,
   frames: framesProp,
   layout,
   defaultTab,
   onFramesChange,
 }: Props) {
   // ── Core state ──
-  const [activeTab, setActiveTab] = useState<ModalTab>(
-    defaultTab ?? ((framesProp ?? []).some(f => f.slot !== null) ? 'frames' : 'generate')
+  const saved = beatModalState.get(beatId);
+  const [activeTab, setActiveTabRaw] = useState<ModalTab>(
+    defaultTab ?? saved?.lastTab ?? ((framesProp ?? []).some(f => f.slot !== null) ? 'frames' : 'generate')
   );
+  const setActiveTab = useCallback((tab: ModalTab) => {
+    setActiveTabRaw(tab);
+    const s = beatModalState.get(beatId) ?? {};
+    beatModalState.set(beatId, { ...s, lastTab: tab });
+  }, [beatId]);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    () => saved?.collapsedSections ?? new Set(['hidden'])
+  );
+  const toggleSection = useCallback((key: string) => {
+    setCollapsedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      const s = beatModalState.get(beatId) ?? {};
+      beatModalState.set(beatId, { ...s, collapsedSections: next });
+      return next;
+    });
+  }, [beatId]);
   const [history, setHistory] = useState<ScriptStoryboardFrameRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(activeFrame?.id ?? null);
   const [generating, setGenerating] = useState(false);
-  const [localPrompt, setLocalPrompt] = useState('');
+  const [localAudio, setLocalAudio] = useState(audioContent);
+  const [localVisual, setLocalVisual] = useState(visualContent);
+  const [localNotes, setLocalNotes] = useState(notesContent);
+  const [promptPreviewTab, setPromptPreviewTab] = useState<'text' | 'json'>('text');
+  const beatSaveRef = useRef<NodeJS.Timeout | null>(null);
+
+  const saveBeatContent = useCallback((audio: string, visual: string, notes: string) => {
+    if (beatSaveRef.current) clearTimeout(beatSaveRef.current);
+    beatSaveRef.current = setTimeout(() => {
+      void updateBeat(beatId, { audio_content: audio, visual_content: visual, notes_content: notes });
+    }, 800);
+  }, [beatId]);
   const [modifyPrompt, setModifyPrompt] = useState('');
+  // Stable empty array — prevents ScriptBeatCell from re-firing setContent on every render
+  const emptyTags = useMemo(() => [] as ScriptTagRow[], []);
   const [localReferences, setLocalReferences] = useState<StoryboardReferenceUsed[]>(() => {
     // Pre-populate from props so references show immediately even before history loads
     const refs: StoryboardReferenceUsed[] = [];
@@ -134,8 +169,21 @@ export function StoryboardGenerateModal({
     return refs;
   });
   const [localStylePreset, setLocalStylePreset] = useState<StoryboardStylePreset | null>(style?.style_preset ?? null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showModifyInfo, setShowModifyInfo] = useState(false);
+  useEffect(() => {
+    if (!showModifyInfo) return;
+    const handler = (e: MouseEvent) => {
+      e.stopPropagation();
+      setShowModifyInfo(false);
+    };
+    // Use capture so it fires before the button's own click handler
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
+  }, [showModifyInfo]);
+  const [allFramesForScript, setAllFramesForScript] = useState<ScriptStoryboardFrameRow[] | null>(null);
+  const [loadingOthers, setLoadingOthers] = useState(true);
+  const [isDragOverRef, setIsDragOverRef] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Draft state for Frames tab (not persisted until Save)
@@ -145,51 +193,13 @@ export function StoryboardGenerateModal({
     framesProp?.filter(f => f.slot !== null).forEach(f => map.set(f.slot!, f.id));
     return map;
   });
+  const [foreignFrameIds, setForeignFrameIds] = useState<Set<string>>(new Set());
   const [draftCrops, setDraftCrops] = useState<Map<string, CropConfig>>(() => {
     const map = new Map<string, CropConfig>();
     framesProp?.filter(f => f.crop_config != null).forEach(f => map.set(f.id, f.crop_config!));
     return map;
   });
-
-  // ── Undo/Redo for content prompt ──
-  const [promptHistory, setPromptHistory] = useState<string[]>([]);
-  const [promptFuture, setPromptFuture] = useState<string[]>([]);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedPromptRef = useRef('');
-
-  const pushPromptHistory = useCallback((oldValue: string) => {
-    if (oldValue === lastSavedPromptRef.current) return;
-    lastSavedPromptRef.current = oldValue;
-    setPromptHistory(prev => [...prev, oldValue]);
-    setPromptFuture([]);
-  }, []);
-
-  const handlePromptChange = useCallback((value: string) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const currentVal = localPrompt;
-    debounceRef.current = setTimeout(() => pushPromptHistory(currentVal), 500);
-    setLocalPrompt(value);
-  }, [localPrompt, pushPromptHistory]);
-
-  const handleUndo = useCallback(() => {
-    if (promptHistory.length === 0) return;
-    setPromptFuture(prev => [localPrompt, ...prev]);
-    const prev = [...promptHistory];
-    const last = prev.pop()!;
-    setPromptHistory(prev);
-    setLocalPrompt(last);
-    lastSavedPromptRef.current = last;
-  }, [promptHistory, localPrompt]);
-
-  const handleRedo = useCallback(() => {
-    if (promptFuture.length === 0) return;
-    setPromptHistory(prev => [...prev, localPrompt]);
-    const future = [...promptFuture];
-    const next = future.shift()!;
-    setPromptFuture(future);
-    setLocalPrompt(next);
-    lastSavedPromptRef.current = next;
-  }, [promptFuture, localPrompt]);
+  const [selectedSlot, setSelectedSlot] = useState<number>(1);
 
   // ── Frames tab: layout change handler ──
   const handleLayoutChange = useCallback((newLayout: string) => {
@@ -208,7 +218,79 @@ export function StoryboardGenerateModal({
   }, []);
 
   // Fall back to activeFrame prop if not found in history (e.g., history fetch failed)
-  const selectedFrame = history.find(f => f.id === selectedFrameId) ?? activeFrame;
+  const selectedFrame = selectedFrameId
+    ? (history.find(f => f.id === selectedFrameId) ?? null)
+    : (activeFrame ?? null);
+
+  // ── Assembled prompt (live preview, updates as user edits fields) ──
+  const assembledPrompt = useMemo(() => {
+    const beat = scene.beats[beatIndex];
+    if (!beat) {
+      return [localAudio && `Audio: ${localAudio}`, localVisual && `Visual: ${localVisual}`, localNotes && `Notes: ${localNotes}`]
+        .filter(Boolean).join('\n') || 'Empty beat — generate a neutral establishing shot';
+    }
+    const fakeBeat = { ...beat, audio_content: localAudio, visual_content: localVisual, notes_content: localNotes };
+    let prompt = buildRichPrompt(fakeBeat, beatIndex, scene, characters, locations, castMap, referenceMap);
+    const presetKey = localStylePreset ?? style?.style_preset;
+    if (presetKey && STYLE_PRESETS[presetKey as keyof typeof STYLE_PRESETS]?.prompt) {
+      prompt += `\n${STYLE_PRESETS[presetKey as keyof typeof STYLE_PRESETS].prompt}`;
+    }
+    return prompt;
+  }, [localAudio, localVisual, localNotes, scene, beatIndex, characters, locations, castMap, referenceMap, localStylePreset, style]);
+
+  // ── Preview JSON — mirrors server-side promptObj ──
+  const previewJson = useMemo(() => {
+    const presetKey = localStylePreset ?? style?.style_preset;
+    const styleBlock = presetKey && STYLE_PRESETS[presetKey as keyof typeof STYLE_PRESETS]
+      ? STYLE_PRESETS[presetKey as keyof typeof STYLE_PRESETS].jsonStyle
+      : style?.prompt ? { name: 'Custom style', rendering: style.prompt, depth_of_field: 'f/2.0' } : null;
+
+    const styleRefs       = localReferences.filter(r => r.purpose === 'style').slice(0, 2);
+    const consistencyRefs = localReferences.filter(r => r.purpose === 'consistency').slice(0, 4);
+    const castRefs        = localReferences.filter(r => r.purpose === 'cast').slice(0, 4);
+    const locRefs         = localReferences.filter(r => r.purpose === 'location').slice(0, 2);
+    const beatRefs        = localReferences.filter(r => r.purpose === 'beat').slice(0, 2);
+
+    const refDeclarations: object[] = [];
+    let imgIdx = 1;
+    if (styleRefs.length > 0) {
+      refDeclarations.push({ image_ids: Array.from({ length: styleRefs.length }, (_, i) => imgIdx + i), purpose: 'style reference', extract: 'visual rendering technique, line weight, color palette, shading approach, overall feel', apply_to: 'entire output — match this style exactly' });
+      imgIdx += styleRefs.length;
+    }
+    if (consistencyRefs.length > 0) {
+      refDeclarations.push({ image_ids: Array.from({ length: consistencyRefs.length }, (_, i) => imgIdx + i), purpose: 'nearby frames from this storyboard sequence', extract: 'visual style, line weight, color palette, rendering technique, character appearances, environment', apply_to: 'entire output — your frame must be visually indistinguishable from these' });
+      imgIdx += consistencyRefs.length;
+    }
+    if (castRefs.length > 0) {
+      refDeclarations.push({ image_ids: Array.from({ length: castRefs.length }, (_, i) => imgIdx + i), purpose: 'character appearance reference', extract: 'exact facial structure, hair color and style, eye shape, skin tone, identifying physical features', apply_to: 'character rendering — this specific person, match exactly every frame' });
+      imgIdx += castRefs.length;
+    }
+    if (locRefs.length > 0) {
+      refDeclarations.push({ image_ids: Array.from({ length: locRefs.length }, (_, i) => imgIdx + i), purpose: 'location environment reference', extract: 'architecture, surfaces, spatial layout, lighting quality, color palette of this specific place', apply_to: 'environment rendering — this specific location, match exactly every frame' });
+      imgIdx += locRefs.length;
+    }
+    if (beatRefs.length > 0) {
+      refDeclarations.push({ image_ids: Array.from({ length: beatRefs.length }, (_, i) => imgIdx + i), purpose: 'product or visual reference for this scene', extract: 'exact appearance, shape, color, and details of this product or object', apply_to: 'product or object rendering — match exactly as shown' });
+    }
+
+    return {
+      task: 'Generate a single storyboard frame illustration',
+      ...(styleBlock && { style: styleBlock }),
+      sequence_consistency: consistencyRefs.length > 0
+        ? 'CRITICAL: This is one frame in an ongoing storyboard sequence. Your output MUST be visually indistinguishable from the nearby frames provided — same artist, same medium, same rendering technique, same character appearances. Zero drift between frames.'
+        : 'This is one frame in an ongoing storyboard sequence. Apply the style parameters above with absolute consistency — same artist, same tools, same rendering every frame.',
+      scene: { content: assembledPrompt },
+      ...(refDeclarations.length > 0 && { reference_images: refDeclarations }),
+      constraints: {
+        must_avoid: ['any text, letters, numbers, words, or symbols rendered anywhere in the image', 'borders, panel frames, or rectangular outlines drawn inside the image', 'watermarks, production logos, or frame numbering', 'camera equipment — boom microphones, tripods, light stands, camera rigs', 'crew members, camera operators, sound recordists', 'interviewer presence in interview scenes — subject only on camera, no OTS shots', 'whiteboards or screens with readable content — show them blank or with abstract shapes only'],
+        output: 'edge-to-edge illustration filling 100% of canvas with zero internal borders',
+      },
+      output_specifications: { resolution: '2K', aspect_ratio: style?.aspect_ratio ?? '16:9', format: 'single storyboard frame' },
+    };
+  }, [localReferences, localStylePreset, style, assembledPrompt]);
+
+  // ── Scene heading (mirrors ScriptSceneHeader) ──
+  const sceneHeading = [scene.int_ext, scene.location_name || 'UNTITLED LOCATION', scene.time_of_day ? `— ${scene.time_of_day}` : ''].filter(Boolean).join('. ').replace('. —', ' —');
 
   // ── Build initial references from cell props ──
   const buildInitialReferences = useCallback((): StoryboardReferenceUsed[] => {
@@ -248,36 +330,12 @@ export function StoryboardGenerateModal({
     return refs;
   }, [styleReferences, scene, beatIndex, castMap, referenceMap, characters, locations, locationReferenceMap, beatReferenceUrls, consistencyFrameUrls]);
 
-  // ── Build initial prompt ──
-  const buildInitialPrompt = useCallback((): string => {
-    const beat = scene.beats[beatIndex];
-    if (beat) return buildRichPrompt(beat, beatIndex, scene, characters, locations, castMap, referenceMap);
-    return [audioContent && `Audio: ${audioContent}`, visualContent && `Visual: ${visualContent}`]
-      .filter(Boolean).join('\n') || 'Empty beat — generate a neutral establishing shot';
-  }, [scene, beatIndex, characters, locations, castMap, referenceMap, audioContent, visualContent]);
-
   // ── Load history on mount ──
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
     const initFromFrame = (sel: ScriptStoryboardFrameRow | null) => {
-      if (sel?.prompt_used) {
-        try {
-          const parsed = JSON.parse(sel.prompt_used);
-          const content = parsed?.scene?.content ?? buildInitialPrompt();
-          setLocalPrompt(content);
-          lastSavedPromptRef.current = content;
-        } catch {
-          const content = buildInitialPrompt();
-          setLocalPrompt(content);
-          lastSavedPromptRef.current = content;
-        }
-      } else {
-        const content = buildInitialPrompt();
-        setLocalPrompt(content);
-        lastSavedPromptRef.current = content;
-      }
       const refs = sel?.reference_urls_used?.length
         ? sel.reference_urls_used
         : buildInitialReferences();
@@ -311,7 +369,15 @@ export function StoryboardGenerateModal({
       }
     });
     return () => { cancelled = true; };
-  }, [beatId, activeFrame, buildInitialPrompt, buildInitialReferences]);
+  }, [beatId, activeFrame, buildInitialReferences]);
+
+  // ── Fetch all script frames for sidebar ──
+  useEffect(() => {
+    setLoadingOthers(true);
+    fetchAllScriptFrames(scriptId)
+      .then(data => setAllFramesForScript(data as unknown as ScriptStoryboardFrameRow[]))
+      .finally(() => setLoadingOthers(false));
+  }, [scriptId]);
 
   // ── Keyboard: Escape to close ──
   useEffect(() => {
@@ -324,7 +390,7 @@ export function StoryboardGenerateModal({
 
   // ── Generate (generation mode) ──
   const handleGenerate = useCallback(async () => {
-    if (generating || !style) return;
+    if (generating) return;
     setGenerating(true);
     try {
       const styleUrls = localReferences.filter(r => r.purpose === 'style').map(r => r.url);
@@ -339,11 +405,11 @@ export function StoryboardGenerateModal({
         body: JSON.stringify({
           scriptId,
           beatId,
-          contentPrompt: buildInitialPrompt(),
-          promptOverride: localPrompt,
-          stylePrompt: style.prompt,
-          stylePreset: localStylePreset ?? style.style_preset,
-          aspectRatio: style.aspect_ratio,
+          contentPrompt: assembledPrompt,
+          promptOverride: assembledPrompt,
+          stylePrompt: style?.prompt,
+          stylePreset: localStylePreset ?? style?.style_preset,
+          aspectRatio: style?.aspect_ratio,
           referenceImageUrls: styleUrls,
           castReferenceUrls: castUrls,
           locationReferenceUrls: locUrls,
@@ -364,7 +430,7 @@ export function StoryboardGenerateModal({
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, localPrompt, localStylePreset, localReferences, scriptId, beatId, buildInitialPrompt, onFrameChange]);
+  }, [generating, assembledPrompt, localStylePreset, localReferences, scriptId, beatId, style, onFrameChange]);
 
   // ── Generate (modification mode) ──
   const handleModify = useCallback(async () => {
@@ -413,48 +479,6 @@ export function StoryboardGenerateModal({
   }, [beatId, onFrameChange]);
 
   // ── Delete a frame from history ──
-  const handleDeleteFrame = useCallback(async (frameId: string) => {
-    try {
-      await deleteStoryboardFrame(frameId);
-      setHistory(prev => {
-        const updated = prev.filter(f => f.id !== frameId);
-        if (selectedFrameId === frameId) {
-          const next = updated[0] ?? null;
-          setSelectedFrameId(next?.id ?? null);
-          if (prev.find(f => f.id === frameId)?.is_active && next) {
-            onFrameChange(next.is_active ? next : null);
-          }
-        }
-        return updated;
-      });
-      setConfirmDeleteId(null);
-    } catch (err) {
-      console.error('Failed to delete frame:', err);
-    }
-  }, [selectedFrameId, onFrameChange]);
-
-  // ── Click a history thumbnail to preview ──
-  const handleSelectFrame = useCallback((frame: ScriptStoryboardFrameRow) => {
-    setSelectedFrameId(frame.id);
-    if (frame.prompt_used) {
-      try {
-        const parsed = JSON.parse(frame.prompt_used);
-        const content = parsed?.scene?.content ?? buildInitialPrompt();
-        setLocalPrompt(content);
-        lastSavedPromptRef.current = content;
-      } catch {
-        const content = buildInitialPrompt();
-        setLocalPrompt(content);
-        lastSavedPromptRef.current = content;
-      }
-    }
-    const refs = frame.reference_urls_used?.length
-      ? frame.reference_urls_used
-      : buildInitialReferences();
-    setLocalReferences(refs);
-    setPromptHistory([]);
-    setPromptFuture([]);
-  }, [buildInitialPrompt, buildInitialReferences]);
 
   // ── Remove / add reference ──
   const handleRemoveRef = useCallback((url: string) => {
@@ -478,35 +502,50 @@ export function StoryboardGenerateModal({
 
   // ── Save selection and close ──
   const handleSaveAndClose = useCallback(async () => {
-    // If the selected frame isn't already the active one, make it active
-    if (selectedFrame && !selectedFrame.is_active) {
-      await handleUseFrame(selectedFrame.id);
-    }
-
-    // Flush Frames tab draft state
-    const savedLayout = layout ?? 'single';
-    if (draftLayout !== savedLayout) {
-      await setBeatLayout(beatId, draftLayout);
-    }
-    // Assign slots for all frames in draftSlots
-    const activeIds = new Set(draftSlots.values());
-    for (const [slot, frameId] of draftSlots) {
-      await setFrameSlot(frameId, slot);
-    }
-    // Clear slots for frames no longer in draftSlots
-    for (const frame of history) {
-      if (frame.slot !== null && !activeIds.has(frame.id)) {
-        await setFrameSlot(frame.id, null);
+    if (activeTab === 'frames') {
+      // Frames tab: manage slots directly from draft state
+      const savedLayout = layout ?? 'single';
+      if (draftLayout !== savedLayout) {
+        await setBeatLayout(beatId, draftLayout);
       }
-    }
-    // Flush crop changes
-    for (const [frameId, crop] of draftCrops) {
-      await updateFrameCrop(frameId, crop);
+      // Clear ALL current slot assignments first to avoid unique constraint violations
+      for (const frame of history) {
+        if (frame.slot !== null) {
+          await setFrameSlot(frame.id, null);
+        }
+      }
+      // Resolve final slot→frameId map, duplicating cross-beat frames into this beat
+      const resolvedSlots = new Map<number, string>(); // slot → final frameId (may be a new copy)
+      const extraFrames: import('@/types/scripts').ScriptStoryboardFrameRow[] = [];
+      for (const [slot, frameId] of draftSlots) {
+        if (foreignFrameIds.has(frameId)) {
+          // Frame belongs to another beat — duplicate it into this beat
+          const copy = await duplicateFrame(frameId, beatId);
+          resolvedSlots.set(slot, copy.id);
+          extraFrames.push({ ...copy, slot, is_active: true });
+        } else {
+          resolvedSlots.set(slot, frameId);
+        }
+      }
+      // Assign slots
+      for (const [slot, frameId] of resolvedSlots) {
+        await setFrameSlot(frameId, slot);
+      }
+      // Flush crop changes
+      for (const [frameId, crop] of draftCrops) {
+        await updateFrameCrop(frameId, crop);
+      }
+      // Notify parent
+      const updatedHistory = history.map(f => {
+        const newSlot = [...resolvedSlots.entries()].find(([, id]) => id === f.id)?.[0] ?? null;
+        const newCrop = draftCrops.get(f.id) ?? f.crop_config;
+        return { ...f, slot: newSlot, is_active: newSlot !== null, crop_config: newCrop };
+      });
+      onFramesChange?.([...updatedHistory, ...extraFrames]);
     }
 
-    onFramesChange?.(history);
     onClose();
-  }, [selectedFrame, handleUseFrame, layout, draftLayout, draftSlots, draftCrops, history, beatId, onFramesChange, onClose]);
+  }, [activeTab, selectedFrame, handleUseFrame, layout, draftLayout, draftSlots, draftCrops, foreignFrameIds, history, beatId, onFramesChange, onClose]);
 
   // ── Derived ──
   const refGroups = groupByPurpose(localReferences);
@@ -520,9 +559,22 @@ export function StoryboardGenerateModal({
         className="bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header: Tab strip + close ── */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-admin-border bg-admin-bg-sidebar flex-shrink-0 rounded-t-admin-xl">
-          <div className="flex items-center gap-1">
+        {/* ── Header: Scene title left, tabs right ── */}
+        <div className="flex items-center border-b border-admin-border bg-admin-bg-sidebar flex-shrink-0 rounded-t-admin-xl overflow-hidden min-h-[52px]">
+          {/* Scene heading — identical to ScriptSceneHeader view mode */}
+          <div className="flex items-center gap-0 flex-1 min-w-0 overflow-hidden">
+            <span className="text-admin-border font-bebas text-[52px] leading-none flex-shrink-0 translate-y-[2px] pl-2 pr-3">
+              {scene.sceneNumber}
+            </span>
+            <span className="text-admin-base font-medium text-admin-text-faint uppercase tracking-wider truncate">
+              {sceneHeading}
+              {scene.scene_description && (
+                <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{scene.scene_description}</span></>
+              )}
+            </span>
+          </div>
+          {/* Tab buttons — far right */}
+          <div className="flex items-center gap-1 px-3 flex-shrink-0">
             {([
               { id: 'generate' as ModalTab, label: 'Generate', icon: Sparkles },
               { id: 'modify' as ModalTab, label: 'Modify', icon: Wand2 },
@@ -531,20 +583,17 @@ export function StoryboardGenerateModal({
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-2 ${
+                className={`px-4 py-2 text-admin-base font-medium rounded-admin-sm transition-colors inline-flex items-center gap-2 ${
                   activeTab === id
                     ? 'bg-admin-bg-active text-admin-text-primary'
                     : 'text-admin-text-dim hover:text-admin-text-secondary hover:bg-admin-bg-hover'
                 }`}
               >
-                <Icon size={14} />
+                <Icon size={15} />
                 {label}
               </button>
             ))}
           </div>
-          <button onClick={onClose} className="btn-ghost w-8 h-8 flex items-center justify-center" title="Close">
-            <X size={14} />
-          </button>
         </div>
 
         {/* ── Body ── */}
@@ -554,74 +603,172 @@ export function StoryboardGenerateModal({
           </div>
         ) : (
           <div className="flex-1 flex overflow-hidden">
+            {/* ── Left column — changes per tab ── */}
             {activeTab === 'frames' ? (
               <StoryboardFramesTab
-                beatId={beatId}
-                scenes={scenes}
-                allScriptFrames={allBeatFrames ?? []}
                 frames={history}
                 draftLayout={draftLayout}
                 draftSlots={draftSlots}
                 draftCrops={draftCrops}
+                selectedSlot={selectedSlot}
                 onLayoutChange={handleLayoutChange}
-                onSlotAssign={(slot, frameId) =>
-                  setDraftSlots(prev => new Map(prev).set(slot, frameId))
-                }
+                onSlotAssign={(slot, frameId) => {
+                  setDraftSlots(prev => new Map(prev).set(slot, frameId));
+                  // If frame isn't in history (e.g. from Others), add it so stage can render it
+                  const allFrames = allFramesForScript ?? [];
+                  const foreign = allFrames.find(f => f.id === frameId);
+                  if (foreign && !history.some(h => h.id === frameId)) {
+                    setHistory(prev => [...prev, foreign]);
+                  }
+                }}
+                onSlotClick={(slot) => setSelectedSlot(slot)}
                 onReframe={(frameId, crop) =>
                   setDraftCrops(prev => new Map(prev).set(frameId, crop))
                 }
-                onDuplicate={async (frameId) => {
-                  const newFrame = await duplicateFrame(frameId);
-                  setHistory(prev => [newFrame, ...prev]);
-                }}
-                onMoveToBeat={async (frameId, targetBeatId) => {
-                  await moveFrameToBeat(frameId, targetBeatId);
-                  setHistory(prev => prev.filter(f => f.id !== frameId));
-                  setDraftSlots(prev => {
-                    const next = new Map(prev);
-                    for (const [s, id] of next) { if (id === frameId) next.delete(s); }
-                    return next;
-                  });
-                }}
-                onDownload={(frame) => {
-                  void downloadSingleImage(frame.image_url, `frame-${frame.id}.jpg`);
-                }}
-                onDelete={async (frameId) => {
-                  await deleteStoryboardFrame(frameId);
-                  setHistory(prev => prev.filter(f => f.id !== frameId));
-                  setDraftSlots(prev => {
-                    const next = new Map(prev);
-                    for (const [s, id] of next) { if (id === frameId) next.delete(s); }
-                    return next;
-                  });
-                }}
               />
             ) : (
-            <>
-            {/* ── Left column ── */}
-            <div className="flex-1 overflow-y-auto admin-scrollbar-auto px-6 py-5 space-y-5">
-              {/* Image preview */}
-              <div>
-                {selectedFrame ? (
-                  <img
-                    src={selectedFrame.image_url}
-                    alt=""
-                    className="w-full rounded-admin-md border border-admin-border"
-                  />
-                ) : (
-                  <div className="aspect-video rounded-admin-md border border-dashed border-admin-border-subtle bg-admin-bg-base flex items-center justify-center">
+            <div className="flex-1 admin-scrollbar px-6 py-5 space-y-8" style={{ overflowY: 'scroll' }}>
+              {/* Image preview — only shown on modify tab */}
+              {activeTab === 'modify' && previewImageUrl && !generating ? (
+                <div className="aspect-video rounded-admin-md overflow-hidden">
+                  <img src={previewImageUrl} className="w-full h-full object-cover" alt="" />
+                </div>
+              ) : activeTab === 'modify' && selectedFrame && !generating ? (
+                <StoryboardLayoutRenderer
+                  layout="single"
+                  frames={[{ ...selectedFrame, slot: 1 }]}
+                  size="stage"
+                  gap={0}
+                />
+              ) : activeTab === 'modify' && !selectedFrame && !generating ? (
+                <div className="aspect-video rounded-admin-md border-[3px] border-dashed border-admin-border bg-admin-bg-inset flex items-center justify-center">
+                  <div className="text-center text-admin-text-faint">
+                    <ImageIcon size={24} className="mx-auto mb-2 opacity-40" />
+                    <p className="text-admin-sm">Generate an image first, then select it to modify</p>
+                  </div>
+                </div>
+              ) : generating ? (
+                <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset">
+                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+                  <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center text-admin-text-faint">
-                      <ImageIcon size={24} className="mx-auto mb-2 opacity-40" />
-                      <p className="text-admin-sm">No image generated yet</p>
+                      <Loader2 size={24} className="mx-auto mb-2 animate-spin opacity-40" />
+                      <p className="text-admin-sm">Generating…</p>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="aspect-video rounded-admin-md border-[3px] border-dashed border-admin-border bg-admin-bg-inset flex items-center justify-center">
+                  <div className="text-center text-admin-text-faint">
+                    <ImageIcon size={24} className="mx-auto mb-2 opacity-40" />
+                    <p className="text-admin-sm">
+                      {activeTab === 'modify' ? 'Select an image from history to modify' : 'No image generated yet'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {activeTab === 'generate' ? (
                 <>
-                  {/* Style selector strip */}
-                  <div>
+                  {/* Content fields — 2-col: Audio+Visual | Notes+References */}
+                  <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleAddRefFile(e.target.files)} />
+                  <div className="border border-[#0e0e0e] overflow-hidden bg-admin-bg-base">
+                    {/* Row 1: Audio | Visual */}
+                    <div className="grid grid-cols-2">
+                      <div className="border-l-[3px] border-l-[var(--admin-accent)] border-r border-r-[#0e0e0e] [&>div]:!border-b-0" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
+                        <div className="px-3 pt-1.5">
+                          <span className="text-admin-sm text-admin-text-ghost uppercase tracking-widest">Audio</span>
+                        </div>
+                        <ScriptBeatCell
+                          value={localAudio}
+                          field="audio_content"
+                          onChange={(v) => { setLocalAudio(v); saveBeatContent(v, localVisual, localNotes); }}
+                          characters={characters}
+                          tags={emptyTags}
+                          locations={locations}
+                          products={products}
+                          beatId={beatId}
+                        />
+                      </div>
+                      <div className="border-l-[3px] border-l-[var(--admin-info)] [&>div]:!border-b-0" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
+                        <div className="px-3 pt-1.5">
+                          <span className="text-admin-sm text-admin-text-ghost uppercase tracking-widest">Visual</span>
+                        </div>
+                        <ScriptBeatCell
+                          value={localVisual}
+                          field="visual_content"
+                          onChange={(v) => { setLocalVisual(v); saveBeatContent(localAudio, v, localNotes); }}
+                          characters={characters}
+                          tags={emptyTags}
+                          locations={locations}
+                          products={products}
+                          beatId={beatId}
+                        />
+                      </div>
+                    </div>
+                    {/* Row 2: Notes | References */}
+                    <div className="grid grid-cols-2 border-t border-t-[#0e0e0e]">
+                      <div className="border-l-[3px] border-l-[var(--admin-warning)] border-r border-r-[#0e0e0e] [&>div]:!border-b-0" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
+                        <div className="px-3 pt-1.5">
+                          <span className="text-admin-sm text-admin-text-ghost uppercase tracking-widest">Notes</span>
+                        </div>
+                        <ScriptBeatCell
+                          value={localNotes}
+                          field="notes_content"
+                          onChange={(v) => { setLocalNotes(v); saveBeatContent(localAudio, localVisual, v); }}
+                          characters={characters}
+                          tags={emptyTags}
+                          locations={locations}
+                          products={products}
+                          beatId={beatId}
+                        />
+                      </div>
+                      <div
+                        className={`border-l-[3px] border-l-[var(--admin-danger)] transition-colors ${isDragOverRef ? 'bg-[var(--admin-accent)]/10 ring-1 ring-inset ring-[var(--admin-accent)]' : ''}`}
+                        onDragOver={(e) => { if (e.dataTransfer.types.includes('application/x-storyboard-ref')) { e.preventDefault(); setIsDragOverRef(true); } }}
+                        onDragLeave={() => setIsDragOverRef(false)}
+                        onDrop={(e) => {
+                          setIsDragOverRef(false);
+                          const url = e.dataTransfer.getData('application/x-storyboard-ref');
+                          if (url) {
+                            e.preventDefault();
+                            setLocalReferences(prev => prev.some(r => r.url === url) ? prev : [...prev, { url, purpose: 'beat' }]);
+                          }
+                        }}
+                      >
+                        <div className="px-3 pt-1.5 pb-1">
+                          <span className="text-admin-sm text-admin-text-ghost uppercase tracking-widest">References</span>
+                        </div>
+                        <div className="px-3 pb-2">
+                          <div className={`grid ${localReferences.filter(r => r.purpose === 'beat').length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 mb-1`}>
+                            {localReferences.filter(r => r.purpose === 'beat').map((ref, i) => (
+                              <div key={`${ref.url}-${i}`} className="group/img relative aspect-video rounded overflow-hidden">
+                                <img src={ref.url} alt="" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 rounded">
+                                  <button
+                                    onClick={() => handleRemoveRef(ref.url)}
+                                    className="w-6 h-6 flex items-center justify-center rounded bg-admin-danger text-white"
+                                    title="Remove"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div
+                            className="flex items-center justify-center h-8 cursor-pointer rounded border border-dashed border-admin-border hover:border-admin-border-strong hover:bg-admin-bg-hover transition-colors"
+                            onClick={() => fileRef.current?.click()}
+                          >
+                            <Plus size={13} className="text-admin-text-ghost" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Style selector — below the content fields, with separator */}
+                  <div className="border-t border-admin-border pt-4">
                     <label className="admin-label">Style</label>
                     <div className="grid grid-cols-8 gap-2 p-1 -m-1">
                       {Object.entries(STYLE_PRESETS).map(([key, preset]) => (
@@ -644,129 +791,94 @@ export function StoryboardGenerateModal({
                     </div>
                   </div>
 
-                  {/* Content prompt with undo/redo */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="admin-label mb-0">Content Prompt</label>
-                      <div className="flex items-center gap-1">
-                        <button onClick={handleUndo} disabled={promptHistory.length === 0}
-                          className="btn-ghost w-7 h-7 flex items-center justify-center disabled:opacity-30" title="Undo">
-                          <Undo2 size={12} />
+                  {/* Full prompt preview — tabs between text and JSON */}
+                  <div className="border-t border-admin-border pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="admin-label mb-0">Full Prompt Preview</label>
+                      <div className="flex items-center gap-0 border border-admin-border rounded-admin-sm overflow-hidden">
+                        <button
+                          onClick={() => setPromptPreviewTab('text')}
+                          className={`px-3 py-1 text-admin-sm transition-colors ${promptPreviewTab === 'text' ? 'bg-admin-bg-active text-admin-text-primary' : 'text-admin-text-muted hover:bg-admin-bg-hover'}`}
+                        >
+                          Text
                         </button>
-                        <button onClick={handleRedo} disabled={promptFuture.length === 0}
-                          className="btn-ghost w-7 h-7 flex items-center justify-center disabled:opacity-30" title="Redo">
-                          <Redo2 size={12} />
+                        <button
+                          onClick={() => setPromptPreviewTab('json')}
+                          className={`px-3 py-1 text-admin-sm transition-colors border-l border-admin-border ${promptPreviewTab === 'json' ? 'bg-admin-bg-active text-admin-text-primary' : 'text-admin-text-muted hover:bg-admin-bg-hover'}`}
+                        >
+                          JSON
                         </button>
                       </div>
                     </div>
-                    <textarea
-                      value={localPrompt}
-                      onChange={(e) => handlePromptChange(e.target.value)}
-                      onBlur={() => pushPromptHistory(localPrompt)}
-                      className="admin-input admin-scrollbar w-full text-admin-sm font-admin-mono min-h-[160px] max-h-[300px]"
-                    />
-                  </div>
+                    <pre className="text-admin-sm font-admin-mono text-admin-text-muted whitespace-pre-wrap break-words leading-relaxed">
+                      {promptPreviewTab === 'text'
+                        ? assembledPrompt
+                        : JSON.stringify(previewJson, null, 2)
+                      }
+                    </pre>
 
-                  {/* Reference images */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="admin-label mb-0">Reference Images</label>
-                      <button
-                        onClick={() => fileRef.current?.click()}
-                        className="btn-ghost-add w-7 h-7 flex items-center justify-center"
-                        title="Add reference image"
-                      >
-                        <Plus size={12} />
-                      </button>
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleAddRefFile(e.target.files)}
-                      />
-                    </div>
-
-                    {Object.keys(refGroups).length === 0 ? (
-                      <p className="text-admin-sm text-admin-text-faint">No reference images</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {Object.entries(refGroups).map(([purpose, refs]) => (
-                          <div key={purpose}>
-                            <p className="text-admin-sm text-admin-text-muted mb-1.5">{PURPOSE_LABELS[purpose] ?? purpose}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {refs.map((ref, i) => (
-                                <div key={`${ref.url}-${i}`} className="group/ref relative w-16 h-16">
+                    {/* All reference images sent to AI */}
+                    {localReferences.length > 0 && (
+                      <div className="border-t border-admin-border mt-4 pt-4">
+                        <label className="admin-label mb-2">References</label>
+                        <div className="flex flex-wrap gap-x-6 gap-y-5">
+                          {Object.entries(refGroups).map(([purpose, refs]) => (
+                            <div key={purpose}>
+                              <p className={`text-admin-sm mb-1 uppercase tracking-wider ${
+                                purpose === 'style' ? 'text-admin-text-muted' :
+                                purpose === 'cast' ? 'text-admin-success' :
+                                purpose === 'location' ? 'text-admin-warning' :
+                                purpose === 'beat' ? 'text-admin-danger' :
+                                'text-admin-danger'
+                              }`}>{PURPOSE_LABELS[purpose] ?? purpose}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {refs.map((ref, i) => (
                                   <img
+                                    key={`${ref.url}-${i}`}
                                     src={ref.url}
                                     alt=""
-                                    className="w-full h-full object-cover rounded-admin-sm border border-admin-border"
+                                    className="w-16 h-16 object-cover rounded-[2px] border border-[#0e0e0e]"
                                   />
-                                  <button
-                                    onClick={() => handleRemoveRef(ref.url)}
-                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-admin-danger text-white opacity-0 group-hover/ref:opacity-100 transition-opacity"
-                                    title="Remove"
-                                  >
-                                    <X size={10} />
-                                  </button>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {/* Generate action */}
-                  <button
-                    onClick={handleGenerate}
-                    disabled={generating || !style}
-                    className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2 w-full justify-center"
-                  >
-                    {generating ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Sparkles size={14} />
-                    )}
-                    {generating ? 'Generating...' : 'Generate'}
-                  </button>
                 </>
               ) : (
                 /* ── Modify tab content ── */
                 <>
-                  {!selectedFrame && (
-                    <div className="bg-admin-warning/10 border border-admin-warning/30 rounded-admin-md px-4 py-3">
-                      <p className="text-admin-sm text-admin-warning">Select or generate an image first to use modification mode.</p>
-                    </div>
-                  )}
-
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-2">
                       <label className="admin-label mb-0">Modification Prompt</label>
                       <div className="relative">
                         <button
                           onClick={() => setShowModifyInfo(!showModifyInfo)}
-                          className="btn-ghost w-6 h-6 flex items-center justify-center"
+                          className="btn-ghost w-4 h-4 flex items-center justify-center"
                           title="How to use"
                         >
                           <Info size={12} />
                         </button>
                         {showModifyInfo && (
-                          <div className="absolute top-full left-0 mt-1 z-10 w-72 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl p-4 space-y-2">
-                            <p className="text-admin-sm text-admin-text-primary font-medium">How modification works</p>
-                            <p className="text-admin-sm text-admin-text-muted">
-                              Describe changes to make to the selected image. The AI uses the current image as a starting point and applies your edits.
-                            </p>
-                            <div className="space-y-1">
-                              <p className="text-admin-sm text-admin-text-muted font-medium">Examples:</p>
-                              <ul className="text-admin-sm text-admin-text-faint space-y-0.5 list-none">
-                                <li>&bull; Tighter frame on the subject</li>
-                                <li>&bull; Warmer color grading</li>
-                                <li>&bull; Add dramatic shadows from the left</li>
-                                <li>&bull; Remove background clutter</li>
-                                <li>&bull; Change to a low-angle shot</li>
-                              </ul>
+                          <div className="absolute bottom-full left-0 mb-2 z-10 w-72 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl overflow-hidden">
+                            <div className="px-4 py-3 space-y-3">
+                              <p className="text-admin-sm text-admin-text-muted leading-relaxed">
+                                Describe changes to make to the selected image. The AI uses the current image as a starting point and applies your edits.
+                              </p>
+                              <div>
+                                <p className="text-admin-sm text-admin-text-muted font-medium mb-1.5">Examples</p>
+                                <ul className="space-y-1">
+                                  {['Tighter frame on the subject', 'Warmer color grading', 'Add dramatic shadows from the left', 'Remove background clutter', 'Change to a low-angle shot'].map(ex => (
+                                    <li key={ex} className="text-admin-sm text-admin-text-faint flex gap-2">
+                                      <span className="text-admin-text-muted flex-shrink-0">—</span>
+                                      <span>{ex}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -776,137 +888,452 @@ export function StoryboardGenerateModal({
                       value={modifyPrompt}
                       onChange={(e) => setModifyPrompt(e.target.value)}
                       placeholder="Describe what to change (e.g., tighter frame, warmer lighting, remove background elements...)"
-                      className="admin-input admin-scrollbar w-full text-admin-sm font-admin-mono min-h-[120px] max-h-[300px]"
+                      className="admin-input admin-scrollbar w-full text-admin-sm font-admin-mono min-h-[120px] max-h-[300px] resize-none"
                     />
                   </div>
 
-                  {/* Modify action */}
-                  <button
-                    onClick={handleModify}
-                    disabled={generating || !selectedFrame || !modifyPrompt.trim()}
-                    className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2 w-full justify-center"
-                  >
-                    {generating ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Wand2 size={14} />
-                    )}
-                    {generating ? 'Modifying...' : 'Modify Image'}
-                  </button>
                 </>
               )}
             </div>
-
-            {/* ── Right column: history ── */}
-            <div className="w-[200px] flex-shrink-0 border-l border-admin-border bg-admin-bg-base overflow-y-auto admin-scrollbar-auto">
-              <div className="px-4 pt-4 pb-2">
-                <label className="admin-label mb-0">History</label>
-              </div>
-
-              {history.length === 0 ? (
-                <div className="px-4 py-8 text-center text-admin-text-faint">
-                  <p className="text-admin-sm">No generations yet</p>
-                </div>
-              ) : (
-                <div className="px-3 pb-3 space-y-2">
-                  {history.map((frame) => {
-                    const ts = formatLA(frame.created_at);
-                    return (
-                      <div
-                        key={frame.id}
-                        className={`group/hist relative rounded-admin-sm cursor-pointer transition-all ${
-                          frame.id === selectedFrameId
-                            ? 'ring-2 ring-[var(--admin-accent)]'
-                            : 'hover:ring-1 hover:ring-admin-border'
-                        }`}
-                        onClick={() => handleSelectFrame(frame)}
-                      >
-                        <img
-                          src={frame.image_url}
-                          alt=""
-                          className="w-full aspect-video object-cover rounded-admin-sm"
-                        />
-                        {/* Active dot — top right */}
-                        {frame.is_active && (
-                          <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-admin-success ring-1 ring-black/30" />
-                        )}
-                        {/* Hover actions */}
-                        <div
-                          className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover/hist:opacity-100 transition-opacity bg-black/40 rounded-admin-sm"
-                          onMouseLeave={() => setConfirmDeleteId(null)}
-                        >
-                          {!frame.is_active && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleUseFrame(frame.id); }}
-                              className="px-2 py-1 text-[11px] font-medium rounded bg-white/90 text-black hover:bg-white transition-colors"
-                              title="Set as active"
-                            >
-                              Use
-                            </button>
-                          )}
-                          {confirmDeleteId === frame.id ? (
-                            <>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteFrame(frame.id); }}
-                                className="w-6 h-6 flex items-center justify-center rounded bg-red-500/90 text-white hover:bg-red-500"
-                                title="Confirm delete"
-                              >
-                                <Check size={10} />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                                className="w-6 h-6 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500"
-                                title="Cancel"
-                              >
-                                <X size={10} />
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(frame.id); }}
-                              className="w-6 h-6 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-red-500"
-                              title="Delete"
-                            >
-                              <Trash2 size={10} />
-                            </button>
-                          )}
-                        </div>
-                        {/* Timestamp — LA timezone */}
-                        <p className="text-admin-sm text-admin-text-faint text-center mt-1">
-                          {ts.date} {ts.time}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            </>
             )}
+
+            {/* ── Right column: unified frame sidebar ── */}
+            <div className="w-[200px] flex-shrink-0 border-l border-admin-border bg-admin-bg-base flex flex-col overflow-hidden">
+              {(() => {
+                // Compute which image URLs / frame IDs are "active" in the hero
+                // For frames tab: all slots. For generate/modify: selectedFrame + previewImageUrl
+                const activeUrls = new Set<string>();
+                const activeIds = new Set<string>();
+                if (activeTab === 'frames') {
+                  draftSlots.forEach((frameId) => {
+                    const f = history.find(h => h.id === frameId);
+                    if (f) { activeUrls.add(f.image_url); activeIds.add(f.id); }
+                  });
+                } else {
+                  if (selectedFrame) { activeIds.add(selectedFrame.id); }
+                  else if (previewImageUrl) activeUrls.add(previewImageUrl);
+                }
+
+                const handleFrameClick = (frameId: string, imageUrl: string) => {
+                  if (activeTab === 'frames') {
+                    setDraftSlots(prev => new Map(prev).set(selectedSlot, frameId));
+                    if (!history.some(h => h.id === frameId)) {
+                      const foreign = allFramesForScript?.find(f => f.id === frameId);
+                      if (foreign) {
+                        setHistory(prev => [...prev, foreign]);
+                        setForeignFrameIds(prev => new Set(prev).add(frameId));
+                      }
+                    }
+                  } else {
+                    const inHistory = history.find(f => f.id === frameId);
+                    if (inHistory) {
+                      // Toggle: clicking already-selected frame deselects it
+                      if (selectedFrameId === inHistory.id) { setSelectedFrameId(null); setPreviewImageUrl(null); }
+                      else { setSelectedFrameId(inHistory.id); setPreviewImageUrl(null); }
+                    } else { setPreviewImageUrl(imageUrl); setSelectedFrameId(null); }
+                  }
+                };
+
+                const renderFrame = (id: string, imageUrl: string, label?: string, archived?: boolean) => {
+                  const isActive = activeIds.has(id) || activeUrls.has(imageUrl);
+                  const isSyntheticId = id.startsWith('scene-url-') || id.startsWith('preview-');
+                  const refreshAfterChange = () => {
+                    setHistory(prev => prev.filter(f => f.id !== id));
+                    setDraftSlots(prev => { const n = new Map(prev); for (const [s, fid] of n) { if (fid === id) n.delete(s); } return n; });
+                  };
+                  return (
+                    <SidebarFrameItem
+                      key={id}
+                      id={id}
+                      imageUrl={imageUrl}
+                      label={label}
+                      isActive={isActive}
+                      isSyntheticId={isSyntheticId}
+                      isArchived={archived}
+                      scenes={scenes}
+                      onClick={() => handleFrameClick(id, imageUrl)}
+                      onDeleted={() => {
+                        refreshAfterChange();
+                        if (selectedFrameId === id) setSelectedFrameId(null);
+                      }}
+                      onMoved={refreshAfterChange}
+                      onArchived={() => {
+                        refreshAfterChange();
+                        fetchAllScriptFrames(scriptId).then(setAllFramesForScript);
+                      }}
+                    />
+                  );
+                };
+
+                // Build other-scene groups sorted by scene number
+                // Frames may have scene_id=null (beat-level); resolve via beat_id → scene lookup
+                const resolveSceneId = (f: ScriptStoryboardFrameRow): string | null => {
+                  if (f.scene_id) return f.scene_id;
+                  if (f.beat_id && scenes) {
+                    const sc = scenes.find(s => s.beats.some(b => b.id === f.beat_id));
+                    return sc?.id ?? null;
+                  }
+                  return null;
+                };
+                const allOtherFrames = (allFramesForScript ?? []).filter(f => {
+                  const sid = resolveSceneId(f);
+                  return sid !== sceneId;
+                });
+                const otherGrouped = new Map<string, ScriptStoryboardFrameRow[]>();
+                for (const f of allOtherFrames) {
+                  const sid = resolveSceneId(f) ?? 'unknown';
+                  if (!otherGrouped.has(sid)) otherGrouped.set(sid, []);
+                  otherGrouped.get(sid)!.push(f);
+                }
+                const sortedOtherSceneIds = [...otherGrouped.keys()].sort((a, b) => {
+                  const sa = scenes?.find(s => s.id === a)?.sceneNumber ?? 0;
+                  const sb = scenes?.find(s => s.id === b)?.sceneNumber ?? 0;
+                  return (typeof sa === 'number' ? sa : parseInt(sa)) - (typeof sb === 'number' ? sb : parseInt(sb));
+                });
+
+                // Helper: derive caption for any frame via beat lookup
+                const frameCaption = (frameId: string): string => {
+                  const f = allFramesForScript?.find(af => af.id === frameId)
+                         ?? history.find(hf => hf.id === frameId);
+                  if (f) {
+                    const sc = scenes?.find(s => s.beats.some(b => b.id === f.beat_id));
+                    if (sc) {
+                      const beatIdx = sc.beats.findIndex(b => b.id === f.beat_id);
+                      let letter = '';
+                      if (beatIdx >= 0) {
+                        let n = beatIdx + 1;
+                        while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+                      }
+                      return letter ? `${sc.sceneNumber}${letter}` : `${sc.sceneNumber}`;
+                    }
+                  }
+                  return '';
+                };
+
+                // Selected frames (currently in use across all slots / hero)
+                const selectedFrames: { id: string; imageUrl: string; caption: string }[] = [];
+                activeIds.forEach(id => {
+                  const f = history.find(h => h.id === id);
+                  if (f) selectedFrames.push({ id: f.id, imageUrl: f.image_url, caption: frameCaption(f.id) });
+                });
+                activeUrls.forEach(url => {
+                  if (!selectedFrames.some(f => f.imageUrl === url)) {
+                    selectedFrames.push({ id: `preview-${url}`, imageUrl: url, caption: frameCaption(`preview-${url}`) });
+                  }
+                });
+
+                // This scene frames — built from allFramesForScript, sorted by beat order
+                const thisSceneBeatIds = new Set(scene.beats.map(b => b.id));
+                const thisSceneRaw = (allFramesForScript ?? []).filter(f =>
+                  f.beat_id && thisSceneBeatIds.has(f.beat_id)
+                ).sort((fa, fb) => {
+                  const ai = scene.beats.findIndex(b => b.id === fa.beat_id);
+                  const bi = scene.beats.findIndex(b => b.id === fb.beat_id);
+                  return ai - bi;
+                });
+                const thisSceneFrames = thisSceneRaw.filter(f => !f.is_archived).map(f => ({
+                  id: f.id,
+                  imageUrl: f.image_url,
+                  caption: frameCaption(f.id),
+                }));
+
+                // Collect all archived frames across all scenes
+                const archivedFrames = [
+                  ...thisSceneRaw.filter(f => f.is_archived),
+                  ...(allFramesForScript ?? []).filter(f => {
+                    const sid = resolveSceneId(f);
+                    return sid !== sceneId && f.is_archived;
+                  }),
+                ];
+
+                const sectionHeader = (key: string, label: string, opts?: { colorClass?: string; icon?: React.ReactNode }) => {
+                  const collapsed = collapsedSections.has(key);
+                  return (
+                    <button type="button" onClick={() => toggleSection(key)} className="flex items-center justify-between w-full mb-3 opacity-80 hover:opacity-100 transition-opacity">
+                      <span className={`text-xs uppercase tracking-wide ${opts?.colorClass ? opts.colorClass : 'text-admin-text-secondary'}`}>{label}</span>
+                      <span className={`flex items-center gap-1 ${opts?.colorClass ? opts.colorClass : 'text-admin-text-faint'}`}>
+                        {opts?.icon}
+                        <ChevronDown size={12} className={`transition-transform ${collapsed ? '-rotate-90' : ''}`} />
+                      </span>
+                    </button>
+                  );
+                };
+
+                return (
+                  <div className="flex-1 admin-scrollbar px-3 py-6" style={{ overflowY: 'scroll' }}>
+                    {/* THIS SCENE */}
+                    <div>
+                      {sectionHeader('current-scene', 'Current Scene', { colorClass: 'text-[var(--admin-info)]' })}
+                      {!collapsedSections.has('current-scene') && (
+                        thisSceneFrames.length === 0 ? (
+                          <p className="text-admin-sm text-admin-text-faint text-center pb-2">No frames yet</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {thisSceneFrames.map(f => renderFrame(f.id, f.imageUrl, f.caption || undefined))}
+                          </div>
+                        )
+                      )}
+                    </div>
+
+                    {/* ALL OTHER SCENES */}
+                    <div className="border-t border-admin-border mt-5 pt-5">
+                      {loadingOthers ? (
+                        <p className="text-admin-sm text-admin-text-faint text-center">Loading…</p>
+                      ) : sortedOtherSceneIds.map(sid => {
+                        const sc = scenes?.find(s => s.id === sid);
+                        const sceneLabel = sc ? `${sc.sceneNumber}` : '?';
+                        const sectionKey = `scene-${sid}`;
+                        // Sort frames by beat order within this scene, exclude archived
+                        const sortedFrames = [...(otherGrouped.get(sid) ?? [])].filter(f => !f.is_archived).sort((a, b) => {
+                          const ai = sc?.beats.findIndex(b2 => b2.id === a.beat_id) ?? -1;
+                          const bi = sc?.beats.findIndex(b2 => b2.id === b.beat_id) ?? -1;
+                          return ai - bi;
+                        });
+                        if (sortedFrames.length === 0) return null;
+                        return (
+                          <div key={sid} className="mb-4">
+                            {sectionHeader(sectionKey, `Scene ${sceneLabel}`)}
+                            {!collapsedSections.has(sectionKey) && (
+                              <div className="space-y-1.5">
+                                {sortedFrames.map(f => {
+                                  const beatIdx = sc?.beats.findIndex(b => b.id === f.beat_id) ?? -1;
+                                  let letter = '';
+                                  if (beatIdx >= 0) {
+                                    let n = beatIdx + 1;
+                                    while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+                                  }
+                                  const beatLabel = letter ? `${sceneLabel}${letter}` : sceneLabel;
+                                  return renderFrame(f.id, f.image_url, beatLabel);
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* ARCHIVED */}
+                    {archivedFrames.length > 0 && (
+                      <div className="border-t border-admin-border mt-5 pt-5">
+                        {sectionHeader('hidden', 'Hidden', { colorClass: 'text-[var(--admin-warning)]', icon: <EyeOff size={12} /> })}
+                        {!collapsedSections.has('hidden') && (
+                          <div className="space-y-1.5">
+                            {archivedFrames.map(f => renderFrame(f.id, f.image_url, frameCaption(f.id) || undefined, true))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
+
         {/* ── Footer ── */}
-        <div className="flex items-center border-t border-admin-border bg-admin-bg-wash flex-shrink-0 rounded-b-admin-xl">
-          <div className="flex-1 flex items-center gap-2 px-6 py-4">
+        <div className="flex items-center gap-2 border-t border-admin-border bg-admin-bg-wash flex-shrink-0 rounded-b-admin-xl px-6 py-4">
+          {activeTab === 'generate' && (
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2"
+            >
+              {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {generating ? 'Generating...' : 'Generate Frame'}
+            </button>
+          )}
+          {activeTab === 'modify' && (
+            <button
+              onClick={handleModify}
+              disabled={generating || !selectedFrame || !modifyPrompt.trim()}
+              className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2"
+            >
+              {generating ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+              {generating ? 'Modifying...' : 'Modify Frame'}
+            </button>
+          )}
+          {activeTab === 'frames' && (
             <button
               onClick={handleSaveAndClose}
               className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2"
             >
-              Save
+              <LayoutGrid size={14} />
+              Apply Layout
             </button>
-            <button onClick={onClose} className="btn-secondary px-4 py-2.5 text-sm">
-              Close
-            </button>
-          </div>
-          <div className="w-[200px] flex-shrink-0 px-4 py-4 text-center">
-            <span className="text-admin-sm text-admin-text-muted">
-              {history.length} generation{history.length !== 1 ? 's' : ''}
-            </span>
-          </div>
+          )}
+          <button onClick={onClose} className="btn-secondary px-4 py-2.5 text-sm">
+            Close
+          </button>
         </div>
       </div>
     </div>,
     document.body,
+  );
+}
+
+// ── SidebarFrameItem ─────────────────────────────────────────────────────────
+
+function SidebarFrameItem({
+  id, imageUrl, label, isActive, isSyntheticId, isArchived, scenes, onClick, onDeleted, onMoved, onArchived,
+}: {
+  id: string;
+  imageUrl: string;
+  label?: string;
+  isActive: boolean;
+  isSyntheticId: boolean;
+  isArchived?: boolean;
+  scenes?: import('@/types/scripts').ComputedScene[];
+  onClick: () => void;
+  onDeleted: () => void;
+  onMoved: () => void;
+  onArchived: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showBeatPicker, setShowBeatPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'move' | 'copy'>('move');
+  const [pickerAbove, setPickerAbove] = useState(true);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showBeatPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setShowBeatPicker(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showBeatPicker]);
+
+  const openPicker = (e: React.MouseEvent, mode: 'move' | 'copy') => {
+    e.stopPropagation();
+    setPickerMode(mode);
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPickerAbove(rect.top > 220);
+    }
+    setShowBeatPicker(v => !v);
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await deleteStoryboardFrame(id);
+    onDeleted();
+  };
+
+  const handleCopyToClipboard = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    } catch {
+      // fallback: open in new tab
+      window.open(imageUrl, '_blank');
+    }
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `frame-${id}.jpg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(imageUrl, '_blank');
+    }
+  };
+
+  const handleArchiveToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isArchived) {
+      await unarchiveStoryboardFrame(id);
+    } else {
+      await archiveStoryboardFrame(id);
+    }
+    onArchived();
+  };
+
+  const btnCls = 'w-5 h-5 flex items-center justify-center text-admin-text-faint hover:text-admin-text-primary transition-colors flex-shrink-0';
+
+  return (
+    <div className="group/sf">
+      <div
+        className={`relative rounded-admin-sm cursor-pointer transition-all overflow-hidden ${isActive ? 'ring-2 ring-[var(--admin-accent)]' : 'hover:ring-1 hover:ring-admin-border'}`}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('application/x-frame-id', id);
+          e.dataTransfer.setData('application/x-storyboard-ref', imageUrl);
+          e.dataTransfer.effectAllowed = 'copy';
+        }}
+        onClick={onClick}
+      >
+        <img src={imageUrl} alt="" className="w-full aspect-video object-cover rounded-admin-sm" />
+        {/* Tint overlay */}
+        {!isActive && <div className="absolute inset-0 rounded-admin-sm bg-black/35" />}
+      </div>
+      <div className="relative flex items-center justify-between mt-1 px-0.5 min-h-[1.5rem]">
+        {/* Floating beat picker — absolutely positioned, doesn't shift layout */}
+        {showBeatPicker && (
+          <div
+            ref={pickerRef}
+            className={`absolute ${pickerAbove ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 bg-admin-bg-overlay border border-admin-border rounded-admin-sm shadow-lg overflow-hidden min-w-[120px]`}
+          >
+            <div className="px-3 py-1.5 border-b border-admin-border">
+              <p className="text-admin-sm text-admin-text-muted">{pickerMode === 'move' ? 'Move to…' : 'Copy to…'}</p>
+            </div>
+            <div className="max-h-48 overflow-y-auto admin-scrollbar">
+              {scenes?.map(sc => sc.beats.map((b, bi) => {
+                let letter = '';
+                let n = bi + 1;
+                while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
+                return (
+                  <button
+                    key={b.id}
+                    className="w-full text-left px-3 py-1.5 text-admin-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+                    onMouseDown={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (pickerMode === 'move') {
+                        await moveFrameToBeat(id, b.id);
+                        onMoved();
+                      } else {
+                        await duplicateFrame(id, b.id);
+                      }
+                      setShowBeatPicker(false);
+                    }}
+                  >{sc.sceneNumber}{letter}</button>
+                );
+              }))}
+            </div>
+          </div>
+        )}
+        <p className="text-admin-sm text-admin-text-faint truncate flex-1">{label ?? ''}</p>
+        {/* Right: action buttons */}
+        {!isSyntheticId && (
+          <div className="flex items-center opacity-0 group-hover/sf:opacity-100 transition-opacity flex-shrink-0 ml-1">
+            {confirmDelete ? (
+              <>
+                <button onClick={handleDelete} title="Confirm delete" className="w-6 h-6 flex items-center justify-center text-admin-danger hover:text-red-400 transition-colors flex-shrink-0"><Check size={11} /></button>
+                <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} title="Cancel" className={btnCls}><X size={11} /></button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleCopyToClipboard} title="Copy to clipboard" className={btnCls}><Clipboard size={11} /></button>
+                <button onClick={handleDownload} title="Download" className={btnCls}><Download size={11} /></button>
+                <button ref={triggerRef} onClick={(e) => openPicker(e, 'copy')} title="Copy to beat…" className={btnCls}><Copy size={11} /></button>
+                <button onClick={(e) => openPicker(e, 'move')} title="Move to beat…" className={btnCls}><ArrowRight size={11} /></button>
+                <button onClick={handleArchiveToggle} title={isArchived ? 'Show' : 'Hide'} className={`${btnCls} hover:!text-admin-warning`}>{isArchived ? <Eye size={11} /> : <EyeOff size={11} />}</button>
+                <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }} title="Delete" className={`${btnCls} hover:!text-admin-danger`}><Trash2 size={11} /></button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

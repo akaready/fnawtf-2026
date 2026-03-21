@@ -3146,6 +3146,7 @@ export type Database = {
           id: string
           image_url: string
           is_active: boolean
+          is_archived: boolean
           prompt_used: string | null
           reference_urls_used: Json | null
           scene_id: string | null
@@ -3159,6 +3160,7 @@ export type Database = {
           id?: string
           image_url: string
           is_active?: boolean
+          is_archived?: boolean
           prompt_used?: string | null
           reference_urls_used?: Json | null
           scene_id?: string | null
@@ -3172,6 +3174,7 @@ export type Database = {
           id?: string
           image_url?: string
           is_active?: boolean
+          is_archived?: boolean
           prompt_used?: string | null
           reference_urls_used?: Json | null
           scene_id?: string | null

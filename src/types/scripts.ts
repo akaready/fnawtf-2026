@@ -268,6 +268,7 @@ export interface ScriptStoryboardFrameRow {
   source: StoryboardFrameSource;
   prompt_used: string | null;
   is_active: boolean;
+  is_archived: boolean;
   reference_urls_used: StoryboardReferenceUsed[];
   slot: number | null;           // 1–4 or null (history only)
   crop_config: CropConfig | null;

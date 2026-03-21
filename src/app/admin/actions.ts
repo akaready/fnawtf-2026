@@ -3317,6 +3317,18 @@ export async function getStoryboardFrames(scriptId: string) {
   return data ?? [];
 }
 
+export async function getAllStoryboardFrames(scriptId: string) {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('script_storyboard_frames')
+    .select('*')
+    .eq('script_id', scriptId)
+    .order('created_at', { ascending: false });
+  if (error?.message?.includes('schema cache')) return [];
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function getFrameHistoryForBeat(beatId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
@@ -3451,6 +3463,26 @@ export async function deleteStoryboardFrame(id: string) {
   }
 }
 
+export async function archiveStoryboardFrame(id: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  await supabase
+    .from('script_storyboard_frames')
+    .update({ is_archived: true, is_active: false, slot: null } as never)
+    .eq('id', id);
+}
+
+export async function unarchiveStoryboardFrame(id: string) {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  await supabase
+    .from('script_storyboard_frames')
+    .update({ is_archived: false } as never)
+    .eq('id', id);
+}
+
 export async function deleteAllStoryboardFrames(scriptId: string) {
   await requireAuth();
   const { createServiceClient } = await import('@/lib/supabase/service');
@@ -3501,7 +3533,7 @@ export async function updateFrameCrop(frameId: string, crop: import('@/types/scr
   if (error) throw new Error(error.message);
 }
 
-export async function duplicateFrame(frameId: string): Promise<import('@/types/scripts').ScriptStoryboardFrameRow> {
+export async function duplicateFrame(frameId: string, targetBeatId?: string): Promise<import('@/types/scripts').ScriptStoryboardFrameRow> {
   await requireAuth();
   const { createServiceClient } = await import('@/lib/supabase/service');
   const supabase = createServiceClient();
@@ -3515,7 +3547,8 @@ export async function duplicateFrame(frameId: string): Promise<import('@/types/s
   const { data: copy, error: insertErr } = await supabase
     .from('script_storyboard_frames')
     .insert({
-      beat_id: src.beat_id,
+      script_id: src.script_id,
+      beat_id: targetBeatId ?? src.beat_id,
       image_url: src.image_url,
       storage_path: src.storage_path,
       source: src.source,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Sparkles, ImagePlus, Loader2, X, Expand, GripVertical, Pencil, RefreshCw } from 'lucide-react';
+import { Sparkles, ImagePlus, Loader2, X, Expand, GripVertical, Pencil } from 'lucide-react';
 import { uploadStoryboardFrame } from '@/app/admin/actions';
 import { ImageActionButton } from '@/app/admin/_components/ImageActionButton';
 import { buildRichPrompt } from './storyboardUtils';
@@ -9,7 +9,7 @@ import { StoryboardLightbox } from './StoryboardLightbox';
 import { StoryboardGenerateModal } from './StoryboardGenerateModal';
 import { StoryboardLayoutRenderer } from './StoryboardLayoutRenderer';
 import { buildStoryboardFilename } from '@/lib/scripts/downloadStoryboards';
-import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ImageDragData, ImageDropData, StoryboardSlotFrame } from '@/types/scripts';
+import type { ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, ScriptProductRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ImageDragData, ImageDropData, StoryboardSlotFrame } from '@/types/scripts';
 
 interface Props {
   frames: ScriptStoryboardFrameRow[];
@@ -30,6 +30,7 @@ interface Props {
   beatIndex: number;
   characters: ScriptCharacterRow[];
   locations: ScriptLocationRow[];
+  products?: ScriptProductRow[];
   castMap?: Record<string, CharacterCastWithContact[]>;
   referenceMap?: Record<string, CharacterReferenceRow[]>;
   locationReferenceMap?: Record<string, LocationReferenceRow[]>;
@@ -40,6 +41,7 @@ interface Props {
   allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
   consistencyFrameUrls?: string[];
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
+  scenes?: import('@/types/scripts').ComputedScene[];
 }
 
 export function ScriptStoryboardCell({
@@ -61,6 +63,7 @@ export function ScriptStoryboardCell({
   beatIndex,
   characters,
   locations,
+  products,
   castMap,
   referenceMap,
   locationReferenceMap,
@@ -68,8 +71,10 @@ export function ScriptStoryboardCell({
   scriptVersion,
   beatLabel,
   sceneFrames,
+  allScriptFrames,
   consistencyFrameUrls,
   onImageMove,
+  scenes,
 }: Props) {
   const [generating, setGenerating] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -189,6 +194,7 @@ export function ScriptStoryboardCell({
           source: 'uploaded',
           prompt_used: null,
           is_active: false,
+          is_archived: false,
           slot: null,
           crop_config: null,
           reference_urls_used: [],
@@ -259,7 +265,7 @@ export function ScriptStoryboardCell({
     return (
       <>
       <div
-        className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative select-none"
+        className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative select-none flex items-center"
         onMouseDown={e => e.preventDefault()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -272,7 +278,7 @@ export function ScriptStoryboardCell({
           </div>
         )}
         <div
-          className="relative mx-2 my-2 group/img cursor-pointer select-none"
+          className="relative p-1 w-full group/img cursor-pointer select-none"
           onClick={() => setModalOpen(true)}
         >
           <StoryboardLayoutRenderer
@@ -281,9 +287,8 @@ export function ScriptStoryboardCell({
             size="cell"
             gap={2}
           />
-          {/* Hover overlay: drag handle left, actions right */}
-          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/25 flex items-start justify-between p-1 select-none">
-            {/* Drag handle */}
+          {/* Hover overlay: centered icons matching reference cell */}
+          <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/30 rounded flex items-center justify-center gap-1 select-none">
             <span
               draggable
               onDragStart={(e) => {
@@ -296,14 +301,13 @@ export function ScriptStoryboardCell({
                 }));
                 e.dataTransfer.effectAllowed = 'move';
               }}
-              className="pointer-events-auto w-6 h-6 flex items-center justify-center rounded bg-black/50 text-white hover:bg-black/70 transition-all cursor-grab active:cursor-grabbing"
+              onClick={(e) => e.stopPropagation()}
+              className="pointer-events-auto w-7 h-7 flex items-center justify-center rounded bg-black/50 text-white/80 hover:bg-zinc-500 hover:text-white transition-all cursor-grab active:cursor-grabbing"
               title="Drag to move layout"
             >
               <GripVertical size={12} />
             </span>
-            {/* Action buttons */}
-            <div className="pointer-events-auto flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-              <ImageActionButton icon={RefreshCw} color="info" title="Regenerate" onClick={generate} />
+            <div className="pointer-events-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <ImageActionButton icon={Pencil} color="info" title="Edit in modal" onClick={() => setModalOpen(true)} />
               <ImageActionButton icon={Expand} color="info" title="View fullscreen" onClick={() => setLightboxOpen(true)} />
             </div>
@@ -353,11 +357,14 @@ export function ScriptStoryboardCell({
           beatIndex={beatIndex}
           characters={characters}
           locations={locations}
+          products={products}
           castMap={castMap}
           referenceMap={referenceMap}
           locationReferenceMap={locationReferenceMap}
           sceneFrames={sceneFrames}
+          allScriptFrames={allScriptFrames}
           consistencyFrameUrls={consistencyFrameUrls}
+          scenes={scenes}
           onFrameChange={(newFrame) => {
             if (newFrame) {
               const exists = frames.some(f => f.id === newFrame.id);
@@ -448,11 +455,14 @@ export function ScriptStoryboardCell({
           beatIndex={beatIndex}
           characters={characters}
           locations={locations}
+          products={products}
           castMap={castMap}
           referenceMap={referenceMap}
           locationReferenceMap={locationReferenceMap}
           sceneFrames={sceneFrames}
+          allScriptFrames={allScriptFrames}
           consistencyFrameUrls={consistencyFrameUrls}
+          scenes={scenes}
           onFrameChange={(newFrame) => {
             if (newFrame) {
               onFramesChange?.([...frames, newFrame]);
