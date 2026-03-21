@@ -714,12 +714,10 @@ export function StoryboardGenerateModal({
           {/* Scene heading — identical to ScriptSceneHeader view mode */}
           <div className="flex items-center gap-0 flex-1 min-w-0 overflow-hidden">
             <span className="text-admin-border font-bebas text-[52px] leading-none flex-shrink-0 translate-y-[2px] pl-2 pr-3">
-              {scene.sceneNumber}
+              {scene.sceneNumber}{String.fromCharCode(65 + beatIndex)}
             </span>
             <span className="text-admin-sm text-admin-text-faint uppercase tracking-wide truncate">
               {sceneHeading}
-              <span className="text-admin-text-ghost mx-1.5">&bull;</span>
-              <span className="text-admin-text-muted">{String.fromCharCode(65 + beatIndex)}</span>
               {scene.scene_description && (
                 <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{scene.scene_description}</span></>
               )}
