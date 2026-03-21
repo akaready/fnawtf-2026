@@ -25,6 +25,7 @@ import { DEFAULT_FRACTIONS } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
 import { ScriptSceneSidebar } from './ScriptSceneSidebar';
 import { SceneNav } from './SceneNav';
+import { SceneSidebarShell } from './SceneSidebarShell';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
 import { ScriptPresentation } from './ScriptPresentation';
 import { buildPresentationSlides } from './presentationUtils';
@@ -824,8 +825,7 @@ export function ScriptEditorClient({
 
       <div className="flex-1 flex min-h-0">
         {/* Scene sidebar */}
-        <div className={`h-full overflow-hidden flex-shrink-0 border-r border-admin-border transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-[360px]' : 'w-0'}`}>
-          <div className="h-full w-[360px] bg-admin-bg-sidebar">
+        <SceneSidebarShell open={showSidebar}>
             {contentMode === 'scratchpad' ? (
               <ScriptSceneSidebar
                 scenes={computedScenes}
@@ -855,8 +855,7 @@ export function ScriptEditorClient({
                 onAddScene={handleAddScene}
               />
             )}
-          </div>
-        </div>
+        </SceneSidebarShell>
 
         {/* Main editor — constrained by container width toggle */}
         <div className="flex-1 min-w-0 min-h-0 h-full">

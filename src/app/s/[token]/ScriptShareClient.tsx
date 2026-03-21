@@ -8,6 +8,7 @@ import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
+import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
 import { startScriptViewSession, updateScriptViewDuration } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion } from '@/types/scripts';
@@ -283,10 +284,7 @@ export function ScriptShareClient({
       {/* Content area */}
       <div className="flex-1 flex min-h-0">
         {/* Sidebar */}
-        <div
-          className={`h-full overflow-hidden flex-shrink-0 border-r border-admin-border transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'w-[320px]' : 'w-0'}`}
-        >
-          <div className="h-full w-[320px] bg-admin-bg-sidebar">
+        <SceneSidebarShell open={showSidebar}>
             <SceneNav
               scenes={computedScenes.map(s => ({
                 id: s.id,
@@ -301,8 +299,7 @@ export function ScriptShareClient({
               onSelectScene={handleSceneClick}
               onSelectBeat={handleBeatClick}
             />
-          </div>
-        </div>
+        </SceneSidebarShell>
 
         {/* Main canvas */}
         <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">

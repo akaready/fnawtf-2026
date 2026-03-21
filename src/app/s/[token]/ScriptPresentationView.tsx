@@ -9,6 +9,7 @@ import type { StoryboardSlotFrame } from '@/types/scripts';
 
 import { CommentSidebar } from './CommentSidebar';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
+import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
 import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneBottomSheet } from './SceneBottomSheet';
 import { addComment, getCommentCounts } from './actions';
@@ -228,9 +229,6 @@ export function ScriptPresentationView({
     ? `${activeScene.int_ext}. ${activeScene.location_name || 'UNTITLED LOCATION'} ${activeScene.time_of_day ? `\u2014 ${activeScene.time_of_day}` : ''}`.trim()
     : current.sceneName;
 
-  /* ── Sidebar transition class ── */
-  const sidebarTransition = 'transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]';
-
   return (
     <div className="fixed inset-0 z-50 bg-black flex">
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
@@ -245,10 +243,7 @@ export function ScriptPresentationView({
           <span className="text-xs font-semibold uppercase tracking-widest whitespace-nowrap">Scenes</span>
         </button>
 
-        <div
-          className={`h-full overflow-hidden flex-shrink-0 border-r border-admin-border z-10 relative ${sidebarTransition} ${leftOpen ? 'w-[320px]' : 'w-0'}`}
-        >
-          <div className="h-full w-[320px] bg-admin-bg-sidebar">
+        <SceneSidebarShell open={leftOpen} className="z-10 relative">
             <SceneNav
               scenes={scenes}
               activeSceneId={activeSceneId}
@@ -259,8 +254,7 @@ export function ScriptPresentationView({
               showHeader
               onCollapse={() => setLeftOpen(false)}
             />
-          </div>
-        </div>
+        </SceneSidebarShell>
       </div>
 
       {/* ════ CENTER COLUMN ════ */}
