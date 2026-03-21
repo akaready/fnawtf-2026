@@ -84,6 +84,7 @@ interface Props {
   layout?: string | null;                             // beat's current storyboard_layout
   defaultTab?: ModalTab;                              // which tab to open on
   onFramesChange?: (frames: ScriptStoryboardFrameRow[]) => void;
+  onLayoutChange?: (layout: string) => void;
 }
 
 export function StoryboardGenerateModal({
@@ -116,6 +117,7 @@ export function StoryboardGenerateModal({
   layout,
   defaultTab,
   onFramesChange,
+  onLayoutChange,
 }: Props) {
   // ── Core state ──
   const saved = beatModalState.get(beatId);
@@ -691,16 +693,25 @@ export function StoryboardGenerateModal({
         const newCrop = draftCrops.get(f.id) ?? f.crop_config;
         return { ...f, slot: newSlot, is_active: newSlot !== null, crop_config: newCrop };
       });
+      if (draftLayout !== savedLayout) onLayoutChange?.(draftLayout);
       onFramesChange?.([...updatedHistory, ...extraFrames]);
     } else {
       // Non-frames tab: flush any crop changes made via reframe drag
       for (const [frameId, crop] of draftCrops) {
         await updateFrameCrop(frameId, crop);
       }
+      // Still notify parent with updated frames (crop changes applied)
+      if (draftCrops.size > 0) {
+        const updatedFrames = history.map(f => ({
+          ...f,
+          crop_config: draftCrops.get(f.id) ?? f.crop_config,
+        }));
+        onFramesChange?.(updatedFrames);
+      }
     }
 
     onClose();
-  }, [activeTab, selectedFrame, handleUseFrame, layout, draftLayout, draftSlots, draftCrops, foreignFrameIds, history, beatId, onFramesChange, onClose]);
+  }, [activeTab, selectedFrame, handleUseFrame, layout, draftLayout, draftSlots, draftCrops, foreignFrameIds, history, beatId, onFramesChange, onLayoutChange, onClose]);
 
   // ── Derived ──
   const refGroups = groupByPurpose(localReferences);

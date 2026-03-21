@@ -29,6 +29,7 @@ interface Props {
   scene: import('@/types/scripts').ComputedScene;
   locations: import('@/types/scripts').ScriptLocationRow[];
   onFramesChange: (frames: ScriptStoryboardFrameRow[]) => void;
+  onLayoutChange?: (layout: string) => void;
   gridTemplate: string;
   isOnly: boolean;
   beatNumber: number;
@@ -49,6 +50,7 @@ interface Props {
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
   allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
+  scenes?: import('@/types/scripts').ComputedScene[];
 }
 
 function beatLetter(n: number): string {
@@ -84,6 +86,7 @@ export function ScriptBeatRow({
   scene,
   locations,
   onFramesChange,
+  onLayoutChange,
   gridTemplate,
   isOnly: _isOnly,
   beatNumber,
@@ -104,6 +107,7 @@ export function ScriptBeatRow({
   sceneFrames,
   allScriptFrames,
   onImageMove,
+  scenes,
 }: Props) {
   const {
     attributes,
@@ -264,12 +268,14 @@ export function ScriptBeatRow({
               style={scriptStyle}
               styleReferences={styleReferences}
               onFramesChange={onFramesChange}
+              onLayoutChange={onLayoutChange}
               batchGenerating={batchGenerating}
               onCancelGeneration={onCancelGeneration}
               scene={scene}
               beatIndex={beatNumber - 1}
               characters={characters}
               locations={locations}
+              products={products}
               castMap={castMap}
               referenceMap={referenceMap}
               locationReferenceMap={locationReferenceMap}
@@ -279,6 +285,7 @@ export function ScriptBeatRow({
               sceneFrames={sceneFrames}
               allScriptFrames={allScriptFrames}
               onImageMove={onImageMove}
+              scenes={scenes}
             />
           )}
         </div>

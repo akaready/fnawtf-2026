@@ -24,6 +24,7 @@ interface Props {
   style: ScriptStyleRow | null;
   styleReferences: ScriptStyleReferenceRow[];
   onFramesChange?: (frames: ScriptStoryboardFrameRow[]) => void;
+  onLayoutChange?: (layout: string) => void;
   batchGenerating?: boolean;
   onCancelGeneration?: () => void;
   scene: ComputedScene;
@@ -57,6 +58,7 @@ export function ScriptStoryboardCell({
   style,
   styleReferences,
   onFramesChange,
+  onLayoutChange,
   batchGenerating,
   onCancelGeneration,
   scene,
@@ -183,23 +185,7 @@ export function ScriptStoryboardCell({
       try {
         const fd = new FormData();
         fd.append('file', files[0]);
-        const result = await uploadStoryboardFrame(scriptId, { beatId }, fd);
-        const newFrame: ScriptStoryboardFrameRow = {
-          id: result.id,
-          script_id: scriptId,
-          beat_id: beatId,
-          scene_id: null,
-          image_url: result.image_url,
-          storage_path: result.storage_path,
-          source: 'uploaded',
-          prompt_used: null,
-          is_active: false,
-          is_archived: false,
-          slot: null,
-          crop_config: null,
-          reference_urls_used: [],
-          created_at: new Date().toISOString(),
-        };
+        const newFrame = await uploadStoryboardFrame(scriptId, beatId, fd);
         onFramesChange?.([...frames, newFrame]);
       } finally {
         setUploading(false);
@@ -285,7 +271,7 @@ export function ScriptStoryboardCell({
             layout={layout}
             frames={activeFrames}
             size="cell"
-            gap={2}
+            gap={4}
           />
           {/* Hover overlay: centered icons matching reference cell */}
           <div className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none bg-black/30 rounded flex items-center justify-center gap-1 select-none">
@@ -376,6 +362,7 @@ export function ScriptStoryboardCell({
             }
           }}
           onFramesChange={onFramesChange}
+          onLayoutChange={onLayoutChange}
         />
       )}
       </>

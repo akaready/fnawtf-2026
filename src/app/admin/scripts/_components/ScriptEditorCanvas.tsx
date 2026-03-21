@@ -894,6 +894,7 @@ export function ScriptEditorCanvas({
                             onFrameGenerated(latest, beat.id);
                           }
                         }}
+                        onLayoutChange={(newLayout) => onUpdateBeat(beat.id, 'storyboard_layout', newLayout)}
                         onUpdate={onUpdateBeat}
                         onDelete={onDeleteBeat}
                         onAddBeat={() => onAddBeat(scene.id)}
