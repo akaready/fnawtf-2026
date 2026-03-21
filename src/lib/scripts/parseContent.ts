@@ -138,7 +138,7 @@ export function htmlToMarkdown(html: string): string {
   // Decode HTML entities
   md = decodeHtml(md);
 
-  return md;
+  return md.replace(/\n+$/, '');
 }
 
 function escapeHtml(text: string): string {
