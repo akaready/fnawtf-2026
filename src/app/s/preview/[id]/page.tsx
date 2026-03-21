@@ -82,9 +82,15 @@ export default async function ScriptPreviewPage({ params }: Props) {
     { data: products },
   ] = await Promise.all([
     supabase.from('script_scenes').select('*').eq('script_id', sc.id).order('sort_order'),
-    supabase.from('script_characters').select('*').eq('script_id', sc.id).order('sort_order'),
-    supabase.from('script_tags').select('*').eq('script_id', sc.id),
-    supabase.from('script_locations').select('*').eq('script_id', sc.id).order('sort_order'),
+    sc.script_group_id
+      ? supabase.from('script_characters').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? supabase.from('script_tags').select('*').eq('script_group_id', sc.script_group_id)
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? supabase.from('script_locations').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
     supabase.from('script_storyboard_frames').select('*').eq('script_id', sc.id),
     sc.script_group_id
       ? supabase.from('script_products').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')

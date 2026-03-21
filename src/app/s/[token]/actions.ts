@@ -158,9 +158,15 @@ export async function getScriptShareData(token: string) {
     { data: products },
   ] = await Promise.all([
     service.from('script_scenes').select('*').eq('script_id', sc.id).order('sort_order'),
-    service.from('script_characters').select('*').eq('script_id', sc.id).order('sort_order'),
-    service.from('script_tags').select('*').eq('script_id', sc.id),
-    service.from('script_locations').select('*').eq('script_id', sc.id).order('sort_order'),
+    sc.script_group_id
+      ? service.from('script_characters').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? service.from('script_tags').select('*').eq('script_group_id', sc.script_group_id)
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? service.from('script_locations').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
     service.from('script_storyboard_frames').select('*').eq('script_id', sc.id),
     sc.script_group_id
       ? service.from('script_products').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
