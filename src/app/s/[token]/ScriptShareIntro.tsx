@@ -201,7 +201,7 @@ export function ScriptShareIntro({
                 className="inline-block px-4 py-1.5 text-sm font-mono font-bold rounded-full"
                 style={{ color, backgroundColor: color + '18', border: `1px solid ${color}40` }}
               >
-                v{versionLabel}
+                {versionLabel}
               </span>
             </div>
           );

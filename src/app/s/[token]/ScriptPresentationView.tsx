@@ -297,7 +297,7 @@ export function ScriptPresentationView({
                     return (
                       <span className="inline-block ml-2 px-2.5 py-0.5 text-xs font-mono font-bold rounded-full"
                         style={{ color, backgroundColor: color + '15', border: `1px solid ${color}40` }}>
-                        v{versionLabel}
+                        {versionLabel}
                       </span>
                     );
                   })()}
@@ -363,7 +363,7 @@ export function ScriptPresentationView({
           {/* ── Bordered content block: scene heading + all beat cells ── */}
           <div className="w-full max-w-5xl flex-shrink-0 border border-border rounded-lg overflow-hidden mb-6">
             {/* Scene heading */}
-            <div className="flex items-center gap-0 bg-[#141414] border-b border-border h-[44px]">
+            <div className={`flex items-center gap-0 bg-[#141414] border-b border-border h-[44px] ${(commentCounts[current.beatId] ?? 0) > 0 ? 'border-l border-l-admin-warning' : ''}`}>
               <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-5 pr-3">
                 {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
               </span>
@@ -373,14 +373,6 @@ export function ScriptPresentationView({
                   <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{activeScene.scene_description}</span></>
                 )}
               </span>
-              {(commentCounts[current.beatId] ?? 0) > 0 && (
-                <div className="flex items-center gap-1.5 flex-shrink-0 mr-3">
-                  <div className="w-2 h-2 rounded-full bg-admin-warning" />
-                  <span className="text-admin-sm text-admin-text-muted">
-                    {commentCounts[current.beatId]} {commentCounts[current.beatId] === 1 ? 'comment' : 'comments'}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Audio (2/3) + Visual (1/3) */}

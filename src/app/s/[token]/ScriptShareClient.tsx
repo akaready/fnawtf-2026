@@ -241,7 +241,7 @@ export function ScriptShareClient({
             {/* Right — version tag */}
             <div className="ml-auto flex-shrink-0">
               <span className="inline-block px-3 py-1 text-xs font-mono font-bold text-muted-foreground bg-white/[0.05] border border-border rounded-full">
-                v{versionLabel}
+                {versionLabel}
               </span>
             </div>
           </div>
