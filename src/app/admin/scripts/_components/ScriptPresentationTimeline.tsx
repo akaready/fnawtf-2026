@@ -7,9 +7,11 @@ interface Props {
   slides: PresentationSlide[];
   currentIndex: number;
   onSeek: (index: number) => void;
+  /** Comment counts per beatId — used to show indicators on the timeline */
+  commentCounts?: Record<string, number>;
 }
 
-export function ScriptPresentationTimeline({ slides, currentIndex, onSeek }: Props) {
+export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, commentCounts }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -95,10 +97,15 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek }: Pro
                 />
               );
             }
+            const dotClass = i === currentIndex
+              ? 'w-1 h-1 bg-white'
+              : (commentCounts?.[slides[i].beatId] ?? 0) > 0
+                ? 'w-1.5 h-1.5 bg-admin-warning shadow-[0_0_4px_rgba(245,158,11,0.6)]'
+                : 'w-1 h-1 bg-admin-text-faint';
             return (
               <div
                 key={i}
-                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1 h-1 rounded-full pointer-events-none ${isCurrent ? 'bg-white' : 'bg-[#444]'}`}
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 rounded-full pointer-events-none ${dotClass}`}
                 style={{ left }}
               />
             );

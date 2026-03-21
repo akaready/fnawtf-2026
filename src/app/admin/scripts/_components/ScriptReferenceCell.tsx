@@ -70,7 +70,7 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete, on
 
   return (
     <div
-      className="relative min-h-[2.5rem] border-b border-b-[#0e0e0e] group/ref"
+      className="relative min-h-[2.5rem] border-b border-b-[#0e0e0e] group/ref flex items-center"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -88,7 +88,7 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete, on
       {hasImages ? (
         <>
           {/* Image grid */}
-          <div className={`grid ${references.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 p-1`}>
+          <div className={`grid ${references.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 p-1 w-full`}>
             {references.map((ref, i) => (
               <div key={ref.id} className="relative group/img aspect-video rounded overflow-hidden">
                 <img

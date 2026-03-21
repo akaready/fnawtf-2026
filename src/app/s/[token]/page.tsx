@@ -46,6 +46,7 @@ export default async function ScriptSharePage({ params }: Props) {
       characters={data.characters}
       tags={data.tags}
       locations={data.locations}
+      products={data.products}
       references={data.references}
       storyboardFrames={data.storyboardFrames}
       viewerEmail={viewer.email}

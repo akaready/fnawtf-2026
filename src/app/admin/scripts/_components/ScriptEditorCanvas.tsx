@@ -42,7 +42,9 @@ interface Props {
   scriptId: string;
   scriptGroupId: string;
   onFrameGenerated: (frame: ScriptStoryboardFrameRow | null, beatId?: string) => void;
+  onFramesBatchChange?: (frames: ScriptStoryboardFrameRow[], beatId: string) => void;
   activeSceneId: string | null;
+  activeBeatId?: string | null;
   onUpdateScene: (sceneId: string, data: Partial<ScriptSceneRow>) => void;
   onAddScene: () => void;
   onAddBeat: (sceneId: string) => void;
@@ -80,7 +82,9 @@ export function ScriptEditorCanvas({
   scriptId,
   scriptGroupId,
   onFrameGenerated,
+  onFramesBatchChange,
   activeSceneId,
+  activeBeatId,
   onUpdateScene,
   onAddScene,
   onAddBeat,
@@ -174,6 +178,31 @@ export function ScriptEditorCanvas({
       container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
     });
   }, [activeSceneId]);
+
+  // Scroll to active beat when selected from sidebar
+  useEffect(() => {
+    if (!activeBeatId || !scrollRef.current) return;
+    const container = scrollRef.current;
+    const colH = colHeaderRef.current?.offsetHeight ?? 0;
+    // Uncollapse the scene containing this beat
+    const sceneForBeat = scenes.find(s => s.beats.some(b => b.id === activeBeatId));
+    if (sceneForBeat) {
+      setCollapsedScenes(prev => {
+        if (!prev.has(sceneForBeat.id)) return prev;
+        const next = new Set(prev);
+        next.delete(sceneForBeat.id);
+        return next;
+      });
+    }
+    requestAnimationFrame(() => {
+      const beatEl = container.querySelector(`[data-beat-id="${activeBeatId}"]`) as HTMLElement | null;
+      if (!beatEl) return;
+      const elTop = beatEl.getBoundingClientRect().top;
+      const containerTop = container.getBoundingClientRect().top;
+      const scrollTarget = container.scrollTop + (elTop - containerTop) - colH;
+      container.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+    });
+  }, [activeBeatId, scenes]);
 
   // Keyboard handler for batch delete, Cmd+Delete instant delete, and deselect
   useEffect(() => {
@@ -548,23 +577,6 @@ export function ScriptEditorCanvas({
     }
   }, [selectionMode, allSelected, scenes]);
 
-  const handleSelectScene = useCallback((sceneId: string) => {
-    const scene = scenes.find(s => s.id === sceneId);
-    if (!scene) return;
-    if (!selectionMode) setSelectionMode(true);
-    const sceneBeatIds = scene.beats.map(b => b.id);
-    const allSceneSelected = sceneBeatIds.every(id => selectedBeatIds.has(id));
-    setSelectedBeatIds(prev => {
-      const next = new Set(prev);
-      if (allSceneSelected) {
-        for (const id of sceneBeatIds) next.delete(id);
-      } else {
-        for (const id of sceneBeatIds) next.add(id);
-      }
-      return next;
-    });
-  }, [scenes, selectedBeatIds, selectionMode]);
-
   // Double-click gutter: enter selection mode and select that beat
   const handleActivateSelection = useCallback((beatId: string) => {
     setSelectionMode(true);
@@ -642,14 +654,15 @@ export function ScriptEditorCanvas({
           {visibleColumns.map((col, idx) => (
             <div
               key={col.key}
-              className={`group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}
+              className={`${['storyboard', 'visual'].includes(col.key) ? '@container ' : ''}group/colhdr relative px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}
             >
-              <span className="opacity-60">{col.label}</span>
+              <span className={`opacity-60 ${['storyboard', 'visual'].includes(col.key) ? 'hidden @[140px]:inline' : 'block truncate'}`}>{col.label}</span>
+              <div className="hidden @[50px]:block">
               {col.key === 'visual' && (
                 <div ref={visualTipsRef} className="contents">
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowVisualTips(v => !v); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                     title="Visual content best practices"
                   >
                     <Info size={14} />
@@ -671,11 +684,13 @@ export function ScriptEditorCanvas({
                   )}
                 </div>
               )}
+              </div>
+              <div className="hidden @[75px]:block">
               {col.key === 'storyboard' && scriptStyle && (
                 generatingScope ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); abortControllerRef.current?.abort(); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-admin-danger"
                     title="Cancel generation"
                   >
                     <X size={14} />
@@ -684,14 +699,14 @@ export function ScriptEditorCanvas({
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); void handleDeleteAll(); }}
-                      className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover text-admin-danger"
+                      className="absolute right-8 top-1/2 -translate-y-1/2 p-1 text-admin-danger"
                       title="Confirm — delete all storyboards"
                     >
                       <Check size={14} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(false); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-admin-bg-hover"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
                       title="Cancel"
                     >
                       <X size={14} />
@@ -703,14 +718,14 @@ export function ScriptEditorCanvas({
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); setConfirmDeleteAll(true); }}
-                          className="absolute right-[3.5rem] top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                          className="absolute right-[3.5rem] top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                           title="Delete all storyboards"
                         >
                           <Trash2 size={14} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDownloadAll(); }}
-                          className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                          className="absolute right-8 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                           title="Download all storyboards"
                         >
                           <Download size={14} />
@@ -719,7 +734,7 @@ export function ScriptEditorCanvas({
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleGenerateAll(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 group-hover/colhdr:opacity-100 transition-opacity p-1 rounded hover:bg-admin-bg-hover"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
                       title="Generate all storyboards"
                     >
                       <Sparkles size={14} />
@@ -727,6 +742,7 @@ export function ScriptEditorCanvas({
                   </>
                 )
               )}
+              </div>
               {idx < visibleColumns.length - 1 && (
                 <span
                   onMouseDown={(e) => handleResize(col.key, e)}
@@ -798,38 +814,6 @@ export function ScriptEditorCanvas({
                   }
                 }}
               >
-                <div className="group/scenegutter flex-shrink-0 w-10 flex items-center justify-center py-3 text-admin-text-faint">
-                  {(() => {
-                    if (selectionMode) {
-                      const sceneBeatIds = scene.beats.map(b => b.id);
-                      const allSceneSelected = sceneBeatIds.length > 0 && sceneBeatIds.every(id => selectedBeatIds.has(id));
-                      return (
-                        <div
-                          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors cursor-pointer ${
-                            allSceneSelected
-                              ? 'bg-white border-white'
-                              : 'border-admin-text-ghost hover:border-admin-text-faint'
-                          }`}
-                          onClick={(e) => { e.stopPropagation(); handleSelectScene(scene.id); }}
-                        >
-                          {allSceneSelected && <Check size={10} className="text-black" strokeWidth={3} />}
-                        </div>
-                      );
-                    }
-                    // Normal mode: grip on hover — drag handle for scene reorder
-                    return (
-                      <div
-                        className="opacity-0 group-hover/scenegutter:opacity-100 transition-opacity cursor-grab"
-                        {...sceneDragListeners}
-                      >
-                        <GripVertical size={12} className="text-admin-text-ghost" />
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div className="flex-shrink-0 text-admin-text-faint mr-1">
-                  {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
-                </div>
                 <div className="flex-1 min-w-0">
                   <ScriptSceneHeader
                     scene={scene}
@@ -843,6 +827,12 @@ export function ScriptEditorCanvas({
                     generating={generatingScope === scene.id}
                     isGenerating={generatingScope !== null && generatingScope !== scene.id && scene.beats.some(b => generatingBeatIds.has(b.id))}
                   />
+                </div>
+                <div className="flex-shrink-0 flex items-center justify-center py-3 px-2 text-admin-text-faint cursor-grab hover:text-white transition-colors" {...sceneDragListeners}>
+                  <GripVertical size={12} />
+                </div>
+                <div className="flex-shrink-0 text-admin-text-faint pl-1 pr-3 hover:text-white transition-colors">
+                  {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
                 </div>
               </div>
 
@@ -890,12 +880,21 @@ export function ScriptEditorCanvas({
                         characters={characters}
                         tags={tags}
                         references={references[beat.id] ?? []}
-                        storyboardFrame={storyboardFrames.find(f => f.beat_id === beat.id) ?? null}
+                        storyboardFrames={storyboardFrames.filter(f => f.beat_id === beat.id)}
+                        storyboardLayout={beat.storyboard_layout ?? null}
                         scriptStyle={scriptStyle}
                         styleReferences={styleReferences}
                         scriptId={scriptId}
                         sceneId={scene.id}
-                        onFrameChange={(frame) => onFrameGenerated(frame, beat.id)}
+                        onFramesChange={(updatedFrames) => {
+                          if (onFramesBatchChange) {
+                            onFramesBatchChange(updatedFrames, beat.id);
+                          } else {
+                            const latest = updatedFrames[updatedFrames.length - 1] ?? null;
+                            onFrameGenerated(latest, beat.id);
+                          }
+                        }}
+                        onLayoutChange={(newLayout) => onUpdateBeat(beat.id, 'storyboard_layout', newLayout)}
                         onUpdate={onUpdateBeat}
                         onDelete={onDeleteBeat}
                         onAddBeat={() => onAddBeat(scene.id)}
@@ -923,6 +922,7 @@ export function ScriptEditorCanvas({
                         sceneFrames={sceneFramesForLightbox}
                         allScriptFrames={allScriptFrames}
                         onImageMove={onImageMove}
+                        scenes={scenes}
                       />
                     ));
                     })()}

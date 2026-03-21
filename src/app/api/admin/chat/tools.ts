@@ -718,15 +718,24 @@ export async function executeTool(
 
     case 'get_script': {
       const id = input.id as string;
-      const [scriptRes, scenesRes, charactersRes, tagsRes, locationsRes, framesRes] = await Promise.all([
-        db.from('scripts').select('*').eq('id', id).single(),
+      // First fetch script to get script_group_id for entity queries
+      const scriptRes = await db.from('scripts').select('*').eq('id', id).single();
+      if (scriptRes.error) return { error: scriptRes.error.message };
+      const groupId = (scriptRes.data as Record<string, unknown>)?.script_group_id as string | null;
+
+      const [scenesRes, charactersRes, tagsRes, locationsRes, framesRes] = await Promise.all([
         db.from('script_scenes').select('id, sort_order, location_name, time_of_day, int_ext, scene_notes, location_id').eq('script_id', id).order('sort_order'),
-        db.from('script_characters').select('id, name, description, color, sort_order').eq('script_id', id).order('sort_order'),
-        db.from('script_tags').select('id, name, slug, category, color').eq('script_id', id).order('name'),
-        db.from('script_locations').select('id, name, description, color, sort_order, global_location_id').eq('script_id', id).order('sort_order'),
+        groupId
+          ? db.from('script_characters').select('id, name, description, color, sort_order').eq('script_group_id', groupId).order('sort_order')
+          : Promise.resolve({ data: [], error: null }),
+        groupId
+          ? db.from('script_tags').select('id, name, slug, category, color').eq('script_group_id', groupId).order('name')
+          : Promise.resolve({ data: [], error: null }),
+        groupId
+          ? db.from('script_locations').select('id, name, description, color, sort_order, global_location_id').eq('script_group_id', groupId).order('sort_order')
+          : Promise.resolve({ data: [], error: null }),
         db.from('script_storyboard_frames').select('id, beat_id, scene_id').eq('script_id', id),
       ]);
-      if (scriptRes.error) return { error: scriptRes.error.message };
 
       // Fetch beats for each scene
       const scenes = scenesRes.data || [];

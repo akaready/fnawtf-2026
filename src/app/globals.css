@@ -113,6 +113,11 @@
   --admin-toolbar-indigo:    #6366f1;
   --admin-toolbar-violet:    #8b46ff;
 
+  /* Beat navigation */
+  --admin-beat-selected-bg:   #000000;
+  --admin-beat-selected-text: #d4d4d8;
+  --admin-beat-hover-bg:      rgba(255, 255, 255, 0.06);
+
   /* Border radius */
   --admin-radius-sm:   0.375rem;
   --admin-radius-md:   0.5rem;
@@ -205,6 +210,11 @@
   --admin-accent-hover:      #6d28d9;
   --admin-accent-bg:         rgba(124, 58, 237, 0.08);
   --admin-accent-border:     rgba(124, 58, 237, 0.25);
+
+  /* Beat navigation */
+  --admin-beat-selected-bg:   #e5e5e5;
+  --admin-beat-selected-text: #404040;
+  --admin-beat-hover-bg:      rgba(0, 0, 0, 0.06);
 }
 
 html {
@@ -416,6 +426,18 @@ html[data-admin-light] .admin-shell .admin-logo {
     margin-bottom: 0;
   }
 
+  /* Keyboard-adjacent mention highlight (arrow-key selection indicator) */
+  .script-mention.mention-highlighted {
+    outline: 1px solid currentColor;
+    outline-offset: 0;
+    border-radius: 2px;
+  }
+
+  /* Hide blinking caret when cursor is parked adjacent to a highlighted mention */
+  .mention-cursor-hidden {
+    caret-color: transparent;
+  }
+
   /* Admin text inputs, search, selects */
   .admin-input {
     @apply px-3 py-2 text-admin-base border border-admin-border-subtle bg-admin-bg-base text-admin-text-primary placeholder:text-admin-text-faint focus:outline-none focus:ring-1 focus:ring-admin-border-focus focus:border-admin-border-focus;
@@ -551,6 +573,11 @@ a[data-btn-hover]:hover {
 }
 
 /* Animations */
+@keyframes shimmer {
+  0% { background-position: 200% 0%; }
+  100% { background-position: -200% 0%; }
+}
+
 @keyframes marquee {
   from {
     transform: translateX(0);

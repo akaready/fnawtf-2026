@@ -73,19 +73,27 @@ export function ChatWidget() {
               mass: 0.8,
             }}
             style={{ transformOrigin: 'bottom right' }}
-            className="fixed bottom-24 right-6 z-[115] w-[380px] h-[550px]"
+            className="fixed bottom-[78px] right-3 z-[115] w-[380px] h-[550px]"
           >
             {/* Outer glow for lift */}
             <div className="absolute -inset-10 rounded-[2rem] bg-radial from-transparent via-black/20 to-black/60 pointer-events-none blur-md" />
-            {/* Chat bubble tail — overlaps card bottom to hide border seam */}
-            <div className="absolute -bottom-[8px] right-8 z-20 w-4 h-4">
-              {/* Cover strip to mask card border behind triangle */}
-              <div className="absolute -top-[2px] left-[1px] w-[14px] h-[4px] bg-admin-bg-nav" />
-              {/* Triangle with only outer edges */}
-              <div className="w-4 h-4 bg-admin-bg-nav border-r border-b border-admin-border rotate-45" />
-            </div>
-            <div className="relative h-full z-10">
-              <ChatPanel />
+            {/* drop-shadow traces the combined alpha of panel + tail as one continuous outline */}
+            <div
+              className="absolute inset-0"
+              style={{ filter: 'drop-shadow(0 0 0.5px rgba(255,255,255,0.7)) drop-shadow(0 0 0.5px rgba(255,255,255,0.7)) drop-shadow(0 8px 40px rgba(0,0,0,0.7))' }}
+            >
+              <div className="relative h-full">
+                <ChatPanel />
+              </div>
+              {/* Tail — just fill, outline comes from parent drop-shadow */}
+              <svg
+                className="absolute -bottom-[7px] right-4 pointer-events-none"
+                width="18"
+                height="11"
+                viewBox="0 0 18 11"
+              >
+                <path d="M0,0 L18,0 L9,11 Z" style={{ fill: 'var(--admin-bg-nav)' }} />
+              </svg>
             </div>
           </motion.div>
         )}
@@ -99,7 +107,7 @@ export function ChatWidget() {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-        className="fixed bottom-3 right-3 z-[115] w-12 h-12 rounded-full bg-white text-black shadow-xl flex items-center justify-center"
+        className="fixed bottom-3 right-3 z-[115] w-12 h-12 rounded-full bg-white text-black shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center" style={{ border: '1.5px solid black' }}
         title="Chat (⌘+J)"
       >
         <MessageCircle size={20} />

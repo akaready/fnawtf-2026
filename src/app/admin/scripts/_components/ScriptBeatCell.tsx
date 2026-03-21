@@ -5,6 +5,38 @@ import { markdownToHtml, htmlToMarkdown } from '@/lib/scripts/parseContent';
 import { MentionDropdown } from './MentionDropdown';
 import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
+/** Place cursor immediately after the mention span for `itemId` that follows `before` text. */
+function positionCursorAfterMention(container: HTMLElement, before: string, itemId: string) {
+  const selector = [
+    `[data-character-id="${itemId}"]`,
+    `[data-location-id="${itemId}"]`,
+    `[data-product-id="${itemId}"]`,
+  ].join(', ');
+  const allSpans = Array.from(container.querySelectorAll(selector)) as Element[];
+  if (allSpans.length === 0) return;
+
+  // Default to the last span; if multiple, find the one whose preceding text ends with `before`
+  let targetSpan = allSpans[allSpans.length - 1];
+  if (allSpans.length > 1) {
+    for (const span of allSpans) {
+      const prev = span.previousSibling;
+      if (prev?.nodeType === Node.TEXT_NODE && (prev.textContent ?? '').endsWith(before)) {
+        targetSpan = span;
+        break;
+      }
+    }
+  }
+
+  // selectNode + collapse(false) is the unambiguous "cursor right after this element"
+  // — avoids browser quirks with setStart(textNode, 0) adjacent to contenteditable="false"
+  const range = document.createRange();
+  range.selectNode(targetSpan);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+}
+
 interface Props {
   value: string;
   field: 'audio_content' | 'visual_content' | 'notes_content';
@@ -25,6 +57,9 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
   const lastValue = useRef(value);
 
   const mentionJustSelected = useRef(false);
+  const isFocused = useRef(false);
+  const selectedMentionRef = useRef<Element | null>(null);
+  const isExitingToken = useRef(false);
 
   // Mention state
   const [mentionState, setMentionState] = useState<{
@@ -37,23 +72,27 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
   const setContent = useCallback((md: string) => {
     if (!ref.current) return;
     // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML
-    const sanitizedHtml = markdownToHtml(md, characters, tags, locations, products);
+    const sanitizedHtml = markdownToHtml(md, characters, tags, locations, products, { noHeadings: field !== 'notes_content' });
     ref.current.innerHTML = sanitizedHtml;
   }, [characters, tags, locations, products]);
 
-  // Set initial content on mount
-  useEffect(() => {
-    setContent(value);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Update when value changes externally
+  // Update when value changes from outside (not from own edits)
   useEffect(() => {
     if (lastValue.current !== value) {
       lastValue.current = value;
       setContent(value);
     }
-  }, [value, setContent]);
+    // setContent intentionally excluded — entity list changes handled by the effect below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  // Re-render when entity lists change (e.g. products load async after mount).
+  // setContent identity only changes when [characters, tags, locations, products] changes.
+  useEffect(() => {
+    setContent(lastValue.current);
+    // value intentionally excluded — external value changes handled by the effect above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setContent]);
 
   const emitChange = useCallback(() => {
     if (!ref.current) return;
@@ -135,9 +174,9 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
       replacement = `#[${tag.slug}]`;
     }
 
-    node.textContent = before + replacement + ' ' + after;
+    node.textContent = before + replacement + after;
 
-    const newOffset = before.length + replacement.length + 1;
+    const newOffset = before.length + replacement.length;
     range.setStart(node, Math.min(newOffset, node.textContent.length));
     range.setEnd(node, Math.min(newOffset, node.textContent.length));
     sel.removeAllRanges();
@@ -153,9 +192,89 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
     lastValue.current = md;
     onChange(md);
     ref.current.focus();
+
+    // Re-place cursor after the inserted mention span (setContent replaced innerHTML)
+    positionCursorAfterMention(ref.current, before, item.id);
   }, [mentionState, onChange, setContent]);
 
+  // Selection-change listener: when cursor moves adjacent to a mention, highlight it and
+  // track it so arrow keys can skip over it and Delete can remove it.
+  // Cursor stays collapsed (no text selection inside the box).
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (!ref.current || !isFocused.current || mentionJustSelected.current) return;
+      if (isExitingToken.current) return;
+
+      // Clear previous highlight
+      if (selectedMentionRef.current) {
+        selectedMentionRef.current.classList.remove('mention-highlighted');
+        selectedMentionRef.current = null;
+        ref.current.style.caretColor = '';
+      }
+
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      if (!range.collapsed) return;
+      const node = range.startContainer;
+      if (node.nodeType !== Node.TEXT_NODE) return;
+      const offset = range.startOffset;
+      const len = node.textContent?.length ?? 0;
+
+      let adjacentSpan: Element | null = null;
+      if (offset === len) {
+        const next = node.nextSibling;
+        if (next instanceof Element && next.classList.contains('script-mention')) adjacentSpan = next;
+      }
+      if (offset === 0) {
+        const prev = node.previousSibling;
+        if (prev instanceof Element && prev.classList.contains('script-mention')) adjacentSpan = prev;
+      }
+      if (!adjacentSpan) return;
+
+      adjacentSpan.classList.add('mention-highlighted');
+      selectedMentionRef.current = adjacentSpan;
+      ref.current.style.caretColor = 'transparent';
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, []);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Mention token selected: Arrow moves cursor to outside edge; Delete removes span
+    if (selectedMentionRef.current && !mentionState) {
+      const span = selectedMentionRef.current;
+      const sel = window.getSelection();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        span.classList.remove('mention-highlighted');
+        selectedMentionRef.current = null;
+        ref.current?.style && (ref.current.style.caretColor = '');
+        isExitingToken.current = true;
+        setTimeout(() => { isExitingToken.current = false; }, 50);
+        const r = document.createRange();
+        if (e.key === 'ArrowLeft') r.setStartBefore(span);
+        else r.setStartAfter(span);
+        r.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(r);
+        return;
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        span.classList.remove('mention-highlighted');
+        selectedMentionRef.current = null;
+        ref.current?.style && (ref.current.style.caretColor = '');
+        span.parentNode?.removeChild(span);
+        emitChange();
+        return;
+      }
+      // Any other key: deselect token and let it through normally
+      span.classList.remove('mention-highlighted');
+      selectedMentionRef.current = null;
+      ref.current?.style && (ref.current.style.caretColor = '');
+    }
+
     // Cmd+Shift+Backspace/Delete = delete beat row (handled by canvas, stop contentEditable default)
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'Backspace' || e.key === 'Delete')) {
       e.preventDefault();
@@ -256,15 +375,39 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
     checkMentionTrigger();
   }, [emitChange, checkMentionTrigger]);
 
+  const handleWrapperMouseDown = useCallback((e: React.MouseEvent) => {
+    // If the click landed on the wrapper itself (not on the contenteditable or its children),
+    // focus the editor and place cursor at the end of content.
+    if (e.target !== e.currentTarget || !ref.current) return;
+    e.preventDefault();
+    ref.current.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(ref.current);
+    range.collapse(false);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, []);
+
   return (
-    <div className="relative min-w-0 overflow-hidden border-b border-b-[#0e0e0e]">
+    <div
+      className="relative min-w-0 overflow-hidden border-b border-b-[#0e0e0e]"
+      onMouseDown={handleWrapperMouseDown}
+    >
       <div
         ref={ref}
         contentEditable
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}
+        onFocus={() => { isFocused.current = true; }}
         onBlur={() => {
+          isFocused.current = false;
+          if (selectedMentionRef.current) {
+            selectedMentionRef.current.classList.remove('mention-highlighted');
+            selectedMentionRef.current = null;
+          }
+          ref.current?.style && (ref.current.style.caretColor = '');
           emitChange();
           setTimeout(() => setMentionState(null), 200);
         }}

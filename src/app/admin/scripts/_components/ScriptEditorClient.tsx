@@ -25,6 +25,7 @@ import { DEFAULT_FRACTIONS } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
 import { ScriptSceneSidebar } from './ScriptSceneSidebar';
 import { SceneNav } from './SceneNav';
+import { SceneSidebarShell } from './SceneSidebarShell';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
 import { ScriptPresentation } from './ScriptPresentation';
 import { buildPresentationSlides } from './presentationUtils';
@@ -60,6 +61,7 @@ interface Props {
   initialLocations: ScriptLocationRow[];
   initialReferences: ScriptBeatReferenceRow[];
   globalLocations?: { id: string; name: string; featured_image: string | null }[];
+  initialProducts?: ScriptProductRow[];
 }
 
 export function ScriptEditorClient({
@@ -71,6 +73,7 @@ export function ScriptEditorClient({
   initialLocations,
   initialReferences,
   globalLocations = [],
+  initialProducts = [],
 }: Props) {
   const { showError } = useAdminToast();
   const [script, setScript] = useState(initialScript);
@@ -81,6 +84,7 @@ export function ScriptEditorClient({
   const [locations, setLocations] = useState(initialLocations);
   const [references, setReferences] = useState(initialReferences);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(scenes[0]?.id ?? null);
+  const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
   const [showCharacters, setShowCharacters] = useState(false);
   const [showTags, setShowTags] = useState(false);
   const [showLocations, setShowLocations] = useState(false);
@@ -96,7 +100,7 @@ export function ScriptEditorClient({
   const [showProducts, setShowProducts] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
-  const [products, setProducts] = useState<ScriptProductRow[]>([]);
+  const [products, setProducts] = useState<ScriptProductRow[]>(initialProducts);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
   const [showSidebar, setShowSidebar] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
@@ -259,6 +263,7 @@ export function ScriptEditorClient({
       audio_content: '',
       visual_content: '',
       notes_content: '',
+      storyboard_layout: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -307,6 +312,7 @@ export function ScriptEditorClient({
       audio_content: '',
       visual_content: '',
       notes_content: '',
+      storyboard_layout: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -392,6 +398,14 @@ export function ScriptEditorClient({
     } else if (beatId) {
       setStoryboardFrames(prev => prev.filter(f => f.beat_id !== beatId));
     }
+  }, []);
+
+  // ── Multi-frame batch update (Frames tab save) ──
+  const handleFramesBatchChange = useCallback((frames: ScriptStoryboardFrameRow[], beatId: string) => {
+    setStoryboardFrames(prev => [
+      ...prev.filter(f => f.beat_id !== beatId),
+      ...frames,
+    ]);
   }, []);
 
   // ── Image move / swap between beat rows ──
@@ -811,8 +825,7 @@ export function ScriptEditorClient({
 
       <div className="flex-1 flex min-h-0">
         {/* Scene sidebar */}
-        <div className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}>
-          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
+        <SceneSidebarShell open={showSidebar}>
             {contentMode === 'scratchpad' ? (
               <ScriptSceneSidebar
                 scenes={computedScenes}
@@ -827,17 +840,22 @@ export function ScriptEditorClient({
               />
             ) : (
               <SceneNav
-                scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null }))}
+                scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null, beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })) }))}
                 activeSceneId={activeSceneId}
                 onSelectScene={setActiveSceneId}
+                activeBeatId={activeBeatId}
+                onSelectBeat={(beatId) => {
+                  setActiveBeatId(beatId);
+                  const scene = computedScenes.find(s => s.beats.some(b => b.id === beatId));
+                  if (scene) setActiveSceneId(scene.id);
+                }}
                 draggable
                 onReorder={handleReorderScenes}
                 showAddButton
                 onAddScene={handleAddScene}
               />
             )}
-          </div>
-        </div>
+        </SceneSidebarShell>
 
         {/* Main editor — constrained by container width toggle */}
         <div className="flex-1 min-w-0 min-h-0 h-full">
@@ -858,7 +876,9 @@ export function ScriptEditorClient({
                 scriptId={script.id}
                 scriptGroupId={script.script_group_id!}
                 onFrameGenerated={handleFrameChange}
+                onFramesBatchChange={handleFramesBatchChange}
                 activeSceneId={activeSceneId}
+                activeBeatId={activeBeatId}
                 onUpdateScene={handleUpdateScene}
                 onAddScene={handleAddScene}
                 onAddBeat={handleAddBeat}

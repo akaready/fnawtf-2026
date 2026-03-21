@@ -11,6 +11,12 @@ import { useDirectionalFill } from '@/hooks/useDirectionalFill';
  * Layout and animation lifted from TitleSlide.tsx (proposal landing page).
  */
 
+const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
+function versionColor(label: string): string {
+  const major = parseInt(label) || 0;
+  return VERSION_COLORS[major % VERSION_COLORS.length];
+}
+
 interface Props {
   scriptTitle: string;
   projectTitle: string | null;
@@ -29,6 +35,8 @@ const iconVariants = {
 export function ScriptShareIntro({
   scriptTitle,
   clientName,
+  clientLogoUrl: _clientLogoUrl,
+  versionLabel,
   shareNotes,
   onBegin,
 }: Props) {
@@ -97,14 +105,18 @@ export function ScriptShareIntro({
       const bgOverlay = el.closest('section')?.querySelector('[data-bg-overlay]') as HTMLElement;
       const eyebrow = el.querySelector('[data-eyebrow]') as HTMLElement;
       const words = el.querySelectorAll('[data-word]');
+      const version = el.querySelector('[data-version]') as HTMLElement | null;
       const notes = el.querySelector('[data-notes]') as HTMLElement | null;
-      const buttons = el.querySelectorAll('[data-button]');
+      const cta = el.querySelector('[data-cta]') as HTMLElement | null;
+      const email = el.querySelector('[data-email]') as HTMLElement | null;
       const instructions = el.querySelectorAll('[data-instructions]');
 
       gsap.set(eyebrow, { opacity: 0, y: 20 });
       gsap.set(words, { y: '115%' });
-      if (notes) gsap.set(notes, { opacity: 0, y: 24 });
-      if (buttons.length) gsap.set(buttons, { opacity: 0, y: 32 });
+      if (version) gsap.set(version, { opacity: 0, y: 16 });
+      if (notes) gsap.set(notes, { opacity: 0, y: 20 });
+      if (cta) gsap.set(cta, { opacity: 0, y: 24 });
+      if (email) gsap.set(email, { opacity: 0, y: 24 });
       if (instructions.length) gsap.set(instructions, { opacity: 0, y: 12 });
 
       const tl = gsap.timeline({ delay: 0.3 });
@@ -113,20 +125,20 @@ export function ScriptShareIntro({
         tl.to(bgOverlay, { opacity: 0, duration: 0.8, ease: 'power2.out' });
       }
 
-      tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, bgOverlay ? '-=0.3' : '>')
-        .to(words, { y: '0%', duration: 1.3, ease: 'expo.out', stagger: 0.07 }, '-=0.3');
-
-      if (notes) {
-        tl.to(notes, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.5');
-      }
-
-      if (buttons.length) {
-        tl.to(buttons, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out', stagger: 0.1 }, '-=0.3');
-      }
-
-      if (instructions.length) {
-        tl.to(instructions, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', stagger: 0.05 }, '-=0.3');
-      }
+      // 1. Client name
+      tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' }, bgOverlay ? '-=0.3' : '>');
+      // 2. Script title words
+      tl.to(words, { y: '0%', duration: 1.3, ease: 'expo.out', stagger: 0.07 }, '-=0.3');
+      // 3. Version pill
+      if (version) tl.to(version, { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }, '-=0.6');
+      // 4. What to look for
+      if (notes) tl.to(notes, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+      // 5. View Script button
+      if (cta) tl.to(cta, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+      // 6. Email button
+      if (email) tl.to(email, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.3');
+      // 7. Instructions
+      if (instructions.length) tl.to(instructions, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.3');
     }, el.closest('section') ?? el);
 
     return () => ctx.revert();
@@ -164,7 +176,7 @@ export function ScriptShareIntro({
 
         {/* Clip-reveal title */}
         <h1
-          className="font-display font-bold text-white leading-[0.95] mb-6"
+          className="font-display font-bold text-white leading-[0.95] mb-1"
           style={{ fontSize: 'clamp(2rem, 8vw, 10rem)' }}
         >
           {titleWords.map((word, i) => (
@@ -180,6 +192,21 @@ export function ScriptShareIntro({
           ))}
         </h1>
 
+        {/* Version pill */}
+        {versionLabel && (() => {
+          const color = versionColor(versionLabel);
+          return (
+            <div data-version className="mb-7" style={{ opacity: 0 }}>
+              <span
+                className="inline-block px-4 py-1.5 text-sm font-mono font-bold rounded-full"
+                style={{ color, backgroundColor: color + '18', border: `1px solid ${color}40` }}
+              >
+                v{versionLabel}
+              </span>
+            </div>
+          );
+        })()}
+
         {/* What to look for — same position as proposal subtitle */}
         {shareNotes && (
           <p data-notes className="text-xl text-white/40 max-w-lg leading-relaxed mb-8 whitespace-pre-wrap" style={{ opacity: 0 }}>
@@ -188,7 +215,7 @@ export function ScriptShareIntro({
         )}
 
         {/* CTA Button — directional fill */}
-        <div data-button className="w-full max-w-sm mb-5" style={{ opacity: 0 }}>
+        <div data-cta className="w-full max-w-sm mb-5" style={{ opacity: 0 }}>
           <motion.button
             ref={buttonRef}
             onClick={onBegin}
@@ -216,7 +243,7 @@ export function ScriptShareIntro({
         </div>
 
         {/* Email Button — directional fill */}
-        <div data-button className="w-full max-w-[12rem] mb-5" style={{ opacity: 0 }}>
+        <div data-email className="w-full max-w-[12rem] mb-5" style={{ opacity: 0 }}>
           <a
             ref={emailBtnRef}
             href="mailto:hi@fna.wtf"

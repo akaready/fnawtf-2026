@@ -4,30 +4,40 @@ import { useEffect, useCallback, useState } from 'react';
 import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
+import type { StoryboardSlotFrame } from '@/types/scripts';
 
 interface Props {
   frames: { imageUrl: string; label: string; filename: string }[];
   initialIndex: number;
   onClose: () => void;
+  slotFrames?: StoryboardSlotFrame[];
 }
 
 const SLIDE_DISTANCE = 48;
 const TRANSITION = { duration: 0.35, ease: [0.32, 0.72, 0, 1] };
 
-export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
+export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }: Props) {
+  const navFrames = (slotFrames && slotFrames.length > 0)
+    ? slotFrames.map(f => ({
+        imageUrl: f.image_url,
+        label: `Slot ${f.slot}`,
+        filename: `frame-${f.id}.jpg`,
+      }))
+    : frames;
+
   const [idx, setIdx] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
-  const current = frames[idx];
+  const current = navFrames[idx];
 
   const goNext = useCallback(() => {
     setDirection(1);
-    setIdx(i => (i + 1) % frames.length);
-  }, [frames.length]);
+    setIdx(i => (i + 1) % navFrames.length);
+  }, [navFrames.length]);
 
   const goPrev = useCallback(() => {
     setDirection(-1);
-    setIdx(i => (i - 1 + frames.length) % frames.length);
-  }, [frames.length]);
+    setIdx(i => (i - 1 + navFrames.length) % navFrames.length);
+  }, [navFrames.length]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -53,7 +63,7 @@ export function StoryboardLightbox({ frames, initialIndex, onClose }: Props) {
       onClick={handleBackdropClick}
     >
       {/* Screen-edge nav arrows */}
-      {frames.length > 1 && (
+      {navFrames.length > 1 && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); goPrev(); }}

@@ -111,13 +111,13 @@ export async function getScriptShareData(token: string) {
   // Fetch script with project + client
   const { data: script, error: scriptErr } = await service
     .from('scripts')
-    .select('id, title, major_version, minor_version, is_published, project_id, content_mode')
+    .select('id, title, major_version, minor_version, is_published, project_id, content_mode, script_group_id')
     .eq('id', s.script_id)
     .single();
 
   if (scriptErr || !script) return null;
 
-  const sc = script as { id: string; title: string; major_version: number; minor_version: number; is_published: boolean; project_id: string | null; content_mode: string };
+  const sc = script as { id: string; title: string; major_version: number; minor_version: number; is_published: boolean; project_id: string | null; content_mode: string; script_group_id: string | null };
 
   // Fetch project + client info
   let projectTitle: string | null = null;
@@ -148,19 +148,29 @@ export async function getScriptShareData(token: string) {
     }
   }
 
-  // Fetch scenes, beats, characters, tags, locations, references, storyboard frames
+  // Fetch scenes, beats, characters, tags, locations, products, references, storyboard frames
   const [
     { data: scenes },
     { data: characters },
     { data: tags },
     { data: locations },
     { data: storyboardFrames },
+    { data: products },
   ] = await Promise.all([
     service.from('script_scenes').select('*').eq('script_id', sc.id).order('sort_order'),
-    service.from('script_characters').select('*').eq('script_id', sc.id).order('sort_order'),
-    service.from('script_tags').select('*').eq('script_id', sc.id),
-    service.from('script_locations').select('*').eq('script_id', sc.id).order('sort_order'),
+    sc.script_group_id
+      ? service.from('script_characters').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? service.from('script_tags').select('*').eq('script_group_id', sc.script_group_id)
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? service.from('script_locations').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
     service.from('script_storyboard_frames').select('*').eq('script_id', sc.id),
+    sc.script_group_id
+      ? service.from('script_products').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
   ]);
 
   const sceneIds = (scenes ?? []).map((s: Record<string, unknown>) => s.id as string);
@@ -172,7 +182,7 @@ export async function getScriptShareData(token: string) {
   if (sceneIds.length > 0) {
     const { data: beatData } = await service
       .from('script_beats')
-      .select('*')
+      .select('id, scene_id, sort_order, audio_content, visual_content, notes_content, storyboard_layout, created_at, updated_at')
       .in('scene_id', sceneIds)
       .order('sort_order');
     beats = (beatData ?? []) as Record<string, unknown>[];
@@ -210,6 +220,7 @@ export async function getScriptShareData(token: string) {
     characters: (characters ?? []) as Record<string, unknown>[],
     tags: (tags ?? []) as Record<string, unknown>[],
     locations: (locations ?? []) as Record<string, unknown>[],
+    products: (products ?? []) as Record<string, unknown>[],
     references,
     storyboardFrames: (storyboardFrames ?? []) as Record<string, unknown>[],
   };
@@ -278,6 +289,22 @@ export async function getComments(shareId: string, beatId: string) {
   }));
 }
 
+export async function getCommentCounts(shareId: string): Promise<Record<string, number>> {
+  if (!shareId) return {};
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from('script_share_comments' as never)
+    .select('beat_id')
+    .eq('share_id', shareId)
+    .is('deleted_at', null);
+  if (error) return {};
+  const counts: Record<string, number> = {};
+  for (const row of (data ?? []) as { beat_id: string }[]) {
+    counts[row.beat_id] = (counts[row.beat_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function addComment(
   shareId: string,
   beatId: string,
@@ -286,7 +313,7 @@ export async function addComment(
   content: string,
 ) {
   if (!shareId || !beatId) throw new Error('Missing share or beat ID');
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('script_share_comments' as never)
     .insert({
@@ -307,7 +334,7 @@ export async function updateComment(
   viewerEmail: string,
   content: string,
 ) {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('script_share_comments' as never)
     .update({ content } as never)
@@ -317,7 +344,7 @@ export async function updateComment(
 }
 
 export async function deleteComment(commentId: string, viewerEmail: string) {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from('script_share_comments' as never)
     .update({ deleted_at: new Date().toISOString() } as never)

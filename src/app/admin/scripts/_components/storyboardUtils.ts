@@ -90,8 +90,8 @@ export function buildRichPrompt(
   const next = scene.beats[beatIndex + 1];
   if (next) {
     const nextContent = [next.audio_content, next.visual_content].filter(Boolean).join(' | ');
-    if (nextContent) parts.push(`\nNext beat: ${nextContent}`);
+    if (nextContent) parts.push(`Next beat: ${nextContent}`);
   }
 
-  return parts.join('\n') || 'Empty beat — generate a neutral establishing shot';
+  return parts.join('\n').replace(/\n{3,}/g, '\n\n') || 'Empty beat — generate a neutral establishing shot';
 }

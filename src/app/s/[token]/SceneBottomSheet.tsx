@@ -11,19 +11,22 @@ interface Scene {
   int_ext: string;
   time_of_day: string;
   scene_description: string | null;
+  beats?: { id: string; sort_order: number }[];
 }
 
 interface Props {
   scenes: Scene[];
   activeSceneId: string;
-  onJumpToScene: (sceneId: string) => void;
+  onSelectScene: (sceneId: string) => void;
+  activeBeatId?: string | null;
+  onSelectBeat?: (beatId: string) => void;
 }
 
-export function SceneBottomSheet({ scenes, activeSceneId, onJumpToScene }: Props) {
+export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeBeatId, onSelectBeat }: Props) {
   const [open, setOpen] = useState(false);
 
   const handleSelect = (sceneId: string) => {
-    onJumpToScene(sceneId);
+    onSelectScene(sceneId);
     setOpen(false);
   };
 
@@ -70,17 +73,32 @@ export function SceneBottomSheet({ scenes, activeSceneId, onJumpToScene }: Props
           </div>
 
           {/* Scene list */}
-          <div className="flex-1 overflow-y-auto px-2 pb-4 grid grid-cols-[auto_1fr] content-start">
+          <div className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col">
             {scenes.map(scene => {
-              const isActive = scene.id === activeSceneId;
+              const beatNavItems = (scene.beats ?? []).length >= 2
+                ? [...scene.beats!]
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .map((beat, i) => ({
+                      beatId: beat.id,
+                      label: String.fromCharCode(65 + i),
+                      isActive: beat.id === activeBeatId,
+                      onClick: (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        onSelectBeat?.(beat.id);
+                        setOpen(false);
+                      },
+                    }))
+                : undefined;
+
               return (
                 <SceneListItem
                   key={scene.id}
                   sceneNumber={scene.sceneNumber}
                   slug={`${scene.int_ext}. ${scene.location_name || '\u2014'}${scene.time_of_day ? ` \u2014 ${scene.time_of_day}` : ''}`}
                   description={scene.scene_description}
-                  isActive={isActive}
+                  isActive={scene.id === activeSceneId}
                   onClick={() => handleSelect(scene.id)}
+                  beats={beatNavItems}
                 />
               );
             })}

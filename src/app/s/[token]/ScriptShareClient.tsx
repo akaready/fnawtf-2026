@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink } from 'lucide-react';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
@@ -8,10 +8,11 @@ import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
+import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
 import { startScriptViewSession, updateScriptViewDuration } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion } from '@/types/scripts';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
@@ -37,6 +38,7 @@ interface Props {
   characters: Record<string, unknown>[];
   tags: Record<string, unknown>[];
   locations: Record<string, unknown>[];
+  products: Record<string, unknown>[];
   references: Record<string, unknown>[];
   storyboardFrames: Record<string, unknown>[];
   viewerEmail: string;
@@ -57,9 +59,11 @@ export function ScriptShareClient({
   characters: rawCharacters,
   tags: rawTags,
   locations: rawLocations,
+  products: rawProducts,
   references: rawReferences,
   storyboardFrames: rawStoryboardFrames,
   viewerEmail,
+  viewerName,
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
@@ -72,12 +76,13 @@ export function ScriptShareClient({
 
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
-  const typedBeats = rawBeats as unknown as { id: string; scene_id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string }[];
+  const typedBeats = rawBeats as unknown as { id: string; scene_id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string; storyboard_layout: string | null }[];
   const typedCharacters = rawCharacters as unknown as ScriptCharacterRow[];
   const typedTags = rawTags as unknown as ScriptTagRow[];
   const typedLocations = rawLocations as unknown as ScriptLocationRow[];
+  const typedProducts = rawProducts as unknown as ScriptProductRow[];
   const typedReferences = rawReferences as unknown as { id: string; beat_id: string; image_url: string }[];
-  const typedStoryboardFrames = rawStoryboardFrames as unknown as { id: string; beat_id: string | null; scene_id: string | null; image_url: string }[];
+  const typedStoryboardFrames = rawStoryboardFrames as unknown as { id: string; beat_id: string | null; scene_id: string | null; image_url: string; slot: number | null; crop_config: import('@/types/scripts').CropConfig | null }[];
 
   // Sort scenes and build beats-by-scene map
   const sortedScenes = typedScenes.sort((a, b) => a.sort_order - b.sort_order);
@@ -93,7 +98,7 @@ export function ScriptShareClient({
   }
 
   const computed = computeSceneNumbers(sortedScenes as never, beatsByScene as never);
-  const computedScenes = (computed as unknown as { id: string; sceneNumber: number; int_ext: string; location_name: string; time_of_day: string; scene_description?: string | null; beats: { id: string; audio_content: string; visual_content: string; notes_content: string }[] }[]);
+  const computedScenes = (computed as unknown as { id: string; sceneNumber: number; int_ext: string; location_name: string; time_of_day: string; scene_description?: string | null; beats: { id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string }[] }[]);
 
   // Set initial active scene
   useEffect(() => {
@@ -137,6 +142,11 @@ export function ScriptShareClient({
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const handleBeatClick = useCallback((beatId: string) => {
+    const el = document.getElementById(`beat-${beatId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const btnCls = 'w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors';
 
   // Build presentation slides data
@@ -156,6 +166,7 @@ export function ScriptShareClient({
     int_ext: sc.int_ext,
     time_of_day: sc.time_of_day,
     scene_description: (sc as Record<string, unknown>).scene_description as string | null ?? null,
+    beats: sc.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
   }));
 
   // Intro page
@@ -178,7 +189,6 @@ export function ScriptShareClient({
     return (
       <ScriptPresentationView
         slides={presentationSlides}
-        columnConfig={columnConfig}
         onClose={() => setShowIntro(true)}
         scriptTitle={script.title}
         clientName={clientName ?? undefined}
@@ -187,7 +197,11 @@ export function ScriptShareClient({
         scenes={presentationScenes}
         shareId={shareId}
         viewerEmail={viewerEmail}
-        viewerName={null}
+        viewerName={viewerName}
+        characters={typedCharacters}
+        tags={typedTags}
+        locations={typedLocations}
+        products={typedProducts}
       />
     );
   }
@@ -270,17 +284,22 @@ export function ScriptShareClient({
       {/* Content area */}
       <div className="flex-1 flex min-h-0">
         {/* Sidebar */}
-        <div
-          className={`h-full grid transition-[grid-template-columns] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${showSidebar ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'}`}
-        >
-          <div className="overflow-hidden min-w-0 border-r border-admin-border bg-admin-bg-sidebar h-full">
+        <SceneSidebarShell open={showSidebar}>
             <SceneNav
-              scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null }))}
+              scenes={computedScenes.map(s => ({
+                id: s.id,
+                sceneNumber: s.sceneNumber,
+                int_ext: s.int_ext,
+                location_name: s.location_name,
+                time_of_day: s.time_of_day,
+                scene_description: s.scene_description ?? null,
+                beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
+              }))}
               activeSceneId={activeSceneId}
               onSelectScene={handleSceneClick}
+              onSelectBeat={handleBeatClick}
             />
-          </div>
-        </div>
+        </SceneSidebarShell>
 
         {/* Main canvas */}
         <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
@@ -293,6 +312,7 @@ export function ScriptShareClient({
               characters={typedCharacters}
               tags={typedTags}
               locations={typedLocations}
+              products={typedProducts}
             />
           </div>
         </div>

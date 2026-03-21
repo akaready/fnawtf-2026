@@ -27,7 +27,7 @@ export function getGridTemplateFromFractions(
   const parts: string[] = [];
   for (const key of KEYS) {
     if (config[key]) {
-      parts.push(`${fractions[key] ?? 1}fr`);
+      parts.push(`minmax(0, ${fractions[key] ?? 1}fr)`);
     }
   }
   return parts.length === 0 ? '1fr' : parts.join(' ');

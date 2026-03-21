@@ -31,6 +31,8 @@ interface Props {
   scratchpadMode?: boolean;
   scratchScenes?: ScratchScene[];
   onScrollToScene?: (label: string, sceneIndex: number) => void;
+  activeBeatId?: string | null;
+  onSelectBeat?: (beatId: string) => void;
 }
 
 export function ScriptSceneSidebar({
@@ -43,6 +45,8 @@ export function ScriptSceneSidebar({
   scratchpadMode,
   scratchScenes,
   onScrollToScene,
+  activeBeatId,
+  onSelectBeat,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
@@ -64,7 +68,7 @@ export function ScriptSceneSidebar({
   if (scratchpadMode && scratchScenes) {
     return (
       <div className="bg-admin-bg-sidebar flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
+        <div className="flex-1 overflow-y-auto admin-scrollbar flex flex-col">
           {scratchScenes.map((scene, i) => (
             <SceneListItem
               key={`${scene.sceneIndex}-${i}`}
@@ -81,7 +85,7 @@ export function ScriptSceneSidebar({
 
   return (
     <div className="bg-admin-bg-sidebar flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto admin-scrollbar grid grid-cols-[auto_1fr] content-start">
+      <div className="flex-1 overflow-y-auto admin-scrollbar flex flex-col">
         <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={scenes.map(s => s.id)} strategy={verticalListSortingStrategy}>
             {scenes.map(scene => (
@@ -90,9 +94,10 @@ export function ScriptSceneSidebar({
                 scene={scene}
                 isActive={scene.id === activeSceneId}
                 onSelect={() => onSelectScene(scene.id)}
-                showNumber={true}
                 showSlug={showSlug}
                 showDesc={showDesc}
+                activeBeatId={activeBeatId}
+                onSelectBeat={onSelectBeat}
               />
             ))}
           </SortableContext>
@@ -134,16 +139,18 @@ function SortableSceneItem({
   scene,
   isActive,
   onSelect,
-  showNumber: _showNumber,
   showSlug,
   showDesc,
+  activeBeatId,
+  onSelectBeat,
 }: {
   scene: ComputedScene;
   isActive: boolean;
   onSelect: () => void;
-  showNumber: boolean;
   showSlug: boolean;
   showDesc: boolean;
+  activeBeatId?: string | null;
+  onSelectBeat?: (beatId: string) => void;
 }) {
   const {
     attributes,
@@ -160,34 +167,40 @@ function SortableSceneItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const slug = showSlug
+    ? `${scene.int_ext}. ${scene.location_name || '—'}${scene.time_of_day ? ` — ${scene.time_of_day}` : ''}`
+    : undefined;
+
+  const beats = scene.beats.length >= 2
+    ? [...scene.beats]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((beat, i) => ({
+          beatId: beat.id,
+          label: String.fromCharCode(65 + i),
+          isActive: beat.id === activeBeatId,
+          onClick: (e: React.MouseEvent) => {
+            e.stopPropagation();
+            onSelectBeat?.(beat.id);
+          },
+        }))
+    : undefined;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`group col-span-2 grid grid-cols-subgrid items-center h-[45px] overflow-hidden border-b border-admin-border-subtle cursor-grab transition-colors ${
-        isActive
-          ? 'bg-black/40 text-admin-text-primary'
-          : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
-      }`}
-      onClick={onSelect}
+      className="cursor-grab"
     >
-      <span className="text-admin-border font-bebas text-[56px] leading-none translate-y-[6px] text-right pr-2">
-        {scene.sceneNumber}
-      </span>
-      <div className="flex-1 min-w-0">
-        {showSlug && (
-          <span className="text-xs font-medium text-admin-text-faint uppercase tracking-wider truncate block leading-tight">
-            {scene.int_ext}. {scene.location_name || '—'}{scene.time_of_day ? ` — ${scene.time_of_day}` : ''}
-          </span>
-        )}
-        {showDesc && scene.scene_description && (
-          <span className="text-xs text-admin-text-muted font-normal uppercase tracking-wider truncate block leading-tight">
-            {scene.scene_description}
-          </span>
-        )}
-      </div>
+      <SceneListItem
+        sceneNumber={scene.sceneNumber}
+        slug={slug}
+        description={showDesc ? scene.scene_description : undefined}
+        isActive={isActive}
+        onClick={onSelect}
+        beats={beats}
+      />
     </div>
   );
 }

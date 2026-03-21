@@ -1,18 +1,16 @@
 'use client';
 
 /**
- * Demo6 — Polished Demo5
- * Single column (760px), dark default.
- * Improvements: white balance card, aligned payment amounts, tfoot totals,
- * ghost doc buttons, footer logo, amber notes accent, stage-labeled paid rows.
+ * Demo6 — Polished linear invoice
+ * Single column (760px), dark default, auto-light-mode print.
+ * No PortalNav — standalone print button.
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import type { InvoiceData, PaymentTrigger, StageStatus } from '@/types/invoice';
-import { CheckSquare, FileText, CreditCard, FileSignature, BadgeDollarSign } from 'lucide-react';
-import { PortalNav } from '../PortalNav';
+import { CheckSquare, FileText, CreditCard, FileSignature, BadgeDollarSign, Printer, Mail } from 'lucide-react';
 import { buildDemoData, type DemoStage, type DemoDiscount } from '../demoData';
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -82,6 +80,63 @@ const payIconVariants = {
   },
 };
 
+function GsapLink({ href, onClick, children, className = '' }: {
+  href?: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLAnchorElement & HTMLButtonElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    const fill = fillRef.current;
+    const textEl = textRef.current;
+    if (!el || !fill || !textEl) return;
+
+    const onEnter = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const fromLeft = e.clientX - rect.left < rect.width / 2;
+      gsap.killTweensOf([fill, textEl]);
+      gsap.fromTo(fill, { scaleX: 0, transformOrigin: fromLeft ? '0 50%' : '100% 50%' }, { scaleX: 1, duration: 0.3, ease: 'power2.out' });
+      gsap.to(textEl, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    };
+    const onLeave = () => {
+      gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
+      gsap.to(textEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    };
+
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    return () => {
+      el.removeEventListener('mouseenter', onEnter);
+      el.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
+
+  const sharedClass = `relative px-4 py-2 font-medium text-white bg-black border border-white/20 rounded-lg overflow-hidden inline-flex items-center justify-center ${className}`;
+
+  const inner = (
+    <>
+      <div
+        ref={fillRef}
+        className="absolute inset-0 bg-white pointer-events-none"
+        style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+      />
+      <span ref={textRef} className="relative flex items-center gap-2 text-white text-sm" style={{ zIndex: 10 }}>
+        {children}
+      </span>
+    </>
+  );
+
+  if (href) {
+    return <a ref={ref as React.RefObject<HTMLAnchorElement>} href={href} className={sharedClass}>{inner}</a>;
+  }
+  return <button ref={ref as React.RefObject<HTMLButtonElement>} onClick={onClick} className={sharedClass}>{inner}</button>;
+}
+
 function PayNowButton({ href }: { href: string }) {
   const btnRef = useRef<HTMLAnchorElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
@@ -100,13 +155,13 @@ function PayNowButton({ href }: { href: string }) {
       const fromLeft = e.clientX - rect.left < rect.width / 2;
       gsap.killTweensOf([fill, textEl, btn]);
       gsap.fromTo(fill, { scaleX: 0, transformOrigin: fromLeft ? '0 50%' : '100% 50%' }, { scaleX: 1, duration: 0.3, ease: 'power2.out' });
-      gsap.to(textEl, { color: '#000000', duration: 0.3, ease: 'power2.out' });
-      gsap.to(btn, { borderColor: '#000000', duration: 0.3, ease: 'power2.out' });
+      gsap.to(textEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+      gsap.to(btn, { borderColor: '#ffffff', duration: 0.3, ease: 'power2.out' });
     };
     const onLeave = () => {
       setHovered(false);
       gsap.to(fill, { scaleX: 0, duration: 0.3, ease: 'power2.out' });
-      gsap.to(textEl, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+      gsap.to(textEl, { color: '#000000', duration: 0.3, ease: 'power2.out' });
       gsap.to(btn, { borderColor: 'transparent', duration: 0.3, ease: 'power2.out' });
     };
 
@@ -122,14 +177,14 @@ function PayNowButton({ href }: { href: string }) {
     <a
       ref={btnRef}
       href={href}
-      className="invoice-no-print relative w-full max-w-xs mx-auto px-6 py-3 font-medium text-white bg-black border border-transparent rounded-lg overflow-hidden flex items-center justify-center mt-6"
+      className="invoice-no-print relative w-full max-w-xs mx-auto px-6 py-3 font-medium text-black bg-white border border-transparent rounded-lg overflow-hidden flex items-center justify-center mt-6"
     >
       <div
         ref={fillRef}
-        className="absolute inset-0 bg-white pointer-events-none"
+        className="absolute inset-0 bg-black pointer-events-none"
         style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
       />
-      <span ref={textRef} className="relative flex items-center justify-center gap-2 text-white" style={{ zIndex: 10 }}>
+      <span ref={textRef} className="relative flex items-center justify-center gap-2 text-black" style={{ zIndex: 10 }}>
         <motion.span variants={payIconVariants} initial="hidden" animate={hovered ? 'visible' : 'hidden'} className="flex items-center">
           <BadgeDollarSign size={16} strokeWidth={2} />
         </motion.span>
@@ -158,7 +213,7 @@ function DevToolbar({
     }`;
 
   return (
-    <div className="invoice-no-print sticky top-12 z-40 flex items-center justify-center gap-6 px-5 py-2 border-b border-admin-border bg-admin-bg-inset">
+    <div className="invoice-no-print sticky top-0 z-40 flex items-center justify-center gap-6 px-5 py-2 border-b border-admin-border bg-admin-bg-inset">
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] uppercase tracking-widest font-bold text-admin-text-dim mr-1">Stage</span>
         <div className="flex items-center gap-0.5 bg-admin-bg-base border border-admin-border rounded-lg p-0.5">
@@ -182,9 +237,9 @@ function DevToolbar({
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function Demo6({ data: _initialData }: { data: InvoiceData }) {
-  const [lightMode, setLightMode] = useState(false);
   const [stage, setStage] = useState<DemoStage>(2);
   const [discount, setDiscount] = useState<DemoDiscount>('none');
+  const shellRef = useRef<HTMLDivElement>(null);
 
   const data = useMemo(() => buildDemoData(stage, discount), [stage, discount]);
 
@@ -202,17 +257,19 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
     {},
   );
 
-  return (
-    <div className={`min-h-screen bg-admin-bg-base text-admin-text-primary ${lightMode ? 'cs-light' : ''}`}>
+  /* Print: temporarily flip to light mode, print, flip back */
+  const handlePrint = useCallback(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    el.classList.add('cs-light');
+    requestAnimationFrame(() => {
+      window.print();
+      el.classList.remove('cs-light');
+    });
+  }, []);
 
-      <PortalNav
-        projectTitle={data.projectTitle}
-        clientCompany={data.clientCompany}
-        invoiceNumber={data.invoiceNumber}
-        lightMode={lightMode}
-        onToggleMode={() => setLightMode(m => !m)}
-        showDocTabs={false}
-      />
+  return (
+    <div ref={shellRef} className="min-h-screen bg-admin-bg-base text-admin-text-primary">
 
       <DevToolbar
         stage={stage} setStage={setStage}
@@ -230,7 +287,7 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
                 src={data.clientLogoUrl}
                 alt={data.clientCompany ?? data.clientName}
                 height={56}
-                className="h-14 w-auto object-contain brightness-0 invert admin-logo"
+                className="h-14 w-auto object-contain brightness-0 invert admin-logo invoice-print-invert"
               />
             )}
             <span className="text-admin-text-dim text-4xl font-extralight leading-none">&times;</span>
@@ -240,7 +297,7 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
               alt="Friends 'n Allies"
               width={160}
               height={56}
-              className="h-12 w-auto object-contain brightness-0 invert"
+              className="h-12 w-auto object-contain brightness-0 invert invoice-print-invert"
             />
           </div>
           <div className="text-center">
@@ -257,32 +314,34 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
 
         {/* ═══ BILL TO + DETAILS — single card, two columns ═══ */}
         <div className="rounded-xl border border-admin-border bg-admin-bg-raised">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-14 p-6">
             {/* Left: Bill To */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-admin-text-dim mb-3">Bill To</p>
-              <div className="space-y-1.5">
-                <p className="text-sm font-semibold">{data.clientName}</p>
-                {data.clientCompany && <p className="text-sm text-admin-text-muted">{data.clientCompany}</p>}
-                <p className="text-sm text-admin-text-muted">{data.clientEmail}</p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-1.5 text-sm">
+                {data.clientCompany && <>
+                  <span className="text-admin-text-muted">Company</span>
+                  <span className="font-medium">{data.clientCompany}</span>
+                </>}
+                <span className="text-admin-text-muted">Name</span>
+                <span className="font-medium">{data.clientName}</span>
+                {data.clientTitle && <>
+                  <span className="text-admin-text-muted">Title</span>
+                  <span className="font-medium">{data.clientTitle}</span>
+                </>}
+                <span className="text-admin-text-muted">Email</span>
+                <span className="font-medium">{data.clientEmail}</span>
+                {data.clientPhone && <>
+                  <span className="text-admin-text-muted">Phone</span>
+                  <span className="font-medium">{data.clientPhone}</span>
+                </>}
               </div>
             </div>
 
-            {/* Right: Details */}
+            {/* Right: Details — client/project context first, then dates */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-admin-text-dim mb-3">Details</p>
               <div className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-1.5 text-sm">
-                <span className="text-admin-text-muted">Invoice</span>
-                <span className="font-[family-name:var(--font-mono)] font-medium">{data.invoiceNumber}</span>
-
-                <span className="text-admin-text-muted">Issued</span>
-                <span className="font-medium">{formatDate(data.issueDate)}</span>
-
-                {currentStage?.dueDate && <>
-                  <span className="text-admin-text-muted">Due</span>
-                  <span className="font-semibold text-admin-danger">{formatDate(currentStage.dueDate)}</span>
-                </>}
-
                 <span className="text-admin-text-muted">Project</span>
                 <span className="font-medium">{data.projectTitle}</span>
 
@@ -290,19 +349,26 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
                   <span className="text-admin-text-muted">Type</span>
                   <span className="font-medium">{data.projectType}</span>
                 </>}
+
+                <span className="text-admin-text-muted">Invoice</span>
+                <span className="font-medium font-[family-name:var(--font-mono)]">{data.invoiceNumber}</span>
+
+                <span className="text-admin-text-muted">Issued</span>
+                <span className="font-medium">{formatDate(data.issueDate)}</span>
+
+                {currentStage?.dueDate && <>
+                  <span className="text-admin-text-muted">Due</span>
+                  <span className={`font-medium ${currentStage.status === 'overdue' ? 'text-admin-danger' : ''}`}>
+                    {formatDate(currentStage.dueDate)}
+                  </span>
+                </>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ═══ SCOPE OF WORK ═══ */}
+        {/* ═══ LINE ITEMS ═══ */}
         <div>
-          <SectionHeader
-            icon={<FileText className="w-6 h-6" strokeWidth={1.75} />}
-            title="Scope of Work"
-            count={data.lineItems.length}
-          />
-
           <table className="w-full">
             <thead>
               <tr className="border-b border-admin-border">
@@ -337,41 +403,37 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
                 ))}
               </tbody>
             ))}
-
-            {/* ── Totals in tfoot ── */}
-            <tfoot>
-              <tr>
-                <td className="pt-6 pb-2.5 text-sm text-admin-text-muted text-right pr-6">Subtotal</td>
-                <td className="pt-6 pb-2.5 text-right font-[family-name:var(--font-mono)] text-sm tabular-nums">
-                  {fmt(data.subtotal)}
-                </td>
-              </tr>
-              {data.discountAmount && data.discountAmount > 0 && (
-                <tr>
-                  <td className="py-2 text-sm text-admin-text-muted text-right pr-6">{data.discountLabel ?? 'Discount'}</td>
-                  <td className="py-2 text-right font-[family-name:var(--font-mono)] text-sm tabular-nums text-admin-success">
-                    &minus;{fmt(data.discountAmount)}
-                  </td>
-                </tr>
-              )}
-              <tr className="border-t border-admin-border">
-                <td className="pt-3 pb-2.5 text-sm font-bold text-right pr-6">Total</td>
-                <td className="pt-3 pb-2.5 text-right font-[family-name:var(--font-mono)] text-base font-bold tabular-nums">
-                  {fmt(data.total)}
-                </td>
-              </tr>
-              {paidStages.map(s => (
-                <tr key={s.id}>
-                  <td className="py-2 text-sm text-admin-text-muted text-right pr-6">
-                    {s.label} received
-                  </td>
-                  <td className="py-2 text-right font-[family-name:var(--font-mono)] text-sm tabular-nums text-emerald-400">
-                    &minus;{fmt(s.amount)}
-                  </td>
-                </tr>
-              ))}
-            </tfoot>
           </table>
+
+          {/* Totals — right-aligned, partial-width border */}
+          <div className="mt-6 flex justify-end">
+            <div className="w-56 border-t border-admin-border pt-4 space-y-2.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-admin-text-muted">Subtotal</span>
+                <span className="font-[family-name:var(--font-mono)] tabular-nums">{fmt(data.subtotal)}</span>
+              </div>
+              {data.discountAmount && data.discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-admin-text-muted">{data.discountLabel ?? 'Discount'}</span>
+                  <span className="font-[family-name:var(--font-mono)] tabular-nums text-admin-success">
+                    &minus;{fmt(data.discountAmount)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-bold border-t border-admin-border pt-2.5">
+                <span>Total</span>
+                <span className="font-[family-name:var(--font-mono)] tabular-nums">{fmt(data.total)}</span>
+              </div>
+              {paidStages.map(s => (
+                <div key={s.id} className="flex justify-between text-sm">
+                  <span className="text-admin-text-muted">{s.label} received</span>
+                  <span className="font-[family-name:var(--font-mono)] tabular-nums text-emerald-400">
+                    &minus;{fmt(s.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ═══ PAYMENTS ═══ */}
@@ -388,15 +450,20 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
               return (
                 <div
                   key={stg.id}
-                  className={`rounded-xl border p-5 flex flex-col ${cfg.card} ${isCurrent ? 'ring-1 ring-sky-500/30' : ''}`}
+                  className={`rounded-xl border px-6 py-7 flex flex-col ${cfg.card} ${isCurrent ? 'ring-1 ring-sky-500/30' : ''}`}
                 >
-                  {/* Header: label + trigger + due/received date */}
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div>
+                  <div className="flex items-start justify-between gap-3 mb-6">
+                    <div className="space-y-1">
                       <p className="text-sm font-bold leading-tight">{stg.label}</p>
-                      <p className="text-xs text-admin-text-dim mt-0.5">{TRIGGER_LABEL[stg.trigger]}</p>
+                      <p className="text-xs text-admin-text-dim">{TRIGGER_LABEL[stg.trigger]}</p>
+                      {stg.paidAt && (
+                        <p className="text-xs text-admin-text-dim flex items-center gap-1">
+                          {formatDate(stg.paidAt)}
+                          <CheckSquare className="w-3 h-3 text-emerald-400 shrink-0" />
+                        </p>
+                      )}
                       {stg.dueDate && stg.status !== 'paid' && (
-                        <p className="text-xs text-admin-text-dim mt-0.5">by {formatDate(stg.dueDate)}</p>
+                        <p className="text-xs text-admin-text-dim">by {formatDate(stg.dueDate)}</p>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
@@ -405,35 +472,25 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
                       </span>
                     </div>
                   </div>
-                  {/* Amount — always at bottom, aligned across cards */}
                   <p className={`font-[family-name:var(--font-mono)] text-3xl font-bold tabular-nums tracking-tight mt-auto ${cfg.amount}`}>
                     {fmt(stg.amount)}
                   </p>
-                  {/* Received date below amount */}
-                  {stg.paidAt ? (
-                    <p className="text-xs text-admin-text-dim mt-2 flex items-center gap-1">
-                      {formatDate(stg.paidAt)}
-                      <CheckSquare className="w-3 h-3 text-emerald-400 shrink-0" />
-                    </p>
-                  ) : (
-                    <div className="h-5 mt-2" />
-                  )}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* ═══ BALANCE DUE + PAY NOW — white card ═══ */}
-        <div className="rounded-2xl bg-white py-14 text-center">
-          <p className="text-[10px] uppercase tracking-[0.4em] font-extrabold text-neutral-400">
+        {/* ═══ BALANCE DUE + PAY NOW ═══ */}
+        <div className="rounded-2xl bg-admin-bg-raised border border-admin-border py-14 text-center">
+          <p className="text-[10px] uppercase tracking-[0.4em] font-extrabold text-admin-text-dim">
             Balance Due
           </p>
-          <p className="font-[family-name:var(--font-mono)] text-7xl font-bold tracking-tighter text-black mt-4 tabular-nums">
+          <p className="font-[family-name:var(--font-mono)] text-7xl font-bold tracking-tighter text-admin-text-primary mt-4 tabular-nums">
             {fmt(balanceDue)}
           </p>
           {currentStage && (
-            <p className="text-sm text-neutral-400 mt-4">
+            <p className="text-sm text-admin-text-muted mt-4">
               {TRIGGER_LABEL[currentStage.trigger]}
               {currentStage.dueDate && ` · due ${formatDate(currentStage.dueDate)}`}
             </p>
@@ -443,17 +500,17 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
           )}
 
           {/* Related documents — ghost buttons */}
-          <div className="invoice-no-print flex items-center justify-center gap-4 mt-8 pt-6 border-t border-neutral-200 mx-auto max-w-xs">
+          <div className="invoice-no-print flex items-center justify-center gap-4 mt-8 pt-6 border-t border-admin-border mx-auto max-w-xs">
             <a
               href="#"
-              className="inline-flex items-center gap-1.5 border border-neutral-300 rounded-lg px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-neutral-100 hover:text-black transition-colors"
+              className="inline-flex items-center gap-1.5 border border-admin-border rounded-lg px-4 py-2 text-sm font-medium text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary transition-colors"
             >
               <FileText className="w-3.5 h-3.5" />
               Proposal
             </a>
             <a
               href="#"
-              className="inline-flex items-center gap-1.5 border border-neutral-300 rounded-lg px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-neutral-100 hover:text-black transition-colors"
+              className="inline-flex items-center gap-1.5 border border-admin-border rounded-lg px-4 py-2 text-sm font-medium text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary transition-colors"
             >
               <FileSignature className="w-3.5 h-3.5" />
               Contract
@@ -461,7 +518,7 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
           </div>
         </div>
 
-        {/* ═══ NOTES — amber left accent ═══ */}
+        {/* ═══ NOTES ═══ */}
         {data.notes && (
           <div className="rounded-xl border border-admin-border bg-admin-bg-raised px-5 py-4">
             <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-admin-text-dim mb-2">Notes</p>
@@ -470,30 +527,20 @@ export function Demo6({ data: _initialData }: { data: InvoiceData }) {
         )}
 
         {/* ═══ FOOTER ═══ */}
-        <div className="border-t border-admin-border pt-8 flex items-start justify-between gap-8">
-          <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/logo/fna-logo.svg"
-              alt="Friends 'n Allies"
-              width={80}
-              height={24}
-              className="h-5 w-auto object-contain brightness-0 invert mb-3"
-            />
-            <p className="text-xs text-admin-text-dim leading-relaxed">
-              Friends &apos;n Allies LLC<br />
-              1541 Wilcox Ave, Suite 304<br />
-              Los Angeles, CA 90028<br />
-              hello@fna.wtf &middot; fna.wtf
-            </p>
-          </div>
-          <div className="text-right max-w-xs">
-            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-admin-text-dim mb-2">Payment</p>
-            <p className="text-xs text-admin-text-muted leading-relaxed">
-              Wire, ACH, or card accepted. Reference{' '}
-              <span className="font-[family-name:var(--font-mono)]">{data.invoiceNumber}</span>{' '}
-              on all payments. Checks payable to Friends &apos;n Allies LLC.
-            </p>
+        <div className="border-t border-admin-border pt-5 flex items-center justify-between gap-8">
+          <p className="text-xs text-admin-text-dim leading-relaxed">
+            Friends &apos;n Allies LLC<br />
+            1541 Wilcox Ave, Suite 304<br />
+            Los Angeles, CA 90028
+          </p>
+          <div className="flex items-center gap-3">
+            <GsapLink href="mailto:hi@fna.wtf">
+              <Mail className="w-4 h-4" />
+              hi@fna.wtf
+            </GsapLink>
+            <GsapLink onClick={handlePrint} className="invoice-no-print !px-2.5">
+              <Printer className="w-4 h-4" />
+            </GsapLink>
           </div>
         </div>
 

@@ -26,12 +26,12 @@ export default async function ScriptPreviewPage({ params }: Props) {
   // Fetch script
   const { data: script, error: scriptErr } = await supabase
     .from('scripts')
-    .select('id, title, major_version, minor_version, is_published, project_id, content_mode')
+    .select('id, title, major_version, minor_version, is_published, project_id, content_mode, script_group_id')
     .eq('id', id)
     .single();
   if (scriptErr || !script) redirect('/admin/scripts');
 
-  const sc = script as { id: string; title: string; major_version: number; minor_version: number; is_published: boolean; project_id: string | null; content_mode: string };
+  const sc = script as { id: string; title: string; major_version: number; minor_version: number; is_published: boolean; project_id: string | null; content_mode: string; script_group_id: string | null };
 
   // Fetch project + client
   let projectTitle: string | null = null;
@@ -61,6 +61,17 @@ export default async function ScriptPreviewPage({ params }: Props) {
     }
   }
 
+  // Fetch share notes from the most recent share for this script
+  let shareNotes: string | null = null;
+  const { data: shareData } = await supabase
+    .from('script_shares')
+    .select('notes')
+    .eq('script_id', sc.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  if (shareData) shareNotes = (shareData as { notes: string | null }).notes;
+
   // Fetch all script content
   const [
     { data: scenes },
@@ -68,12 +79,22 @@ export default async function ScriptPreviewPage({ params }: Props) {
     { data: tags },
     { data: locations },
     { data: storyboardFrames },
+    { data: products },
   ] = await Promise.all([
     supabase.from('script_scenes').select('*').eq('script_id', sc.id).order('sort_order'),
-    supabase.from('script_characters').select('*').eq('script_id', sc.id).order('sort_order'),
-    supabase.from('script_tags').select('*').eq('script_id', sc.id),
-    supabase.from('script_locations').select('*').eq('script_id', sc.id).order('sort_order'),
+    sc.script_group_id
+      ? supabase.from('script_characters').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? supabase.from('script_tags').select('*').eq('script_group_id', sc.script_group_id)
+      : Promise.resolve({ data: [] }),
+    sc.script_group_id
+      ? supabase.from('script_locations').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
     supabase.from('script_storyboard_frames').select('*').eq('script_id', sc.id),
+    sc.script_group_id
+      ? supabase.from('script_products').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
+      : Promise.resolve({ data: [] }),
   ]);
 
   const sceneIds = (scenes ?? []).map((s: Record<string, unknown>) => s.id as string);
@@ -102,7 +123,7 @@ export default async function ScriptPreviewPage({ params }: Props) {
   return (
     <ScriptShareClient
       shareId=""
-      shareNotes={null}
+      shareNotes={shareNotes}
       shareMode="presentation"
       script={{
         id: sc.id,
@@ -123,6 +144,7 @@ export default async function ScriptPreviewPage({ params }: Props) {
       locations={(locations ?? []) as Record<string, unknown>[]}
       references={references}
       storyboardFrames={(storyboardFrames ?? []) as Record<string, unknown>[]}
+      products={(products ?? []) as Record<string, unknown>[]}
       viewerEmail={user.email ?? ''}
       viewerName={null}
     />

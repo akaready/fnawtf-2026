@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getGridTemplate, getVisibleColumns } from '@/app/admin/scripts/_components/gridUtils';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow } from '@/types/scripts';
+import { StoryboardLayoutRenderer } from '@/app/admin/scripts/_components/StoryboardLayoutRenderer';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, CropConfig, StoryboardSlotFrame } from '@/types/scripts';
 
 interface Scene {
   id: string;
@@ -21,6 +22,7 @@ interface Beat {
   audio_content: string;
   visual_content: string;
   notes_content: string;
+  storyboard_layout?: string | null;
 }
 
 interface Reference {
@@ -34,6 +36,8 @@ interface StoryboardFrame {
   beat_id: string | null;
   scene_id: string | null;
   image_url: string;
+  slot?: number | null;
+  crop_config?: CropConfig | null;
 }
 
 interface Props {
@@ -44,6 +48,7 @@ interface Props {
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
+  products: ScriptProductRow[];
 }
 
 export function ReadOnlyCanvas({
@@ -54,6 +59,7 @@ export function ReadOnlyCanvas({
   characters,
   tags,
   locations,
+  products,
 }: Props) {
   const [collapsedScenes, setCollapsedScenes] = useState<Set<string>>(new Set());
   const colHeaderRef = useRef<HTMLDivElement>(null);
@@ -85,10 +91,14 @@ export function ReadOnlyCanvas({
     refMap.set(ref.beat_id, list);
   }
 
-  // Build storyboard lookup: beatId -> StoryboardFrame
-  const frameMap = new Map<string, StoryboardFrame>();
+  // Build storyboard lookup: beatId -> StoryboardFrame[]
+  const frameMap = new Map<string, StoryboardFrame[]>();
   for (const frame of storyboardFrames) {
-    if (frame.beat_id) frameMap.set(frame.beat_id, frame);
+    if (frame.beat_id) {
+      const list = frameMap.get(frame.beat_id) ?? [];
+      list.push(frame);
+      frameMap.set(frame.beat_id, list);
+    }
   }
 
   const beatLetter = (n: number) => String.fromCharCode(64 + n); // 1=A, 2=B...
@@ -141,10 +151,10 @@ export function ReadOnlyCanvas({
             {/* Beats */}
             {!isCollapsed && scene.beats.map((beat, beatIdx) => {
               const beatRefs = refMap.get(beat.id) ?? [];
-              const frame = frameMap.get(beat.id);
+              const beatFrames = frameMap.get(beat.id) ?? [];
 
               return (
-                <div key={beat.id} className="relative">
+                <div key={beat.id} id={`beat-${beat.id}`} className="relative">
                   {/* Beat letter gutter */}
                   <div className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#1a1a1a]">
                     <span className="text-[10px] text-muted-foreground/30 font-mono">
@@ -166,19 +176,19 @@ export function ReadOnlyCanvas({
                     {/* Grid cells */}
                     <div className="grid items-stretch" style={{ gridTemplateColumns: gridTemplate }}>
                       {columnConfig.audio && (
-                        <ReadOnlyCell content={beat.audio_content} characters={characters} tags={tags} locations={locations} />
+                        <ReadOnlyCell content={beat.audio_content} characters={characters} tags={tags} locations={locations} products={products} />
                       )}
                       {columnConfig.visual && (
-                        <ReadOnlyCell content={beat.visual_content} characters={characters} tags={tags} locations={locations} />
+                        <ReadOnlyCell content={beat.visual_content} characters={characters} tags={tags} locations={locations} products={products} />
                       )}
                       {columnConfig.notes && (
-                        <ReadOnlyCell content={beat.notes_content} characters={characters} tags={tags} locations={locations} />
+                        <ReadOnlyCell content={beat.notes_content} characters={characters} tags={tags} locations={locations} products={products} />
                       )}
                       {columnConfig.reference && (
                         <ReadOnlyReferenceCell references={beatRefs} />
                       )}
                       {columnConfig.storyboard && (
-                        <ReadOnlyStoryboardCell frame={frame} />
+                        <ReadOnlyStoryboardCell frames={beatFrames} storyboardLayout={beat.storyboard_layout ?? null} />
                       )}
                     </div>
                   </div>
@@ -200,19 +210,21 @@ function ReadOnlyCell({
   characters,
   tags,
   locations,
+  products,
 }: {
   content: string;
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
+  products: ScriptProductRow[];
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   // markdownToHtml uses DOMPurify which requires a browser DOM — skip during SSR
   const html = useMemo(
-    () => (mounted ? markdownToHtml(content || '', characters, tags, locations) : ''),
-    [mounted, content, characters, tags, locations],
+    () => (mounted ? markdownToHtml(content || '', characters, tags, locations, products) : ''),
+    [mounted, content, characters, tags, locations, products],
   );
 
   return (
@@ -245,7 +257,27 @@ function ReadOnlyReferenceCell({ references }: { references: Reference[] }) {
 
 // ── Read-only storyboard cell ────────────────────────────────────────────
 
-function ReadOnlyStoryboardCell({ frame }: { frame?: StoryboardFrame }) {
+function ReadOnlyStoryboardCell({ frames, storyboardLayout }: { frames: StoryboardFrame[]; storyboardLayout: string | null }) {
+  const slottedFrames = frames
+    .filter(f => f.slot != null)
+    .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0)) as StoryboardSlotFrame[];
+
+  if (slottedFrames.length > 0) {
+    return (
+      <div className="min-w-0 overflow-hidden border-b border-b-[#1a1a1a]">
+        <div className="mx-2 my-2">
+          <StoryboardLayoutRenderer
+            layout={storyboardLayout ?? 'single'}
+            frames={slottedFrames}
+            size="cell"
+            gap={2}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const frame = frames[0];
   if (!frame) {
     return <div className="min-h-[2.5rem] border-b border-b-[#1a1a1a]" />;
   }
