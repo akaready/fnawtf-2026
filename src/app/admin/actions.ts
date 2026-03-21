@@ -3363,64 +3363,6 @@ export async function setActiveFrame(frameId: string, beatId: string): Promise<i
   return data as import('@/types/scripts').ScriptStoryboardFrameRow;
 }
 
-export async function uploadStoryboardFrame(
-  scriptId: string,
-  target: { beatId?: string; sceneId?: string },
-  formData: FormData,
-): Promise<{ id: string; image_url: string; storage_path: string }> {
-  await requireAuth();
-  const { createServiceClient } = await import('@/lib/supabase/service');
-  const supabase = createServiceClient();
-
-  const file = formData.get('file') as File;
-  if (!file) throw new Error('No file provided');
-
-  const ext = file.name.split('.').pop() ?? 'jpg';
-  const folder = target.beatId ?? target.sceneId ?? 'unknown';
-  const path = `frames/${folder}/${Date.now()}.${ext}`;
-
-  const { error: uploadErr } = await supabase.storage
-    .from('script-storyboards')
-    .upload(path, file, { contentType: file.type, upsert: false });
-  if (uploadErr) throw new Error(uploadErr.message);
-
-  const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(path);
-  const image_url = urlData.publicUrl;
-
-  // Deactivate existing active frame(s) — preserve history
-  if (target.beatId) {
-    await supabase
-      .from('script_storyboard_frames')
-      .update({ is_active: false } as never)
-      .eq('beat_id', target.beatId)
-      .eq('is_active', true);
-  } else if (target.sceneId) {
-    await supabase
-      .from('script_storyboard_frames')
-      .update({ is_active: false } as never)
-      .eq('scene_id', target.sceneId)
-      .eq('is_active', true);
-  }
-
-  const { data: frame, error: insertErr } = await supabase
-    .from('script_storyboard_frames')
-    .insert({
-      script_id: scriptId,
-      beat_id: target.beatId ?? null,
-      scene_id: target.sceneId ?? null,
-      image_url,
-      storage_path: path,
-      source: 'uploaded',
-      is_active: true,
-      reference_urls_used: [],
-    } as never)
-    .select('id')
-    .single();
-  if (insertErr) throw new Error(insertErr.message);
-
-  return { id: (frame as { id: string }).id, image_url, storage_path: path };
-}
-
 export async function deleteStoryboardFrame(id: string) {
   await requireAuth();
   const { createServiceClient } = await import('@/lib/supabase/service');
@@ -3549,6 +3491,7 @@ export async function duplicateFrame(frameId: string, targetBeatId?: string): Pr
     .insert({
       script_id: src.script_id,
       beat_id: targetBeatId ?? src.beat_id,
+      scene_id: src.scene_id,
       image_url: src.image_url,
       storage_path: src.storage_path,
       source: src.source,
@@ -3589,6 +3532,43 @@ export async function moveFrameToBeat(frameId: string, targetBeatId: string): Pr
     .update({ beat_id: targetBeatId, slot: nextSlot, is_active: true } as never)
     .eq('id', frameId);
   if (updateErr) throw new Error(updateErr.message);
+}
+
+export async function uploadStoryboardFrame(
+  scriptId: string,
+  beatId: string,
+  formData: FormData,
+): Promise<import('@/types/scripts').ScriptStoryboardFrameRow> {
+  await requireAuth();
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  const file = formData.get('file') as File;
+  if (!file) throw new Error('No file provided');
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+  const storagePath = `frames/${scriptId}/${beatId}/${Date.now()}.${ext}`;
+  const { error: uploadErr } = await supabase.storage
+    .from('script-storyboards')
+    .upload(storagePath, buffer, { contentType: file.type, upsert: false });
+  if (uploadErr) throw new Error(uploadErr.message);
+  const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(storagePath);
+  const image_url = urlData.publicUrl;
+  const { data: frame, error: insertErr } = await supabase
+    .from('script_storyboard_frames')
+    .insert({
+      script_id: scriptId,
+      beat_id: beatId,
+      image_url,
+      storage_path: storagePath,
+      source: 'uploaded',
+      is_active: false,
+      slot: null,
+    } as never)
+    .select('*')
+    .single();
+  if (insertErr) throw new Error(insertErr.message);
+  return frame as import('@/types/scripts').ScriptStoryboardFrameRow;
 }
 
 // ── Locations ─────────────────────────────────────────────────────────

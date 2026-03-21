@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Sparkles, Plus, ImageIcon, Info, Wand2, LayoutGrid, Trash2, Download, Clipboard, ArrowRight, Check, EyeOff, Eye, ChevronDown, Copy } from 'lucide-react';
-import { getFrameHistoryForBeat, getAllStoryboardFrames as fetchAllScriptFrames, setActiveFrame, setFrameSlot, setBeatLayout, updateFrameCrop, updateBeat, deleteStoryboardFrame, moveFrameToBeat, duplicateFrame, archiveStoryboardFrame, unarchiveStoryboardFrame } from '@/app/admin/actions';
+import { X, Loader2, Sparkles, Plus, Info, Wand2, LayoutGrid, Trash2, Download, Clipboard, ArrowRight, Check, EyeOff, Eye, ChevronDown, Copy, Upload, FlipHorizontal2, FlipVertical2 } from 'lucide-react';
+import { getFrameHistoryForBeat, getAllStoryboardFrames as fetchAllScriptFrames, setActiveFrame, setFrameSlot, setBeatLayout, updateFrameCrop, updateBeat, deleteStoryboardFrame, moveFrameToBeat, duplicateFrame, archiveStoryboardFrame, unarchiveStoryboardFrame, uploadStoryboardFrame } from '@/app/admin/actions';
 import { buildRichPrompt } from './storyboardUtils';
 import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
 import { StoryboardFramesTab } from './StoryboardFramesTab';
@@ -48,7 +48,7 @@ function groupByPurpose(refs: StoryboardReferenceUsed[]) {
 
 // ── Types ──
 
-type ModalTab = 'generate' | 'modify' | 'frames';
+type ModalTab = 'upload' | 'generate' | 'modify' | 'frames';
 
 // Per-beat persistent state (survives modal close/reopen within session)
 const beatModalState = new Map<string, { lastTab?: ModalTab; collapsedSections?: Set<string> }>();
@@ -143,6 +143,10 @@ export function StoryboardGenerateModal({
   const [loading, setLoading] = useState(true);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(activeFrame?.id ?? null);
   const [generating, setGenerating] = useState(false);
+  const [flipping, setFlipping] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadDragOver, setUploadDragOver] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [localAudio, setLocalAudio] = useState(audioContent);
   const [localVisual, setLocalVisual] = useState(visualContent);
   const [localNotes, setLocalNotes] = useState(notesContent);
@@ -156,6 +160,7 @@ export function StoryboardGenerateModal({
     }, 800);
   }, [beatId]);
   const [modifyPrompt, setModifyPrompt] = useState('');
+  const [modifyRefs, setModifyRefs] = useState<StoryboardReferenceUsed[]>([]);
   // Stable empty array — prevents ScriptBeatCell from re-firing setContent on every render
   const emptyTags = useMemo(() => [] as ScriptTagRow[], []);
   const [localReferences, setLocalReferences] = useState<StoryboardReferenceUsed[]>(() => {
@@ -204,16 +209,20 @@ export function StoryboardGenerateModal({
   // ── Frames tab: layout change handler ──
   const handleLayoutChange = useCallback((newLayout: string) => {
     setDraftLayout(newLayout);
-    // Remove slot assignments that exceed the new layout's slot count
     const def = STORYBOARD_LAYOUTS.find(l => l.id === newLayout);
     if (def) {
       setDraftSlots(prev => {
-        const next = new Map(prev);
-        for (const slot of next.keys()) {
-          if (slot > def.slotCount) next.delete(slot);
-        }
+        // Re-map existing frames into new slots in order (slot 1 → slot 1, etc.)
+        // Frames beyond the new slot count are dropped from the stage (not deleted)
+        const sorted = [...prev.entries()].sort((a, b) => a[0] - b[0]);
+        const next = new Map<number, string>();
+        sorted.forEach(([, frameId], i) => {
+          const newSlot = i + 1;
+          if (newSlot <= def.slotCount) next.set(newSlot, frameId);
+        });
         return next;
       });
+      setSelectedSlot(prev => def ? Math.min(prev, def.slotCount) : prev);
     }
   }, []);
 
@@ -221,6 +230,18 @@ export function StoryboardGenerateModal({
   const selectedFrame = selectedFrameId
     ? (history.find(f => f.id === selectedFrameId) ?? null)
     : (activeFrame ?? null);
+
+  // Auto-expand hidden section if selected frame is archived
+  useEffect(() => {
+    if (selectedFrame?.is_archived) {
+      setCollapsedSections(prev => {
+        if (!prev.has('hidden')) return prev;
+        const next = new Set(prev);
+        next.delete('hidden');
+        return next;
+      });
+    }
+  }, [selectedFrame?.is_archived]);
 
   // ── Assembled prompt (live preview, updates as user edits fields) ──
   const assembledPrompt = useMemo(() => {
@@ -331,9 +352,11 @@ export function StoryboardGenerateModal({
   }, [styleReferences, scene, beatIndex, castMap, referenceMap, characters, locations, locationReferenceMap, beatReferenceUrls, consistencyFrameUrls]);
 
   // ── Load history on mount ──
+  const historyLoadedRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    historyLoadedRef.current = false;
 
     const initFromFrame = (sel: ScriptStoryboardFrameRow | null) => {
       const refs = sel?.reference_urls_used?.length
@@ -353,10 +376,12 @@ export function StoryboardGenerateModal({
       setDraftCrops(new Map(frames.filter(f => f.crop_config != null).map(f => [f.id, f.crop_config!])));
       if (frames.some(f => f.slot !== null) && !defaultTab) setActiveTab('frames');
 
-      const active = frames.find(f => f.is_active);
-      const sel = active ?? frames[0] ?? null;
+      const active = frames.find(f => f.is_active && !f.is_archived);
+      const firstVisible = frames.find(f => !f.is_archived);
+      const sel = active ?? firstVisible ?? null;
       setSelectedFrameId(sel?.id ?? null);
       initFromFrame(sel);
+      historyLoadedRef.current = true;
       setLoading(false);
     }).catch(() => {
       if (!cancelled) {
@@ -365,11 +390,12 @@ export function StoryboardGenerateModal({
         setHistory(frames);
         setSelectedFrameId(activeFrame?.id ?? null);
         initFromFrame(activeFrame);
+        historyLoadedRef.current = true;
         setLoading(false);
       }
     });
     return () => { cancelled = true; };
-  }, [beatId, activeFrame, buildInitialReferences]);
+  }, [beatId, activeFrame]); // intentionally omit buildInitialReferences — only run on mount/beat change
 
   // ── Fetch all script frames for sidebar ──
   useEffect(() => {
@@ -422,9 +448,24 @@ export function StoryboardGenerateModal({
         const data = await res.json();
         if (data.frame) {
           const newFrame = data.frame as ScriptStoryboardFrameRow;
-          setHistory(prev => [newFrame, ...prev.map(f => f.is_active ? { ...f, is_active: false } : f)]);
-          setSelectedFrameId(newFrame.id);
-          onFrameChange(newFrame);
+          // Assign to next available slot so it shows in the cell
+          const usedSlots = new Set(draftSlots.values() ? [...draftSlots.keys()] : []);
+          const nextSlot = ([1, 2, 3, 4] as const).find(s => !usedSlots.has(s)) ?? null;
+          if (nextSlot) {
+            // Assign slot in DB
+            const { setFrameSlot } = await import('@/app/admin/actions');
+            await setFrameSlot(newFrame.id, nextSlot);
+            const framedFrame = { ...newFrame, slot: nextSlot, is_active: true };
+            setHistory(prev => [framedFrame, ...prev]);
+            setDraftSlots(prev => new Map(prev).set(nextSlot, newFrame.id));
+            onFrameChange(framedFrame);
+          } else {
+            // All slots full — add to history only (unslotted)
+            setHistory(prev => [newFrame, ...prev]);
+            onFrameChange(newFrame);
+          }
+          // Refresh sidebar so new frame appears in Current Scene
+          fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
         }
       }
     } finally {
@@ -432,11 +473,66 @@ export function StoryboardGenerateModal({
     }
   }, [generating, assembledPrompt, localStylePreset, localReferences, scriptId, beatId, style, onFrameChange]);
 
+  // ── Upload ──
+  const handleUploadFiles = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0 || uploading) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const newFrame = await uploadStoryboardFrame(scriptId, beatId, formData);
+        // Assign to next available slot
+        const usedSlots = new Set([...draftSlots.keys()]);
+        const nextSlot = ([1, 2, 3, 4] as const).find(s => !usedSlots.has(s)) ?? null;
+        if (nextSlot) {
+          await setFrameSlot(newFrame.id, nextSlot);
+          const framedFrame = { ...newFrame, slot: nextSlot, is_active: true };
+          setHistory(prev => [framedFrame, ...prev]);
+          setDraftSlots(prev => new Map(prev).set(nextSlot, newFrame.id));
+          onFrameChange(framedFrame);
+        } else {
+          setHistory(prev => [newFrame, ...prev]);
+          onFrameChange(newFrame);
+        }
+      }
+      fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
+    } finally {
+      setUploading(false);
+    }
+  }, [uploading, scriptId, beatId, draftSlots, onFrameChange]);
+
   // ── Generate (modification mode) ──
+  const handleModifyPromptChange = useCallback((val: string) => {
+    setModifyPrompt(val);
+    // Sync modifyRefs from all @mentions present in val
+    const mentionRegex = /\[[@][^\]]*\]\(([0-9a-f-]{36})\)/g;
+    const mentionedIds = new Set<string>();
+    let match;
+    while ((match = mentionRegex.exec(val)) !== null) mentionedIds.add(match[1]);
+    const newRefs: StoryboardReferenceUsed[] = [];
+    for (const id of mentionedIds) {
+      const char = characters.find(c => c.id === id);
+      if (char) {
+        if (char.cast_mode === 'references') {
+          (referenceMap?.[char.id] ?? []).forEach(r => newRefs.push({ url: r.image_url, purpose: 'cast' }));
+        } else {
+          (castMap?.[char.id] ?? []).forEach(c => { if (c.contact?.headshot_url) newRefs.push({ url: c.contact.headshot_url, purpose: 'cast' }); });
+        }
+        continue;
+      }
+      const loc = locations.find(l => l.id === id);
+      if (loc) (locationReferenceMap?.[loc.id] ?? []).forEach(r => newRefs.push({ url: r.image_url, purpose: 'location' }));
+    }
+    setModifyRefs(newRefs);
+  }, [characters, locations, referenceMap, castMap, locationReferenceMap]);
+
   const handleModify = useCallback(async () => {
     if (generating || !selectedFrame) return;
     setGenerating(true);
     try {
+      const castUrls = modifyRefs.filter(r => r.purpose === 'cast').map(r => r.url);
+      const locUrls = modifyRefs.filter(r => r.purpose === 'location').map(r => r.url);
       const res = await fetch('/api/admin/storyboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -449,6 +545,8 @@ export function StoryboardGenerateModal({
           modifyMode: true,
           modifyImageUrl: selectedFrame.image_url,
           promptOverride: modifyPrompt,
+          castReferenceUrls: castUrls,
+          locationReferenceUrls: locUrls,
         }),
       });
 
@@ -459,12 +557,64 @@ export function StoryboardGenerateModal({
           setHistory(prev => [newFrame, ...prev.map(f => f.is_active ? { ...f, is_active: false } : f)]);
           setSelectedFrameId(newFrame.id);
           onFrameChange(newFrame);
+          fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
         }
       }
     } finally {
       setGenerating(false);
     }
-  }, [generating, selectedFrame, modifyPrompt, scriptId, beatId, style, onFrameChange]);
+  }, [generating, selectedFrame, modifyPrompt, modifyRefs, scriptId, beatId, style, onFrameChange]);
+
+  // ── Flip selected frame horizontally or vertically ──
+  const handleFlip = useCallback(async (direction: 'horizontal' | 'vertical') => {
+    if (!selectedFrame || flipping) return;
+    setFlipping(true);
+    try {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = selectedFrame.image_url;
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!;
+      if (direction === 'horizontal') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      } else {
+        ctx.translate(0, canvas.height);
+        ctx.scale(1, -1);
+      }
+      ctx.drawImage(img, 0, 0);
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.92)
+      );
+      const fd = new FormData();
+      fd.append('file', blob, 'flipped.jpg');
+      const newFrame = await uploadStoryboardFrame(scriptId, beatId, fd);
+      const nextSlot = [1, 2, 3, 4].find(s => !draftSlots.has(s));
+      if (nextSlot) {
+        const framedFrame = { ...newFrame, slot: nextSlot };
+        await setFrameSlot(newFrame.id, nextSlot);
+        setHistory(prev => [framedFrame, ...prev]);
+        setDraftSlots(prev => new Map(prev).set(nextSlot, newFrame.id));
+        setSelectedFrameId(newFrame.id);
+        onFrameChange(framedFrame);
+      } else {
+        setHistory(prev => [newFrame, ...prev]);
+        setSelectedFrameId(newFrame.id);
+        onFrameChange(newFrame);
+      }
+      fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
+    } catch (err) {
+      console.error('Flip failed:', err);
+    } finally {
+      setFlipping(false);
+    }
+  }, [selectedFrame, flipping, scriptId, beatId, draftSlots, onFrameChange]);
 
   // ── Select a historical frame as active ──
   const handleUseFrame = useCallback(async (frameId: string) => {
@@ -566,8 +716,10 @@ export function StoryboardGenerateModal({
             <span className="text-admin-border font-bebas text-[52px] leading-none flex-shrink-0 translate-y-[2px] pl-2 pr-3">
               {scene.sceneNumber}
             </span>
-            <span className="text-admin-base font-medium text-admin-text-faint uppercase tracking-wider truncate">
+            <span className="text-admin-sm text-admin-text-faint uppercase tracking-wide truncate">
               {sceneHeading}
+              <span className="text-admin-text-ghost mx-1.5">&bull;</span>
+              <span className="text-admin-text-muted">{String.fromCharCode(65 + beatIndex)}</span>
               {scene.scene_description && (
                 <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{scene.scene_description}</span></>
               )}
@@ -576,6 +728,7 @@ export function StoryboardGenerateModal({
           {/* Tab buttons — far right */}
           <div className="flex items-center gap-1 px-3 flex-shrink-0">
             {([
+              { id: 'upload' as ModalTab, label: 'Upload', icon: Upload },
               { id: 'generate' as ModalTab, label: 'Generate', icon: Sparkles },
               { id: 'modify' as ModalTab, label: 'Modify', icon: Wand2 },
               { id: 'frames' as ModalTab, label: 'Frames', icon: LayoutGrid },
@@ -626,6 +779,42 @@ export function StoryboardGenerateModal({
                   setDraftCrops(prev => new Map(prev).set(frameId, crop))
                 }
               />
+            ) : activeTab === 'upload' ? (
+              <div className="flex-1 admin-scrollbar px-6 py-5" style={{ overflowY: 'scroll' }}>
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files) handleUploadFiles(e.target.files); e.target.value = ''; }}
+                />
+                <div
+                  className={[
+                    'aspect-video rounded-admin-md border-[3px] border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors',
+                    uploadDragOver
+                      ? 'border-[var(--admin-accent)] bg-admin-bg-active'
+                      : 'border-admin-border bg-admin-bg-inset hover:border-admin-border-strong hover:bg-admin-bg-raised',
+                  ].join(' ')}
+                  onClick={() => uploadInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setUploadDragOver(true); }}
+                  onDragLeave={() => setUploadDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setUploadDragOver(false);
+                    if (e.dataTransfer.files.length) handleUploadFiles(e.dataTransfer.files);
+                  }}
+                >
+                  {uploading ? (
+                    <Loader2 size={36} className="mb-3 animate-spin text-admin-text-faint opacity-60" />
+                  ) : (
+                    <Upload size={36} className="mb-3 text-admin-text-faint opacity-40" />
+                  )}
+                  <p className="text-admin-sm text-admin-text-faint">
+                    {uploading ? 'Uploading…' : 'Drop images here or click to browse.'}
+                  </p>
+                </div>
+              </div>
             ) : (
             <div className="flex-1 admin-scrollbar px-6 py-5 space-y-8" style={{ overflowY: 'scroll' }}>
               {/* Image preview — only shown on modify tab */}
@@ -643,16 +832,52 @@ export function StoryboardGenerateModal({
               ) : activeTab === 'modify' && !selectedFrame && !generating ? (
                 <div className="aspect-video rounded-admin-md border-[3px] border-dashed border-admin-border bg-admin-bg-inset flex items-center justify-center">
                   <div className="text-center text-admin-text-faint">
-                    <ImageIcon size={24} className="mx-auto mb-2 opacity-40" />
-                    <p className="text-admin-sm">Generate an image first, then select it to modify</p>
+                    <Wand2 size={36} className="mx-auto mb-3 opacity-40" />
+                    <p className="text-admin-sm">Select an image from history to modify.</p>
+                  </div>
+                </div>
+              ) : flipping ? (
+                <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset">
+                  {selectedFrame && (
+                    <img
+                      src={selectedFrame.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      style={{ filter: 'blur(2px) brightness(0.6)' }}
+                    />
+                  )}
+                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 8s linear infinite' }} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <Loader2 size={36} className="mx-auto mb-3 animate-spin opacity-70" />
+                      <p className="text-admin-sm opacity-70">Flipping…</p>
+                    </div>
+                  </div>
+                </div>
+              ) : generating && activeTab === 'modify' ? (
+                <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset">
+                  {selectedFrame && (
+                    <img
+                      src={selectedFrame.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      style={{ filter: 'blur(2px) brightness(0.6)' }}
+                    />
+                  )}
+                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 8s linear infinite' }} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-white">
+                      <Loader2 size={36} className="mx-auto mb-3 animate-spin opacity-70" />
+                      <p className="text-admin-sm opacity-70">Modifying…</p>
+                    </div>
                   </div>
                 </div>
               ) : generating ? (
-                <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset">
-                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+                <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset border-[3px] border-dashed border-admin-border">
+                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 8s linear infinite' }} />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center text-admin-text-faint">
-                      <Loader2 size={24} className="mx-auto mb-2 animate-spin opacity-40" />
+                      <Loader2 size={36} className="mx-auto mb-3 animate-spin opacity-40" />
                       <p className="text-admin-sm">Generating…</p>
                     </div>
                   </div>
@@ -660,10 +885,8 @@ export function StoryboardGenerateModal({
               ) : (
                 <div className="aspect-video rounded-admin-md border-[3px] border-dashed border-admin-border bg-admin-bg-inset flex items-center justify-center">
                   <div className="text-center text-admin-text-faint">
-                    <ImageIcon size={24} className="mx-auto mb-2 opacity-40" />
-                    <p className="text-admin-sm">
-                      {activeTab === 'modify' ? 'Select an image from history to modify' : 'No image generated yet'}
-                    </p>
+                    <Sparkles size={36} className="mx-auto mb-3 opacity-40" />
+                    <p className="text-admin-sm">No image generated yet.</p>
                   </div>
                 </div>
               )}
@@ -883,15 +1106,66 @@ export function StoryboardGenerateModal({
                           </div>
                         )}
                       </div>
+                      <div className="ml-auto flex items-center gap-1">
+                        <button
+                          onClick={() => void handleFlip('horizontal')}
+                          disabled={!selectedFrame || flipping}
+                          className="btn-ghost w-8 h-8 flex items-center justify-center"
+                          title="Flip horizontal"
+                        >
+                          <FlipHorizontal2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => void handleFlip('vertical')}
+                          disabled={!selectedFrame || flipping}
+                          className="btn-ghost w-8 h-8 flex items-center justify-center"
+                          title="Flip vertical"
+                        >
+                          <FlipVertical2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <textarea
-                      value={modifyPrompt}
-                      onChange={(e) => setModifyPrompt(e.target.value)}
-                      placeholder="Describe what to change (e.g., tighter frame, warmer lighting, remove background elements...)"
-                      className="admin-input admin-scrollbar w-full text-admin-sm font-admin-mono min-h-[120px] max-h-[300px] resize-none"
-                    />
+                    <div className="border border-admin-border rounded-admin-md overflow-hidden bg-admin-bg-base min-h-[140px]" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
+                      <ScriptBeatCell
+                        value={modifyPrompt}
+                        field="notes_content"
+                        onChange={handleModifyPromptChange}
+                        characters={characters}
+                        tags={emptyTags}
+                        locations={locations}
+                        products={products}
+                        beatId={beatId}
+                      />
+                    </div>
                   </div>
 
+                  {/* References being sent with this modification */}
+                  {modifyRefs.length > 0 && (
+                    <div className="border-t border-admin-border pt-4">
+                      <label className="admin-label mb-2">References</label>
+                      <div className="flex flex-wrap gap-x-6 gap-y-5">
+                        {Object.entries(groupByPurpose(modifyRefs)).map(([purpose, refs]) => (
+                          <div key={purpose}>
+                            <p className={`text-admin-sm mb-1 uppercase tracking-wider ${
+                              purpose === 'cast' ? 'text-admin-success' :
+                              purpose === 'location' ? 'text-admin-warning' :
+                              'text-admin-text-muted'
+                            }`}>{PURPOSE_LABELS[purpose] ?? purpose}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {refs.map((ref, i) => (
+                                <img
+                                  key={`${ref.url}-${i}`}
+                                  src={ref.url}
+                                  alt=""
+                                  className="w-16 h-16 object-cover rounded-[2px] border border-[#0e0e0e]"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -905,17 +1179,22 @@ export function StoryboardGenerateModal({
                 const activeUrls = new Set<string>();
                 const activeIds = new Set<string>();
                 if (activeTab === 'frames') {
-                  draftSlots.forEach((frameId) => {
-                    const f = history.find(h => h.id === frameId);
-                    if (f) { activeUrls.add(f.image_url); activeIds.add(f.id); }
-                  });
-                } else {
+                  // Only highlight the frame assigned to the currently-selected slot
+                  const selectedSlotFrameId = draftSlots.get(selectedSlot);
+                  if (selectedSlotFrameId) activeIds.add(selectedSlotFrameId);
+                } else if (activeTab === 'modify') {
                   if (selectedFrame) { activeIds.add(selectedFrame.id); }
                   else if (previewImageUrl) activeUrls.add(previewImageUrl);
                 }
+                // generate tab: no highlight — sidebar is reference-only
 
                 const handleFrameClick = (frameId: string, imageUrl: string) => {
                   if (activeTab === 'frames') {
+                    // Toggle: clicking frame already in selected slot removes it
+                    if (draftSlots.get(selectedSlot) === frameId) {
+                      setDraftSlots(prev => { const n = new Map(prev); n.delete(selectedSlot); return n; });
+                      return;
+                    }
                     setDraftSlots(prev => new Map(prev).set(selectedSlot, frameId));
                     if (!history.some(h => h.id === frameId)) {
                       const foreign = allFramesForScript?.find(f => f.id === frameId);
@@ -924,19 +1203,30 @@ export function StoryboardGenerateModal({
                         setForeignFrameIds(prev => new Set(prev).add(frameId));
                       }
                     }
-                  } else {
+                  } else if (activeTab === 'modify') {
+                    // Toggle deselect
+                    if (selectedFrameId === frameId) { setSelectedFrameId(null); setPreviewImageUrl(null); return; }
+                    // Check history first, then allFramesForScript (other beats in this scene)
                     const inHistory = history.find(f => f.id === frameId);
                     if (inHistory) {
-                      // Toggle: clicking already-selected frame deselects it
-                      if (selectedFrameId === inHistory.id) { setSelectedFrameId(null); setPreviewImageUrl(null); }
-                      else { setSelectedFrameId(inHistory.id); setPreviewImageUrl(null); }
-                    } else { setPreviewImageUrl(imageUrl); setSelectedFrameId(null); }
+                      setSelectedFrameId(inHistory.id); setPreviewImageUrl(null);
+                    } else {
+                      const inScript = allFramesForScript?.find(f => f.id === frameId);
+                      if (inScript) {
+                        // Add to local history so selectedFrame derivation can find it
+                        setHistory(prev => prev.some(f => f.id === frameId) ? prev : [...prev, inScript]);
+                        setSelectedFrameId(frameId); setPreviewImageUrl(null);
+                      } else {
+                        setPreviewImageUrl(imageUrl); setSelectedFrameId(null);
+                      }
+                    }
                   }
+                  // generate tab: clicks do nothing to selection
                 };
 
                 const renderFrame = (id: string, imageUrl: string, label?: string, archived?: boolean) => {
-                  const isActive = activeIds.has(id) || activeUrls.has(imageUrl);
                   const isSyntheticId = id.startsWith('scene-url-') || id.startsWith('preview-');
+                  const isActive = activeIds.has(id) || (isSyntheticId && activeUrls.has(imageUrl));
                   const refreshAfterChange = () => {
                     setHistory(prev => prev.filter(f => f.id !== id));
                     setDraftSlots(prev => { const n = new Map(prev); for (const [s, fid] of n) { if (fid === id) n.delete(s); } return n; });
@@ -950,16 +1240,22 @@ export function StoryboardGenerateModal({
                       isActive={isActive}
                       isSyntheticId={isSyntheticId}
                       isArchived={archived}
+                      clickable={activeTab !== 'generate' && !generating}
                       scenes={scenes}
-                      onClick={() => handleFrameClick(id, imageUrl)}
+                      onClick={() => { if (!generating) handleFrameClick(id, imageUrl); }}
                       onDeleted={() => {
-                        refreshAfterChange();
+                        setHistory(prev => prev.filter(f => f.id !== id));
+                        setDraftSlots(prev => {
+                          const next = new Map(prev);
+                          for (const [s, fid] of next) { if (fid === id) next.delete(s); }
+                          return next;
+                        });
                         if (selectedFrameId === id) setSelectedFrameId(null);
                       }}
                       onMoved={refreshAfterChange}
                       onArchived={() => {
                         refreshAfterChange();
-                        fetchAllScriptFrames(scriptId).then(setAllFramesForScript);
+                        fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
                       }}
                     />
                   );
@@ -1066,7 +1362,10 @@ export function StoryboardGenerateModal({
                       {sectionHeader('current-scene', 'Current Scene', { colorClass: 'text-[var(--admin-info)]' })}
                       {!collapsedSections.has('current-scene') && (
                         thisSceneFrames.length === 0 ? (
-                          <p className="text-admin-sm text-admin-text-faint text-center pb-2">No frames yet</p>
+                          <div className="flex flex-col items-center justify-center rounded-admin-md border border-dashed border-admin-border bg-admin-bg-inset py-4 mb-2 text-admin-text-faint">
+                            <Sparkles size={16} className="mb-1.5 opacity-40" />
+                            <p className="text-admin-sm">No frames yet.</p>
+                          </div>
                         ) : (
                           <div className="space-y-2">
                             {thisSceneFrames.map(f => renderFrame(f.id, f.imageUrl, f.caption || undefined))}
@@ -1133,6 +1432,16 @@ export function StoryboardGenerateModal({
 
         {/* ── Footer ── */}
         <div className="flex items-center gap-2 border-t border-admin-border bg-admin-bg-wash flex-shrink-0 rounded-b-admin-xl px-6 py-4">
+          {activeTab === 'upload' && (
+            <button
+              onClick={() => uploadInputRef.current?.click()}
+              disabled={uploading}
+              className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2"
+            >
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              {uploading ? 'Uploading...' : 'Upload Image'}
+            </button>
+          )}
           {activeTab === 'generate' && (
             <button
               onClick={handleGenerate}
@@ -1175,7 +1484,7 @@ export function StoryboardGenerateModal({
 // ── SidebarFrameItem ─────────────────────────────────────────────────────────
 
 function SidebarFrameItem({
-  id, imageUrl, label, isActive, isSyntheticId, isArchived, scenes, onClick, onDeleted, onMoved, onArchived,
+  id, imageUrl, label, isActive, isSyntheticId, isArchived, clickable = true, scenes, onClick, onDeleted, onMoved, onArchived,
 }: {
   id: string;
   imageUrl: string;
@@ -1183,6 +1492,7 @@ function SidebarFrameItem({
   isActive: boolean;
   isSyntheticId: boolean;
   isArchived?: boolean;
+  clickable?: boolean;
   scenes?: import('@/types/scripts').ComputedScene[];
   onClick: () => void;
   onDeleted: () => void;
@@ -1212,12 +1522,6 @@ function SidebarFrameItem({
       setPickerAbove(rect.top > 220);
     }
     setShowBeatPicker(v => !v);
-  };
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await deleteStoryboardFrame(id);
-    onDeleted();
   };
 
   const handleCopyToClipboard = async (e: React.MouseEvent) => {
@@ -1263,7 +1567,7 @@ function SidebarFrameItem({
   return (
     <div className="group/sf">
       <div
-        className={`relative rounded-admin-sm cursor-pointer transition-all overflow-hidden ${isActive ? 'ring-2 ring-[var(--admin-accent)]' : 'hover:ring-1 hover:ring-admin-border'}`}
+        className={`relative rounded-admin-sm transition-all overflow-hidden ${clickable ? 'cursor-pointer' : 'cursor-default'} ${isActive ? 'ring-2 ring-[var(--admin-accent)]' : clickable ? 'hover:ring-1 hover:ring-admin-border' : ''}`}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData('application/x-frame-id', id);
@@ -1274,7 +1578,7 @@ function SidebarFrameItem({
       >
         <img src={imageUrl} alt="" className="w-full aspect-video object-cover rounded-admin-sm" />
         {/* Tint overlay */}
-        {!isActive && <div className="absolute inset-0 rounded-admin-sm bg-black/35" />}
+        {!isActive && <div className="absolute inset-0 rounded-admin-sm bg-black/35 pointer-events-none" />}
       </div>
       <div className="relative flex items-center justify-between mt-1 px-0.5 min-h-[1.5rem]">
         {/* Floating beat picker — absolutely positioned, doesn't shift layout */}
@@ -1318,7 +1622,7 @@ function SidebarFrameItem({
           <div className="flex items-center opacity-0 group-hover/sf:opacity-100 transition-opacity flex-shrink-0 ml-1">
             {confirmDelete ? (
               <>
-                <button onClick={handleDelete} title="Confirm delete" className="w-6 h-6 flex items-center justify-center text-admin-danger hover:text-red-400 transition-colors flex-shrink-0"><Check size={11} /></button>
+                <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); void (async () => { await deleteStoryboardFrame(id); onDeleted(); })(); }} title="Confirm delete" className={`${btnCls} hover:!text-admin-danger`}><Check size={11} /></button>
                 <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} title="Cancel" className={btnCls}><X size={11} /></button>
               </>
             ) : (

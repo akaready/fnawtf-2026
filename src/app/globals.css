@@ -573,6 +573,11 @@ a[data-btn-hover]:hover {
 }
 
 /* Animations */
+@keyframes shimmer {
+  0% { background-position: 200% 0%; }
+  100% { background-position: -200% 0%; }
+}
+
 @keyframes marquee {
   from {
     transform: translateX(0);
