@@ -870,7 +870,7 @@ export function StoryboardGenerateModal({
                     </div>
                   </div>
                 </div>
-              ) : generating ? (
+              ) : generating && activeTab === 'generate' ? (
                 <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset border-[3px] border-dashed border-admin-border">
                   <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 8s linear infinite' }} />
                   <div className="absolute inset-0 flex items-center justify-center">
