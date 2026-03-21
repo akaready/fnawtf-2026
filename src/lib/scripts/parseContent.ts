@@ -11,7 +11,8 @@ export function markdownToHtml(
   characters: ScriptCharacterRow[],
   tags: ScriptTagRow[],
   locations: ScriptLocationRow[] = [],
-  products: ScriptProductRow[] = []
+  products: ScriptProductRow[] = [],
+  options: { noHeadings?: boolean } = {}
 ): string {
   let html = escapeHtml(md);
 
@@ -71,7 +72,7 @@ export function markdownToHtml(
   for (const line of lines) {
     // Strip HTML tags to get plain text for ALL CAPS detection
     const plain = line.replace(/<[^>]+>/g, '').replace(/^@/, '').trim();
-    const isSceneHeading = plain.length > 0 && /[A-Z]{2,}/.test(plain) && !/[a-z]/.test(plain);
+    const isSceneHeading = !options.noHeadings && plain.length > 0 && /[A-Z]{2,}/.test(plain) && !/[a-z]/.test(plain);
 
     if (isSceneHeading) {
       flushParagraph();

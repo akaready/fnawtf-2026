@@ -72,7 +72,7 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
   const setContent = useCallback((md: string) => {
     if (!ref.current) return;
     // markdownToHtml sanitizes all output via DOMPurify — safe for innerHTML
-    const sanitizedHtml = markdownToHtml(md, characters, tags, locations, products);
+    const sanitizedHtml = markdownToHtml(md, characters, tags, locations, products, { noHeadings: field !== 'notes_content' });
     ref.current.innerHTML = sanitizedHtml;
   }, [characters, tags, locations, products]);
 

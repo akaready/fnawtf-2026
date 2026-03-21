@@ -692,6 +692,11 @@ export function StoryboardGenerateModal({
         return { ...f, slot: newSlot, is_active: newSlot !== null, crop_config: newCrop };
       });
       onFramesChange?.([...updatedHistory, ...extraFrames]);
+    } else {
+      // Non-frames tab: flush any crop changes made via reframe drag
+      for (const [frameId, crop] of draftCrops) {
+        await updateFrameCrop(frameId, crop);
+      }
     }
 
     onClose();
@@ -825,6 +830,11 @@ export function StoryboardGenerateModal({
                   layout="single"
                   frames={[{ ...selectedFrame, slot: 1 }]}
                   size="stage"
+                  interactive={true}
+                  cropOverrides={draftCrops}
+                  onReframe={(frameId, crop) =>
+                    setDraftCrops(prev => new Map(prev).set(frameId, crop))
+                  }
                   gap={0}
                 />
               ) : activeTab === 'modify' && !selectedFrame && !generating ? (
@@ -852,7 +862,7 @@ export function StoryboardGenerateModal({
                     </div>
                   </div>
                 </div>
-              ) : generating && activeTab === 'modify' ? (
+              ) : generating ? (
                 <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset">
                   {selectedFrame && (
                     <img
@@ -867,16 +877,6 @@ export function StoryboardGenerateModal({
                     <div className="text-center text-white">
                       <Loader2 size={36} className="mx-auto mb-3 animate-spin opacity-70" />
                       <p className="text-admin-sm opacity-70">Modifying…</p>
-                    </div>
-                  </div>
-                </div>
-              ) : generating && activeTab === 'generate' ? (
-                <div className="aspect-video rounded-admin-md overflow-hidden relative bg-admin-bg-inset border-[3px] border-dashed border-admin-border">
-                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: 'shimmer 8s linear infinite' }} />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center text-admin-text-faint">
-                      <Loader2 size={36} className="mx-auto mb-3 animate-spin opacity-40" />
-                      <p className="text-admin-sm">Generating…</p>
                     </div>
                   </div>
                 </div>
@@ -1126,7 +1126,7 @@ export function StoryboardGenerateModal({
                     <div className="border border-admin-border rounded-admin-md overflow-hidden bg-admin-bg-base min-h-[140px]" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
                       <ScriptBeatCell
                         value={modifyPrompt}
-                        field="notes_content"
+                        field="audio_content"
                         onChange={handleModifyPromptChange}
                         characters={characters}
                         tags={emptyTags}
@@ -1617,7 +1617,7 @@ function SidebarFrameItem({
         <p className="text-admin-sm text-admin-text-faint truncate flex-1">{label ?? ''}</p>
         {/* Right: action buttons */}
         {!isSyntheticId && (
-          <div className="flex items-center opacity-0 group-hover/sf:opacity-100 transition-opacity flex-shrink-0 ml-1">
+          <div className={`flex items-center transition-opacity flex-shrink-0 ml-1 ${confirmDelete ? 'opacity-100' : 'opacity-0 group-hover/sf:opacity-100'}`}>
             {confirmDelete ? (
               <>
                 <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); void (async () => { await deleteStoryboardFrame(id); onDeleted(); })(); }} title="Confirm delete" className={`${btnCls} hover:!text-admin-danger`}><Check size={11} /></button>
