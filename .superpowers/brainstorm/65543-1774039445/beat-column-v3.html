@@ -1,0 +1,247 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg-sidebar:    #0a0a0a;
+    --bg-hover:      rgba(255,255,255,0.05);
+    --bg-row-on:     rgba(0,0,0,0.40);
+    --border-sub:    #1f1f1f;
+    --border:        #2a2a2a;
+    --txt-primary:   #fafafa;
+    --txt-muted:     #a1a1aa;
+    --txt-faint:     #505055;
+    --txt-number:    #2a2a2a;
+    --accent:        #a14dfd;
+    --accent-dim:    rgba(161,77,253,0.18);
+    --accent-border: rgba(161,77,253,0.40);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  h2 { margin-bottom: 4px; }
+  .subtitle { margin-bottom: 28px; }
+
+  .layout {
+    display: flex;
+    justify-content: center;
+  }
+
+  .sidebar-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--txt-faint);
+  }
+
+  /* ── Sidebar shell ── */
+  .sidebar {
+    width: 220px;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  /* ── Scene row: flexbox so beat grid is naturally pushed right ── */
+  .sr {
+    display: flex;
+    align-items: stretch;
+    min-height: 45px;
+    border-bottom: 1px solid var(--border-sub);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sr:hover { background: var(--bg-hover); }
+  .sr.on    { background: var(--bg-row-on); }
+
+  /* scene number */
+  .sn {
+    font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-size: 44px;
+    line-height: 1;
+    text-align: right;
+    padding: 0 4px 0 12px;
+    color: var(--txt-number);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    /* nudge baseline down to match original component */
+    padding-top: 2px;
+  }
+
+  /* info column — fills remaining space, pushes beat grid to the right */
+  .si {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 8px 8px 0;
+  }
+  .si-slug {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--txt-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: block;
+    line-height: 1.35;
+  }
+  .si-desc {
+    font-size: 10px;
+    color: var(--txt-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: block;
+    line-height: 1.35;
+  }
+
+  /* ── Beat grid ──
+     align-self: stretch → fills full row height, border-left is always full-height.
+     grid-template-rows: repeat(2, 1fr) → two equal rows, each half the row height.
+     grid-auto-columns: 22px → fixed cell width regardless of letter.
+     grid-auto-flow: column → A fills row1/col1, B fills row2/col1, C fills row1/col2…
+     gap + bg = 1px grid-line dividers between cells, no border math needed.
+  ── */
+  .bc-grid {
+    flex-shrink: 0;
+    align-self: stretch;
+    border-left: 1px solid var(--border-sub);
+    display: grid;
+    grid-template-rows: repeat(2, 1fr);
+    grid-auto-columns: 22px;
+    grid-auto-flow: column;
+    gap: 1px;
+    background: var(--border-sub);
+  }
+
+  .bc {
+    background: var(--bg-sidebar);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--txt-faint);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    letter-spacing: 0;
+  }
+  .bc:hover { background: rgba(255,255,255,0.07); color: var(--txt-muted); }
+  .bc.on    { background: var(--accent-dim); color: var(--accent); }
+
+  /* invisible filler to complete a 2-row column for odd beat counts */
+  .bc.empty {
+    background: var(--bg-sidebar);
+    pointer-events: none;
+  }
+</style>
+
+<h2>Beat Column — Flush Right</h2>
+<p class="subtitle">Flexbox rows ensure the beat grid is always anchored to the right edge regardless of column count.</p>
+
+<div class="layout">
+  <div class="sidebar-wrap">
+    <div class="sidebar-title">Scene list</div>
+    <div class="sidebar">
+
+      <!-- 101: 1 beat — no beat column -->
+      <div class="sr">
+        <span class="sn">101</span>
+        <div class="si">
+          <span class="si-slug">INT. CAFÉ</span>
+          <span class="si-desc">Morning</span>
+        </div>
+      </div>
+
+      <!-- 201: 2 beats → 1 col: A over B -->
+      <div class="sr">
+        <span class="sn">201</span>
+        <div class="si">
+          <span class="si-slug">EXT. STREET</span>
+          <span class="si-desc">Day</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc on">A</span>
+          <span class="bc">B</span>
+        </div>
+      </div>
+
+      <!-- 202: 1 beat — normal -->
+      <div class="sr">
+        <span class="sn">202</span>
+        <div class="si">
+          <span class="si-slug">EXT. ALLEY</span>
+        </div>
+      </div>
+
+      <!-- 301: 3 beats → 2 cols: A/B | C/· -->
+      <div class="sr">
+        <span class="sn">301</span>
+        <div class="si">
+          <span class="si-slug">INT. OFFICE</span>
+          <span class="si-desc">Night</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc empty"></span>
+        </div>
+      </div>
+
+      <!-- 401: 4 beats → 2 cols: A/B | C/D -->
+      <div class="sr on">
+        <span class="sn">401</span>
+        <div class="si">
+          <span class="si-slug">INT. BOARDROOM</span>
+          <span class="si-desc">Evening</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc on">C</span>
+          <span class="bc">D</span>
+        </div>
+      </div>
+
+      <!-- 402: 1 beat — normal -->
+      <div class="sr">
+        <span class="sn">402</span>
+        <div class="si">
+          <span class="si-slug">EXT. PARKING LOT</span>
+        </div>
+      </div>
+
+      <!-- 501: 5 beats → 3 cols: A/B | C/D | E/· -->
+      <div class="sr">
+        <span class="sn">501</span>
+        <div class="si">
+          <span class="si-slug">INT. LOBBY</span>
+          <span class="si-desc">Dawn</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc">D</span>
+          <span class="bc">E</span>
+          <span class="bc empty"></span>
+        </div>
+      </div>
+
+      <!-- 601: 1 beat -->
+      <div class="sr">
+        <span class="sn">601</span>
+        <div class="si">
+          <span class="si-slug">EXT. ROOFTOP</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

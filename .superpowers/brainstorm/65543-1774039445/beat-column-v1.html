@@ -1,0 +1,364 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg-sidebar:   #0a0a0a;
+    --bg-hover:     rgba(255,255,255,0.05);
+    --bg-active:    rgba(255,255,255,0.10);
+    --bg-row-on:    rgba(0,0,0,0.40);
+    --border-sub:   #1f1f1f;
+    --border:       #2a2a2a;
+    --txt-primary:  #fafafa;
+    --txt-muted:    #a1a1aa;
+    --txt-faint:    #505055;
+    --txt-number:   #2a2a2a;
+    --accent:       #a14dfd;
+    --accent-dim:   rgba(161,77,253,0.18);
+    --accent-border:rgba(161,77,253,0.40);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  h2 { margin-bottom: 4px; }
+  .subtitle { margin-bottom: 28px; }
+
+  /* ── page layout: two sidebars + annotation column ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 220px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  .sidebar-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--txt-faint);
+  }
+
+  /* ── sidebar shell ──
+     3-col grid: [auto = big number] [1fr = info] [auto = beat grid]
+     Single-beat rows just leave the third column empty → collapses to 0.
+  ── */
+  .sidebar {
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+  }
+
+  /* ── scene row spans all 3 columns via subgrid ── */
+  .sr {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    border-bottom: 1px solid var(--border-sub);
+    cursor: pointer;
+    overflow: hidden;
+    transition: background 0.1s;
+    min-height: 45px;
+  }
+  .sr:hover { background: var(--bg-hover); }
+  .sr.on    { background: var(--bg-row-on); }
+
+  /* scene number */
+  .sn {
+    font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-size: 44px;
+    line-height: 1;
+    text-align: right;
+    padding: 0 4px 0 12px;
+    transform: translateY(2px);
+    color: var(--txt-number);
+    align-self: center;
+  }
+
+  /* info col */
+  .si {
+    padding: 10px 10px 10px 0;
+    align-self: center;
+  }
+  .si-slug {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--txt-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: block;
+    line-height: 1.35;
+  }
+  .si-desc {
+    font-size: 10px;
+    color: var(--txt-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: block;
+    line-height: 1.35;
+  }
+
+  /* ── beat grid: 2 cols of boxy cells, flush right ──
+     cells fill the full row height divided equally.
+     Grid auto-grows rows as beats are added.
+  ── */
+  .bc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 22px);
+    grid-auto-rows: 1fr;   /* each row gets equal share of the row height */
+    align-self: stretch;
+    border-left: 1px solid var(--border-sub);
+  }
+
+  .bc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--txt-faint);
+    border-bottom: 1px solid var(--border-sub);
+    border-right: 1px solid var(--border-sub);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    /* ensure the last column has no right border overhang */
+  }
+  /* remove right border on odd (right-column) cells */
+  .bc:nth-child(even) { border-right: none; }
+  /* remove bottom border on last row */
+  .bc:last-child,
+  .bc:nth-last-child(2):nth-child(odd) { border-bottom: none; }
+
+  .bc:hover { background: var(--bg-hover); color: var(--txt-muted); }
+  .bc.on    { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+
+  /* ── annotation panel ── */
+  .annotations {
+    padding-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .ann {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .ann-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--txt-faint);
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
+    width: 18px;
+    text-align: right;
+  }
+  .ann-text {
+    font-size: 11px;
+    color: var(--txt-muted);
+    line-height: 1.5;
+  }
+  .ann-text strong { color: var(--txt-primary); font-weight: 600; }
+</style>
+
+<h2>Beat Column — Right-Edge Grid</h2>
+<p class="subtitle">A third column appears only on multi-beat scenes — boxy letter cells, flush right, 2 wide.</p>
+
+<div class="layout">
+
+  <!-- ── sidebar 1: variety of beat counts ── -->
+  <div class="sidebar-wrap">
+    <div class="sidebar-title">Scene list view</div>
+    <div class="sidebar">
+
+      <!-- 101: 1 beat — no third column -->
+      <div class="sr">
+        <span class="sn">101</span>
+        <div class="si">
+          <span class="si-slug">INT. CAFÉ</span>
+          <span class="si-desc">Morning</span>
+        </div>
+        <!-- no beat grid -->
+      </div>
+
+      <!-- 201: 2 beats — A B in one row (1×2 grid) -->
+      <div class="sr">
+        <span class="sn">201</span>
+        <div class="si">
+          <span class="si-slug">EXT. STREET</span>
+          <span class="si-desc">Day</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc on">A</span>
+          <span class="bc">B</span>
+        </div>
+      </div>
+
+      <!-- 202: 1 beat — normal -->
+      <div class="sr">
+        <span class="sn">202</span>
+        <div class="si">
+          <span class="si-slug">EXT. ALLEY</span>
+        </div>
+      </div>
+
+      <!-- 301: 3 beats — A B / C (2×2, last cell empty) -->
+      <div class="sr">
+        <span class="sn">301</span>
+        <div class="si">
+          <span class="si-slug">INT. OFFICE</span>
+          <span class="si-desc">Night</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc" style="opacity:0;pointer-events:none"></span>
+        </div>
+      </div>
+
+      <!-- 401: 4 beats — A B / C D -->
+      <div class="sr on">
+        <span class="sn">401</span>
+        <div class="si">
+          <span class="si-slug">INT. BOARDROOM</span>
+          <span class="si-desc">Evening</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc on">C</span>
+          <span class="bc">D</span>
+        </div>
+      </div>
+
+      <!-- 402: 1 beat — normal -->
+      <div class="sr">
+        <span class="sn">402</span>
+        <div class="si">
+          <span class="si-slug">EXT. PARKING LOT</span>
+        </div>
+      </div>
+
+      <!-- 501: 5 beats — A B / C D / E (3-row tall) -->
+      <div class="sr">
+        <span class="sn">501</span>
+        <div class="si">
+          <span class="si-slug">INT. LOBBY</span>
+          <span class="si-desc">Dawn</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc">D</span>
+          <span class="bc">E</span>
+          <span class="bc" style="opacity:0;pointer-events:none"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── sidebar 2: isolated beat counts, labeled ── -->
+  <div class="sidebar-wrap">
+    <div class="sidebar-title">Beat counts isolated</div>
+    <div class="sidebar">
+
+      <!-- 2 beats -->
+      <div class="sr" style="opacity:0.4;pointer-events:none">
+        <span class="sn">—</span>
+        <div class="si"><span class="si-slug" style="color:var(--txt-faint)">1 beat — no column</span></div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">201</span>
+        <div class="si">
+          <span class="si-slug">2 beats</span>
+          <span class="si-desc">A · B</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+        </div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">301</span>
+        <div class="si">
+          <span class="si-slug">3 beats</span>
+          <span class="si-desc">A · B · C</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc" style="opacity:0;pointer-events:none"></span>
+        </div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">401</span>
+        <div class="si">
+          <span class="si-slug">4 beats</span>
+          <span class="si-desc">A · B · C · D</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc">D</span>
+        </div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">501</span>
+        <div class="si">
+          <span class="si-slug">5 beats</span>
+          <span class="si-desc">A · B · C · D · E</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc">D</span>
+          <span class="bc">E</span>
+          <span class="bc" style="opacity:0;pointer-events:none"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── annotations ── -->
+  <div class="annotations">
+    <div class="ann">
+      <span class="ann-num">1</span>
+      <div class="ann-text"><strong>Single-beat scenes are unchanged</strong> — the third column simply doesn't exist. No visual noise for the majority of scenes.</div>
+    </div>
+    <div class="ann">
+      <span class="ann-num">2</span>
+      <div class="ann-text"><strong>2 beats = one row of cells</strong>, 22px each. The row stays at its natural 45px height — the cells stretch to fill it.</div>
+    </div>
+    <div class="ann">
+      <span class="ann-num">3</span>
+      <div class="ann-text"><strong>3–4 beats = 2×2 grid.</strong> Odd beat counts leave the last cell empty (invisible filler). Row height grows to accommodate two rows.</div>
+    </div>
+    <div class="ann">
+      <span class="ann-num">4</span>
+      <div class="ann-text"><strong>5 beats = 3-row tall.</strong> Each row is still 2 cells wide. The row height grows further. The info column and number stay vertically centered.</div>
+    </div>
+    <div class="ann">
+      <span class="ann-num">5</span>
+      <div class="ann-text"><strong>Active beat highlighted</strong> in accent color — only the current beat cell is lit. Scene row itself shows active state if any of its beats is active.</div>
+    </div>
+  </div>
+
+</div>

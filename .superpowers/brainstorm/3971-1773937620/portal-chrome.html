@@ -1,0 +1,221 @@
+<style>
+  .variants { display: flex; flex-direction: column; gap: 2.5rem; }
+  .variant-option {
+    border: 2px solid transparent; border-radius: 12px; overflow: hidden;
+    cursor: pointer; transition: border-color 0.2s, transform 0.1s; background: #0d0d0d;
+  }
+  .variant-option:hover { border-color: #444; transform: translateY(-1px); }
+  .variant-option.selected { border-color: #a78bfa; }
+  .variant-label {
+    padding: 0.625rem 1.25rem; background: #181818;
+    display: flex; align-items: center; gap: 0.75rem;
+    border-bottom: 1px solid #222;
+  }
+  .variant-label .letter {
+    width: 22px; height: 22px; border-radius: 50%; background: #252525;
+    border: 1px solid #444; display: flex; align-items: center; justify-content: center;
+    font-size: 0.62rem; font-weight: 700; color: #a78bfa;
+  }
+  .variant-label strong { font-size: 0.82rem; color: #e8e8e8; }
+  .variant-label span { font-size: 0.72rem; color: #666; margin-left: auto; }
+  .frame { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+
+  /* ─── SHARED CHROME PIECES ─── */
+  .logo-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.25rem; height: 52px; border-bottom: 1px solid #1e1e1e;
+  }
+  .logo-lockup { display: flex; align-items: center; gap: 0.625rem; }
+  .logo-client {
+    width: 32px; height: 20px; background: #2a2a2a; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: #666; font-weight: 600; letter-spacing: 0.05em;
+  }
+  .logo-x { font-size: 0.65rem; color: #333; }
+  .logo-fna {
+    font-size: 0.62rem; letter-spacing: 0.18em; color: #555;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .user-pill {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.65rem; color: #555;
+  }
+  .user-pill .email { color: #888; }
+  .user-pill .logout {
+    padding: 3px 8px; border-radius: 4px; border: 1px solid #2a2a2a;
+    font-size: 0.6rem; color: #555; cursor: default;
+  }
+  .user-pill .logout:hover { color: #888; border-color: #333; }
+
+  /* Breadcrumb styles */
+  .breadcrumb-bar {
+    display: flex; align-items: center; gap: 0; padding: 0 1.25rem;
+    height: 36px; border-bottom: 1px solid #1a1a1a; background: #0e0e0e;
+  }
+  .bc-item { font-size: 0.68rem; color: #444; }
+  .bc-item.active { color: #aaa; }
+  .bc-sep { font-size: 0.65rem; color: #2d2d2d; margin: 0 0.4rem; }
+
+  /* Content preview */
+  .content-preview { padding: 1.25rem; }
+  .preview-title { font-size: 1.1rem; color: #e8e8e8; font-weight: 300; margin-bottom: 0.35rem; letter-spacing: -0.02em; }
+  .preview-sub { font-size: 0.7rem; color: #444; margin-bottom: 1.25rem; }
+  .mini-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.625rem; }
+  .mini-tile {
+    background: #161616; border: 1px solid #222; border-radius: 8px;
+    padding: 0.875rem 0.5rem; text-align: center;
+  }
+  .mini-tile .mt-icon { font-size: 1.1rem; margin-bottom: 0.3rem; }
+  .mini-tile .mt-name { font-size: 0.6rem; color: #777; }
+  .mini-recent { margin-top: 1rem; }
+  .mini-recent .recent-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.15em; color: #333; margin-bottom: 0.5rem; }
+  .recent-row {
+    display: flex; align-items: center; gap: 0.625rem;
+    padding: 0.5rem 0.625rem; background: #141414; border: 1px solid #1e1e1e;
+    border-radius: 6px; margin-bottom: 0.375rem;
+  }
+  .recent-row .rr-icon { font-size: 0.85rem; }
+  .recent-row .rr-title { font-size: 0.65rem; color: #ccc; flex: 1; }
+  .recent-row .rr-badge { font-size: 0.52rem; background: #1f1a2e; color: #a78bfa; padding: 2px 5px; border-radius: 3px; }
+  .recent-row .rr-date { font-size: 0.58rem; color: #3a3a3a; }
+
+  /* ─── VARIANT SPECIFIC ─── */
+
+  /* A: Thin unified bar */
+  .va .logo-bar { background: #0a0a0a; height: 48px; }
+  .va .logo-fna { color: #666; }
+
+  /* B: Solid branded band + separate breadcrumb row */
+  .vb .logo-bar { background: #111; height: 56px; border-bottom: 1px solid #222; }
+  .vb .logo-fna { color: #888; font-size: 0.7rem; }
+  .vb .logo-client { background: #1e1e1e; color: #999; width: 40px; height: 24px; font-size: 0.62rem; border-radius: 4px; }
+  .vb .logo-x { color: #444; }
+  .vb .breadcrumb-bar { background: #0d0d0d; height: 32px; }
+
+  /* C: Left-aligned with section title inline */
+  .vc .logo-bar { height: 52px; background: #0e0e0e; }
+  .vc .page-context {
+    display: flex; align-items: center; gap: 0.5rem;
+    border-left: 1px solid #222; margin-left: 1rem; padding-left: 1rem;
+  }
+  .vc .page-context .section-icon { font-size: 0.9rem; }
+  .vc .page-context .section-name { font-size: 0.8rem; color: #ccc; font-weight: 400; }
+  .vc .page-context .bc-sep { margin: 0 0.35rem; }
+  .vc .page-context .page-title { font-size: 0.72rem; color: #888; }
+</style>
+
+<h2>Portal chrome — wrapper &amp; navigation</h2>
+<p class="subtitle">All three use {client logo} × FNA lockup + email/logout. Difference is how breadcrumbs &amp; context travel with you.</p>
+
+<div class="variants">
+
+  <!-- Variant A: Two-row: logo bar + slim breadcrumb strip -->
+  <div class="variant-option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="variant-label">
+      <div class="letter">A</div>
+      <strong>Two-row: logo bar + breadcrumb strip</strong>
+      <span>Clean separation, always wayfind</span>
+    </div>
+    <div class="frame va">
+      <div class="logo-bar">
+        <div class="logo-lockup">
+          <div class="logo-client">ACME</div>
+          <span class="logo-x">×</span>
+          <span class="logo-fna">Friends &amp; Allies</span>
+        </div>
+        <div class="user-pill">
+          <span class="email">sarah@acme.com</span>
+          <span class="logout">Log out</span>
+        </div>
+      </div>
+      <div class="breadcrumb-bar">
+        <span class="bc-item">Home</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-item">Scripts</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-item active">Brand Launch — Draft v3</span>
+      </div>
+      <div class="content-preview">
+        <div class="preview-title">Brand Launch — Draft v3</div>
+        <div class="preview-sub">Script · Updated Mar 18</div>
+        <div style="height:60px;background:#141414;border:1px solid #1e1e1e;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:0.65rem;color:#333;">[ script content ]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant B: Single tall bar with inline breadcrumbs -->
+  <div class="variant-option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="variant-label">
+      <div class="letter">B</div>
+      <strong>Single bar — logos left, breadcrumbs center, user right</strong>
+      <span>Compact, everything in one row</span>
+    </div>
+    <div class="frame vb">
+      <div class="logo-bar" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;">
+        <div class="logo-lockup">
+          <div class="logo-client">ACME</div>
+          <span class="logo-x">×</span>
+          <span class="logo-fna">Friends &amp; Allies</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0;">
+          <span class="bc-item" style="font-size:0.65rem;color:#444;">Home</span>
+          <span class="bc-sep">/</span>
+          <span class="bc-item" style="font-size:0.65rem;color:#444;">Scripts</span>
+          <span class="bc-sep">/</span>
+          <span class="bc-item active" style="font-size:0.65rem;color:#aaa;">Brand Launch</span>
+        </div>
+        <div class="user-pill" style="justify-content:flex-end;">
+          <span class="email">sarah@acme.com</span>
+          <span class="logout">Log out</span>
+        </div>
+      </div>
+      <div class="content-preview">
+        <div class="preview-title">Brand Launch — Draft v3</div>
+        <div class="preview-sub">Script · Updated Mar 18</div>
+        <div style="height:60px;background:#141414;border:1px solid #1e1e1e;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:0.65rem;color:#333;">[ script content ]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant C: Logo bar only — section/page context inline after divider -->
+  <div class="variant-option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="variant-label">
+      <div class="letter">C</div>
+      <strong>Logo bar with inline context — no separate breadcrumb row</strong>
+      <span>Saves vertical space, feels more editorial</span>
+    </div>
+    <div class="frame vc">
+      <div class="logo-bar">
+        <div style="display:flex;align-items:center;gap:0;">
+          <div class="logo-lockup">
+            <div class="logo-client">ACME</div>
+            <span class="logo-x">×</span>
+            <span class="logo-fna">Friends &amp; Allies</span>
+          </div>
+          <div class="page-context">
+            <span class="section-icon">🎬</span>
+            <span class="section-name">Scripts</span>
+            <span class="bc-sep">/</span>
+            <span class="page-title">Brand Launch — Draft v3</span>
+          </div>
+        </div>
+        <div class="user-pill">
+          <span class="email">sarah@acme.com</span>
+          <span class="logout">Log out</span>
+        </div>
+      </div>
+      <div class="content-preview">
+        <div class="preview-title">Brand Launch — Draft v3</div>
+        <div class="preview-sub">Script · Updated Mar 18</div>
+        <div style="height:60px;background:#141414;border:1px solid #1e1e1e;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:0.65rem;color:#333;">[ script content ]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,108 @@
+<h2>Comments Column — White?</h2>
+<p class="subtitle">White dot + left border shown in context with the existing 5 columns</p>
+
+<div class="section" style="margin-bottom: 2rem;">
+  <div class="label" style="margin-bottom: 0.75rem;">How the dot strip would look</div>
+
+  <!-- Without comments -->
+  <div style="margin-bottom: 16px;">
+    <div style="font-size: 11px; color: #555; font-family: monospace; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">Current — 5 dots</div>
+    <div style="display: inline-flex; gap: 6px; align-items: center; padding: 8px 14px; background: #111; border-radius: 8px; border: 1px solid #2a2a2a;">
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #a855f7;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #38bdf8;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div>
+    </div>
+  </div>
+
+  <!-- With white dot -->
+  <div>
+    <div style="font-size: 11px; color: #555; font-family: monospace; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.08em;">With Comments — white dot added</div>
+    <div style="display: inline-flex; gap: 6px; align-items: center; padding: 8px 14px; background: #111; border-radius: 8px; border: 1px solid #2a2a2a;">
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #a855f7;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #38bdf8;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div>
+      <div style="width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px rgba(255,255,255,0.3);"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-bottom: 2rem;">
+  <div class="label" style="margin-bottom: 0.75rem;">White left border on a beat row (on dark bg)</div>
+  <div style="background: #111; border-radius: 8px; overflow: hidden; border: 1px solid #2a2a2a;">
+    <div style="display: grid; grid-template-columns: 4px 1fr 4px 1fr 4px 1fr 4px 1fr 4px 1fr 4px 1fr; min-height: 80px;">
+      <div style="background: #a855f7; opacity: 0.7;"></div>
+      <div style="padding: 12px; color: #888; font-size: 12px; font-family: monospace; border-right: 1px solid #222;">Audio content here</div>
+      <div style="background: #38bdf8; opacity: 0.7;"></div>
+      <div style="padding: 12px; color: #888; font-size: 12px; font-family: monospace; border-right: 1px solid #222;">Visual content here</div>
+      <div style="background: #10b981; opacity: 0.7;"></div>
+      <div style="padding: 12px; color: #888; font-size: 12px; font-family: monospace; border-right: 1px solid #222;">Storyboard</div>
+      <div style="background: #fff; opacity: 0.85;"></div>
+      <div style="padding: 12px; border-right: 1px solid #222;">
+        <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+          <div style="width: 22px; height: 22px; border-radius: 50%; background: #333; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #777;">R</div>
+          <div>
+            <div style="font-size: 11px; color: #777; font-family: monospace; margin-bottom: 2px;">Ready · 2h ago</div>
+            <div style="font-size: 12px; color: #ccc; font-family: monospace;">Love this transition here</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label" style="margin-bottom: 0.75rem;">Variations on "white"</div>
+  <div class="options">
+    <div class="option" data-choice="white-pure" onclick="toggleSelect(this)">
+      <div class="letter" style="background: #fff; color: #111;">W</div>
+      <div class="content">
+        <h3>Pure white</h3>
+        <p>Maximum contrast on dark backgrounds. The only column with a light dot — immediately readable as "different category" from the creative columns.</p>
+        <div style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#a855f7;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#fff;display:inline-block;box-shadow:0 0 0 1px rgba(255,255,255,0.4);"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option" data-choice="white-warm" onclick="toggleSelect(this)">
+      <div class="letter" style="background: #f5f0e8; color: #111;">W</div>
+      <div class="content">
+        <h3>Warm off-white / cream</h3>
+        <p>Slightly warm — feels like paper, like printed annotations. Less clinical than pure white. Still clearly "other" from the color columns.</p>
+        <div style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#a855f7;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#f5f0e8;display:inline-block;box-shadow:0 0 0 1px rgba(255,255,255,0.3);"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="option" data-choice="silver" onclick="toggleSelect(this)">
+      <div class="letter" style="background: #94a3b8; color: #fff;">S</div>
+      <div class="content">
+        <h3>Silver / slate</h3>
+        <p>Neutral grey — less bright than white, still clearly distinct from all colored columns. Softer presence on the dark toolbar.</p>
+        <div style="display:inline-flex;gap:4px;align-items:center;margin-top:6px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#a855f7;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

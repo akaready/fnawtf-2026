@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comment Indicators — Placement Options</title>
+<script src="../../../.superpowers/brainstorm/82484-1774043394/../../../.superpowers/brainstorm/82484-1774043394/../../.superpowers/brainstorm/82484-1774043394/./helper.js" onerror="console.warn('helper not found')"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0a;
+    color: #e5e5e5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .subtitle { color: #777; font-size: 13px; margin-bottom: 28px; }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .option-card {
+    border: 2px solid #2a2a2a;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .option-card:hover { border-color: #444; }
+  .option-card.selected { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+
+  .option-label {
+    background: #111;
+    border-bottom: 1px solid #222;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .option-letter {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #2a2a2a;
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .option-card.selected .option-letter { background: #6366f1; color: #fff; }
+  .option-title { font-size: 12px; font-weight: 600; color: #ccc; }
+
+  .mockup-area {
+    background: #111;
+    padding: 14px;
+  }
+
+  /* ── Shared UI Elements ── */
+  .bebas {
+    font-family: 'Arial Narrow', Arial, sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  .scene-header-row {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px 6px 0 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px 0 8px;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .scene-num { font-size: 36px; color: #333; line-height: 1; flex-shrink: 0; margin-top: 2px; }
+  .scene-num.active { color: #e5e5e5; }
+  .scene-heading { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scene-desc { font-size: 11px; color: #555; }
+
+  .content-stub {
+    background: #161616;
+    border: 1px solid #2a2a2a;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .stub-block { background: #252525; border-radius: 3px; }
+
+  /* Sidebar */
+  .sidebar {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 6px;
+    overflow: hidden;
+    width: 120px;
+  }
+  .sidebar-header {
+    background: #161616;
+    border-bottom: 1px solid #222;
+    padding: 6px 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    font-weight: 600;
+  }
+  .sidebar-scene {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    gap: 6px;
+    border-bottom: 1px solid #1c1c1c;
+    cursor: pointer;
+    position: relative;
+  }
+  .sidebar-scene.active { background: #1c1c2a; }
+  .sidebar-scene:hover { background: #191919; }
+  .sidebar-scene-num { font-size: 28px; color: #333; line-height: 1; flex-shrink: 0; }
+  .sidebar-scene.active .sidebar-scene-num { color: #e5e5e5; }
+  .sidebar-scene-info { flex: 1; min-width: 0; }
+  .sidebar-scene-title { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-scene.active .sidebar-scene-title { color: #aaa; }
+  .beat-pills { display: flex; gap: 2px; margin-top: 3px; flex-wrap: wrap; }
+  .beat-pill {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    background: #252525;
+    border: 1px solid #333;
+    font-size: 9px;
+    color: #666;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    position: relative;
+  }
+  .beat-pill.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+
+  /* Comment dot styles */
+  .comment-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+  }
+  .comment-dot-sm {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #f59e0b;
+    position: absolute;
+    top: -1px; right: -1px;
+    border: 1px solid #111;
+  }
+  .comment-dot-header {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+  }
+  .comment-badge {
+    background: #f59e0b;
+    color: #000;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+    line-height: 14px;
+  }
+
+  /* Timeline */
+  .timeline-wrap {
+    margin-top: 10px;
+    padding: 0 2px;
+  }
+  .timeline-track {
+    height: 20px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .timeline-beat {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .beat-mark {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: #444;
+  }
+  .beat-mark.has-comment {
+    background: #f59e0b;
+    width: 5px; height: 5px;
+    box-shadow: 0 0 4px rgba(245,158,11,0.5);
+  }
+  .scene-divider {
+    position: absolute;
+    left: 0;
+    top: 3px; bottom: 3px;
+    width: 1px;
+    background: #555;
+  }
+  .timeline-playhead {
+    position: absolute;
+    left: 25%;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: #6366f1;
+  }
+
+  .layout-row { display: flex; gap: 10px; align-items: flex-start; }
+
+  /* Option A - sidebar dots */
+  /* Option B - timeline marks */
+  /* Option C - header badge */
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .note {
+    font-size: 11px;
+    color: #666;
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .note strong { color: #aaa; }
+
+  /* Selected state overlay */
+  .option-card.selected .option-label { background: #13132a; }
+  .option-card.selected .option-title { color: #a5b4fc; }
+
+  /* Bottom note */
+  .bottom-note {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+  .bottom-note strong { color: #999; }
+
+  /* Multi select hint */
+  .multi-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Comment Indicators — Where should they appear?</h1>
+<p class="subtitle">Three placement options — click to select. You can pick more than one.</p>
+<p class="multi-hint">These can be combined — select all that feel right</p>
+
+<div class="options-grid">
+
+  <!-- Option A: Sidebar dots -->
+  <div class="option-card" data-choice="sidebar" onclick="toggleOpt(this)">
+    <div class="option-label">
+      <div class="option-letter">A</div>
+      <div class="option-title">Scene Sidebar</div>
+    </div>
+    <div class="mockup-area">
+      <div class="section-label">Left sidebar</div>
+      <div class="sidebar">
+        <div class="sidebar-header">Scenes</div>
+
+        <!-- Scene 1 — no comments -->
+        <div class="sidebar-scene">
+          <div class="sidebar-scene-num bebas">1</div>
+          <div class="sidebar-scene-info">
+            <div class="sidebar-scene-title">INT. OFFICE</div>
+            <div class="beat-pills">
+              <div class="beat-pill">A</div>
+              <div class="beat-pill">B</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scene 2 — has comments on beat B -->
+        <div class="sidebar-scene active">
+          <div class="sidebar-scene-num bebas active">2</div>
+          <div class="sidebar-scene-info">
+            <div class="sidebar-scene-title">EXT. STREET</div>
+            <div class="beat-pills">
+              <div class="beat-pill active">A</div>
+              <div class="beat-pill" style="position:relative;">B<div class="comment-dot-sm"></div></div>
+              <div class="beat-pill">C</div>
+            </div>
+          </div>
+          <div class="comment-dot"></div>
+        </div>
+
+        <!-- Scene 3 — has comments -->
+        <div class="sidebar-scene">
+          <div class="sidebar-scene-num bebas">3</div>
+          <div class="sidebar-scene-info">
+            <div class="sidebar-scene-title">INT. KITCHEN</div>
+            <div class="beat-pills">
+              <div class="beat-pill" style="position:relative;">A<div class="comment-dot-sm"></div></div>
+            </div>
+          </div>
+          <div class="comment-dot"></div>
+        </div>
+
+        <!-- Scene 4 — no comments -->
+        <div class="sidebar-scene">
+          <div class="sidebar-scene-num bebas">4</div>
+          <div class="sidebar-scene-info">
+            <div class="sidebar-scene-title">EXT. PARK</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">Amber dot on scene row = any beat in scene has comments.<br>Smaller dot on beat pill = that specific beat has a comment.</div>
+    </div>
+  </div>
+
+  <!-- Option B: Timeline marks -->
+  <div class="option-card" data-choice="timeline" onclick="toggleOpt(this)">
+    <div class="option-label">
+      <div class="option-letter">B</div>
+      <div class="option-title">Timeline</div>
+    </div>
+    <div class="mockup-area">
+      <div class="section-label">Bottom scrubber</div>
+      <div class="timeline-wrap">
+        <div class="timeline-track">
+          <div class="timeline-playhead"></div>
+
+          <!-- Scene 1: 3 beats -->
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+
+          <!-- Scene 2: 3 beats, beat 2 has comment -->
+          <div class="timeline-beat"><div class="scene-divider"></div><div class="beat-mark"></div></div>
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+          <div class="timeline-beat"><div class="beat-mark has-comment"></div></div>
+
+          <!-- Scene 3: 2 beats, beat 1 has comment -->
+          <div class="timeline-beat"><div class="scene-divider"></div><div class="beat-mark has-comment"></div></div>
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+
+          <!-- Scene 4: 3 beats -->
+          <div class="timeline-beat"><div class="scene-divider"></div><div class="beat-mark"></div></div>
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+          <div class="timeline-beat"><div class="beat-mark"></div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:#555;align-items:center;">
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:5px;height:5px;border-radius:50%;background:#f59e0b;box-shadow:0 0 4px rgba(245,158,11,0.5)"></div> Has comments</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:3px;height:3px;border-radius:50%;background:#444"></div> No comments</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:1px;height:10px;background:#555"></div> Scene break</div>
+      </div>
+      <div class="note" style="margin-top:10px;">Amber marks on the scrubber show exactly which beats have comments. Glanceable across the whole script at once.</div>
+    </div>
+  </div>
+
+  <!-- Option C: Scene header badge -->
+  <div class="option-card" data-choice="header" onclick="toggleOpt(this)">
+    <div class="option-label">
+      <div class="option-letter">C</div>
+      <div class="option-title">Scene Header Row</div>
+    </div>
+    <div class="mockup-area">
+      <div class="section-label">Current beat header</div>
+
+      <!-- Without comments -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;color:#444;margin-bottom:4px;">No comments:</div>
+        <div class="scene-header-row">
+          <span class="bebas scene-num active">2</span>
+          <span class="scene-heading">INT. OFFICE — DAY</span>
+          <span class="scene-desc">Open plan workspace</span>
+        </div>
+      </div>
+
+      <!-- With comments -->
+      <div>
+        <div style="font-size:10px;color:#444;margin-bottom:4px;">With comments:</div>
+        <div class="scene-header-row">
+          <span class="bebas scene-num active">2B</span>
+          <span class="scene-heading">INT. OFFICE — DAY</span>
+          <span style="flex:1"></span>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+            <div class="comment-dot-header"></div>
+            <span style="font-size:10px;color:#888;">3 comments</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-stub" style="margin-bottom: 10px;">
+        <div class="stub-block" style="width:32px;height:24px;"></div>
+        <div class="stub-block" style="width:100%;height:14px;"></div>
+      </div>
+
+      <div class="note">Only shows for the <strong>current beat</strong>. Confirms there are comments waiting without opening the sidebar.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom-note">
+  <strong>Technical note:</strong> All three options require pre-fetching comment counts when the share page loads — a single query returning <code>{ beat_id, count }</code> pairs for the whole script. This is lightweight (one DB call) and enables all placements simultaneously.
+</div>
+
+<script>
+  function toggleOpt(el) {
+    el.classList.toggle('selected');
+    const choice = el.dataset.choice;
+    const selected = document.querySelectorAll('.option-card.selected');
+    const choices = Array.from(selected).map(c => c.dataset.choice);
+
+    if (typeof recordEvent === 'function') {
+      recordEvent({ type: 'click', choice: choices.join(','), text: 'Selected: ' + choices.join(', ') });
+    }
+  }
+</script>
+</body>
+</html>

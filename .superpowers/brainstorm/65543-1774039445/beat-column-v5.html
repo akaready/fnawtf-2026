@@ -1,0 +1,229 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg-sidebar:    #0a0a0a;
+    --bg-hover:      rgba(255,255,255,0.05);
+    --bg-row-on:     rgba(0,0,0,0.40);
+    --border-sub:    #1f1f1f;
+    --border:        #2a2a2a;
+    --txt-primary:   #fafafa;
+    --txt-muted:     #a1a1aa;
+    --txt-faint:     #505055;
+    --txt-number:    #2a2a2a;
+    /* beat active: pure black cell — darker than sidebar, bright text */
+    --beat-on-bg:    #000000;
+    --beat-on-text:  #d4d4d8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  h2 { margin-bottom: 4px; }
+  .subtitle { margin-bottom: 28px; }
+
+  .layout { display: flex; justify-content: center; }
+
+  .sidebar-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--txt-faint);
+  }
+
+  .sidebar {
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    display: inline-flex;
+    flex-direction: column;
+    width: max-content;
+  }
+
+  .sr {
+    display: flex;
+    align-items: stretch;
+    min-height: 45px;
+    border-bottom: 1px solid var(--border-sub);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .sr:hover { background: var(--bg-hover); }
+  .sr.on    { background: var(--bg-row-on); }
+
+  .sn {
+    font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-size: 44px;
+    line-height: 1;
+    padding: 2px 4px 0 12px;
+    color: var(--txt-number);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .si {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 8px 8px 0;
+  }
+  .si-slug {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--txt-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: block;
+    line-height: 1.35;
+  }
+  .si-desc {
+    font-size: 10px;
+    color: var(--txt-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    display: block;
+    line-height: 1.35;
+  }
+
+  .bc-grid {
+    flex-shrink: 0;
+    align-self: stretch;
+    border-left: 1px solid var(--border-sub);
+    display: grid;
+    grid-template-rows: repeat(2, 1fr);
+    grid-auto-columns: 22px;
+    grid-auto-flow: column;
+    gap: 1px;
+    background: var(--border-sub);
+  }
+
+  .bc {
+    background: var(--bg-sidebar);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', 'Arial Narrow', sans-serif;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--txt-faint);
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    letter-spacing: 0;
+  }
+  .bc:hover { background: rgba(255,255,255,0.06); color: var(--txt-muted); }
+
+  /* Selected: pure black — darker than sidebar bg — with legible text */
+  .bc.on {
+    background: var(--beat-on-bg);
+    color: var(--beat-on-text);
+  }
+
+  .bc.empty {
+    background: var(--bg-sidebar);
+    pointer-events: none;
+  }
+</style>
+
+<div class="layout">
+  <div class="sidebar-wrap">
+    <div class="sidebar-title">Scene list</div>
+    <div class="sidebar">
+
+      <div class="sr">
+        <span class="sn">101</span>
+        <div class="si">
+          <span class="si-slug">INT. CAFÉ</span>
+          <span class="si-desc">Morning</span>
+        </div>
+      </div>
+
+      <!-- 201: 2 beats, A active (default on row click) -->
+      <div class="sr on">
+        <span class="sn">201</span>
+        <div class="si">
+          <span class="si-slug">EXT. STREET</span>
+          <span class="si-desc">Day</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc on">A</span>
+          <span class="bc">B</span>
+        </div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">202</span>
+        <div class="si">
+          <span class="si-slug">EXT. ALLEY — CONTINUATION OF PRIOR SCENE</span>
+        </div>
+      </div>
+
+      <!-- 301: 3 beats -->
+      <div class="sr">
+        <span class="sn">301</span>
+        <div class="si">
+          <span class="si-slug">INT. OFFICE</span>
+          <span class="si-desc">Night</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc empty"></span>
+        </div>
+      </div>
+
+      <!-- 401: 4 beats, C active (navigated away from A) -->
+      <div class="sr">
+        <span class="sn">401</span>
+        <div class="si">
+          <span class="si-slug">INT. BOARDROOM</span>
+          <span class="si-desc">Evening</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc on">C</span>
+          <span class="bc">D</span>
+        </div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">402</span>
+        <div class="si">
+          <span class="si-slug">EXT. PARKING LOT</span>
+        </div>
+      </div>
+
+      <!-- 501: 5 beats -->
+      <div class="sr">
+        <span class="sn">501</span>
+        <div class="si">
+          <span class="si-slug">INT. LOBBY</span>
+          <span class="si-desc">Dawn</span>
+        </div>
+        <div class="bc-grid">
+          <span class="bc">A</span>
+          <span class="bc">B</span>
+          <span class="bc">C</span>
+          <span class="bc">D</span>
+          <span class="bc">E</span>
+          <span class="bc empty"></span>
+        </div>
+      </div>
+
+      <div class="sr">
+        <span class="sn">601</span>
+        <div class="si">
+          <span class="si-slug">EXT. ROOFTOP — GOLDEN HOUR</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

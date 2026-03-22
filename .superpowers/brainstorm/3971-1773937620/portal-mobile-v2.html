@@ -1,0 +1,192 @@
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+  .row { display: flex; gap: 1.5rem; justify-content: center; align-items: flex-start; }
+  .screen-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.16em; color: #444; margin-bottom: 0.75rem; text-align: center; }
+
+  .phone {
+    width: 220px; flex-shrink: 0;
+    background: #0a0a0a; border: 1.5px solid #222; border-radius: 28px; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .status-bar {
+    height: 36px; background: #0a0a0a; padding: 10px 14px 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .time { font-size: 0.6rem; font-weight: 600; color: #e0e0e0; }
+  .status-icons { display: flex; gap: 3px; align-items: center; font-size: 0.48rem; color: #aaa; }
+
+  /* ── HOME bar: logos + avatar ── */
+  .top-bar-home {
+    height: 50px; padding: 0 1rem; background: #0d0d0d;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo-lockup { display: flex; align-items: center; gap: 0.4rem; }
+  .client-mark {
+    height: 20px; padding: 0 6px; background: #1e1e1e; border-radius: 3px;
+    display: flex; align-items: center;
+    font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; color: #999; border: 1px solid #2a2a2a;
+  }
+  .x-mark { font-size: 0.52rem; color: #2a2a2a; }
+  .fna-mark { font-size: 0.5rem; letter-spacing: 0.18em; color: #484848; text-transform: uppercase; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: #1e1e1e; border: 1px solid #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; color: #777; font-weight: 600; }
+
+  /* ── INNER bar: just breadcrumbs + avatar — logos gone ── */
+  .top-bar-inner {
+    height: 50px; padding: 0 1rem; background: #0d0d0d;
+    border-bottom: 1px solid #1a1a1a;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  }
+  .breadcrumbs { display: flex; align-items: center; flex: 1; min-width: 0; gap: 0; }
+  .bc { font-size: 0.65rem; color: #505050; white-space: nowrap; }
+  .bc a { color: #a78bfa; text-decoration: none; }
+  .bc.active { color: #d0d0d0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .bc-sep { font-size: 0.55rem; color: #282828; margin: 0 0.35rem; flex-shrink: 0; }
+
+  /* page bodies */
+  .page-body { padding: 1.125rem 1rem 1.5rem; }
+  .sec-label { font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.16em; color: #2e2e2e; margin-bottom: 0.5rem; }
+
+  .greeting h1 { font-size: 1.15rem; font-weight: 300; color: #eee; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 0.2rem; }
+  .greeting p { font-size: 0.62rem; color: #333; margin-bottom: 1.25rem; }
+
+  .recent-row { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .r-card { flex: 1; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.625rem 0.75rem; min-width: 0; }
+  .r-top { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.2rem; }
+  .r-icon { font-size: 0.75rem; }
+  .r-type { font-size: 0.46rem; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
+  .r-badge { margin-left: auto; font-size: 0.44rem; background: #1c1528; color: #a78bfa; padding: 1px 4px; border-radius: 2px; }
+  .r-title { font-size: 0.6rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r-date { font-size: 0.5rem; color: #2e2e2e; margin-top: 0.1rem; }
+
+  .tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .tile { background: #111; border: 1px solid #1c1c1c; border-radius: 9px; padding: 0.875rem 0.5rem; text-align: center; position: relative; }
+  .t-icon { font-size: 1.3rem; margin-bottom: 0.35rem; line-height: 1; }
+  .t-name { font-size: 0.58rem; color: #999; }
+  .t-count { font-size: 0.5rem; color: #343434; margin-top: 0.15rem; }
+  .t-dot { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; }
+
+  .inner-title h1 { font-size: 1rem; font-weight: 300; color: #eee; letter-spacing: -0.02em; margin-bottom: 0.15rem; }
+  .inner-title p { font-size: 0.6rem; color: #333; margin-bottom: 1rem; }
+  .content-block { background: #111; border: 1px solid #1e1e1e; border-radius: 8px; overflow: hidden; }
+  .c-row { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #161616; }
+  .c-row:last-child { border-bottom: none; }
+  .c-icon { font-size: 0.85rem; flex-shrink: 0; }
+  .c-info { flex: 1; min-width: 0; }
+  .c-title { font-size: 0.62rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c-sub { font-size: 0.52rem; color: #333; margin-top: 0.1rem; }
+  .c-new { font-size: 0.46rem; background: #1c1528; color: #a78bfa; padding: 2px 5px; border-radius: 3px; flex-shrink: 0; }
+  .c-arrow { font-size: 0.6rem; color: #2a2a2a; flex-shrink: 0; }
+
+  .note { font-size: 0.62rem; color: #3a3a3a; text-align: center; margin-top: 1.5rem; line-height: 1.6; }
+  .note strong { color: #666; }
+</style>
+
+<h2>Mobile inner pages — logos out, breadcrumbs own the bar</h2>
+<p class="subtitle">Home keeps the full lockup. Inner pages swap it for <span style="color:#a78bfa">Home / Section</span> — clean escape route, no smush.</p>
+
+<div class="row">
+
+  <!-- HOME -->
+  <div>
+    <div class="screen-label">Home — logos + avatar</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="status-icons"><span>●●● WiFi ▮</span></div>
+      </div>
+      <div class="top-bar-home">
+        <div class="logo-lockup">
+          <div class="client-mark">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark">FNA</span>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-body">
+        <div class="greeting">
+          <h1>Welcome back,<br>Sarah.</h1>
+          <p>Acme Co. · Project portal</p>
+        </div>
+        <div class="sec-label">Recent</div>
+        <div class="recent-row">
+          <div class="r-card"><div class="r-top"><span class="r-icon">🎬</span><span class="r-type">Script</span><span class="r-badge">New</span></div><div class="r-title">Brand Launch v3</div><div class="r-date">Mar 18</div></div>
+          <div class="r-card"><div class="r-top"><span class="r-icon">🧾</span><span class="r-type">Invoice</span></div><div class="r-title">Invoice #1042</div><div class="r-date">Due Apr 1</div></div>
+        </div>
+        <div class="sec-label">Sections</div>
+        <div class="tile-grid">
+          <div class="tile"><div class="t-icon">📄</div><div class="t-name">Proposals</div><div class="t-count">2 active</div></div>
+          <div class="tile"><div class="t-dot"></div><div class="t-icon">🎬</div><div class="t-name">Scripts</div><div class="t-count">1 new</div></div>
+          <div class="tile"><div class="t-icon">🧾</div><div class="t-name">Invoices</div><div class="t-count">3 total</div></div>
+          <div class="tile"><div class="t-icon">📋</div><div class="t-name">Contracts</div></div>
+          <div class="tile"><div class="t-icon">🎤</div><div class="t-name">Transcripts</div></div>
+          <div class="tile"><div class="t-icon">📝</div><div class="t-name">Intake</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION LIST -->
+  <div>
+    <div class="screen-label">Section — breadcrumbs only</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="status-icons"><span>●●● WiFi ▮</span></div>
+      </div>
+      <div class="top-bar-inner">
+        <div class="breadcrumbs">
+          <span class="bc"><a>Home</a></span>
+          <span class="bc-sep">/</span>
+          <span class="bc active">Scripts</span>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-body">
+        <div class="inner-title">
+          <h1>Scripts</h1>
+          <p>Shared versions for review</p>
+        </div>
+        <div class="content-block">
+          <div class="c-row"><span class="c-icon">🎬</span><div class="c-info"><div class="c-title">Brand Launch — Draft v3</div><div class="c-sub">Mar 18</div></div><span class="c-new">New</span><span class="c-arrow">›</span></div>
+          <div class="c-row"><span class="c-icon">🎬</span><div class="c-info"><div class="c-title">Product Overview — Final</div><div class="c-sub">Feb 24</div></div><span class="c-arrow">›</span></div>
+          <div class="c-row"><span class="c-icon">🎬</span><div class="c-info"><div class="c-title">Interview Series — v1</div><div class="c-sub">Jan 12</div></div><span class="c-arrow">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEEP PAGE -->
+  <div>
+    <div class="screen-label">Deep page — 3-level crumb</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="status-icons"><span>●●● WiFi ▮</span></div>
+      </div>
+      <div class="top-bar-inner">
+        <div class="breadcrumbs">
+          <span class="bc"><a>Home</a></span>
+          <span class="bc-sep">/</span>
+          <span class="bc"><a>Scripts</a></span>
+          <span class="bc-sep">/</span>
+          <span class="bc active">Brand Launch v3</span>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-body">
+        <div class="inner-title">
+          <h1>Brand Launch<br>Draft v3</h1>
+          <p>Script · Shared Mar 18 · For review</p>
+        </div>
+        <div style="height:110px;background:#111;border:1px solid #1e1e1e;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:0.6rem;color:#2a2a2a;">[ script viewer ]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note"><strong>Home:</strong> logos own the bar &nbsp;·&nbsp; <strong>Any inner page:</strong> breadcrumbs own the bar &nbsp;·&nbsp; Avatar always right<br>Desktop keeps logos + breadcrumbs centered since there's room</p>

@@ -1,0 +1,274 @@
+<style>
+  .mockup-shell {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #0a0a0a; border-radius: 10px; overflow: hidden;
+    border: 1px solid #222; max-width: 740px; margin: 0 auto;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .mockup-shell:hover { border-color: #555; }
+  .mockup-shell.selected { border-color: #a78bfa; }
+
+  /* ── Top bar ── */
+  .top-bar {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; padding: 0 1.5rem; height: 54px;
+    background: #0d0d0d; border-bottom: 1px solid #1a1a1a;
+    gap: 1rem;
+  }
+  .logo-lockup { display: flex; align-items: center; gap: 0.625rem; }
+  .client-logo {
+    height: 22px; width: 44px; background: #1e1e1e; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.52rem; font-weight: 700; letter-spacing: 0.08em; color: #888;
+    border: 1px solid #2a2a2a;
+  }
+  .divider-x { font-size: 0.6rem; color: #2e2e2e; margin: 0 0.1rem; }
+  .fna-wordmark { font-size: 0.6rem; letter-spacing: 0.2em; color: #555; text-transform: uppercase; font-weight: 500; }
+
+  /* Center nav */
+  .center-nav { display: flex; align-items: center; gap: 0.25rem; justify-content: center; }
+  .nav-item {
+    font-size: 0.65rem; color: #555; padding: 0.3rem 0.625rem;
+    border-radius: 5px; white-space: nowrap; transition: color 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .nav-item:hover { color: #999; }
+  .nav-item.active { color: #e0e0e0; background: #181818; }
+  .nav-item .nav-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #a78bfa; margin-left: 4px; vertical-align: middle; margin-top: -1px; }
+
+  /* User area */
+  .user-area { display: flex; align-items: center; gap: 0.625rem; justify-content: flex-end; }
+  .user-email { font-size: 0.62rem; color: #484848; }
+  .logout-btn {
+    font-size: 0.58rem; color: #484848; padding: 3px 8px;
+    border: 1px solid #222; border-radius: 4px; cursor: default;
+  }
+
+  /* ── Page body ── */
+  .page-body { padding: 2rem 2rem 1.75rem; }
+
+  .page-greeting { margin-bottom: 1.75rem; }
+  .page-greeting h1 {
+    font-size: 1.6rem; font-weight: 300; color: #eeeeee;
+    letter-spacing: -0.03em; margin-bottom: 0.25rem;
+  }
+  .page-greeting p { font-size: 0.72rem; color: #3a3a3a; }
+
+  /* Recent strip */
+  .section-label {
+    font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.18em;
+    color: #333; margin-bottom: 0.625rem; font-weight: 500;
+  }
+  .recent-strip { display: flex; gap: 0.625rem; margin-bottom: 1.75rem; }
+  .recent-card {
+    flex: 1; background: #111; border: 1px solid #1e1e1e; border-radius: 8px;
+    padding: 0.75rem 0.875rem; display: flex; flex-direction: column; gap: 0.25rem;
+    min-width: 0;
+  }
+  .rc-top { display: flex; align-items: center; gap: 0.4rem; }
+  .rc-icon { font-size: 0.85rem; flex-shrink: 0; }
+  .rc-type { font-size: 0.55rem; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
+  .rc-badge { margin-left: auto; font-size: 0.5rem; background: #1c1528; color: #a78bfa; padding: 2px 5px; border-radius: 3px; }
+  .rc-title { font-size: 0.7rem; color: #ccc; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc-date { font-size: 0.58rem; color: #333; }
+
+  /* Pinned section */
+  .pinned-strip { display: flex; gap: 0.625rem; margin-bottom: 1.75rem; }
+  .pinned-card {
+    flex: 1; background: #0f0f14; border: 1px solid #1e1e28; border-radius: 8px;
+    padding: 0.75rem 0.875rem; display: flex; align-items: center; gap: 0.625rem;
+  }
+  .pin-icon { font-size: 0.85rem; flex-shrink: 0; }
+  .pin-info { flex: 1; min-width: 0; }
+  .pin-title { font-size: 0.7rem; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pin-sub { font-size: 0.58rem; color: #3a3a3a; margin-top: 0.1rem; }
+  .pin-label { font-size: 0.5rem; color: #5a4a7a; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* Main tile grid */
+  .tile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  .tile {
+    background: #111; border: 1px solid #1c1c1c; border-radius: 10px;
+    padding: 1.25rem 0.875rem; text-align: center;
+    transition: background 0.15s, border-color 0.15s;
+    position: relative; cursor: default;
+  }
+  .tile:hover { background: #161616; border-color: #252525; }
+  .tile .t-icon { font-size: 1.6rem; margin-bottom: 0.5rem; line-height: 1; }
+  .tile .t-name { font-size: 0.68rem; color: #999; letter-spacing: 0.02em; font-weight: 400; }
+  .tile .t-count { font-size: 0.58rem; color: #3a3a3a; margin-top: 0.2rem; }
+  .tile .new-dot {
+    position: absolute; top: 10px; right: 10px;
+    width: 7px; height: 7px; border-radius: 50%; background: #a78bfa;
+  }
+
+  /* Inner page variant (breadcrumb center) */
+  .center-breadcrumb { display: flex; align-items: center; gap: 0; justify-content: center; }
+  .bc { font-size: 0.65rem; color: #3d3d3d; }
+  .bc.active { color: #c0c0c0; }
+  .bc-sep { font-size: 0.55rem; color: #252525; margin: 0 0.4rem; }
+
+  .divider { border: none; border-top: 1px solid #161616; margin: 1.5rem 0; }
+  .caption { font-size: 0.65rem; color: #3a3a3a; text-align: center; margin-top: 1.25rem; }
+</style>
+
+<h2>Portal home — full mockup</h2>
+<p class="subtitle">Combining chrome B, icon grid, recent strip, and pinned section. Click to select if this direction is right.</p>
+
+<!-- HOME STATE -->
+<div style="margin-bottom: 0.75rem;">
+  <p class="label">Home screen (nav items centered)</p>
+</div>
+
+<div class="mockup-shell selected" data-choice="home" onclick="toggleSelect(this)" style="margin-bottom: 2rem;">
+  <!-- Top bar: home state -->
+  <div class="top-bar">
+    <div class="logo-lockup">
+      <div class="client-logo">ACME</div>
+      <span class="divider-x">×</span>
+      <span class="fna-wordmark">Friends &amp; Allies</span>
+    </div>
+    <nav class="center-nav">
+      <span class="nav-item active">Home</span>
+      <span class="nav-item">Scripts <span class="nav-dot"></span></span>
+      <span class="nav-item">Proposals</span>
+      <span class="nav-item">Invoices</span>
+      <span class="nav-item">More ▾</span>
+    </nav>
+    <div class="user-area">
+      <span class="user-email">sarah@acme.com</span>
+      <span class="logout-btn">Log out</span>
+    </div>
+  </div>
+
+  <!-- Page body -->
+  <div class="page-body">
+    <div class="page-greeting">
+      <h1>Welcome back, Sarah.</h1>
+      <p>Acme Co. · Your project portal</p>
+    </div>
+
+    <!-- Recent -->
+    <div class="section-label">Recent</div>
+    <div class="recent-strip">
+      <div class="recent-card">
+        <div class="rc-top">
+          <span class="rc-icon">🎬</span>
+          <span class="rc-type">Script</span>
+          <span class="rc-badge">New</span>
+        </div>
+        <div class="rc-title">Brand Launch — Draft v3</div>
+        <div class="rc-date">Updated Mar 18</div>
+      </div>
+      <div class="recent-card">
+        <div class="rc-top">
+          <span class="rc-icon">🧾</span>
+          <span class="rc-type">Invoice</span>
+        </div>
+        <div class="rc-title">Invoice #1042 — $8,500</div>
+        <div class="rc-date">Due Apr 1</div>
+      </div>
+      <div class="recent-card">
+        <div class="rc-top">
+          <span class="rc-icon">📄</span>
+          <span class="rc-type">Proposal</span>
+        </div>
+        <div class="rc-title">Spring Campaign</div>
+        <div class="rc-date">Sent Mar 12</div>
+      </div>
+    </div>
+
+    <!-- Pinned -->
+    <div class="section-label">Pinned</div>
+    <div class="pinned-strip">
+      <div class="pinned-card">
+        <span class="pin-icon">📋</span>
+        <div class="pin-info">
+          <div class="pin-title">Master Service Agreement</div>
+          <div class="pin-sub">Signed Jan 2026</div>
+        </div>
+        <span class="pin-label">Contract</span>
+      </div>
+      <div class="pinned-card">
+        <span class="pin-icon">🎤</span>
+        <div class="pin-info">
+          <div class="pin-title">Kickoff Call Notes</div>
+          <div class="pin-sub">Feb 14 · 42 min</div>
+        </div>
+        <span class="pin-label">Transcript</span>
+      </div>
+    </div>
+
+    <!-- Tile grid -->
+    <div class="section-label">Sections</div>
+    <div class="tile-grid">
+      <div class="tile">
+        <div class="t-icon">📄</div>
+        <div class="t-name">Proposals</div>
+        <div class="t-count">2 active</div>
+      </div>
+      <div class="tile">
+        <div class="new-dot"></div>
+        <div class="t-icon">🎬</div>
+        <div class="t-name">Scripts</div>
+        <div class="t-count">1 new</div>
+      </div>
+      <div class="tile">
+        <div class="t-icon">🧾</div>
+        <div class="t-name">Invoices</div>
+        <div class="t-count">3 total</div>
+      </div>
+      <div class="tile">
+        <div class="t-icon">📋</div>
+        <div class="t-name">Contracts</div>
+        <div class="t-count">1 signed</div>
+      </div>
+      <div class="tile">
+        <div class="t-icon">🎤</div>
+        <div class="t-name">Transcripts</div>
+        <div class="t-count">2 calls</div>
+      </div>
+      <div class="tile">
+        <div class="t-icon">📝</div>
+        <div class="t-name">Intake</div>
+        <div class="t-count">On file</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INNER PAGE STATE -->
+<div style="margin-bottom: 0.75rem;">
+  <p class="label">Inner page (breadcrumbs in center — same bar)</p>
+</div>
+
+<div class="mockup-shell" data-choice="inner" onclick="toggleSelect(this)">
+  <div class="top-bar">
+    <div class="logo-lockup">
+      <div class="client-logo">ACME</div>
+      <span class="divider-x">×</span>
+      <span class="fna-wordmark">Friends &amp; Allies</span>
+    </div>
+    <div class="center-breadcrumb">
+      <span class="bc">Home</span>
+      <span class="bc-sep">/</span>
+      <span class="bc">Scripts</span>
+      <span class="bc-sep">/</span>
+      <span class="bc active">Brand Launch — Draft v3</span>
+    </div>
+    <div class="user-area">
+      <span class="user-email">sarah@acme.com</span>
+      <span class="logout-btn">Log out</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-greeting">
+      <h1>Brand Launch — Draft v3</h1>
+      <p>Script · Shared Mar 18 · For review</p>
+    </div>
+    <div style="height:80px;background:#111;border:1px solid #1e1e1e;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:0.65rem;color:#2a2a2a;">[ script viewer content ]</span>
+    </div>
+  </div>
+</div>
+
+<p class="caption">Home nav swaps to breadcrumbs on inner pages — same bar, no extra chrome</p>

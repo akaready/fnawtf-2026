@@ -1,0 +1,324 @@
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; }
+
+  .screen-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.16em; color: #444; margin-bottom: 0.75rem; }
+  .row { display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem; }
+  .col { flex: 1; min-width: 0; }
+
+  /* ─── BROWSER FRAME ─── */
+  .browser {
+    background: #0a0a0a; border: 1.5px solid #222; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .browser-chrome {
+    height: 32px; background: #111; border-bottom: 1px solid #1a1a1a;
+    display: flex; align-items: center; padding: 0 0.75rem; gap: 0.4rem;
+  }
+  .browser-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .browser-url {
+    flex: 1; height: 18px; background: #191919; border-radius: 4px; margin: 0 0.5rem;
+    display: flex; align-items: center; padding: 0 0.5rem;
+    font-size: 0.52rem; color: #3a3a3a; letter-spacing: 0.02em;
+  }
+
+  /* ─── PHONE FRAME ─── */
+  .phone {
+    width: 220px; flex-shrink: 0;
+    background: #0a0a0a; border: 1.5px solid #222; border-radius: 28px; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .status-bar {
+    height: 36px; background: #0a0a0a; padding: 10px 14px 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .status-bar .time { font-size: 0.6rem; font-weight: 600; color: #e0e0e0; }
+  .status-icons { display: flex; gap: 3px; align-items: center; font-size: 0.48rem; color: #aaa; }
+
+  /* ─── SHARED PORTAL CHROME ─── */
+  .top-bar {
+    height: 50px; padding: 0 1.25rem; background: #0d0d0d; border-bottom: 1px solid #1a1a1a;
+    display: flex; align-items: center; justify-content: space-between; position: relative;
+  }
+  .top-bar.desktop { height: 54px; padding: 0 2rem; }
+  .logo-lockup { display: flex; align-items: center; gap: 0.5rem; }
+  .client-mark {
+    height: 22px; padding: 0 7px; background: #1e1e1e; border-radius: 3px;
+    display: flex; align-items: center;
+    font-size: 0.52rem; font-weight: 700; letter-spacing: 0.08em; color: #999; border: 1px solid #2a2a2a;
+  }
+  .client-mark.desktop { height: 26px; padding: 0 9px; font-size: 0.6rem; }
+  .x-mark { font-size: 0.55rem; color: #2a2a2a; }
+  .fna-mark { font-size: 0.5rem; letter-spacing: 0.2em; color: #484848; text-transform: uppercase; }
+  .fna-mark.desktop { font-size: 0.6rem; }
+
+  /* Breadcrumb centered */
+  .bar-center { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; }
+  .bc { font-size: 0.6rem; color: #3a3a3a; white-space: nowrap; }
+  .bc.active { color: #c0c0c0; }
+  .bc-sep { font-size: 0.5rem; color: #222; margin: 0 0.35rem; }
+  .bc.desktop { font-size: 0.7rem; }
+  .bc-sep.desktop { margin: 0 0.45rem; }
+
+  /* Right user area */
+  .user-area { display: flex; align-items: center; gap: 0.5rem; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: #1e1e1e; border: 1px solid #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 0.58rem; color: #777; font-weight: 600; }
+  .avatar.desktop { width: 30px; height: 30px; font-size: 0.65rem; }
+  .user-email { font-size: 0.62rem; color: #444; }
+  .logout-btn { font-size: 0.58rem; color: #484848; padding: 3px 8px; border: 1px solid #222; border-radius: 4px; }
+
+  /* ─── PAGE BODY ─── */
+  .page-body { padding: 1.25rem 1rem 1.5rem; }
+  .page-body.desktop { padding: 2.5rem 2.5rem 2rem; }
+
+  .greeting h1 { font-size: 1.15rem; font-weight: 300; color: #eee; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 0.2rem; }
+  .greeting h1.desktop { font-size: 1.8rem; }
+  .greeting p { font-size: 0.62rem; color: #333; margin-bottom: 1.25rem; }
+  .greeting p.desktop { font-size: 0.72rem; margin-bottom: 1.75rem; }
+
+  .sec-label { font-size: 0.52rem; text-transform: uppercase; letter-spacing: 0.16em; color: #2e2e2e; margin-bottom: 0.5rem; }
+  .sec-label.desktop { font-size: 0.58rem; margin-bottom: 0.625rem; }
+
+  /* Recent */
+  .recent-row { display: flex; gap: 0.5rem; margin-bottom: 1.4rem; }
+  .recent-row.desktop { gap: 0.75rem; margin-bottom: 2rem; }
+  .r-card { flex: 1; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.625rem 0.75rem; min-width: 0; }
+  .r-card.desktop { padding: 0.875rem 1rem; border-radius: 10px; }
+  .r-top { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.2rem; }
+  .r-icon { font-size: 0.75rem; }
+  .r-icon.desktop { font-size: 0.9rem; }
+  .r-type { font-size: 0.46rem; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
+  .r-type.desktop { font-size: 0.54rem; }
+  .r-badge { margin-left: auto; font-size: 0.44rem; background: #1c1528; color: #a78bfa; padding: 1px 4px; border-radius: 2px; }
+  .r-badge.desktop { font-size: 0.52rem; padding: 2px 5px; }
+  .r-title { font-size: 0.6rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r-title.desktop { font-size: 0.72rem; }
+  .r-date { font-size: 0.5rem; color: #2e2e2e; margin-top: 0.1rem; }
+  .r-date.desktop { font-size: 0.6rem; }
+
+  /* Tile grid */
+  .tile-grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(2, 1fr); }
+  .tile-grid.desktop { grid-template-columns: repeat(3, 1fr); gap: 0.875rem; }
+  .tile { background: #111; border: 1px solid #1c1c1c; border-radius: 9px; padding: 0.875rem 0.5rem; text-align: center; position: relative; }
+  .tile.desktop { padding: 1.375rem 0.75rem; border-radius: 12px; }
+  .t-icon { font-size: 1.3rem; margin-bottom: 0.35rem; line-height: 1; }
+  .t-icon.desktop { font-size: 1.75rem; margin-bottom: 0.5rem; }
+  .t-name { font-size: 0.58rem; color: #999; }
+  .t-name.desktop { font-size: 0.72rem; }
+  .t-count { font-size: 0.5rem; color: #343434; margin-top: 0.15rem; }
+  .t-count.desktop { font-size: 0.6rem; }
+  .t-dot { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; }
+  .t-dot.desktop { top: 10px; right: 10px; width: 7px; height: 7px; }
+
+  /* Inner page content */
+  .back-row { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 1rem; }
+  .back-row.desktop { margin-bottom: 1.5rem; }
+  .back-icon { font-size: 0.7rem; color: #3a3a3a; }
+  .back-text { font-size: 0.6rem; color: #484848; }
+  .back-text.desktop { font-size: 0.68rem; }
+  .inner-title h1 { font-size: 1rem; font-weight: 300; color: #eee; letter-spacing: -0.02em; margin-bottom: 0.15rem; }
+  .inner-title h1.desktop { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .inner-title p { font-size: 0.6rem; color: #333; margin-bottom: 1rem; }
+  .inner-title p.desktop { font-size: 0.7rem; margin-bottom: 1.5rem; }
+
+  .content-block { background: #111; border: 1px solid #1e1e1e; border-radius: 8px; overflow: hidden; }
+  .content-block.desktop { border-radius: 10px; }
+  .c-row { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid #161616; }
+  .c-row.desktop { padding: 0.75rem 1.25rem; }
+  .c-row:last-child { border-bottom: none; }
+  .c-icon { font-size: 0.85rem; flex-shrink: 0; }
+  .c-icon.desktop { font-size: 1rem; }
+  .c-info { flex: 1; min-width: 0; }
+  .c-title { font-size: 0.62rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c-title.desktop { font-size: 0.72rem; }
+  .c-sub { font-size: 0.52rem; color: #333; margin-top: 0.1rem; }
+  .c-sub.desktop { font-size: 0.6rem; }
+  .c-new { font-size: 0.46rem; background: #1c1528; color: #a78bfa; padding: 2px 5px; border-radius: 3px; flex-shrink: 0; }
+  .c-new.desktop { font-size: 0.54rem; }
+  .c-arrow { font-size: 0.6rem; color: #2a2a2a; flex-shrink: 0; }
+</style>
+
+<h2>All screens — mobile + desktop</h2>
+<p class="subtitle">Same structure, responsive breakpoints. Tiles go 2-col → 3-col. Bar adapts. No separate nav on home.</p>
+
+<!-- ROW 1: Desktop home + Desktop inner -->
+<div class="row">
+  <div class="col">
+    <div class="screen-label">Desktop — Home</div>
+    <div class="browser">
+      <div class="browser-chrome">
+        <div class="browser-dot" style="background:#ff5f56"></div>
+        <div class="browser-dot" style="background:#ffbd2e"></div>
+        <div class="browser-dot" style="background:#27c93f"></div>
+        <div class="browser-url">portal.fna.wtf</div>
+      </div>
+      <div class="top-bar desktop">
+        <div class="logo-lockup">
+          <div class="client-mark desktop">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark desktop">Friends &amp; Allies</span>
+        </div>
+        <!-- No center nav on home -->
+        <div class="user-area">
+          <span class="user-email">sarah@acme.com</span>
+          <span class="logout-btn">Log out</span>
+        </div>
+      </div>
+      <div class="page-body desktop">
+        <div class="greeting">
+          <h1 class="desktop">Welcome back, Sarah.</h1>
+          <p class="desktop">Acme Co. · Your project portal</p>
+        </div>
+        <div class="sec-label desktop">Recent</div>
+        <div class="recent-row desktop">
+          <div class="r-card desktop">
+            <div class="r-top"><span class="r-icon desktop">🎬</span><span class="r-type desktop">Script</span><span class="r-badge desktop">New</span></div>
+            <div class="r-title desktop">Brand Launch — Draft v3</div>
+            <div class="r-date desktop">Mar 18</div>
+          </div>
+          <div class="r-card desktop">
+            <div class="r-top"><span class="r-icon desktop">🧾</span><span class="r-type desktop">Invoice</span></div>
+            <div class="r-title desktop">Invoice #1042 — $8,500</div>
+            <div class="r-date desktop">Due Apr 1</div>
+          </div>
+          <div class="r-card desktop">
+            <div class="r-top"><span class="r-icon desktop">📄</span><span class="r-type desktop">Proposal</span></div>
+            <div class="r-title desktop">Spring Campaign</div>
+            <div class="r-date desktop">Sent Mar 12</div>
+          </div>
+        </div>
+        <div class="sec-label desktop">Sections</div>
+        <div class="tile-grid desktop">
+          <div class="tile desktop"><div class="t-icon desktop">📄</div><div class="t-name desktop">Proposals</div><div class="t-count desktop">2 active</div></div>
+          <div class="tile desktop"><div class="t-dot desktop"></div><div class="t-icon desktop">🎬</div><div class="t-name desktop">Scripts</div><div class="t-count desktop">1 new</div></div>
+          <div class="tile desktop"><div class="t-icon desktop">🧾</div><div class="t-name desktop">Invoices</div><div class="t-count desktop">3 total</div></div>
+          <div class="tile desktop"><div class="t-icon desktop">📋</div><div class="t-name desktop">Contracts</div><div class="t-count desktop">1 signed</div></div>
+          <div class="tile desktop"><div class="t-icon desktop">🎤</div><div class="t-name desktop">Transcripts</div><div class="t-count desktop">2 calls</div></div>
+          <div class="tile desktop"><div class="t-icon desktop">📝</div><div class="t-name desktop">Intake</div><div class="t-count desktop">On file</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="screen-label">Desktop — Scripts section</div>
+    <div class="browser">
+      <div class="browser-chrome">
+        <div class="browser-dot" style="background:#ff5f56"></div>
+        <div class="browser-dot" style="background:#ffbd2e"></div>
+        <div class="browser-dot" style="background:#27c93f"></div>
+        <div class="browser-url">portal.fna.wtf/scripts</div>
+      </div>
+      <div class="top-bar desktop">
+        <div class="logo-lockup">
+          <div class="client-mark desktop">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark desktop">Friends &amp; Allies</span>
+        </div>
+        <div class="bar-center">
+          <span class="bc desktop">Home</span>
+          <span class="bc-sep desktop">/</span>
+          <span class="bc active desktop">Scripts</span>
+        </div>
+        <div class="user-area">
+          <span class="user-email">sarah@acme.com</span>
+          <span class="logout-btn">Log out</span>
+        </div>
+      </div>
+      <div class="page-body desktop">
+        <div class="back-row desktop">
+          <span class="back-icon">←</span>
+          <span class="back-text desktop">Home</span>
+        </div>
+        <div class="inner-title">
+          <h1 class="desktop">Scripts</h1>
+          <p class="desktop">Shared versions ready for your review</p>
+        </div>
+        <div class="content-block desktop">
+          <div class="c-row desktop"><span class="c-icon desktop">🎬</span><div class="c-info"><div class="c-title desktop">Brand Launch — Draft v3</div><div class="c-sub desktop">Updated Mar 18</div></div><span class="c-new desktop">New</span><span class="c-arrow">›</span></div>
+          <div class="c-row desktop"><span class="c-icon desktop">🎬</span><div class="c-info"><div class="c-title desktop">Product Overview — Final</div><div class="c-sub desktop">Feb 24</div></div><span class="c-arrow">›</span></div>
+          <div class="c-row desktop"><span class="c-icon desktop">🎬</span><div class="c-info"><div class="c-title desktop">Interview Series — v1</div><div class="c-sub desktop">Jan 12</div></div><span class="c-arrow">›</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2: Mobile home + Mobile inner -->
+<div class="row" style="justify-content: center;">
+  <div style="flex: 0 0 auto;">
+    <div class="screen-label">Mobile — Home</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="status-icons"><span>●●●</span><span> WiFi</span><span> ▮</span></div>
+      </div>
+      <div class="top-bar">
+        <div class="logo-lockup">
+          <div class="client-mark">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark">FNA</span>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-body">
+        <div class="greeting">
+          <h1>Welcome back,<br>Sarah.</h1>
+          <p>Acme Co. · Project portal</p>
+        </div>
+        <div class="sec-label">Recent</div>
+        <div class="recent-row" style="margin-bottom:1.25rem;">
+          <div class="r-card"><div class="r-top"><span class="r-icon">🎬</span><span class="r-type">Script</span><span class="r-badge">New</span></div><div class="r-title">Brand Launch v3</div><div class="r-date">Mar 18</div></div>
+          <div class="r-card"><div class="r-top"><span class="r-icon">🧾</span><span class="r-type">Invoice</span></div><div class="r-title">Invoice #1042</div><div class="r-date">Due Apr 1</div></div>
+        </div>
+        <div class="sec-label">Sections</div>
+        <div class="tile-grid">
+          <div class="tile"><div class="t-icon">📄</div><div class="t-name">Proposals</div><div class="t-count">2 active</div></div>
+          <div class="tile"><div class="t-dot"></div><div class="t-icon">🎬</div><div class="t-name">Scripts</div><div class="t-count">1 new</div></div>
+          <div class="tile"><div class="t-icon">🧾</div><div class="t-name">Invoices</div><div class="t-count">3 total</div></div>
+          <div class="tile"><div class="t-icon">📋</div><div class="t-name">Contracts</div></div>
+          <div class="tile"><div class="t-icon">🎤</div><div class="t-name">Transcripts</div></div>
+          <div class="tile"><div class="t-icon">📝</div><div class="t-name">Intake</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 0 0 auto;">
+    <div class="screen-label">Mobile — Scripts section</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="status-icons"><span>●●●</span><span> WiFi</span><span> ▮</span></div>
+      </div>
+      <div class="top-bar" style="position:relative;">
+        <div class="logo-lockup">
+          <div class="client-mark">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark">FNA</span>
+        </div>
+        <div class="bar-center">
+          <span class="bc">Home</span>
+          <span class="bc-sep">/</span>
+          <span class="bc active">Scripts</span>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-body">
+        <div class="back-row">
+          <span class="back-icon">←</span>
+          <span class="back-text">Home</span>
+        </div>
+        <div class="inner-title">
+          <h1>Scripts</h1>
+          <p>Shared versions for review</p>
+        </div>
+        <div class="content-block">
+          <div class="c-row"><span class="c-icon">🎬</span><div class="c-info"><div class="c-title">Brand Launch — Draft v3</div><div class="c-sub">Mar 18</div></div><span class="c-new">New</span></div>
+          <div class="c-row"><span class="c-icon">🎬</span><div class="c-info"><div class="c-title">Product Overview — Final</div><div class="c-sub">Feb 24</div></div></div>
+          <div class="c-row"><span class="c-icon">🎬</span><div class="c-info"><div class="c-title">Interview Series — v1</div><div class="c-sub">Jan 12</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

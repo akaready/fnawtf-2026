@@ -1,0 +1,259 @@
+<style>
+  * { box-sizing: border-box; }
+  .split { display: flex; gap: 2rem; justify-content: center; align-items: flex-start; }
+  .phone-label { font-size: 0.62rem; color: #555; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; margin-bottom: 0.75rem; }
+
+  /* Phone frame */
+  .phone {
+    width: 320px; flex-shrink: 0;
+    background: #0a0a0a; border: 1.5px solid #222; border-radius: 36px;
+    overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 44px; background: #0a0a0a; padding: 12px 20px 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .status-bar .time { font-size: 0.7rem; font-weight: 600; color: #e0e0e0; }
+  .status-bar .icons { display: flex; gap: 4px; align-items: center; }
+  .status-bar .icons span { font-size: 0.55rem; color: #ccc; }
+
+  /* Top bar */
+  .top-bar {
+    height: 50px; padding: 0 1rem;
+    background: #0d0d0d; border-bottom: 1px solid #1a1a1a;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo-lockup { display: flex; align-items: center; gap: 0.4rem; }
+  .client-mark {
+    height: 20px; padding: 0 6px; background: #1e1e1e; border-radius: 3px;
+    display: flex; align-items: center;
+    font-size: 0.5rem; font-weight: 700; letter-spacing: 0.08em; color: #999;
+    border: 1px solid #2a2a2a;
+  }
+  .x-mark { font-size: 0.55rem; color: #2e2e2e; }
+  .fna-mark { font-size: 0.52rem; letter-spacing: 0.2em; color: #4a4a4a; text-transform: uppercase; }
+
+  /* Breadcrumb in bar */
+  .bar-crumb { display: flex; align-items: center; gap: 0; position: absolute; left: 50%; transform: translateX(-50%); }
+  .bc { font-size: 0.58rem; color: #3a3a3a; }
+  .bc.active { color: #c0c0c0; }
+  .bc-sep { font-size: 0.5rem; color: #222; margin: 0 0.3rem; }
+
+  /* Avatar button */
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #1e1e1e; border: 1px solid #2a2a2a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; color: #777; font-weight: 600;
+  }
+
+  /* Page content */
+  .page-content { padding: 1.25rem 1rem 1.5rem; overflow-y: auto; }
+
+  .greeting h1 {
+    font-size: 1.35rem; font-weight: 300; color: #eeeeee;
+    letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 0.2rem;
+  }
+  .greeting p { font-size: 0.65rem; color: #3a3a3a; margin-bottom: 1.5rem; }
+
+  /* Recent row */
+  .section-label {
+    font-size: 0.53rem; text-transform: uppercase; letter-spacing: 0.16em;
+    color: #333; margin-bottom: 0.5rem;
+  }
+  .recent-scroll { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow: visible; }
+  .recent-card {
+    flex-shrink: 0; width: 140px;
+    background: #111; border: 1px solid #1e1e1e; border-radius: 8px;
+    padding: 0.625rem 0.75rem;
+  }
+  .rc-top { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem; }
+  .rc-icon { font-size: 0.8rem; }
+  .rc-type { font-size: 0.48rem; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
+  .rc-badge { margin-left: auto; font-size: 0.46rem; background: #1c1528; color: #a78bfa; padding: 1px 4px; border-radius: 2px; }
+  .rc-title { font-size: 0.62rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc-date { font-size: 0.52rem; color: #333; margin-top: 0.1rem; }
+
+  /* Tile grid — 2 col on mobile */
+  .tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem; }
+  .tile {
+    background: #111; border: 1px solid #1c1c1c; border-radius: 10px;
+    padding: 1rem 0.5rem; text-align: center;
+    position: relative;
+  }
+  .t-icon { font-size: 1.5rem; margin-bottom: 0.4rem; line-height: 1; }
+  .t-name { font-size: 0.62rem; color: #999; }
+  .t-count { font-size: 0.52rem; color: #363636; margin-top: 0.15rem; }
+  .t-dot { position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; }
+
+  /* Inner page content */
+  .inner-title h1 { font-size: 1.1rem; font-weight: 300; color: #eee; letter-spacing: -0.02em; margin-bottom: 0.2rem; }
+  .inner-title p { font-size: 0.62rem; color: #3a3a3a; margin-bottom: 1.25rem; }
+  .content-block {
+    background: #111; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.875rem;
+  }
+  .content-row {
+    display: flex; align-items: center; gap: 0.625rem;
+    padding: 0.5rem 0; border-bottom: 1px solid #161616;
+  }
+  .content-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .cr-icon { font-size: 0.9rem; flex-shrink: 0; }
+  .cr-info { flex: 1; min-width: 0; }
+  .cr-title { font-size: 0.65rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cr-sub { font-size: 0.55rem; color: #3a3a3a; margin-top: 0.1rem; }
+  .cr-new { font-size: 0.48rem; background: #1c1528; color: #a78bfa; padding: 2px 5px; border-radius: 3px; }
+  .back-row { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 1.25rem; }
+  .back-icon { font-size: 0.75rem; color: #444; }
+  .back-text { font-size: 0.62rem; color: #555; }
+  .top-bar-inner { position: relative; }
+</style>
+
+<h2>Mobile-first portal</h2>
+<p class="subtitle">Home hides the center nav — tiles are the entry points. Inner pages use breadcrumbs in the bar.</p>
+
+<div class="split">
+
+  <!-- PHONE 1: Home -->
+  <div>
+    <div class="phone-label">Home</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="icons"><span>●●●</span><span>WiFi</span><span>▮</span></div>
+      </div>
+      <div class="top-bar">
+        <div class="logo-lockup">
+          <div class="client-mark">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark">FNA</span>
+        </div>
+        <!-- No center nav on home -->
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-content">
+        <div class="greeting">
+          <h1>Welcome back,<br>Sarah.</h1>
+          <p>Acme Co. · Your project portal</p>
+        </div>
+
+        <div class="section-label">Recent</div>
+        <div class="recent-scroll">
+          <div class="recent-card">
+            <div class="rc-top">
+              <span class="rc-icon">🎬</span>
+              <span class="rc-type">Script</span>
+              <span class="rc-badge">New</span>
+            </div>
+            <div class="rc-title">Brand Launch v3</div>
+            <div class="rc-date">Mar 18</div>
+          </div>
+          <div class="recent-card">
+            <div class="rc-top">
+              <span class="rc-icon">🧾</span>
+              <span class="rc-type">Invoice</span>
+            </div>
+            <div class="rc-title">Invoice #1042</div>
+            <div class="rc-date">Due Apr 1</div>
+          </div>
+        </div>
+
+        <div class="section-label">Sections</div>
+        <div class="tile-grid">
+          <div class="tile">
+            <div class="t-icon">📄</div>
+            <div class="t-name">Proposals</div>
+            <div class="t-count">2 active</div>
+          </div>
+          <div class="tile">
+            <div class="t-dot"></div>
+            <div class="t-icon">🎬</div>
+            <div class="t-name">Scripts</div>
+            <div class="t-count">1 new</div>
+          </div>
+          <div class="tile">
+            <div class="t-icon">🧾</div>
+            <div class="t-name">Invoices</div>
+            <div class="t-count">3 total</div>
+          </div>
+          <div class="tile">
+            <div class="t-icon">📋</div>
+            <div class="t-name">Contracts</div>
+            <div class="t-count">1 signed</div>
+          </div>
+          <div class="tile">
+            <div class="t-icon">🎤</div>
+            <div class="t-name">Transcripts</div>
+            <div class="t-count">2 calls</div>
+          </div>
+          <div class="tile">
+            <div class="t-icon">📝</div>
+            <div class="t-name">Intake</div>
+            <div class="t-count">On file</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE 2: Inner page (Scripts list) -->
+  <div>
+    <div class="phone-label">Scripts section</div>
+    <div class="phone">
+      <div class="status-bar">
+        <span class="time">9:41</span>
+        <div class="icons"><span>●●●</span><span>WiFi</span><span>▮</span></div>
+      </div>
+      <div class="top-bar top-bar-inner">
+        <div class="logo-lockup">
+          <div class="client-mark">ACME</div>
+          <span class="x-mark">×</span>
+          <span class="fna-mark">FNA</span>
+        </div>
+        <div class="bar-crumb">
+          <span class="bc">Home</span>
+          <span class="bc-sep">/</span>
+          <span class="bc active">Scripts</span>
+        </div>
+        <div class="avatar">S</div>
+      </div>
+      <div class="page-content">
+        <div class="back-row">
+          <span class="back-icon">←</span>
+          <span class="back-text">Home</span>
+        </div>
+        <div class="inner-title">
+          <h1>Scripts</h1>
+          <p>Shared script versions for your review</p>
+        </div>
+        <div class="content-block">
+          <div class="content-row">
+            <span class="cr-icon">🎬</span>
+            <div class="cr-info">
+              <div class="cr-title">Brand Launch — Draft v3</div>
+              <div class="cr-sub">Updated Mar 18</div>
+            </div>
+            <span class="cr-new">New</span>
+          </div>
+          <div class="content-row">
+            <span class="cr-icon">🎬</span>
+            <div class="cr-info">
+              <div class="cr-title">Product Overview — Final</div>
+              <div class="cr-sub">Feb 24</div>
+            </div>
+          </div>
+          <div class="content-row">
+            <span class="cr-icon">🎬</span>
+            <div class="cr-info">
+              <div class="cr-title">Interview Series — v1</div>
+              <div class="cr-sub">Jan 12</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
