@@ -40,7 +40,7 @@ export function CommentInput({ shareId, beatId, viewerEmail, viewerName, onComme
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Share your feedback on this story beat..."
+          placeholder="Share your feedback on this beat."
           rows={2}
           className="w-full bg-white/[0.06] border border-white/[0.08] rounded-lg pl-4 pr-12 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 resize-none focus:outline-none focus:border-white/20 focus:bg-white/[0.08] transition-colors"
         />
