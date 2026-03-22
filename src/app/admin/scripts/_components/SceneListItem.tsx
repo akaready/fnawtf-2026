@@ -9,7 +9,7 @@ interface BeatNav {
   beatId: string;
   label: string;       // "A", "B", "C" — derived by parent
   isActive: boolean;
-  hasComment?: boolean;
+
   onClick: (e: React.MouseEvent) => void;  // must call e.stopPropagation()
 }
 
@@ -21,7 +21,7 @@ interface Props {
   onClick?: () => void;
   className?: string;
   beats?: BeatNav[];   // omit or [] = no beat column rendered
-  hasSceneComment?: boolean;
+
 }
 
 export function SceneListItem({
@@ -32,7 +32,6 @@ export function SceneListItem({
   onClick,
   className = '',
   beats,
-  hasSceneComment,
 }: Props) {
   return (
     <div
@@ -63,9 +62,6 @@ export function SceneListItem({
             {slug}
           </span>
         )}
-        {hasSceneComment && (
-          <div className="w-2 h-2 rounded-full bg-admin-warning mt-0.5" />
-        )}
         {description && (
           <span className="text-admin-sm text-admin-text-muted font-normal uppercase tracking-wider whitespace-nowrap block leading-tight">
             {description}
@@ -88,9 +84,6 @@ export function SceneListItem({
               }`}
             >
               {beat.label}
-              {beat.hasComment && (
-                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-admin-warning border border-admin-bg-sidebar" />
-              )}
             </button>
           ))}
           {beats.length % 2 !== 0 && (

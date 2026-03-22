@@ -49,8 +49,7 @@ interface Props {
   /** Show "New Scene" footer button (admin editor only) */
   showAddButton?: boolean;
   onAddScene?: () => void;
-  /** Comment counts per beatId — used to show indicators in the nav */
-  commentCounts?: Record<string, number>;
+
 }
 
 function buildSlug(scene: SceneData): string {
@@ -69,7 +68,6 @@ export function SceneNav({
   onReorder,
   showAddButton = false,
   onAddScene,
-  commentCounts,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
@@ -102,7 +100,6 @@ export function SceneNav({
   ) : (
     scenes.map(scene => {
       const sceneBeats = scene.beats ?? [];
-      const hasSceneComment = sceneBeats.some(b => (commentCounts?.[b.id] ?? 0) > 0);
       return (
         <SceneListItem
           key={scene.id}
@@ -111,7 +108,6 @@ export function SceneNav({
           description={scene.scene_description}
           isActive={scene.id === activeSceneId}
           onClick={() => onSelectScene(scene.id)}
-          hasSceneComment={hasSceneComment}
           beats={sceneBeats.length >= 2
             ? sceneBeats
                 .slice()
@@ -120,7 +116,7 @@ export function SceneNav({
                   beatId: beat.id,
                   label: String.fromCharCode(65 + i),
                   isActive: beat.id === (activeBeatId ?? null),
-                  hasComment: (commentCounts?.[beat.id] ?? 0) > 0,
+
                   onClick: (e: React.MouseEvent) => {
                     e.stopPropagation();
                     onSelectBeat?.(beat.id);

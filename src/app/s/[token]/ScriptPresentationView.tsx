@@ -151,8 +151,23 @@ export function ScriptPresentationView({
   useEffect(() => {
     getCommentCounts(shareId).then(setCommentCounts);
   }, [shareId]);
-  const [leftOpen, setLeftOpen] = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
+  const [userToggledLeft, setUserToggledLeft] = useState(false);
+  const [userToggledRight, setUserToggledRight] = useState(false);
+
+  // Auto-collapse sidebars based on window width — scenes first, then comments
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      // Scenes sidebar: only auto-manage if user hasn't manually toggled
+      if (!userToggledLeft) setLeftOpen(w >= 1440);
+      if (!userToggledRight) setRightOpen(w >= 1024);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [userToggledLeft, userToggledRight]);
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentText, setCommentText] = useState('');
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -267,7 +282,7 @@ export function ScriptPresentationView({
       <div className="hidden md:block relative flex-shrink-0 h-full">
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
         <button
-          onClick={() => setLeftOpen(true)}
+          onClick={() => { setUserToggledLeft(true); setLeftOpen(true); }}
           className={`absolute left-4 top-4 z-[5] h-8 flex items-center gap-1.5 px-3 rounded bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-opacity duration-300 ${leftOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Show scenes"
         >
@@ -282,9 +297,8 @@ export function ScriptPresentationView({
               onSelectScene={jumpToScene}
               activeBeatId={activeBeatId}
               onSelectBeat={jumpToBeat}
-              commentCounts={commentCounts}
               showHeader
-              onCollapse={() => setLeftOpen(false)}
+              onCollapse={() => { setUserToggledLeft(true); setLeftOpen(false); }}
             />
         </SceneSidebarShell>
       </div>
@@ -393,16 +407,25 @@ export function ScriptPresentationView({
           {/* ── Bordered content block: scene heading + all beat cells ── */}
           <div className="w-full max-w-5xl flex-shrink-0 border border-border rounded-lg overflow-hidden mb-6">
             {/* Scene heading */}
-            <div className={`flex items-center gap-0 bg-[#141414] border-b border-border min-h-[44px] ${(commentCounts[current.beatId] ?? 0) > 0 ? 'border-l border-l-admin-warning' : ''}`}>
+            <div className="flex items-center gap-0 bg-[#141414] border-b border-border min-h-[44px]">
               <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-1 pr-3">
                 {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
               </span>
-              <div className="flex flex-col justify-center flex-1 min-w-0 py-1">
+              {/* Desktop: inline with bullet. Mobile: stacked */}
+              <div className="hidden md:flex items-center flex-1 min-w-0">
+                <span className="text-sm font-medium text-admin-text-faint uppercase tracking-wider truncate">
+                  {sceneHeading}
+                  {activeScene?.scene_description && (
+                    <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal uppercase">{activeScene.scene_description}</span></>
+                  )}
+                </span>
+              </div>
+              <div className="flex md:hidden flex-col justify-center flex-1 min-w-0 py-1">
                 <span className="text-sm font-medium text-admin-text-faint uppercase tracking-wider truncate">
                   {sceneHeading}
                 </span>
                 {activeScene?.scene_description && (
-                  <span className="text-xs text-admin-text-muted font-normal truncate">
+                  <span className="text-sm text-admin-text-muted font-normal uppercase tracking-wider truncate">
                     {activeScene.scene_description}
                   </span>
                 )}
@@ -410,8 +433,8 @@ export function ScriptPresentationView({
             </div>
 
             {/* Audio (2/3) + Visual (1/3) */}
-            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${showVisual ? 'md:grid-cols-4' : ''}`}>
-              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'md:col-span-3' : ''}`}>
+            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${showVisual ? 'lg:grid-cols-4' : ''}`}>
+              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'lg:col-span-3' : ''}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
                 <PresentationCell
                   content={current.audioContent}
@@ -501,7 +524,7 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4 md:px-6 pointer-events-none">
             <div className="w-full max-w-xl md:max-w-2xl pointer-events-auto">
-              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 pl-4 pr-2 py-2">
+              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-end gap-3 pl-4 pr-2 py-2">
                 <textarea
                   ref={commentTextareaRef}
                   value={commentText}
@@ -547,7 +570,7 @@ export function ScriptPresentationView({
         viewerEmail={viewerEmail}
         viewerName={viewerName}
         open={rightOpen}
-        onToggle={() => setRightOpen(prev => !prev)}
+        onToggle={() => { setUserToggledRight(true); setRightOpen(prev => !prev); }}
         refreshKey={commentRefreshKey + idx}
         clientLogoUrl={_clientLogoUrl}
       />
