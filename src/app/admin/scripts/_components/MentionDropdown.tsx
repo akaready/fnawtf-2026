@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Users, MapPin, Package } from 'lucide-react';
+import { User, MapPin, Package } from 'lucide-react';
 import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
 interface Props {
@@ -85,7 +85,7 @@ export function MentionDropdown({ type, query, characters, tags, locations: _loc
           >
             {char && (
               <>
-                <Users size={12} className="flex-shrink-0" style={{ color: char.color }} />
+                <User size={12} className="flex-shrink-0" style={{ color: char.color }} />
                 <span className="truncate">{char.name}</span>
               </>
             )}

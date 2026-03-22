@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, Users, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package, Share2, Play } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package, Share2, Play } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -900,7 +900,7 @@ export function ScriptEditorClient({
         {/* Right zone — panel toggles */}
         <div className="flex items-center gap-0">
           <div ref={toolbarSlotRef} className="w-8 h-8 flex-shrink-0" />
-          <ToolbarButton icon={Users} label="" onClick={() => setShowCharacters(true)} />
+          <ToolbarButton icon={User} label="" onClick={() => setShowCharacters(true)} />
           <ToolbarButton icon={MapPin} label="" onClick={() => setShowLocations(true)} />
           <ToolbarButton icon={Package} label="" onClick={() => setShowProducts(true)} />
           <ToolbarButton icon={Hash} label="" onClick={() => setShowTags(true)} />

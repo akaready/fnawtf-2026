@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, Users, Eye, Trash2 } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft, Check, X, MapPin, User, Eye, Trash2 } from 'lucide-react';
 import { StylePresetCard } from './StylePresetCard';
 import { ColorPicker } from './ColorPicker';
 import { STYLE_PRESETS } from '@/lib/scripts/stylePresets';
@@ -326,7 +326,7 @@ export function ScriptExtractModal({ open, onClose, scriptId, scratchContent, ex
           {step === 'characters' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-admin-text-secondary">
-                <Users size={14} />
+                <User size={14} />
                 <span>{characters.length} character{characters.length !== 1 ? 's' : ''} found</span>
               </div>
               {characters.length === 0 && (
