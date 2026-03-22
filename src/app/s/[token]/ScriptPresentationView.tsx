@@ -254,16 +254,15 @@ export function ScriptPresentationView({
   const isSceneChange = prev !== null && prev.sceneId !== current.sceneId;
   const dissolveDuration = isSceneChange ? 0.5 : 0.35;
 
-  /* ── Preload adjacent images ── */
+  /* ── Preload ALL storyboard images on mount ── */
   useEffect(() => {
-    const urls: string[] = [];
-    if (idx > 0 && slides[idx - 1].storyboardImageUrl) urls.push(slides[idx - 1].storyboardImageUrl!);
-    if (idx < slides.length - 1 && slides[idx + 1].storyboardImageUrl) urls.push(slides[idx + 1].storyboardImageUrl!);
-    urls.forEach(url => {
-      const img = new Image();
-      img.src = responsiveImageUrl(url);
+    slides.forEach(s => {
+      if (s.storyboardImageUrl) {
+        const img = new Image();
+        img.src = responsiveImageUrl(s.storyboardImageUrl);
+      }
     });
-  }, [idx, slides]);
+  }, [slides]);
 
   /* ── Navigation ── */
   const goNext = useCallback(() => {
