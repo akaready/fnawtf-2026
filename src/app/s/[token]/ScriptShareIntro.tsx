@@ -270,7 +270,7 @@ export function ScriptShareIntro({
 
         {/* Instructions */}
         <p data-instructions className="text-xs text-white/40 max-w-sm" style={{ opacity: 0 }}>
-          Navigate with arrow keys, the timeline, or the left/right buttons.
+          Navigate with the arrow keys or the timeline buttons.
         </p>
       </div>
     </section>
