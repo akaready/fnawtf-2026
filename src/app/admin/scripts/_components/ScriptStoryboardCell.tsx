@@ -39,7 +39,7 @@ interface Props {
   scriptVersion: number;
   beatLabel: string;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
-  allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
+  allScriptSlides?: import('./StoryboardLightbox').LightboxSlide[];
   consistencyFrameUrls?: string[];
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
   scenes?: import('@/types/scripts').ComputedScene[];
@@ -73,7 +73,7 @@ export function ScriptStoryboardCell({
   scriptVersion,
   beatLabel,
   sceneFrames,
-  allScriptFrames,
+  allScriptSlides,
   consistencyFrameUrls,
   onImageMove,
   scenes,
@@ -314,18 +314,21 @@ export function ScriptStoryboardCell({
         />
       </div>
       {lightboxOpen && (() => {
-        // Lightbox: show active frames one at a time in slot order
-        const lightboxFrames = activeFrames.length > 0
-          ? activeFrames.map((f, i) => ({
-              imageUrl: f.image_url,
-              label: `Scene ${scene.sceneNumber} \u2014 Beat ${beatLabel} (${i + 1}/${activeFrames.length})`,
-              filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, `${beatLabel}-${i + 1}`),
-            }))
-          : [{ imageUrl: primaryFrame!.image_url, label: `Scene ${scene.sceneNumber} \u2014 Beat ${beatLabel}`, filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel) }];
+        // Use all-script slides if available, otherwise build a single slide for this beat
+        const slides = allScriptSlides ?? [{
+          label: `Scene ${scene.sceneNumber} \u2014 Beat ${beatLabel}`,
+          filename: buildStoryboardFilename(scriptTitle, scriptVersion, scene.sceneNumber, beatLabel),
+          layout,
+          frames: activeFrames,
+          beatId,
+        }];
+        const initialSlideIdx = allScriptSlides
+          ? allScriptSlides.findIndex(s => s.beatId === beatId)
+          : 0;
         return (
           <StoryboardLightbox
-            frames={lightboxFrames}
-            initialIndex={0}
+            slides={slides}
+            initialIndex={Math.max(0, initialSlideIdx)}
             onClose={() => setLightboxOpen(false)}
           />
         );
@@ -354,7 +357,7 @@ export function ScriptStoryboardCell({
           referenceMap={referenceMap}
           locationReferenceMap={locationReferenceMap}
           sceneFrames={sceneFrames}
-          allScriptFrames={allScriptFrames}
+          allScriptSlides={allScriptSlides}
           consistencyFrameUrls={consistencyFrameUrls}
           scenes={scenes}
           onFrameChange={(newFrame) => {
@@ -453,7 +456,7 @@ export function ScriptStoryboardCell({
           referenceMap={referenceMap}
           locationReferenceMap={locationReferenceMap}
           sceneFrames={sceneFrames}
-          allScriptFrames={allScriptFrames}
+          allScriptSlides={allScriptSlides}
           consistencyFrameUrls={consistencyFrameUrls}
           scenes={scenes}
           onFrameChange={(newFrame) => {

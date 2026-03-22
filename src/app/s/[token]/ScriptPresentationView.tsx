@@ -60,7 +60,7 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
           key={topLayer.key}
           src={responsiveImageUrl(topLayer.src)}
           alt={alt}
-          className="w-full select-none max-h-[35vh] md:max-h-[55vh]"
+          className="w-full h-full select-none"
           draggable={false}
           style={{ objectFit: 'contain' }}
         />
@@ -70,7 +70,7 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
           key={bgLayer.key}
           src={responsiveImageUrl(bgLayer.src)}
           alt=""
-          className="absolute inset-0 w-full pointer-events-none select-none max-h-[35vh] md:max-h-[55vh]"
+          className="absolute inset-0 w-full h-full pointer-events-none select-none"
           draggable={false}
           style={{ maxHeight: '55vh', objectFit: 'contain', opacity: 0, transition: `opacity ${duration}s cubic-bezier(0.32, 0.72, 0, 1)` }}
         />
@@ -176,7 +176,7 @@ export function ScriptPresentationView({
 
   const handleCommentSubmit = useCallback(() => {
     if (!commentText.trim() || !current?.beatId) return;
-    if (!shareId) return; // Preview mode — no submissions
+    if (!shareId) return;
     const content = commentText.trim();
     setCommentText('');
     if (commentTextareaRef.current) commentTextareaRef.current.style.height = 'auto';
@@ -188,8 +188,18 @@ export function ScriptPresentationView({
           [current.beatId]: (prev[current.beatId] ?? 0) + 1,
         }));
       })
-      .catch(() => {}); // Silently fail on error
+      .catch(() => {});
   }, [commentText, shareId, current?.beatId, viewerEmail, viewerName]);
+
+  const handleCommentAdded = useCallback(() => {
+    setCommentRefreshKey(k => k + 1);
+    if (current?.beatId) {
+      setCommentCounts(prev => ({
+        ...prev,
+        [current.beatId]: (prev[current.beatId] ?? 0) + 1,
+      }));
+    }
+  }, [current?.beatId]);
   const prev = idx > 0 ? slides[idx - 1] : null;
   const isSceneChange = prev !== null && prev.sceneId !== current.sceneId;
   const dissolveDuration = isSceneChange ? 0.5 : 0.35;
@@ -318,9 +328,13 @@ export function ScriptPresentationView({
         <div className="md:hidden absolute top-4 right-4 z-30">
           <CommentBottomSheet
             shareId={shareId}
-            beatId={current?.beatId ?? null}
+            currentBeatId={current?.beatId ?? null}
             viewerEmail={viewerEmail}
+            viewerName={viewerName}
             refreshKey={commentRefreshKey}
+            slides={slides}
+            onNavigateToBeat={jumpToBeat}
+            onCommentAdded={handleCommentAdded}
           />
         </div>
         {/* Scrollable center content */}
@@ -369,10 +383,10 @@ export function ScriptPresentationView({
                 <ChevronRight size={22} />
               </button>
             </div>
-            <div className="w-full bg-[#0a0a0a] max-h-[35vh] md:max-h-[55vh]" style={{ aspectRatio: '16/9' }}>
-              {current.storyboardFrames && current.storyboardFrames.length > 0 ? (
+            <div className="w-full bg-[#0a0a0a]" style={{ aspectRatio: '16/9' }}>
+              {current.storyboardFrames && current.storyboardFrames.length > 1 && current.storyboard_layout && current.storyboard_layout !== 'single' ? (
                 <StoryboardLayoutRenderer
-                  layout={current.storyboard_layout ?? 'single'}
+                  layout={current.storyboard_layout}
                   frames={current.storyboardFrames as StoryboardSlotFrame[]}
                   size="full"
                   gap={3}
@@ -524,7 +538,7 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4 md:px-6 pointer-events-none">
             <div className="w-full max-w-xl md:max-w-2xl pointer-events-auto">
-              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-end gap-3 pl-4 pr-2 py-2">
+              <div className="bg-[#1e1e1e] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 pl-4 pr-2 py-2">
                 <textarea
                   ref={commentTextareaRef}
                   value={commentText}
@@ -566,13 +580,16 @@ export function ScriptPresentationView({
       {/* ════ RIGHT SIDEBAR — Comments ════ */}
       <CommentSidebar
         shareId={shareId}
-        beatId={current?.beatId ?? null}
+        currentBeatId={current?.beatId ?? null}
         viewerEmail={viewerEmail}
         viewerName={viewerName}
         open={rightOpen}
         onToggle={() => { setUserToggledRight(true); setRightOpen(prev => !prev); }}
-        refreshKey={commentRefreshKey + idx}
+        refreshKey={commentRefreshKey}
         clientLogoUrl={_clientLogoUrl}
+        slides={slides}
+        onNavigateToBeat={jumpToBeat}
+        onCommentAdded={handleCommentAdded}
       />
     </div>
   );

@@ -5,39 +5,40 @@ import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { downloadSingleImage } from '@/lib/scripts/downloadStoryboards';
 import type { StoryboardSlotFrame } from '@/types/scripts';
+import { StoryboardLayoutRenderer } from './StoryboardLayoutRenderer';
+
+/** One slide = one beat in the script */
+export interface LightboxSlide {
+  label: string;
+  filename: string;
+  layout: string | null;
+  frames: StoryboardSlotFrame[];
+  beatId?: string;
+}
 
 interface Props {
-  frames: { imageUrl: string; label: string; filename: string }[];
+  slides: LightboxSlide[];
   initialIndex: number;
   onClose: () => void;
-  slotFrames?: StoryboardSlotFrame[];
 }
 
 const SLIDE_DISTANCE = 48;
 const TRANSITION = { duration: 0.35, ease: [0.32, 0.72, 0, 1] };
 
-export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }: Props) {
-  const navFrames = (slotFrames && slotFrames.length > 0)
-    ? slotFrames.map(f => ({
-        imageUrl: f.image_url,
-        label: `Slot ${f.slot}`,
-        filename: `frame-${f.id}.jpg`,
-      }))
-    : frames;
-
+export function StoryboardLightbox({ slides, initialIndex, onClose }: Props) {
   const [idx, setIdx] = useState(initialIndex);
   const [direction, setDirection] = useState(0);
-  const current = navFrames[idx];
+  const current = slides[idx];
 
   const goNext = useCallback(() => {
     setDirection(1);
-    setIdx(i => (i + 1) % navFrames.length);
-  }, [navFrames.length]);
+    setIdx(i => (i + 1) % slides.length);
+  }, [slides.length]);
 
   const goPrev = useCallback(() => {
     setDirection(-1);
-    setIdx(i => (i - 1 + navFrames.length) % navFrames.length);
-  }, [navFrames.length]);
+    setIdx(i => (i - 1 + slides.length) % slides.length);
+  }, [slides.length]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -57,13 +58,18 @@ export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }
     if (e.target === e.currentTarget) onClose();
   };
 
+  if (!current) return null;
+
+  const isComicLayout = current.layout && current.layout !== 'single' && current.frames.length > 1;
+  const primaryUrl = current.frames[0]?.image_url;
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center"
       onClick={handleBackdropClick}
     >
       {/* Screen-edge nav arrows */}
-      {navFrames.length > 1 && (
+      {slides.length > 1 && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); goPrev(); }}
@@ -82,7 +88,7 @@ export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }
         </>
       )}
 
-      {/* Image + header — centered block */}
+      {/* Content — centered block */}
       <div
         className="flex flex-col items-center w-[90vw] max-w-5xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -102,13 +108,15 @@ export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }
             </motion.span>
           </AnimatePresence>
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => downloadSingleImage(current.imageUrl, current.filename)}
-              className="p-2 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-              title="Download image"
-            >
-              <Download size={16} />
-            </button>
+            {!isComicLayout && primaryUrl && (
+              <button
+                onClick={() => downloadSingleImage(primaryUrl, current.filename)}
+                className="p-2 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                title="Download image"
+              >
+                <Download size={16} />
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors"
@@ -119,14 +127,12 @@ export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }
           </div>
         </div>
 
-        {/* Image */}
-        <div className="relative w-full overflow-hidden">
+        {/* Image / Layout */}
+        <div className="relative w-full overflow-hidden rounded-lg">
           <AnimatePresence mode="wait" initial={false} custom={direction}>
-            <motion.img
-              key={current.imageUrl}
+            <motion.div
+              key={`${idx}-${current.label}`}
               custom={direction}
-              src={current.imageUrl}
-              alt={current.label}
               variants={{
                 enter: (d: number) => ({ opacity: 0, x: d * SLIDE_DISTANCE }),
                 center: { opacity: 1, x: 0 },
@@ -136,8 +142,22 @@ export function StoryboardLightbox({ frames, initialIndex, onClose, slotFrames }
               animate="center"
               exit="exit"
               transition={TRANSITION}
-              className="w-full object-contain max-h-[85vh]"
-            />
+            >
+              {isComicLayout ? (
+                <StoryboardLayoutRenderer
+                  layout={current.layout}
+                  frames={current.frames}
+                  size="full"
+                  gap={6}
+                />
+              ) : primaryUrl ? (
+                <img
+                  src={primaryUrl}
+                  alt={current.label}
+                  className="w-full object-contain max-h-[85vh]"
+                />
+              ) : null}
+            </motion.div>
           </AnimatePresence>
         </div>
       </div>

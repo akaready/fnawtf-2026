@@ -25,7 +25,8 @@ import { ScriptBeatRow } from './ScriptBeatRow';
 import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
-import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
+import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ScriptShareRow, ScriptShareCommentRow, StoryboardSlotFrame } from '@/types/scripts';
+import type { LightboxSlide } from './StoryboardLightbox';
 import { ScriptCommentsVersionPicker } from './ScriptCommentsVersionPicker';
 
 interface Props {
@@ -786,28 +787,24 @@ export function ScriptEditorCanvas({
         <DndContext id={sceneDndId} sensors={sceneSensors} collisionDetection={closestCenter} onDragEnd={handleSceneDragEnd}>
           <SortableContext items={scenes.map(s => s.id)} strategy={verticalListSortingStrategy}>
         {(() => {
-          // Build all-script lightbox frames across every scene for full-script navigation
-          const allScriptFrames: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[] = [];
+          // Build all-script lightbox slides — one per beat with layout + frames
+          const allScriptSlides: LightboxSlide[] = [];
           for (const s of scenes) {
-            const sorted = storyboardFrames
-              .filter(f => s.beats.some(b => b.id === f.beat_id))
-              .sort((fa, fb) => {
-                const ai = s.beats.findIndex(b => b.id === fa.beat_id);
-                const bi = s.beats.findIndex(b => b.id === fb.beat_id);
-                return ai - bi;
-              });
-            for (const f of sorted) {
-              const beatIdx = s.beats.findIndex(b => b.id === f.beat_id);
+            for (let beatIdx = 0; beatIdx < s.beats.length; beatIdx++) {
               const beat = s.beats[beatIdx];
+              const beatFrames = (storyboardFrames
+                .filter(f => f.beat_id === beat.id && f.slot !== null) as StoryboardSlotFrame[])
+                .sort((a, b) => a.slot - b.slot);
+              if (beatFrames.length === 0) continue;
               let letter = '';
               let n = beatIdx + 1;
               while (n > 0) { n--; letter = String.fromCharCode(65 + (n % 26)) + letter; n = Math.floor(n / 26); }
-              allScriptFrames.push({
-                imageUrl: f.image_url,
+              allScriptSlides.push({
                 label: `Scene ${s.sceneNumber} — Beat ${letter}`,
                 filename: buildStoryboardFilename(scriptTitle, scriptVersion, s.sceneNumber, letter),
-                audioContent: beat?.audio_content ?? '',
-                visualContent: beat?.visual_content ?? '',
+                layout: beat.storyboard_layout ?? null,
+                frames: beatFrames,
+                beatId: beat.id,
               });
             }
           }
@@ -944,7 +941,7 @@ export function ScriptEditorCanvas({
                         scriptTitle={scriptTitle}
                         scriptVersion={scriptVersion}
                         sceneFrames={sceneFramesForLightbox}
-                        allScriptFrames={allScriptFrames}
+                        allScriptSlides={allScriptSlides}
                         onImageMove={onImageMove}
                         scenes={scenes}
                         beatComments={beatComments}

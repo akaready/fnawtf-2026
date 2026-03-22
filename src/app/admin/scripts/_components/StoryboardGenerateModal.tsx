@@ -74,7 +74,7 @@ interface Props {
   referenceMap?: Record<string, CharacterReferenceRow[]>;
   locationReferenceMap?: Record<string, LocationReferenceRow[]>;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
-  allScriptFrames?: { imageUrl: string; label: string; filename: string }[];
+  allScriptSlides?: import('./StoryboardLightbox').LightboxSlide[];
   consistencyFrameUrls?: string[];
   onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
   // Multi-frame support
@@ -108,7 +108,7 @@ export function StoryboardGenerateModal({
   referenceMap,
   locationReferenceMap,
   sceneFrames: _sceneFrames,
-  allScriptFrames: _allScriptFrames,
+  allScriptSlides: _allScriptSlides,
   consistencyFrameUrls,
   onFrameChange,
   scenes,

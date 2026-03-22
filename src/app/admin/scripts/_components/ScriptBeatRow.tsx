@@ -50,7 +50,7 @@ interface Props {
   scriptTitle: string;
   scriptVersion: number;
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
-  allScriptFrames?: { imageUrl: string; label: string; filename: string; audioContent: string; visualContent: string }[];
+  allScriptSlides?: import('./StoryboardLightbox').LightboxSlide[];
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
   scenes?: import('@/types/scripts').ComputedScene[];
   beatComments?: ScriptShareCommentRow[];
@@ -108,7 +108,7 @@ export function ScriptBeatRow({
   scriptTitle,
   scriptVersion,
   sceneFrames,
-  allScriptFrames,
+  allScriptSlides,
   onImageMove,
   scenes,
   beatComments,
@@ -288,7 +288,7 @@ export function ScriptBeatRow({
               scriptVersion={scriptVersion}
               beatLabel={beatLetter(beatNumber)}
               sceneFrames={sceneFrames}
-              allScriptFrames={allScriptFrames}
+              allScriptSlides={allScriptSlides}
               onImageMove={onImageMove}
               scenes={scenes}
             />

@@ -171,10 +171,11 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete, on
 
       {lightboxIndex !== null && (
         <StoryboardLightbox
-          frames={references.map((r, i) => ({
-            imageUrl: r.image_url,
+          slides={references.map((r, i) => ({
             label: `Reference ${i + 1} of ${references.length}`,
             filename: `reference-${i + 1}.jpg`,
+            layout: null,
+            frames: [{ id: r.id, beat_id: '', image_url: r.image_url, slot: 1, sort_order: 0, crop_config: null } as unknown as import('@/types/scripts').StoryboardSlotFrame],
           }))}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
