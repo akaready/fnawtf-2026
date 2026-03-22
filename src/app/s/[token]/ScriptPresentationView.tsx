@@ -55,17 +55,8 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
   const bgLayer = layers.length > 1 ? layers[layers.length - 2] : null;
 
   return (
-    <div className="relative rounded-lg overflow-hidden">
-      {topLayer.src && (
-        <img
-          key={topLayer.key}
-          src={responsiveImageUrl(topLayer.src)}
-          alt={alt}
-          className="w-full h-full select-none"
-          draggable={false}
-          style={{ objectFit: 'contain' }}
-        />
-      )}
+    <div className="relative w-full h-full">
+      {/* Previous image — behind, fading out */}
       {bgLayer?.src && (
         <img
           key={bgLayer.key}
@@ -73,9 +64,21 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
           alt=""
           className="absolute inset-0 w-full h-full pointer-events-none select-none"
           draggable={false}
-          style={{ maxHeight: '55vh', objectFit: 'contain', opacity: 0, transition: `opacity ${duration}s cubic-bezier(0.32, 0.72, 0, 1)` }}
+          style={{ objectFit: 'contain' }}
         />
       )}
+      {/* Current image — on top, fading in */}
+      {topLayer.src && (
+        <img
+          key={topLayer.key}
+          src={responsiveImageUrl(topLayer.src)}
+          alt={alt}
+          className="absolute inset-0 w-full h-full select-none"
+          draggable={false}
+          style={{ objectFit: 'contain', opacity: 0, animation: `fadeIn ${duration}s cubic-bezier(0.32, 0.72, 0, 1) forwards` }}
+        />
+      )}
+      <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
     </div>
   );
 }
