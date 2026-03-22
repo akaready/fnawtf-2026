@@ -775,6 +775,12 @@ export function CommentSidebar({
     }
   }, [shareId]);
 
+  // Reload comments AND refresh timeline avatars
+  const loadCommentsAndRefreshAuthors = useCallback(async () => {
+    await loadComments();
+    _onCommentAdded?.();
+  }, [loadComments, _onCommentAdded]);
+
   const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
     await toggleReaction(commentId, viewerEmail, emoji);
     // Reload reactions
@@ -913,7 +919,7 @@ export function CommentSidebar({
                 viewerName={viewerName}
                 shareId={shareId}
                 onNavigate={() => onNavigateToBeat(thread.parent.beat_id)}
-                onRefresh={loadComments}
+                onRefresh={loadCommentsAndRefreshAuthors}
                 reactions={reactions}
                 onToggleReaction={handleToggleReaction}
               />
