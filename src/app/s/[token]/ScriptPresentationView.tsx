@@ -20,6 +20,17 @@ import { markdownToHtml } from '@/lib/scripts/parseContent';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
 import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
 
+/* ─── Optimized image URL via Next.js image loader ─── */
+
+const MOBILE_BP = 768;
+function optimizedImageUrl(src: string, width: number, quality = 75): string {
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality}`;
+}
+function responsiveImageUrl(src: string): string {
+  if (typeof window === 'undefined') return src;
+  return optimizedImageUrl(src, window.innerWidth < MOBILE_BP ? 640 : 1200);
+}
+
 /* ─── CrossfadeImage (copied from ScriptPresentation.tsx) ─── */
 
 function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: string; duration: number }) {
@@ -47,7 +58,7 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
       {topLayer.src && (
         <img
           key={topLayer.key}
-          src={topLayer.src}
+          src={responsiveImageUrl(topLayer.src)}
           alt={alt}
           className="w-full select-none max-h-[35vh] md:max-h-[55vh]"
           draggable={false}
@@ -57,7 +68,7 @@ function CrossfadeImage({ src, alt, duration }: { src: string | null; alt: strin
       {bgLayer?.src && (
         <img
           key={bgLayer.key}
-          src={bgLayer.src}
+          src={responsiveImageUrl(bgLayer.src)}
           alt=""
           className="absolute inset-0 w-full pointer-events-none select-none max-h-[35vh] md:max-h-[55vh]"
           draggable={false}
@@ -175,7 +186,7 @@ export function ScriptPresentationView({
     if (idx < slides.length - 1 && slides[idx + 1].storyboardImageUrl) urls.push(slides[idx + 1].storyboardImageUrl!);
     urls.forEach(url => {
       const img = new Image();
-      img.src = url;
+      img.src = responsiveImageUrl(url);
     });
   }, [idx, slides]);
 
@@ -200,6 +211,25 @@ export function ScriptPresentationView({
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
+  }, [goNext, goPrev]);
+
+  /* ── Swipe nav on mobile images ── */
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx > 0) goPrev();
+      else goNext();
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
   }, [goNext, goPrev]);
 
   /* ── Scene lookup: which scene is current? ── */
@@ -307,7 +337,7 @@ export function ScriptPresentationView({
           )}
 
           {/* Storyboard image with nav arrows overlaid */}
-          <div className="group/image relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden">
+          <div className="group/image relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {/* Nav arrows — bottom center of image, visible on hover */}
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity duration-300">
               <button
@@ -363,21 +393,25 @@ export function ScriptPresentationView({
           {/* ── Bordered content block: scene heading + all beat cells ── */}
           <div className="w-full max-w-5xl flex-shrink-0 border border-border rounded-lg overflow-hidden mb-6">
             {/* Scene heading */}
-            <div className={`flex items-center gap-0 bg-[#141414] border-b border-border h-[44px] ${(commentCounts[current.beatId] ?? 0) > 0 ? 'border-l border-l-admin-warning' : ''}`}>
-              <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-5 pr-3">
+            <div className={`flex items-center gap-0 bg-[#141414] border-b border-border min-h-[44px] ${(commentCounts[current.beatId] ?? 0) > 0 ? 'border-l border-l-admin-warning' : ''}`}>
+              <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-1 pr-3">
                 {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
               </span>
-              <span className="text-sm font-medium text-admin-text-faint uppercase tracking-wider flex-1 min-w-0 truncate">
-                {sceneHeading}
+              <div className="flex flex-col justify-center flex-1 min-w-0 py-1">
+                <span className="text-sm font-medium text-admin-text-faint uppercase tracking-wider truncate">
+                  {sceneHeading}
+                </span>
                 {activeScene?.scene_description && (
-                  <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal">{activeScene.scene_description}</span></>
+                  <span className="text-xs text-admin-text-muted font-normal truncate">
+                    {activeScene.scene_description}
+                  </span>
                 )}
-              </span>
+              </div>
             </div>
 
             {/* Audio (2/3) + Visual (1/3) */}
-            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${showVisual ? 'grid-cols-4' : 'grid-cols-1'}`}>
-              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'col-span-3' : ''}`}>
+            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${showVisual ? 'md:grid-cols-4' : ''}`}>
+              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'md:col-span-3' : ''}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
                 <PresentationCell
                   content={current.audioContent}
@@ -446,7 +480,7 @@ export function ScriptPresentationView({
                     {current.referenceImageUrls.length > 0 ? (
                       <div className="flex gap-2 flex-wrap">
                         {current.referenceImageUrls.map((url, i) => (
-                          <img key={i} src={url} alt="" className="h-12 md:h-16 rounded object-cover" />
+                          <img key={i} src={optimizedImageUrl(url, 256)} alt="" className="h-12 md:h-16 rounded object-cover" />
                         ))}
                       </div>
                     ) : (
@@ -483,7 +517,7 @@ export function ScriptPresentationView({
                       handleCommentSubmit();
                     }
                   }}
-                  placeholder="Share your feedback on this story beat..."
+                  placeholder="Share your feedback on this beat."
                   rows={1}
                   style={{ overflow: 'hidden' }}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none border-none outline-none leading-relaxed"
