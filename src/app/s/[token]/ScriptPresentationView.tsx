@@ -262,7 +262,7 @@ export function ScriptPresentationView({
     : current.sceneName;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex">
+    <div className="fixed inset-0 z-50 bg-black flex" style={{ overscrollBehaviorX: 'none' }}>
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
       <div className="hidden md:block relative flex-shrink-0 h-full">
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
@@ -337,7 +337,7 @@ export function ScriptPresentationView({
           )}
 
           {/* Storyboard image with nav arrows overlaid */}
-          <div className="group/image relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+          <div className="group/image relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden" style={{ touchAction: 'pan-y' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {/* Nav arrows — bottom center of image, visible on hover */}
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover/image:opacity-100 transition-opacity duration-300">
               <button
@@ -402,7 +402,7 @@ export function ScriptPresentationView({
                   {sceneHeading}
                 </span>
                 {activeScene?.scene_description && (
-                  <span className="text-xs text-admin-text-muted font-normal truncate">
+                  <span className="text-xs text-admin-text-muted font-normal truncate uppercase">
                     {activeScene.scene_description}
                   </span>
                 )}
