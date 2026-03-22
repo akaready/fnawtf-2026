@@ -236,6 +236,13 @@ Add `admin-logo` class to all client logo `<img>` tags. This opts them out of th
 
 ---
 
+## Code Rules
+
+- **`@/*` imports only** — always use `@/` path alias (e.g., `@/types/scripts`). Never use relative imports like `../../`.
+- **No `any` types** — strict TypeScript. Use proper types, generics, or `unknown` if the type is truly uncertain.
+- **Server Components first** — default to Server Components. Only add `'use client'` on interactive leaf components that need hooks, event handlers, or browser APIs.
+- **Supabase client split** — use `createServerClient` in Server Components/actions, `createBrowserClient` in Client Components. Never mix them.
+
 ## File Structure
 
 - Admin pages: `src/app/admin/`
