@@ -129,10 +129,9 @@ export function SceneNav({
   );
 
   return (
-    <div className="min-w-max bg-admin-bg-sidebar flex flex-col h-full">
+    <div className="min-w-max bg-admin-bg-nav flex flex-col h-full">
       {showHeader && (
         <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
-          <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
           {onCollapse && (
             <button
               onClick={onCollapse}
@@ -141,6 +140,7 @@ export function SceneNav({
               <PanelLeftClose size={16} />
             </button>
           )}
+          <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
         </div>
       )}
 
@@ -244,14 +244,14 @@ function SortableSceneRow({
               className={`flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
                 beat.isActive
                   ? 'bg-admin-beat-selected-bg text-admin-beat-selected-text'
-                  : 'bg-admin-bg-sidebar text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
+                  : 'bg-admin-bg-nav text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
               }`}
             >
               {beat.label}
             </button>
           ))}
           {beatNavItems.length % 2 !== 0 && (
-            <span aria-hidden="true" className="bg-admin-bg-sidebar" />
+            <span aria-hidden="true" className="bg-admin-bg-nav" />
           )}
         </div>
       )}

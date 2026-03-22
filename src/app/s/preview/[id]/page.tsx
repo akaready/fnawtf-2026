@@ -61,16 +61,21 @@ export default async function ScriptPreviewPage({ params }: Props) {
     }
   }
 
-  // Fetch share notes from the most recent share for this script
+  // Fetch share ID + notes from the most recent share for this script
   let shareNotes: string | null = null;
+  let latestShareId = '';
   const { data: shareData } = await supabase
     .from('script_shares')
-    .select('notes')
+    .select('id, notes')
     .eq('script_id', sc.id)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
-  if (shareData) shareNotes = (shareData as { notes: string | null }).notes;
+  if (shareData) {
+    const sd = shareData as { id: string; notes: string | null };
+    shareNotes = sd.notes;
+    latestShareId = sd.id;
+  }
 
   // Fetch all script content
   const [
@@ -122,7 +127,7 @@ export default async function ScriptPreviewPage({ params }: Props) {
 
   return (
     <ScriptShareClient
-      shareId=""
+      shareId={latestShareId}
       shareNotes={shareNotes}
       shareMode="presentation"
       script={{
@@ -146,7 +151,7 @@ export default async function ScriptPreviewPage({ params }: Props) {
       storyboardFrames={(storyboardFrames ?? []) as Record<string, unknown>[]}
       products={(products ?? []) as Record<string, unknown>[]}
       viewerEmail={user.email ?? ''}
-      viewerName={null}
+      viewerName={user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? null}
     />
   );
 }

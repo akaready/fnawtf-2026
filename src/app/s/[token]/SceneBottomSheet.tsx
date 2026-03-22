@@ -35,7 +35,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeB
       {/* Trigger button */}
       <button
         onClick={() => setOpen(true)}
-        className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
+        className="w-9 h-9 flex items-center justify-center rounded-admin-md bg-admin-bg-nav text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary transition-colors"
         title="Scenes"
       >
         <List size={16} />
@@ -55,17 +55,17 @@ export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeB
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
-        <div className="bg-[#1a1a1a] border-t border-white/10 rounded-t-2xl max-h-[60vh] flex flex-col">
+        <div className="bg-[#111111] border-t border-admin-border-subtle rounded-t-2xl max-h-[70vh] flex flex-col">
           {/* Handle + header */}
-          <div className="flex flex-col items-center pt-3 pb-2 px-4 flex-shrink-0">
-            <div className="w-10 h-1 rounded-full bg-white/20 mb-3" />
+          <div className="flex flex-col items-center pt-4 pb-3 px-5 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full bg-white/10 mb-4" />
             <div className="flex items-center justify-between w-full">
-              <span className="text-xs font-semibold uppercase tracking-widest text-white/40">
-                Scenes ({scenes.length})
+              <span className="text-admin-sm font-semibold uppercase tracking-widest text-admin-text-faint">
+                Scenes
               </span>
               <button
                 onClick={() => setOpen(false)}
-                className="w-7 h-7 flex items-center justify-center rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
               >
                 <X size={16} />
               </button>
@@ -73,7 +73,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeB
           </div>
 
           {/* Scene list */}
-          <div className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col">
+          <div className="flex-1 overflow-y-auto flex flex-col border-t border-admin-border-subtle">
             {scenes.map(scene => {
               const beatNavItems = (scene.beats ?? []).length >= 2
                 ? [...scene.beats!]
