@@ -299,6 +299,46 @@ export async function getComments(shareId: string, beatId: string) {
   }));
 }
 
+export async function getShareComments(shareId: string) {
+  if (!shareId) return [];
+  const service = createServiceClient();
+
+  const { data, error } = await service
+    .from('script_share_comments' as never)
+    .select('id, beat_id, viewer_email, viewer_name, content, is_admin, created_at, parent_comment_id, resolved_at, resolved_by, comment_number')
+    .eq('share_id', shareId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error((error as { message: string }).message);
+
+  const rows = (data ?? []) as unknown as {
+    id: string; beat_id: string; viewer_email: string; viewer_name: string | null;
+    content: string; is_admin: boolean; created_at: string;
+    parent_comment_id: string | null; resolved_at: string | null;
+    resolved_by: string | null; comment_number: number | null;
+  }[];
+
+  const emails = [...new Set(rows.map(c => c.viewer_email).filter(Boolean))];
+  const avatarMap: Record<string, string> = {};
+
+  if (emails.length > 0) {
+    const { data: contacts } = await service
+      .from('contacts')
+      .select('email, headshot_url')
+      .in('email', emails);
+    for (const contact of (contacts ?? []) as { email: string; headshot_url: string | null }[]) {
+      if (contact.headshot_url) {
+        avatarMap[contact.email] = contact.headshot_url;
+      }
+    }
+  }
+
+  return rows.map(c => ({
+    ...c,
+    avatar_url: avatarMap[c.viewer_email] ?? null,
+  }));
+}
+
 export async function getCommentCounts(shareId: string): Promise<Record<string, number>> {
   if (!shareId) return {};
   const service = createServiceClient();
@@ -315,6 +355,58 @@ export async function getCommentCounts(shareId: string): Promise<Record<string, 
   return counts;
 }
 
+export type CommentAuthor = {
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+};
+
+export async function getCommentAuthors(shareId: string): Promise<Record<string, CommentAuthor[]>> {
+  if (!shareId) return {};
+  const service = createServiceClient();
+
+  const { data, error } = await service
+    .from('script_share_comments' as never)
+    .select('beat_id, viewer_email, viewer_name')
+    .eq('share_id', shareId)
+    .is('deleted_at', null);
+  if (error) return {};
+
+  const rows = (data ?? []) as unknown as { beat_id: string; viewer_email: string; viewer_name: string | null }[];
+
+  // Dedupe per beat
+  const beatAuthorsMap: Record<string, Map<string, { email: string; name: string | null }>> = {};
+  for (const row of rows) {
+    if (!beatAuthorsMap[row.beat_id]) beatAuthorsMap[row.beat_id] = new Map();
+    if (!beatAuthorsMap[row.beat_id].has(row.viewer_email)) {
+      beatAuthorsMap[row.beat_id].set(row.viewer_email, { email: row.viewer_email, name: row.viewer_name });
+    }
+  }
+
+  // Look up avatars
+  const allEmails = [...new Set(rows.map(r => r.viewer_email).filter(Boolean))];
+  const avatarMap: Record<string, string> = {};
+  if (allEmails.length > 0) {
+    const { data: contacts } = await service
+      .from('contacts')
+      .select('email, headshot_url')
+      .in('email', allEmails);
+    for (const contact of (contacts ?? []) as { email: string; headshot_url: string | null }[]) {
+      if (contact.headshot_url) avatarMap[contact.email] = contact.headshot_url;
+    }
+  }
+
+  const result: Record<string, CommentAuthor[]> = {};
+  for (const [beatId, authorsMap] of Object.entries(beatAuthorsMap)) {
+    result[beatId] = [...authorsMap.values()].slice(0, 5).map(a => ({
+      email: a.email,
+      name: a.name,
+      avatar_url: avatarMap[a.email] ?? null,
+    }));
+  }
+  return result;
+}
+
 export async function addComment(
   shareId: string,
   beatId: string,
@@ -324,6 +416,14 @@ export async function addComment(
 ) {
   if (!shareId || !beatId) throw new Error('Missing share or beat ID');
   const supabase = createServiceClient();
+
+  const { count } = await supabase
+    .from('script_share_comments' as never)
+    .select('id', { count: 'exact', head: true })
+    .eq('share_id', shareId)
+    .is('deleted_at', null);
+  const commentNumber = (count ?? 0) + 1;
+
   const { data, error } = await supabase
     .from('script_share_comments' as never)
     .insert({
@@ -332,6 +432,7 @@ export async function addComment(
       viewer_email: viewerEmail,
       viewer_name: viewerName,
       content,
+      comment_number: commentNumber,
     } as never)
     .select('id')
     .single();
@@ -361,4 +462,113 @@ export async function deleteComment(commentId: string, viewerEmail: string) {
     .eq('id', commentId)
     .eq('viewer_email', viewerEmail);
   if (error) throw new Error((error as { message: string }).message);
+}
+
+export async function addReply(
+  shareId: string,
+  parentCommentId: string,
+  viewerEmail: string,
+  viewerName: string | null,
+  content: string,
+) {
+  const supabase = createServiceClient();
+
+  const { data: parent } = await supabase
+    .from('script_share_comments' as never)
+    .select('beat_id')
+    .eq('id', parentCommentId)
+    .single();
+  if (!parent) throw new Error('Parent comment not found');
+  const beatId = (parent as unknown as { beat_id: string }).beat_id;
+
+  const { count } = await supabase
+    .from('script_share_comments' as never)
+    .select('id', { count: 'exact', head: true })
+    .eq('share_id', shareId)
+    .is('deleted_at', null);
+  const commentNumber = (count ?? 0) + 1;
+
+  const { data, error } = await supabase
+    .from('script_share_comments' as never)
+    .insert({
+      share_id: shareId,
+      beat_id: beatId,
+      viewer_email: viewerEmail,
+      viewer_name: viewerName,
+      content,
+      parent_comment_id: parentCommentId,
+      comment_number: commentNumber,
+    } as never)
+    .select('id')
+    .single();
+  if (error) throw new Error((error as { message: string }).message);
+  return (data as unknown as { id: string }).id;
+}
+
+export async function getReactions(commentIds: string[]) {
+  if (commentIds.length === 0) return {};
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from('script_share_comment_reactions' as never)
+    .select('comment_id, emoji, viewer_email')
+    .in('comment_id', commentIds);
+  if (error) return {};
+  const result: Record<string, { emoji: string; count: number; viewers: string[] }[]> = {};
+  const rows = (data ?? []) as unknown as { comment_id: string; emoji: string; viewer_email: string }[];
+  for (const row of rows) {
+    if (!result[row.comment_id]) result[row.comment_id] = [];
+    const existing = result[row.comment_id].find(r => r.emoji === row.emoji);
+    if (existing) {
+      existing.count++;
+      existing.viewers.push(row.viewer_email);
+    } else {
+      result[row.comment_id].push({ emoji: row.emoji, count: 1, viewers: [row.viewer_email] });
+    }
+  }
+  return result;
+}
+
+export async function toggleReaction(commentId: string, viewerEmail: string, emoji: string) {
+  const supabase = createServiceClient();
+  // Check if reaction exists
+  const { data: existing } = await supabase
+    .from('script_share_comment_reactions' as never)
+    .select('id')
+    .eq('comment_id', commentId)
+    .eq('viewer_email', viewerEmail)
+    .eq('emoji', emoji)
+    .single();
+  if (existing) {
+    await supabase
+      .from('script_share_comment_reactions' as never)
+      .delete()
+      .eq('id', (existing as unknown as { id: string }).id);
+    return false;
+  } else {
+    await supabase
+      .from('script_share_comment_reactions' as never)
+      .insert({ comment_id: commentId, viewer_email: viewerEmail, emoji } as never);
+    return true;
+  }
+}
+
+export async function toggleResolved(commentId: string, viewerEmail: string) {
+  const supabase = createServiceClient();
+
+  const { data: existing } = await supabase
+    .from('script_share_comments' as never)
+    .select('resolved_at')
+    .eq('id', commentId)
+    .single();
+  const isResolved = !!(existing as unknown as { resolved_at: string | null } | null)?.resolved_at;
+
+  const { error } = await supabase
+    .from('script_share_comments' as never)
+    .update(isResolved
+      ? { resolved_at: null, resolved_by: null } as never
+      : { resolved_at: new Date().toISOString(), resolved_by: viewerEmail } as never
+    )
+    .eq('id', commentId);
+  if (error) throw new Error((error as { message: string }).message);
+  return !isResolved;
 }
