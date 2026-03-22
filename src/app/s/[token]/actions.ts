@@ -359,6 +359,7 @@ export type CommentAuthor = {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  avatar_color: string | null;
 };
 
 export async function getCommentAuthors(shareId: string): Promise<Record<string, CommentAuthor[]>> {
@@ -383,16 +384,16 @@ export async function getCommentAuthors(shareId: string): Promise<Record<string,
     }
   }
 
-  // Look up avatars
+  // Look up avatars + colors
   const allEmails = [...new Set(rows.map(r => r.viewer_email).filter(Boolean))];
-  const avatarMap: Record<string, string> = {};
+  const avatarMap: Record<string, { url: string | null; color: string | null }> = {};
   if (allEmails.length > 0) {
     const { data: contacts } = await service
       .from('contacts')
-      .select('email, headshot_url')
+      .select('email, headshot_url, avatar_color')
       .in('email', allEmails);
-    for (const contact of (contacts ?? []) as { email: string; headshot_url: string | null }[]) {
-      if (contact.headshot_url) avatarMap[contact.email] = contact.headshot_url;
+    for (const contact of (contacts ?? []) as { email: string; headshot_url: string | null; avatar_color: string | null }[]) {
+      avatarMap[contact.email] = { url: contact.headshot_url, color: contact.avatar_color };
     }
   }
 
@@ -401,7 +402,8 @@ export async function getCommentAuthors(shareId: string): Promise<Record<string,
     result[beatId] = [...authorsMap.values()].slice(0, 5).map(a => ({
       email: a.email,
       name: a.name,
-      avatar_url: avatarMap[a.email] ?? null,
+      avatar_url: avatarMap[a.email]?.url ?? null,
+      avatar_color: avatarMap[a.email]?.color ?? null,
     }));
   }
   return result;
@@ -571,4 +573,102 @@ export async function toggleResolved(commentId: string, viewerEmail: string) {
     .eq('id', commentId);
   if (error) throw new Error((error as { message: string }).message);
   return !isResolved;
+}
+
+// ── Viewer Profile ─────────────────────────────────────────────────────
+
+export async function getViewerProfile(email: string): Promise<{
+  first_name: string | null;
+  last_name: string | null;
+  headshot_url: string | null;
+  avatar_color: string | null;
+} | null> {
+  if (!email) return null;
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from('contacts')
+    .select('first_name, last_name, headshot_url, avatar_color')
+    .eq('email', email)
+    .limit(1)
+    .single();
+  if (!data) return null;
+  const row = data as { first_name: string | null; last_name: string | null; headshot_url: string | null; avatar_color: string | null };
+  return row;
+}
+
+export async function updateViewerProfile(
+  email: string,
+  firstName: string,
+  lastName: string,
+  avatarColorHex?: string | null,
+  clearAvatar?: boolean,
+): Promise<void> {
+  if (!email) return;
+  const supabase = createServiceClient();
+
+  const fields: Record<string, unknown> = {
+    first_name: firstName || '',
+    last_name: lastName || '',
+  };
+  if (avatarColorHex !== undefined) fields.avatar_color = avatarColorHex;
+  if (clearAvatar) fields.headshot_url = null;
+
+  // Check if contact exists
+  const { data: existing } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('email', email)
+    .limit(1)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from('contacts')
+      .update(fields as never)
+      .eq('email', email);
+  } else {
+    await supabase
+      .from('contacts')
+      .insert({ email, type: 'external', ...fields } as never);
+  }
+}
+
+export async function uploadViewerAvatar(formData: FormData): Promise<string> {
+  const file = formData.get('file') as File;
+  const email = formData.get('email') as string;
+  if (!file || !email) throw new Error('Missing file or email');
+
+  const supabase = createServiceClient();
+  const ext = file.name.split('.').pop() ?? 'png';
+
+  // Deterministic path based on email
+  let hash = 0;
+  for (const ch of email) hash = ((hash << 5) - hash + ch.charCodeAt(0)) | 0;
+  const path = `viewers/${Math.abs(hash).toString(36)}.${ext}`;
+
+  const { error } = await supabase.storage.from('headshots').upload(path, file, { upsert: true });
+  if (error) throw new Error(error.message);
+
+  const { data: { publicUrl } } = supabase.storage.from('headshots').getPublicUrl(path);
+
+  // Update contact record
+  const { data: existing } = await supabase
+    .from('contacts')
+    .select('id')
+    .eq('email', email)
+    .limit(1)
+    .single();
+
+  if (existing) {
+    await supabase
+      .from('contacts')
+      .update({ headshot_url: publicUrl } as never)
+      .eq('email', email);
+  } else {
+    await supabase
+      .from('contacts')
+      .insert({ email, headshot_url: publicUrl, type: 'external', first_name: '', last_name: '' } as never);
+  }
+
+  return publicUrl;
 }

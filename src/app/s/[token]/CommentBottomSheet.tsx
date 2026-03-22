@@ -117,7 +117,7 @@ export function CommentBottomSheet({ shareId, currentBeatId, viewerEmail, viewer
       {/* Trigger button */}
       <button
         onClick={() => { setOpen(true); loadComments(); }}
-        className="w-9 h-9 flex items-center justify-center rounded-admin-md bg-admin-bg-overlay text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary transition-colors relative"
+        className="w-9 h-9 flex items-center justify-center rounded-admin-md bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors relative"
         title="Comments"
       >
         <MessageCircle size={16} />

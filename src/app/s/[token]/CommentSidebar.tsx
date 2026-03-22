@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Trash2, Check, PanelRightClose, PanelRightOpen, Mail, Smile, MoreHorizontal, Send, ListFilter, Circle } from 'lucide-react';
+import { Pencil, Trash2, Check, PanelRightClose, PanelRightOpen, Mail, Smile, MoreHorizontal, Send, ListFilter, Circle, Settings, Camera } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import gsap from 'gsap';
-import { getShareComments, updateComment, deleteComment, addReply, toggleResolved, getReactions, toggleReaction } from './actions';
+import { getShareComments, updateComment, deleteComment, addReply, toggleResolved, getReactions, toggleReaction, getViewerProfile, updateViewerProfile, uploadViewerAvatar } from './actions';
+import { AnimatePresence } from 'framer-motion';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -726,7 +727,7 @@ export function CommentSidebar({
   open,
   onToggle,
   refreshKey,
-  clientLogoUrl,
+  clientLogoUrl: _clientLogoUrl,
   slides,
   onNavigateToBeat,
   onCommentAdded: _onCommentAdded,
@@ -745,6 +746,72 @@ export function CommentSidebar({
   const [isEmailHovered, setIsEmailHovered] = useState(false);
 
   const beatLabelMap = buildBeatLabelMap(slides);
+
+  // Profile editor state
+  const [sidebarProfileOpen, setSidebarProfileOpen] = useState(false);
+  const [spFirstName, setSpFirstName] = useState('');
+  const [spLastName, setSpLastName] = useState('');
+  const [spEmail, setSpEmail] = useState(viewerEmail);
+  const [spAvatarUrl, setSpAvatarUrl] = useState<string | null>(null);
+  const [spColor, setSpColor] = useState<string | null>(null);
+  const [spSaving, setSpSaving] = useState(false);
+  const [spPendingFile, setSpPendingFile] = useState<File | null>(null);
+  const [spAvatarRemoved, setSpAvatarRemoved] = useState(false);
+  const spFileRef = useRef<HTMLInputElement>(null);
+  const spSnapshot = useRef({ firstName: '', lastName: '', email: '', color: null as string | null, avatarUrl: null as string | null });
+
+  // Load profile on mount
+  useEffect(() => {
+    if (!viewerEmail) return;
+    getViewerProfile(viewerEmail).then(p => {
+      if (p) {
+        setSpAvatarUrl(p.headshot_url);
+        setSpColor(p.avatar_color);
+        if (p.first_name) setSpFirstName(p.first_name);
+        if (p.last_name) setSpLastName(p.last_name);
+      } else if (viewerName) {
+        const parts = viewerName.trim().split(/\s+/);
+        setSpFirstName(parts[0] || '');
+        setSpLastName(parts.slice(1).join(' ') || '');
+      }
+    });
+  }, [viewerEmail, viewerName]);
+
+  const handleSpSave = useCallback(async () => {
+    if (!viewerEmail) return;
+    setSpSaving(true);
+    try {
+      // Upload pending avatar if any
+      if (spPendingFile) {
+        const fd = new FormData();
+        fd.append('file', spPendingFile);
+        fd.append('email', viewerEmail);
+        await uploadViewerAvatar(fd);
+        setSpPendingFile(null);
+      }
+      await updateViewerProfile(viewerEmail, spFirstName, spLastName, spColor, spAvatarRemoved);
+      setSpAvatarRemoved(false);
+      setSidebarProfileOpen(false);
+      _onCommentAdded?.();
+    } finally {
+      setSpSaving(false);
+    }
+  }, [viewerEmail, spFirstName, spLastName, spColor, spPendingFile, spAvatarRemoved, _onCommentAdded]);
+
+  const handleSpAvatarUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Stage locally — show preview, don't upload yet
+    setSpPendingFile(file);
+    setSpAvatarUrl(URL.createObjectURL(file));
+  }, []);
+
+  const spDirty = spFirstName !== spSnapshot.current.firstName ||
+    spLastName !== spSnapshot.current.lastName ||
+    spEmail !== spSnapshot.current.email ||
+    spColor !== spSnapshot.current.color ||
+    spPendingFile !== null ||
+    spAvatarRemoved;
 
   useDirectionalFill(emailBtnRef, emailFillRef, {
     onFillStart: () => {
@@ -927,38 +994,200 @@ export function CommentSidebar({
             ))}
           </div>
 
-          {/* Footer — logos + email */}
-          <div className="flex-shrink-0 border-t border-admin-border px-4 pt-5 pb-5 space-y-4">
-            {clientLogoUrl && (
-              <div className="flex items-center justify-center gap-3 py-1">
-                <img src={clientLogoUrl} alt="" className="h-6 object-contain admin-logo" />
-                <span className="text-admin-text-faint text-base">&times;</span>
-                <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-6" />
-              </div>
-            )}
-            <div className="flex justify-center">
-              <a
-                ref={emailBtnRef}
-                href="mailto:hi@fna.wtf"
-                className="relative px-5 py-2.5 text-admin-sm font-medium text-admin-text-primary border border-admin-border rounded-admin-lg overflow-hidden flex items-center gap-2"
+          {/* Footer — profile editor + email */}
+          <div className="flex-shrink-0">
+            <div
+              className="overflow-hidden transition-[max-height,box-shadow] duration-300 ease-out"
+              style={{
+                maxHeight: sidebarProfileOpen ? 400 : 0,
+                boxShadow: sidebarProfileOpen ? 'inset 0 1px 0 0 var(--admin-border)' : 'inset 0 1px 0 0 transparent',
+              }}
+            >
+                  <div className="px-4 pt-5 pb-4 space-y-4">
+                    {/* Avatar with upload */}
+                    <div className="flex justify-center">
+                      <div className="relative group/avatar">
+                        <button
+                          onClick={() => spFileRef.current?.click()}
+                          className="relative flex-shrink-0"
+                          title="Upload photo"
+                        >
+                          {spAvatarUrl ? (
+                            <img src={spAvatarUrl} alt="" className="w-16 h-16 rounded-full object-cover" />
+                          ) : (
+                            <div
+                              className="w-16 h-16 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: spColor || avatarColor(viewerEmail) }}
+                            >
+                              <span className="text-black leading-none" style={{ fontSize: 32, fontWeight: 900 }}>
+                                {getInitials(viewerName, viewerEmail)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                            <Camera size={18} className="text-white" />
+                          </div>
+                        </button>
+                        {spAvatarUrl && (
+                          <button
+                            onClick={() => { setSpAvatarUrl(null); setSpAvatarRemoved(true); setSpPendingFile(null); }}
+                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-black/80 border border-white/30 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity hover:bg-red-600 hover:border-red-600"
+                            title="Remove photo"
+                          >
+                            <span className="text-white text-sm leading-none font-bold">&times;</span>
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={spFileRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleSpAvatarUpload}
+                      />
+                    </div>
+
+                    {/* Color picker (when no photo) */}
+                    <AnimatePresence>
+                      {!spAvatarUrl && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="flex items-center justify-between py-1 px-0.5">
+                            {['#ef4444','#e67e22','#f59e0b','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899'].map(c => (
+                              <button
+                                key={c}
+                                onClick={() => setSpColor(c)}
+                                className="w-5 h-5 rounded-full transition-transform hover:scale-125"
+                                style={{
+                                  backgroundColor: c,
+                                  outline: (spColor || avatarColor(viewerEmail)) === c ? '2px solid white' : 'none',
+                                  outlineOffset: '1px',
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* First name */}
+                    <input
+                      value={spFirstName}
+                      onChange={e => setSpFirstName(e.target.value)}
+                      placeholder="First name"
+                      className="w-full bg-white/[0.06] border border-white/[0.14] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                    />
+
+                    {/* Last name */}
+                    <input
+                      value={spLastName}
+                      onChange={e => setSpLastName(e.target.value)}
+                      placeholder="Last name"
+                      className="w-full bg-white/[0.06] border border-white/[0.14] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                    />
+
+                    {/* Email */}
+                    <input
+                      value={spEmail}
+                      onChange={e => setSpEmail(e.target.value)}
+                      placeholder="Email"
+                      type="email"
+                      className="w-full bg-white/[0.06] border border-white/[0.14] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                    />
+
+                  </div>
+            </div>
+
+            {/* Button row */}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-admin-border">
+              <button
+                onClick={() => {
+                  if (!sidebarProfileOpen) {
+                    spSnapshot.current = { firstName: spFirstName, lastName: spLastName, email: spEmail, color: spColor, avatarUrl: spAvatarUrl };
+                  }
+                  setSidebarProfileOpen(p => !p);
+                }}
+                className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                  sidebarProfileOpen
+                    ? 'bg-white/10 border-white/20 text-white'
+                    : 'border-white/[0.14] text-white/50 hover:text-white hover:border-white/30'
+                }`}
+                title="Edit profile"
               >
-                <div
-                  ref={emailFillRef}
-                  className="absolute inset-0 bg-admin-text-primary pointer-events-none"
-                  style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
-                />
-                <span className="relative flex items-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
-                  <motion.span
-                    variants={iconVariants}
-                    initial="hidden"
-                    animate={isEmailHovered ? 'visible' : 'hidden'}
-                    className="flex items-center"
+                <Settings size={16} />
+              </button>
+              <AnimatePresence mode="wait">
+                {sidebarProfileOpen ? (
+                  <motion.div
+                    key="profile-actions"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                    className="flex items-center gap-2"
                   >
-                    <Mail size={14} strokeWidth={1.5} />
-                  </motion.span>
-                  hi@fna.wtf
-                </span>
-              </a>
+                    <button
+                      onClick={() => {
+                        setSidebarProfileOpen(false);
+                        setSpFirstName(spSnapshot.current.firstName);
+                        setSpLastName(spSnapshot.current.lastName);
+                        setSpEmail(spSnapshot.current.email);
+                        setSpColor(spSnapshot.current.color);
+                        setSpAvatarUrl(spSnapshot.current.avatarUrl);
+                        setSpPendingFile(null);
+                        setSpAvatarRemoved(false);
+                      }}
+                      className="px-3 py-1.5 text-sm text-white/50 border border-white/20 rounded-lg hover:text-white hover:border-white/40 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSpSave}
+                      disabled={spSaving || !spDirty}
+                      className={`px-3 py-1.5 text-sm rounded-lg border ${
+                        spDirty
+                          ? 'bg-white text-black border-white hover:bg-white/90'
+                          : 'bg-transparent text-white/20 border-white/20 cursor-not-allowed'
+                      } disabled:opacity-50`}
+                    >
+                      {spSaving ? 'Saving...' : 'Save'}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.a
+                    key="email-btn"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                    ref={emailBtnRef}
+                    href="mailto:hi@fna.wtf"
+                    className="relative px-3 py-1.5 text-sm font-medium text-admin-text-primary border border-admin-border rounded-lg overflow-hidden flex items-center gap-2"
+                  >
+                    <div
+                      ref={emailFillRef}
+                      className="absolute inset-0 bg-admin-text-primary pointer-events-none"
+                      style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+                    />
+                    <span className="relative flex items-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
+                      <motion.span
+                        variants={iconVariants}
+                        initial="hidden"
+                        animate={isEmailHovered ? 'visible' : 'hidden'}
+                        className="flex items-center"
+                      >
+                        <Mail size={14} strokeWidth={1.5} />
+                      </motion.span>
+                      hi@fna.wtf
+                    </span>
+                  </motion.a>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

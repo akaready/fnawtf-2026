@@ -14,12 +14,30 @@ import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
 import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneBottomSheet } from './SceneBottomSheet';
-import { addComment, getCommentAuthors } from './actions';
+import { addComment, getCommentAuthors, getViewerProfile } from './actions';
 import type { CommentAuthor } from './actions';
 import { ScriptPresentationTimeline } from '@/app/admin/scripts/_components/ScriptPresentationTimeline';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
 import type { ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
+
+/* ─── Avatar helpers (shared with CommentSidebar) ─── */
+
+function avatarColor(email: string): string {
+  let hash = 0;
+  for (const ch of email) hash = ((hash << 5) - hash + ch.charCodeAt(0)) | 0;
+  const colors = ['#e67e22','#3b82f6','#22c55e','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f59e0b','#14b8a6','#6366f1'];
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getInitials(name: string | null, email: string): string {
+  if (name) {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase();
+}
 
 /* ─── Optimized image URL via Next.js image loader ─── */
 
@@ -153,9 +171,25 @@ export function ScriptPresentationView({
   const [commentAuthors, setCommentAuthors] = useState<Record<string, CommentAuthor[]>>({});
   const [scrollToEmail, setScrollToEmail] = useState<string | null>(null);
 
+  // Viewer profile state
+  const [viewerAvatarUrl, setViewerAvatarUrl] = useState<string | null>(null);
+  const [profileColor, setProfileColor] = useState<string | null>(null);
+
   useEffect(() => {
     getCommentAuthors(shareId).then(setCommentAuthors);
   }, [shareId]);
+
+  // Load viewer profile on mount
+  useEffect(() => {
+    if (!viewerEmail) return;
+    getViewerProfile(viewerEmail).then(p => {
+      if (p) {
+        setViewerAvatarUrl(p.headshot_url);
+        setProfileColor(p.avatar_color);
+      }
+    });
+  }, [viewerEmail, commentAuthors]);
+
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   // Track what the user wants open — resize hides/shows based on these
@@ -588,7 +622,22 @@ export function ScriptPresentationView({
         {current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4 md:px-6 pointer-events-none">
             <div className="w-full max-w-xl md:max-w-2xl pointer-events-auto">
-              <div className="bg-[#111111] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 pl-4 pr-2 py-2">
+              <div className="bg-[#111111] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 pl-2 pr-2 py-2">
+                {/* Viewer avatar preview */}
+                <div className="flex-shrink-0">
+                  {viewerAvatarUrl ? (
+                    <img src={viewerAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: profileColor || avatarColor(viewerEmail) }}
+                    >
+                      <span className="text-black leading-none" style={{ fontSize: 14, fontWeight: 900 }}>
+                        {getInitials(viewerName, viewerEmail)}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <textarea
                   ref={commentTextareaRef}
                   value={commentText}
