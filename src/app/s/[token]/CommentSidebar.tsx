@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Trash2, Check, PanelRightClose, PanelRightOpen, Mail, Smile, MoreHorizontal, Send, ListFilter, Circle, Settings, Camera } from 'lucide-react';
+import { Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen, Mail, Smile, MoreHorizontal, Send, ListFilter, Circle, Settings, Camera } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import gsap from 'gsap';
@@ -1121,6 +1121,14 @@ export function CommentSidebar({
               >
                 <Settings size={16} />
               </button>
+              <div className="flex-1 min-w-0 px-2">
+                <p className="text-[11px] text-white/30 leading-tight">Commenting as:</p>
+                <p className="text-[11px] text-white/50 leading-tight truncate">
+                  {[spFirstName, spLastName].filter(Boolean).join(' ') || viewerName || viewerEmail.split('@')[0]}
+                  {' '}
+                  <span className="text-white/30">({spEmail})</span>
+                </p>
+              </div>
               <AnimatePresence mode="wait">
                 {sidebarProfileOpen ? (
                   <motion.div
@@ -1142,20 +1150,22 @@ export function CommentSidebar({
                         setSpPendingFile(null);
                         setSpAvatarRemoved(false);
                       }}
-                      className="px-3 py-1.5 text-sm text-white/50 border border-white/20 rounded-lg hover:text-white hover:border-white/40 transition-colors"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/20 text-white/50 hover:text-white hover:border-white/40 transition-colors"
+                      title="Cancel"
                     >
-                      Cancel
+                      <X size={14} />
                     </button>
                     <button
                       onClick={handleSpSave}
                       disabled={spSaving || !spDirty}
-                      className={`px-3 py-1.5 text-sm rounded-lg border ${
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg border ${
                         spDirty
                           ? 'bg-white text-black border-white hover:bg-white/90'
                           : 'bg-transparent text-white/20 border-white/20 cursor-not-allowed'
                       } disabled:opacity-50`}
+                      title="Save"
                     >
-                      {spSaving ? 'Saving...' : 'Save'}
+                      <Check size={14} />
                     </button>
                   </motion.div>
                 ) : (
@@ -1167,22 +1177,10 @@ export function CommentSidebar({
                     transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                     ref={emailBtnRef}
                     href="mailto:hi@fna.wtf"
-                    className="relative px-3 py-1.5 text-sm font-medium text-admin-text-primary border border-admin-border rounded-lg overflow-hidden flex items-center gap-2"
+                    className="group/email relative w-9 h-9 flex items-center justify-center rounded-lg border border-white/[0.14] text-white/50 hover:text-black hover:bg-white hover:border-white overflow-hidden transition-colors"
                   >
-                    <div
-                      ref={emailFillRef}
-                      className="absolute inset-0 bg-admin-text-primary pointer-events-none"
-                      style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
-                    />
-                    <span className="relative flex items-center gap-2 whitespace-nowrap" style={{ zIndex: 10 }}>
-                      <motion.span
-                        variants={iconVariants}
-                        initial="hidden"
-                        animate={isEmailHovered ? 'visible' : 'hidden'}
-                        className="flex items-center"
-                      >
-                        <Mail size={14} strokeWidth={1.5} />
-                      </motion.span>
+                    <Mail size={16} strokeWidth={1.5} />
+                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-[#222] border border-white/10 rounded-md text-[11px] text-white/70 whitespace-nowrap opacity-0 group-hover/email:opacity-100 transition-opacity pointer-events-none">
                       hi@fna.wtf
                     </span>
                   </motion.a>

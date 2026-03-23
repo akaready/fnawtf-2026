@@ -240,9 +240,9 @@ export function ScriptPresentationView({
       }
     };
 
-    // On mount, default both wanted
-    userWantsLeft.current = true;
-    userWantsRight.current = true;
+    // On mount, default both closed
+    userWantsLeft.current = false;
+    userWantsRight.current = false;
     update();
 
     window.addEventListener('resize', update);
@@ -264,9 +264,14 @@ export function ScriptPresentationView({
       .then(() => {
         setCommentRefreshKey(k => k + 1);
         getCommentAuthors(shareId).then(setCommentAuthors);
+        // Open comments sidebar on first comment
+        if (!rightOpen) {
+          setRightOpen(true);
+          userWantsRight.current = true;
+        }
       })
       .catch(() => {});
-  }, [commentText, shareId, current?.beatId, viewerEmail, viewerName]);
+  }, [commentText, shareId, current?.beatId, viewerEmail, viewerName, rightOpen]);
 
   const handleCommentAdded = useCallback(() => {
     setCommentRefreshKey(k => k + 1);

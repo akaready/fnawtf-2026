@@ -50,7 +50,7 @@ function BeatAvatars({
             initial={{ y: 8, opacity: 0, scale: 0.5 }}
             animate={{
               y: 0,
-              opacity: isCurrent ? baseOpacity : baseOpacity * 0.7,
+              opacity: i === 0 ? 1 : (isCurrent ? baseOpacity : baseOpacity * 0.7),
               scale: 1,
             }}
             transition={{
