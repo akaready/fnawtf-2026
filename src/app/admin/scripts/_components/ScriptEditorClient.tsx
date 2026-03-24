@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Check, Package, Share2, Play } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import {
   updateScript, createScene, updateScene, deleteScene, reorderScenes,
   createBeat, updateBeat, deleteBeat, reorderBeats,
-  publishScriptVersion, unpublishScriptVersion, getScriptVersions,
+  getScriptVersions,
   uploadBeatReference, deleteBeatReference,
   moveReference, moveStoryboardFrame, swapStoryboardFrames, convertRefToStoryboard, convertStoryboardToRef,
   getScriptStyle, getStyleReferences, getStoryboardFrames,
@@ -110,8 +110,7 @@ export function ScriptEditorClient({
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
-  const [publishing, setPublishing] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean; content_mode?: string }[]>([]);
   const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'table');
@@ -614,34 +613,6 @@ export function ScriptEditorClient({
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
 
-  // ── Publish / Unpublish (toggle client-portal visibility) ──
-  const handlePublish = useCallback(async () => {
-    setPublishing(true);
-    try {
-      await handleSaveAll();
-      await publishScriptVersion(script.id);
-      // Optimistic: compute next major and update local state
-      const nextMajor = versions.length > 0
-        ? Math.max(...versions.map(v => v.major_version)) + 1
-        : 1;
-      setScript(prev => ({ ...prev, major_version: nextMajor, minor_version: 0, is_published: true }));
-      setVersions(prev => prev.map(v => v.id === script.id ? { ...v, major_version: nextMajor, minor_version: 0, is_published: true } : v));
-    } finally {
-      setPublishing(false);
-    }
-  }, [handleSaveAll, script.id, versions]);
-
-  const handleUnpublish = useCallback(async () => {
-    setPublishing(true);
-    try {
-      await unpublishScriptVersion(script.id);
-      setScript(prev => ({ ...prev, is_published: false }));
-      setVersions(prev => prev.map(v => v.id === script.id ? { ...v, is_published: false } : v));
-    } finally {
-      setPublishing(false);
-    }
-  }, [script.id]);
-
   // ── Focus mode toggle ──
   const toggleFocus = useCallback(() => {
     setIsFocused(prev => {
@@ -767,49 +738,10 @@ export function ScriptEditorClient({
             <button onClick={() => setShowSettings(true)} className="btn-secondary px-2.5" title="Settings">
               <Settings size={14} />
             </button>
-            {/* Status dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowStatusDropdown(p => !p)}
-                className={`${script.is_published ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 text-sm font-medium`}
-              >
-                {script.is_published ? 'Published' : 'Internal Draft'}
-                <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showStatusDropdown && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
-                    <button
-                      onClick={() => { setShowStatusDropdown(false); if (script.is_published) handleUnpublish(); }}
-                      disabled={publishing || !script.is_published}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                        !script.is_published ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
-                        Internal Draft
-                      </span>
-                      {!script.is_published && <Check size={12} />}
-                    </button>
-                    <button
-                      onClick={() => { setShowStatusDropdown(false); handlePublish(); }}
-                      disabled={publishing || script.is_published}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                        script.is_published ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
-                        Published
-                      </span>
-                      {script.is_published && <Check size={12} />}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Status label (read-only — publishing happens via Share Panel) */}
+            <span className={`${script.is_published ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 text-sm font-medium cursor-default`}>
+              {script.is_published ? 'Published' : 'Draft'}
+            </span>
             <button
               onClick={handleSaveAll}
               className="btn-primary px-5 text-sm"
@@ -1045,9 +977,6 @@ export function ScriptEditorClient({
         open={showShare}
         onClose={() => setShowShare(false)}
         scriptId={script.id}
-        isPublished={script.is_published}
-        onPublish={handlePublish}
-        onUnpublish={handleUnpublish}
       />
       <ScriptVersionsPanel
         open={showVersions}

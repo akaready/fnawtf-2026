@@ -3125,6 +3125,63 @@ export async function createScriptVersion(scriptId: string): Promise<string> {
   });
 }
 
+/** Create a new blank draft version (same major, bumped minor, empty content) */
+export async function createBlankVersion(scriptId: string): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+
+  // Fetch current script to get group + project
+  const { data: script, error: scriptErr } = await supabase
+    .from('scripts')
+    .select('script_group_id, project_id, title, version, content_mode')
+    .eq('id', scriptId)
+    .single();
+  if (scriptErr || !script) throw new Error(scriptErr?.message ?? 'Script not found');
+  const s = script as Record<string, unknown>;
+  const groupId = s.script_group_id as string;
+
+  // Find the highest major version across the entire group
+  const { data: maxMajorRow } = await supabase
+    .from('scripts')
+    .select('major_version')
+    .eq('script_group_id', groupId)
+    .order('major_version', { ascending: false })
+    .limit(1)
+    .single();
+  const major = ((maxMajorRow as Record<string, unknown> | null)?.major_version as number) ?? 0;
+
+  // Find max minor_version for this group+major
+  const { data: maxRow } = await supabase
+    .from('scripts')
+    .select('minor_version')
+    .eq('script_group_id', groupId)
+    .eq('major_version', major)
+    .order('minor_version', { ascending: false })
+    .limit(1)
+    .single();
+  const nextMinor = ((maxRow as Record<string, unknown> | null)?.minor_version as number ?? 0) + 1;
+
+  // Insert blank script (no scenes/beats/characters)
+  const { data: newScript, error: insertErr } = await supabase
+    .from('scripts')
+    .insert({
+      script_group_id: groupId,
+      project_id: s.project_id,
+      title: s.title,
+      content_mode: s.content_mode ?? 'table',
+      major_version: major,
+      minor_version: nextMinor,
+      is_published: false,
+      version: ((s.version as number) ?? 1) + 1,
+      created_by: userId,
+    } as never)
+    .select('id')
+    .single();
+  if (insertErr || !newScript) throw new Error(insertErr?.message ?? 'Failed to create blank version');
+
+  revalidatePath('/admin/scripts');
+  return (newScript as { id: string }).id;
+}
+
 /** Publish: promote current version in-place to next major version */
 export async function publishScriptVersion(scriptId: string): Promise<string> {
   const { supabase } = await requireAuth();

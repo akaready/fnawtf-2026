@@ -96,17 +96,18 @@ function Actions({ id, content, resolved, onRefresh, hover, isOwn, isParent }: {
 }
 
 /* Reply row — exact same pattern as presentation page ReplyRow */
-function Row({ c, shareId, onRefresh, hover, isLast }: {
-  c: ScriptShareCommentRow; shareId?: string; onRefresh?: () => void; hover: string; isLast: boolean;
+function Row({ c, shareId, onRefresh, hover, isLast, highlight }: {
+  c: ScriptShareCommentRow; shareId?: string; onRefresh?: () => void; hover: string; isLast: boolean; highlight?: boolean;
 }) {
   const resolved = !!c.resolved_at;
+  const lineColor = highlight ? 'bg-admin-text-muted' : 'bg-admin-border';
   return (
     <div className="group/reply flex gap-2">
       {/* Left column: line above + avatar + line below */}
       <div className="flex flex-col items-center flex-shrink-0" style={{ width: AVATAR }}>
-        <div className="w-0.5 h-2 bg-admin-border" />
+        <div className={`w-px h-2 transition-colors ${lineColor}`} />
         <div className="flex-shrink-0"><Avatar email={c.viewer_email} name={c.viewer_name} url={c.avatar_url} /></div>
-        {!isLast && <div className="w-0.5 flex-1 bg-admin-border" />}
+        {!isLast && <div className={`w-px flex-1 transition-colors ${lineColor}`} />}
       </div>
       {/* Right column — pt aligns name with avatar */}
       <div className={`min-w-0 flex-1 pt-2 ${isLast ? 'pb-1' : 'pb-2'}`}>
@@ -121,35 +122,40 @@ function Row({ c, shareId, onRefresh, hover, isLast }: {
   );
 }
 
-function ReplyInput({ shareId, parentId, onDone }: { shareId: string; parentId: string; onDone: () => void }) {
+function ReplyInput({ shareId, parentId, onDone, onFocusChange }: { shareId: string; parentId: string; onDone: () => void; onFocusChange?: (focused: boolean) => void }) {
+  const [text, setText] = useState('');
+  const [focused, setFocused] = useState(false);
+  const submit = useCallback(() => {
+    if (!text.trim()) return;
+    const v = text.trim();
+    setText('');
+    addReply(shareId, parentId, 'admin', null, v).then(onDone);
+  }, [text, shareId, parentId, onDone]);
   return (
-    <div className="flex items-center gap-2" style={{ paddingLeft: AVATAR }}>
-      <textarea
-        placeholder="Reply..."
-        rows={1}
-        className="flex-1 bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm text-admin-text-primary resize-none focus:outline-none focus:border-admin-text-muted h-7"
-        onKeyDown={e => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            const v = (e.target as HTMLTextAreaElement).value.trim();
-            if (!v) return;
-            (e.target as HTMLTextAreaElement).value = '';
-            addReply(shareId, parentId, 'admin', null, v).then(onDone);
-          }
-        }}
+    <div className="flex">
+      {/* L-shaped connector: border-left goes down, border-bottom curves right to reply center */}
+      <div
+        className={`flex-shrink-0 border-l border-b rounded-bl-lg transition-colors ${focused ? 'border-admin-text-muted' : 'border-admin-border'}`}
+        style={{ width: AVATAR / 2 + 8, marginLeft: AVATAR / 2 - 0.5, marginBottom: 16 }}
       />
-      <button
-        onClick={e => {
-          const ta = (e.currentTarget.previousElementSibling as HTMLTextAreaElement);
-          const v = ta.value.trim();
-          if (!v) return;
-          ta.value = '';
-          addReply(shareId, parentId, 'admin', null, v).then(onDone);
-        }}
-        className="h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border border-admin-border text-admin-text-faint hover:text-admin-text-primary hover:border-admin-text-muted transition-colors"
-      >
-        <Send size={12} />
-      </button>
+      <div className="flex items-center gap-2 flex-1 py-1">
+        <textarea
+          value={text}
+          onChange={e => { setText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+          onFocus={() => { setFocused(true); onFocusChange?.(true); }}
+          onBlur={() => { setFocused(false); onFocusChange?.(false); }}
+          placeholder="Reply..."
+          rows={1}
+          className="flex-1 w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm leading-5 text-admin-text-primary placeholder:text-admin-text-faint resize-none overflow-hidden focus:outline-none focus:border-admin-text-muted min-h-7"
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
+        />
+        <button
+          onClick={submit}
+          className={`h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}
+        >
+          <Send size={12} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -159,6 +165,7 @@ function Thread({ thread, shareId, onRefresh }: {
 }) {
   const { parent, replies } = thread;
   const [expanded, setExpanded] = useState(true);
+  const [replyFocused, setReplyFocused] = useState(false);
   const refresh = useCallback(() => { onRefresh?.(); }, [onRefresh]);
 
   // Compute avatar animation data
@@ -246,7 +253,7 @@ function Thread({ thread, shareId, onRefresh }: {
           {/* Parent body with connector line on the left */}
           <div className="flex gap-2">
             <div className="flex flex-col items-center flex-shrink-0" style={{ width: AVATAR }}>
-              {hasReplies && <div className="w-0.5 flex-1 bg-admin-border" />}
+              {(hasReplies || shareId) && <div className={`w-px flex-1 transition-colors ${replyFocused ? 'bg-admin-text-muted' : 'bg-admin-border'}`} />}
             </div>
             <div className="min-w-0 flex-1 pb-1">
               <p className={`text-admin-sm whitespace-pre-wrap break-words mt-0.5 ${parent.resolved_at ? 'text-admin-text-faint' : 'text-admin-text-secondary'}`}>{parent.content}</p>
@@ -254,11 +261,9 @@ function Thread({ thread, shareId, onRefresh }: {
           </div>
           {/* Replies */}
           {hasReplies && replies.map((r, i) => (
-            <Row key={r.id} c={r} shareId={shareId} onRefresh={refresh} hover="group-hover/reply" isLast={i === replies.length - 1} />
+            <Row key={r.id} c={r} shareId={shareId} onRefresh={refresh} hover="group-hover/reply" isLast={!shareId && i === replies.length - 1} highlight={replyFocused} />
           ))}
-          {shareId && (
-            <div className="mt-3"><ReplyInput shareId={shareId} parentId={parent.id} onDone={refresh} /></div>
-          )}
+          {shareId && <ReplyInput shareId={shareId} parentId={parent.id} onDone={refresh} onFocusChange={setReplyFocused} />}
         </div>
       </div>
     </div>
@@ -276,12 +281,12 @@ function NewComment({ shareId, beatId, onDone }: { shareId: string; beatId: stri
   }, [text, shareId, beatId, onDone]);
 
   return (
-    <div className="border-t border-admin-border-subtle px-3 py-2 mt-auto bg-admin-bg-wash">
-      <div className="flex items-start gap-2">
-        <div className="h-7 flex items-center"><Avatar email="admin" name="Admin" /></div>
+    <div className="px-3 pb-2 mt-auto">
+      <div className="flex items-center gap-2">
+        <div className="flex-shrink-0" style={{ width: AVATAR }}><Avatar email="admin" name="Admin" /></div>
         <textarea value={text} onChange={e => { setText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} rows={1}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
-          placeholder="New comment..." className="flex-1 bg-transparent border-none text-admin-base text-admin-text-primary placeholder:text-admin-text-faint focus:outline-none min-h-7 leading-7 resize-none overflow-hidden" />
+          placeholder="New comment..." className="flex-1 w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm leading-5 text-admin-text-primary placeholder:text-admin-text-faint resize-none overflow-hidden focus:outline-none focus:border-admin-text-muted min-h-7" />
         <button onClick={submit} disabled={!text.trim() || sending}
           className={`h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}>
           <Send size={12} />

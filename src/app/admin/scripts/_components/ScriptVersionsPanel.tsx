@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useId } from 'react';
-import { X, Check, Pencil, Eye, EyeOff, Table2, StickyNote, CopyPlus, Calendar } from 'lucide-react';
+import { X, Check, Pencil, Table2, StickyNote, CopyPlus, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   DndContext,
@@ -18,13 +18,13 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
+import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { TwoStateDeleteButton } from '@/app/admin/_components/TwoStateDeleteButton';
 import {
   getScriptVersions,
   updateScript,
   createScriptVersion,
-  publishScriptVersion,
-  unpublishScriptVersion,
+  createBlankVersion,
   deleteScriptVersion,
   reorderScriptVersions,
 } from '@/app/admin/actions';
@@ -73,7 +73,6 @@ function SortableVersionCard({
   onCancelEditing,
   onSaveEdits,
   onDuplicate,
-  onTogglePublish,
   onRequestDeleteConfirm,
   onConfirmDelete,
   onCancelDelete,
@@ -96,7 +95,6 @@ function SortableVersionCard({
   onCancelEditing: () => void;
   onSaveEdits: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onTogglePublish: (v: VersionRow) => void;
   onRequestDeleteConfirm: (id: string) => void;
   onConfirmDelete: (id: string) => void;
   onCancelDelete: () => void;
@@ -170,11 +168,9 @@ function SortableVersionCard({
           )}
         </div>
 
-        {/* Status badge */}
-        {v.is_published ? (
-          <span className="text-admin-sm font-medium text-admin-success flex-shrink-0">Published</span>
-        ) : (
-          <span className="text-admin-sm text-admin-text-faint flex-shrink-0">Draft</span>
+        {/* Version type indicator */}
+        {v.minor_version === 0 && (
+          <span className="text-admin-sm font-medium text-admin-success flex-shrink-0">Shared</span>
         )}
       </div>
 
@@ -234,13 +230,6 @@ function SortableVersionCard({
                 title="Edit"
               >
                 <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => onTogglePublish(v)}
-                className="w-8 h-8 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-faint transition-colors"
-                title={v.is_published ? 'Unpublish' : 'Publish'}
-              >
-                {v.is_published ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
               <TwoStateDeleteButton
                 itemId={v.id}
@@ -315,15 +304,6 @@ export function ScriptVersionsPanel({
     await reorderScriptVersions(reordered.map(v => v.id));
   }, [versions]);
 
-  const handleTogglePublish = async (v: VersionRow) => {
-    if (v.is_published) {
-      await unpublishScriptVersion(v.id);
-    } else {
-      await publishScriptVersion(v.id);
-    }
-    await loadVersions();
-  };
-
   const handleDelete = async (id: string) => {
     await deleteScriptVersion(id);
     setVersions(prev => prev.filter(v => v.id !== id));
@@ -334,6 +314,17 @@ export function ScriptVersionsPanel({
     setDuplicatingId(id);
     try {
       const newId = await createScriptVersion(id);
+      onClose();
+      router.push(`/admin/scripts/${newId}`);
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
+  const handleBlankVersion = async () => {
+    setDuplicatingId('blank');
+    try {
+      const newId = await createBlankVersion(scriptId);
       onClose();
       router.push(`/admin/scripts/${newId}`);
     } finally {
@@ -426,7 +417,6 @@ export function ScriptVersionsPanel({
                     onCancelEditing={cancelEditing}
                     onSaveEdits={saveEdits}
                     onDuplicate={handleDuplicate}
-                    onTogglePublish={handleTogglePublish}
                     onRequestDeleteConfirm={setConfirmDeleteId}
                     onConfirmDelete={(id) => handleDelete(id)}
                     onCancelDelete={() => setConfirmDeleteId(null)}
@@ -441,6 +431,29 @@ export function ScriptVersionsPanel({
             <p className="py-6 text-admin-sm text-admin-text-faint text-center">No versions found.</p>
           )}
         </div>
+
+        {/* Footer */}
+        <PanelFooter
+          secondaryActions={
+            <>
+              <button
+                onClick={() => handleDuplicate(scriptId)}
+                disabled={duplicatingId !== null}
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <CopyPlus size={14} />
+                Iterate New Version
+              </button>
+              <button
+                onClick={handleBlankVersion}
+                disabled={duplicatingId !== null}
+                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                New Blank Version
+              </button>
+            </>
+          }
+        />
       </div>
     </PanelDrawer>
   );
