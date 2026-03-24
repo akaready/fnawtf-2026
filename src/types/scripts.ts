@@ -203,6 +203,7 @@ export interface ScriptTagRow {
   slug: string;
   category: string;
   color: string;
+  prompt_snippet: string;
   created_at: string;
 }
 
@@ -337,6 +338,11 @@ export interface ScriptShareCommentRow {
   is_admin: boolean;
   deleted_at: string | null;
   created_at: string;
+  parent_comment_id: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  comment_number: number | null;
+  avatar_url?: string | null;
 }
 
 /** Script share view tracking record */
@@ -349,13 +355,18 @@ export interface ScriptShareViewRow {
   viewed_at: string;
 }
 
+/** Normalize a tag name: lowercase, spaces→dashes, only [a-z0-9_-] */
+export function normalizeTagName(input: string): string {
+  return input.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+}
+
 /** Default tags seeded on every new script. */
 export const DEFAULT_SCRIPT_TAGS: { name: string; color: string }[] = [
-  { name: 'Interview',        color: '#f97316' },
-  { name: 'B-Roll',           color: '#3b82f6' },
-  { name: 'Graphics',         color: '#22c55e' },
-  { name: 'Overlay Graphics', color: '#84cc16' },
-  { name: 'Stock',            color: '#38bdf8' },
-  { name: 'Transition',       color: '#14b8a6' },
-  { name: 'VFX',              color: '#8b5cf6' },
+  { name: 'interview',        color: '#f97316' },
+  { name: 'b-roll',           color: '#3b82f6' },
+  { name: 'graphics',         color: '#22c55e' },
+  { name: 'overlay-graphics', color: '#84cc16' },
+  { name: 'stock',            color: '#38bdf8' },
+  { name: 'transition',       color: '#14b8a6' },
+  { name: 'vfx',              color: '#8b5cf6' },
 ];
