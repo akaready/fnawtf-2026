@@ -40,7 +40,7 @@ function BeatAvatars({
   const layerOpacity = [1, 0.55, 0.3];
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto" style={{ width: 20, height: stacked.length * 4 + 16, bottom: '100%', marginBottom: 4 }}>
+    <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto" style={{ width: 20, height: stacked.length * 4 + 16, bottom: '100%', marginBottom: 10 }}>
       {stacked.map((author, i) => {
         const baseOpacity = layerOpacity[i] ?? 0.15;
         return (
@@ -93,7 +93,6 @@ interface Props {
 
 export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, commentAuthors, onClickCommentAvatar }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const indexFromClientX = useCallback((clientX: number) => {
@@ -113,9 +112,8 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
   }, [indexFromClientX, onSeek]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    const idx = indexFromClientX(e.clientX);
-    setHoverIndex(idx);
     if (dragging) {
+      const idx = indexFromClientX(e.clientX);
       onSeek(idx);
     }
   }, [dragging, indexFromClientX, onSeek]);
@@ -132,15 +130,14 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
     }
   }
 
-  const hoverSlide = hoverIndex !== null ? slides[hoverIndex] : null;
-  const hoverLeft = hoverIndex !== null && slides.length > 1
-    ? `${(hoverIndex / (slides.length - 1)) * 100}%`
-    : '0%';
+  // Count beats per scene to decide label format
+  const beatsPerScene: Record<string, number> = {};
+  for (const s of slides) beatsPerScene[s.sceneId] = (beatsPerScene[s.sceneId] ?? 0) + 1;
 
   const playheadLeft = slides.length > 1 ? `${(currentIndex / (slides.length - 1)) * 100}%` : '0%';
 
   return (
-    <div className="flex-shrink-0 z-10 pt-4 pb-4">
+    <div className="flex-shrink-0 z-10 pt-6 pb-1">
       {/* Track area */}
       <div className="px-2 py-1">
         <div
@@ -149,7 +146,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerLeave={() => { setHoverIndex(null); }}
+          onPointerLeave={() => { setDragging(false); }}
         >
           {/* Beat marks — dot for regular beats, line for scene boundaries */}
           {slides.map((slide, i) => {
@@ -157,6 +154,11 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
             const isSceneBoundary = sceneBoundarySet.has(i);
             const isCurrent = i === currentIndex;
             const authors = commentAuthors?.[slide.beatId];
+
+            const isSingleBeat = beatsPerScene[slide.sceneId] === 1;
+            const beatLabel = isSceneBoundary
+              ? (isSingleBeat ? `${slide.sceneNumber}` : `${slide.sceneNumber}${slide.beatLetter ?? ''}`)
+              : (isSingleBeat ? null : (slide.beatLetter ?? null));
 
             if (isSceneBoundary) {
               return (
@@ -171,6 +173,17 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       isCurrent={isCurrent}
                       onClickAvatar={(email) => onClickCommentAvatar(slide.beatId, email)}
                     />
+                  )}
+                  {beatLabel && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSeek(i); }}
+                      className={`absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                        isCurrent ? 'text-white bg-white/15' : 'text-[#888]'
+                      }`}
+                      style={{ top: 20 }}
+                    >
+                      {beatLabel}
+                    </button>
                   )}
                 </div>
               );
@@ -191,6 +204,17 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                     onClickAvatar={(email) => onClickCommentAvatar(slide.beatId, email)}
                   />
                 )}
+                {beatLabel && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSeek(i); }}
+                    className={`absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                      isCurrent ? 'text-white bg-white/15' : 'text-[#555]'
+                    }`}
+                    style={{ top: 16 }}
+                  >
+                    {beatLabel}
+                  </button>
+                )}
               </div>
             );
           })}
@@ -203,17 +227,8 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
         </div>
       </div>
 
-      {/* Hover tooltip — below the track */}
-      <div className="relative px-2 h-0">
-        {hoverSlide && !dragging && (
-          <div
-            className="absolute -translate-x-1/2 px-2 py-1 rounded bg-[#1a1a1a] text-[#888] text-admin-sm font-mono whitespace-nowrap pointer-events-none text-center"
-            style={{ left: hoverLeft, top: 3 }}
-          >
-            {hoverSlide.sceneNumber}{hoverSlide.beatLetter}
-          </div>
-        )}
-      </div>
+      {/* Spacer for labels rendered inside tick/dot divs */}
+      <div className="h-8" />
     </div>
   );
 }
