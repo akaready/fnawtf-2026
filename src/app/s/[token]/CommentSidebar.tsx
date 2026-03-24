@@ -10,8 +10,6 @@ import { getShareComments, updateComment, deleteComment, addReply, toggleResolve
 import { AnimatePresence } from 'framer-motion';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
 import { EmojiPicker } from '@/lib/comments/EmojiPicker';
-import { StackedAvatars } from '@/lib/comments/StackedAvatars';
-import { threadNames } from '@/lib/comments/threadNames';
 import { Avatar } from '@/lib/comments/Avatar';
 import type { ScriptShareCommentRow } from '@/types/scripts';
 
@@ -103,7 +101,6 @@ function asScriptRows(comments: ShareComment[]): ScriptShareCommentRow[] {
 // ── Shared styles ────────────────────────────────────────────────────────
 
 const BTN_CANCEL = 'h-7 px-3 text-admin-sm text-admin-text-faint hover:text-white border border-admin-border rounded-admin-md hover:bg-admin-bg-hover transition-colors';
-const ICON_HOVER = 'p-1 rounded cursor-pointer transition-colors';
 
 // ── Reaction types ───────────────────────────────────────────────────────
 
@@ -754,11 +751,6 @@ function FilterDropdown({
 
 // ── Main Sidebar ─────────────────────────────────────────────────────────
 
-const iconVariants = {
-  hidden: { opacity: 0, x: -6, width: 0, marginRight: -6 },
-  visible: { opacity: 1, x: 0, width: 'auto', marginRight: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
-};
-
 // ── Exported for reuse in CommentBottomSheet ────────────────────────────
 export {
   CommentCard as SharedCommentCard,
@@ -796,7 +788,7 @@ export function CommentSidebar({
   const commentListRef = useRef<HTMLDivElement>(null);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
   const emailFillRef = useRef<HTMLDivElement>(null);
-  const [isEmailHovered, setIsEmailHovered] = useState(false);
+  const [_isEmailHovered, setIsEmailHovered] = useState(false);
 
   const beatLabelMap = buildBeatLabelMap(slides);
 
