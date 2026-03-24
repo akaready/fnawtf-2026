@@ -105,9 +105,9 @@ function Row({ c, shareId, onRefresh, hover, isLast, highlight }: {
     <div className="group/reply flex gap-2">
       {/* Left column: line above + avatar + line below */}
       <div className="flex flex-col items-center flex-shrink-0" style={{ width: AVATAR }}>
-        <div className={`w-px h-2 transition-colors ${lineColor}`} />
+        <div className={`w-px h-2 transition-colors duration-100 ${lineColor}`} />
         <div className="flex-shrink-0"><Avatar email={c.viewer_email} name={c.viewer_name} url={c.avatar_url} /></div>
-        {!isLast && <div className={`w-px flex-1 transition-colors ${lineColor}`} />}
+        {!isLast && <div className={`w-px flex-1 transition-colors duration-100 ${lineColor}`} />}
       </div>
       {/* Right column — pt aligns name with avatar */}
       <div className={`min-w-0 flex-1 pt-2 ${isLast ? 'pb-1' : 'pb-2'}`}>
@@ -135,7 +135,7 @@ function ReplyInput({ shareId, parentId, onDone, onFocusChange }: { shareId: str
     <div className="flex">
       {/* L-shaped connector: border-left goes down, border-bottom curves right to reply center */}
       <div
-        className={`flex-shrink-0 border-l border-b rounded-bl-lg transition-colors ${focused ? 'border-admin-text-muted' : 'border-admin-border'}`}
+        className={`flex-shrink-0 border-l border-b rounded-bl-lg transition-colors duration-100 ${focused ? 'border-admin-text-muted' : 'border-admin-border'}`}
         style={{ width: AVATAR / 2 + 8, marginLeft: AVATAR / 2 - 0.5, marginBottom: 16 }}
       />
       <div className="flex items-center gap-2 flex-1 py-1">
@@ -151,7 +151,7 @@ function ReplyInput({ shareId, parentId, onDone, onFocusChange }: { shareId: str
         />
         <button
           onClick={submit}
-          className={`h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}
+          className={`min-h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}
         >
           <Send size={12} />
         </button>
@@ -253,7 +253,7 @@ function Thread({ thread, shareId, onRefresh }: {
           {/* Parent body with connector line on the left */}
           <div className="flex gap-2">
             <div className="flex flex-col items-center flex-shrink-0" style={{ width: AVATAR }}>
-              {(hasReplies || shareId) && <div className={`w-px flex-1 transition-colors ${replyFocused ? 'bg-admin-text-muted' : 'bg-admin-border'}`} />}
+              {(hasReplies || shareId) && <div className={`w-px flex-1 transition-colors duration-100 ${replyFocused ? 'bg-admin-text-muted' : 'bg-admin-border'}`} />}
             </div>
             <div className="min-w-0 flex-1 pb-1">
               <p className={`text-admin-sm whitespace-pre-wrap break-words mt-0.5 ${parent.resolved_at ? 'text-admin-text-faint' : 'text-admin-text-secondary'}`}>{parent.content}</p>
@@ -302,7 +302,7 @@ function NewComment({ shareId, beatId, onDone }: { shareId: string; beatId: stri
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
           placeholder="New comment..." className="flex-1 w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm leading-5 text-admin-text-primary placeholder:text-admin-text-faint resize-none overflow-hidden focus:outline-none focus:border-admin-text-muted min-h-7 transition-all duration-200" />
         <button onClick={submit} disabled={!text.trim() || sending}
-          className={`h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}>
+          className={`min-h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}>
           <Send size={12} />
         </button>
       </div>

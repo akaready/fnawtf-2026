@@ -325,23 +325,15 @@ export function ScriptShareClient({
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0">
-        {/* Left — Scenes toggle */}
-        <button
-          onClick={() => setShowSidebar(prev => !prev)}
-          className={`${btnCls} gap-1.5 px-2 ${showSidebar ? btnOn : ''}`}
-          title={showSidebar ? 'Hide scenes' : 'Show scenes'}
-        >
-          {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-          <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
-        </button>
-        <div className="w-2" />
+        {/* Left — Scenes toggle + Fullscreen */}
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-            className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
-            title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
+            onClick={() => setShowSidebar(prev => !prev)}
+            className={`${btnCls} gap-1.5 px-2 ${showSidebar ? btnOn : ''}`}
+            title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
-            <SeparatorVertical size={16} />
+            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
           </button>
           <button
             onClick={() => setIsFocused(prev => !prev)}
@@ -349,6 +341,13 @@ export function ScriptShareClient({
             title={isFocused ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
+          </button>
+          <button
+            onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
+            className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
+            title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
+          >
+            <SeparatorVertical size={16} />
           </button>
         </div>
         {/* Dots — absolutely centered to match header centering */}

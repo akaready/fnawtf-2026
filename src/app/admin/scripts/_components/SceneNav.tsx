@@ -129,7 +129,7 @@ export function SceneNav({
   );
 
   return (
-    <div className="min-w-max bg-admin-bg-nav flex flex-col h-full">
+    <div className="min-w-max flex flex-col h-full">
       {showHeader && (
         <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
           {onCollapse && (
@@ -215,7 +215,7 @@ function SortableSceneRow({
       {...listeners}
       className={`text-left flex items-stretch min-h-[45px] border-b border-admin-border-subtle cursor-grab transition-colors ${
         isActive
-          ? 'bg-black/40 text-admin-text-primary'
+          ? 'bg-black text-admin-text-primary'
           : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-secondary'
       }`}
       onClick={onSelect}
@@ -244,14 +244,14 @@ function SortableSceneRow({
               className={`flex items-center justify-center font-bebas text-admin-sm leading-none transition-colors ${
                 beat.isActive
                   ? 'bg-admin-beat-selected-bg text-admin-beat-selected-text'
-                  : 'bg-admin-bg-nav text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
+                  : 'bg-inherit text-admin-text-faint hover:bg-admin-beat-hover-bg hover:text-admin-text-muted'
               }`}
             >
               {beat.label}
             </button>
           ))}
           {beatNavItems.length % 2 !== 0 && (
-            <span aria-hidden="true" className="bg-admin-bg-nav" />
+            <span aria-hidden="true" className="bg-inherit" />
           )}
         </div>
       )}
