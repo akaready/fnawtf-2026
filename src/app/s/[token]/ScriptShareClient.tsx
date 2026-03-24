@@ -114,7 +114,7 @@ export function ScriptShareClient({
   useEffect(() => {
     if (!shareId) return;
 
-    startScriptViewSession(shareId, viewerEmail).then(id => {
+    startScriptViewSession(shareId, viewerEmail, viewerName ?? undefined).then(id => {
       viewIdRef.current = id;
     });
 

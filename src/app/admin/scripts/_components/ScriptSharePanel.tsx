@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Plus, ExternalLink, EyeOff, Eye, Trash2 } from 'lucide-react';
+import { X, Copy, Check, Plus, ExternalLink, Trash2, ChevronDown } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { getScriptShares, createScriptShare, updateScriptShare, archiveScriptShare, restoreScriptShare, deleteScriptShare } from '@/app/admin/actions';
@@ -28,6 +28,7 @@ interface Props {
   scriptId: string;
   isPublished: boolean;
   onPublish: () => Promise<void>;
+  onUnpublish: () => Promise<void>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -56,13 +57,16 @@ function formatDuration(seconds: number | null): string {
 
 // ── Main Panel ───────────────────────────────────────────────────────────
 
-export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPublish }: Props) {
+export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPublish, onUnpublish }: Props) {
   const [shares, setShares] = useState<ShareWithViews[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const loadShares = useCallback(async () => {
     setLoading(true);
@@ -126,7 +130,27 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const copyCode = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(id);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const handlePublishToggle = async (publish: boolean) => {
+    setPublishing(true);
+    setShowStatusDropdown(false);
+    try {
+      if (publish) await onPublish();
+      else await onUnpublish();
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const selected = shares.find(s => s.id === selectedId) ?? null;
+
+  // Determine view/preview button
+  const canView = isPublished && selected?.is_active && selected?.token;
 
   return (
     <PanelDrawer open={open} onClose={onClose} width="w-[580px]">
@@ -184,14 +208,6 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
                     </div>
                   </button>
                   <span className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                    {/* Toggle visibility */}
-                    <button
-                      onClick={() => handleToggleActive(share.id, share.is_active)}
-                      className="text-admin-text-ghost hover:text-admin-text-faint p-1 transition-colors"
-                      title={share.is_active ? 'Take offline' : 'Put online'}
-                    >
-                      {share.is_active ? <EyeOff size={13} /> : <Eye size={13} />}
-                    </button>
                     {/* Delete */}
                     {confirmDeleteId === share.id ? (
                       <>
@@ -227,8 +243,11 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
               <ShareDetail
                 share={selected}
                 copiedId={copiedId}
+                copiedCode={copiedCode}
                 onCopyLink={copyLink}
+                onCopyCode={copyCode}
                 onUpdate={handleUpdate}
+                onToggleActive={handleToggleActive}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-admin-sm text-admin-text-faint">
@@ -243,13 +262,71 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
           onSave={onClose}
           saveLabel="Done"
           secondaryActions={
-            <button
-              onClick={() => window.open(`/s/preview/${scriptId}`, '_blank')}
-              className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
-            >
-              <ExternalLink size={14} />
-              Preview
-            </button>
+            <>
+              {/* Published status dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatusDropdown(p => !p)}
+                  disabled={publishing}
+                  className={`${isPublished ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 py-2.5 text-sm font-medium`}
+                >
+                  {isPublished ? 'Published' : 'Internal Draft'}
+                  <ChevronDown size={12} className={`transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showStatusDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                    <div className="absolute left-0 bottom-full mb-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl min-w-[160px] py-1">
+                      <button
+                        onClick={() => { if (isPublished) handlePublishToggle(false); }}
+                        disabled={publishing || !isPublished}
+                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                          !isPublished ? 'text-admin-text-primary bg-admin-bg-active' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-admin-text-faint" />
+                          Internal Draft
+                        </span>
+                        {!isPublished && <Check size={12} />}
+                      </button>
+                      <button
+                        onClick={() => { if (!isPublished) handlePublishToggle(true); }}
+                        disabled={publishing || isPublished}
+                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
+                          isPublished ? 'text-admin-success bg-admin-success-bg/30' : 'text-admin-text-muted hover:bg-admin-bg-hover disabled:opacity-40'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-admin-success" />
+                          Published
+                        </span>
+                        {isPublished && <Check size={12} />}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* View / Preview button */}
+              {canView ? (
+                <button
+                  onClick={() => window.open(`/s/${selected.token}`, '_blank')}
+                  className="btn-info inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+                >
+                  <ExternalLink size={14} />
+                  View
+                </button>
+              ) : (
+                <button
+                  onClick={() => window.open(`/s/preview/${scriptId}`, '_blank')}
+                  className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+                >
+                  <ExternalLink size={14} />
+                  Preview
+                </button>
+              )}
+            </>
           }
         />
       </div>
@@ -262,13 +339,19 @@ export function ScriptSharePanel({ open, onClose, scriptId, isPublished, onPubli
 function ShareDetail({
   share,
   copiedId,
+  copiedCode,
   onCopyLink,
+  onCopyCode,
   onUpdate,
+  onToggleActive,
 }: {
   share: ShareWithViews;
   copiedId: string | null;
+  copiedCode: string | null;
   onCopyLink: (token: string, id: string) => void;
+  onCopyCode: (code: string, id: string) => void;
   onUpdate: (shareId: string, updates: { notes?: string; access_code?: string; is_active?: boolean; share_mode?: string }) => void;
+  onToggleActive: (shareId: string, currentlyActive: boolean) => void;
 }) {
   const [accessCode, setAccessCode] = useState(share.access_code);
   const [notes, setNotes] = useState(share.notes ?? '');
@@ -319,7 +402,7 @@ function ShareDetail({
         </div>
       </div>
 
-      {/* Version header */}
+      {/* Version header + active toggle */}
       <div className="flex items-center gap-3 py-1">
         <span className="text-admin-lg font-bold text-admin-cream">
           {share.snapshot_major_version ? `v${share.snapshot_major_version}` : 'Legacy share'}
@@ -327,6 +410,16 @@ function ShareDetail({
         <span className="text-admin-sm text-admin-text-faint">
           Created {new Date(share.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </span>
+        <button
+          onClick={() => onToggleActive(share.id, share.is_active)}
+          className={`ml-auto text-admin-sm font-medium px-2.5 py-1 rounded-admin-sm transition-colors ${
+            share.is_active
+              ? 'text-admin-success bg-admin-success-bg/30 hover:bg-admin-success-bg/50'
+              : 'text-admin-text-faint bg-admin-bg-active hover:bg-admin-bg-hover'
+          }`}
+        >
+          {share.is_active ? 'Active' : 'Offline'}
+        </button>
       </div>
 
       {/* Divider */}
@@ -335,12 +428,21 @@ function ShareDetail({
       {/* Access code */}
       <div className="space-y-1.5">
         <label className="admin-label">Access Code</label>
-        <input
-          value={accessCode}
-          onChange={e => setAccessCode(e.target.value)}
-          onBlur={() => { if (accessCode !== share.access_code) onUpdate(share.id, { access_code: accessCode }); }}
-          className="admin-input w-full font-admin-mono"
-        />
+        <div className="flex items-center gap-2 bg-admin-bg-inset border border-admin-border-subtle rounded-admin-md px-3 py-2.5">
+          <input
+            value={accessCode}
+            onChange={e => setAccessCode(e.target.value)}
+            onBlur={() => { if (accessCode !== share.access_code) onUpdate(share.id, { access_code: accessCode }); }}
+            className="flex-1 bg-transparent text-admin-base font-admin-mono text-admin-text-secondary outline-none"
+          />
+          <button
+            onClick={() => onCopyCode(share.access_code, share.id)}
+            className="w-7 h-7 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+            title="Copy access code"
+          >
+            {copiedCode === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
+          </button>
+        </div>
       </div>
 
       {/* Notes */}

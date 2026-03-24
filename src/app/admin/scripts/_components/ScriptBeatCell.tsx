@@ -391,7 +391,7 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
 
   return (
     <div
-      className="relative min-w-0 overflow-hidden border-b border-b-[#0e0e0e]"
+      className="relative min-w-0 overflow-hidden border-b border-admin-border-subtle"
       onMouseDown={handleWrapperMouseDown}
     >
       <div

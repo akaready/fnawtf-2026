@@ -76,6 +76,7 @@ interface Props {
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
   allScriptSlides?: import('./StoryboardLightbox').LightboxSlide[];
   consistencyFrameUrls?: string[];
+  tags?: import('@/types/scripts').ScriptTagRow[];
   onFrameChange: (frame: ScriptStoryboardFrameRow | null) => void;
   // Multi-frame support
   scenes?: ComputedScene[];                           // full script scenes for beat picker
@@ -110,6 +111,7 @@ export function StoryboardGenerateModal({
   sceneFrames: _sceneFrames,
   allScriptSlides: _allScriptSlides,
   consistencyFrameUrls,
+  tags,
   onFrameChange,
   scenes,
   allBeatFrames: _allBeatFrames,
@@ -253,7 +255,7 @@ export function StoryboardGenerateModal({
         .filter(Boolean).join('\n') || 'Empty beat — generate a neutral establishing shot';
     }
     const fakeBeat = { ...beat, audio_content: localAudio, visual_content: localVisual, notes_content: localNotes };
-    let prompt = buildRichPrompt(fakeBeat, beatIndex, scene, characters, locations, castMap, referenceMap);
+    let prompt = buildRichPrompt(fakeBeat, beatIndex, scene, characters, locations, castMap, referenceMap, tags);
     const presetKey = localStylePreset ?? style?.style_preset;
     if (presetKey && STYLE_PRESETS[presetKey as keyof typeof STYLE_PRESETS]?.prompt) {
       prompt += `\n${STYLE_PRESETS[presetKey as keyof typeof STYLE_PRESETS].prompt}`;

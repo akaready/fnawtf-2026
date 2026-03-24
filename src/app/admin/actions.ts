@@ -5547,7 +5547,25 @@ export async function getShareComments(shareId: string): Promise<import('@/types
     .is('deleted_at', null)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
-  return (data ?? []) as import('@/types/scripts').ScriptShareCommentRow[];
+  const comments = (data ?? []) as import('@/types/scripts').ScriptShareCommentRow[];
+
+  // Look up avatar URLs from contacts
+  const emails = [...new Set(comments.map(c => c.viewer_email))];
+  if (emails.length > 0) {
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('email, headshot_url')
+      .in('email', emails);
+    const avatarMap = new Map<string, string>();
+    for (const c of (contacts ?? []) as { email: string; headshot_url: string | null }[]) {
+      if (c.headshot_url) avatarMap.set(c.email, c.headshot_url);
+    }
+    for (const comment of comments) {
+      comment.avatar_url = avatarMap.get(comment.viewer_email) ?? null;
+    }
+  }
+
+  return comments;
 }
 
 /** Update a script share link. */

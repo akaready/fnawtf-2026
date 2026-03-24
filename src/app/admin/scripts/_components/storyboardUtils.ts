@@ -1,8 +1,8 @@
-import type { ScriptBeatRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
+import type { ScriptBeatRow, ComputedScene, ScriptCharacterRow, ScriptLocationRow, ScriptTagRow, CharacterCastWithContact, CharacterReferenceRow } from '@/types/scripts';
 
 /**
  * Build a rich context prompt for storyboard image generation.
- * Includes scene heading, location, characters, neighboring beats, and beat content.
+ * Includes scene heading, location, characters, neighboring beats, beat content, and tag prompt snippets.
  */
 export function buildRichPrompt(
   beat: ScriptBeatRow,
@@ -12,6 +12,7 @@ export function buildRichPrompt(
   locations: ScriptLocationRow[],
   castMap?: Record<string, CharacterCastWithContact[]>,
   referenceMap?: Record<string, CharacterReferenceRow[]>,
+  tags?: ScriptTagRow[],
 ): string {
   const parts: string[] = [];
 
@@ -91,6 +92,25 @@ export function buildRichPrompt(
   if (next) {
     const nextContent = [next.audio_content, next.visual_content].filter(Boolean).join(' | ');
     if (nextContent) parts.push(`Next beat: ${nextContent}`);
+  }
+
+  // Tag prompt snippets — inject guidance for any tags referenced in this beat
+  if (tags && tags.length > 0) {
+    const beatText = `${beat.audio_content ?? ''} ${beat.visual_content ?? ''} ${beat.notes_content ?? ''}`;
+    const slugPattern = /#\[(.+?)\]/g;
+    const matchedSlugs = new Set<string>();
+    let match = slugPattern.exec(beatText);
+    while (match !== null) {
+      matchedSlugs.add(match[1]);
+      match = slugPattern.exec(beatText);
+    }
+    for (const tag of tags) {
+      if (matchedSlugs.has(tag.slug) && tag.prompt_snippet?.trim()) {
+        parts.push('');
+        parts.push(`TAG GUIDANCE (#${tag.name}):`);
+        parts.push(tag.prompt_snippet.trim());
+      }
+    }
   }
 
   return parts.join('\n').replace(/\n{3,}/g, '\n\n') || 'Empty beat — generate a neutral establishing shot';

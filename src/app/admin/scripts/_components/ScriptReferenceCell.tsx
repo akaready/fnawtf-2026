@@ -70,7 +70,7 @@ export function ScriptReferenceCell({ beatId, references, onUpload, onDelete, on
 
   return (
     <div
-      className="relative min-h-[2.5rem] border-b border-b-[#0e0e0e] group/ref flex items-center"
+      className="relative min-h-[2.5rem] border-b border-admin-border-subtle group/ref flex items-center"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

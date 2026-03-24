@@ -3289,6 +3289,7 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          prompt_snippet: string
           script_group_id: string
           slug: string
         }
@@ -3298,6 +3299,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          prompt_snippet?: string
           script_group_id: string
           slug: string
         }
@@ -3307,6 +3309,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          prompt_snippet?: string
           script_group_id?: string
           slug?: string
         }

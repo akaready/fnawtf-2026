@@ -41,6 +41,7 @@ interface Props {
   sceneFrames?: { imageUrl: string; label: string; filename: string }[];
   allScriptSlides?: import('./StoryboardLightbox').LightboxSlide[];
   consistencyFrameUrls?: string[];
+  tags?: import('@/types/scripts').ScriptTagRow[];
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
   scenes?: import('@/types/scripts').ComputedScene[];
 }
@@ -75,6 +76,7 @@ export function ScriptStoryboardCell({
   sceneFrames,
   allScriptSlides,
   consistencyFrameUrls,
+  tags,
   onImageMove,
   scenes,
 }: Props) {
@@ -105,7 +107,7 @@ export function ScriptStoryboardCell({
     try {
       const beat = scene.beats[beatIndex];
       const contentPrompt = beat
-        ? buildRichPrompt(beat, beatIndex, scene, characters, locations, castMap, referenceMap)
+        ? buildRichPrompt(beat, beatIndex, scene, characters, locations, castMap, referenceMap, tags)
         : [audioContent && `Audio: ${audioContent}`, visualContent && `Visual: ${visualContent}`].filter(Boolean).join('\n') || 'Empty beat — generate a neutral establishing shot';
 
       // Collect location reference URLs if location is in 'references' mode
@@ -239,7 +241,7 @@ export function ScriptStoryboardCell({
     const canCancel = (generating || batchGenerating) && onCancelGeneration;
     return (
       <div
-        className={`group/loading min-w-0 overflow-hidden border-b border-b-[#0e0e0e] flex items-center justify-center ${canCancel ? 'cursor-pointer hover:bg-admin-bg-hover' : ''}`}
+        className={`group/loading min-w-0 overflow-hidden border-b border-admin-border-subtle flex items-center justify-center ${canCancel ? 'cursor-pointer hover:bg-admin-bg-hover' : ''}`}
         onClick={canCancel ? onCancelGeneration : undefined}
         title={canCancel ? 'Cancel generation' : undefined}
       >
@@ -256,7 +258,7 @@ export function ScriptStoryboardCell({
     return (
       <>
       <div
-        className="group/sb min-w-0 overflow-hidden border-b border-b-[#0e0e0e] relative select-none flex items-center"
+        className="group/sb min-w-0 overflow-hidden border-b border-admin-border-subtle relative select-none flex items-center"
         onMouseDown={e => e.preventDefault()}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -359,6 +361,7 @@ export function ScriptStoryboardCell({
           sceneFrames={sceneFrames}
           allScriptSlides={allScriptSlides}
           consistencyFrameUrls={consistencyFrameUrls}
+          tags={tags}
           scenes={scenes}
           onFrameChange={(newFrame) => {
             if (newFrame) {
@@ -381,7 +384,7 @@ export function ScriptStoryboardCell({
   // Empty state — split cell: upload left, generate-with-editor middle, quick-generate right
   return (
     <div
-      className={`group/sb relative min-w-0 min-h-[2.5rem] overflow-hidden border-b border-b-[#0e0e0e] transition-colors ${
+      className={`group/sb relative min-w-0 min-h-[2.5rem] overflow-hidden border-b border-admin-border-subtle transition-colors ${
         imageMoveOver ? 'bg-admin-info-bg/20' : dragOver ? 'bg-admin-info-bg/20' : ''
       }`}
       onDragOver={handleDragOver}
@@ -458,6 +461,7 @@ export function ScriptStoryboardCell({
           sceneFrames={sceneFrames}
           allScriptSlides={allScriptSlides}
           consistencyFrameUrls={consistencyFrameUrls}
+          tags={tags}
           scenes={scenes}
           onFrameChange={(newFrame) => {
             if (newFrame) {

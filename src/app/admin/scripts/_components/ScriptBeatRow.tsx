@@ -54,6 +54,8 @@ interface Props {
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
   scenes?: import('@/types/scripts').ComputedScene[];
   beatComments?: ScriptShareCommentRow[];
+  commentShareId?: string;
+  onRefreshComments?: () => void;
 }
 
 function beatLetter(n: number): string {
@@ -112,6 +114,8 @@ export function ScriptBeatRow({
   onImageMove,
   scenes,
   beatComments,
+  commentShareId,
+  onRefreshComments,
 }: Props) {
   const {
     attributes,
@@ -142,7 +146,7 @@ export function ScriptBeatRow({
     >
       {/* Beat gutter — checkbox + grip */}
       <div
-        className={`group/gutter absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#0e0e0e] select-none ${selectionActive ? '' : 'cursor-grab'}`}
+        className={`group/gutter absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-admin-border-subtle select-none ${selectionActive ? '' : 'cursor-grab'}`}
         data-beat-gutter={beat.id}
         {...(selectionActive ? {} : { ...attributes, ...listeners })}
         onMouseDown={(e) => {
@@ -291,10 +295,13 @@ export function ScriptBeatRow({
               allScriptSlides={allScriptSlides}
               onImageMove={onImageMove}
               scenes={scenes}
+              tags={tags}
             />
           )}
           {columnConfig.comments && (
-            <ScriptCommentsCell comments={beatComments ?? []} />
+            <div className="border-b border-admin-border-subtle flex flex-col">
+              <ScriptCommentsCell comments={beatComments ?? []} shareId={commentShareId} beatId={beat.id} onRefresh={onRefreshComments} />
+            </div>
           )}
         </div>
       </div>

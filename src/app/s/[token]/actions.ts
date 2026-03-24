@@ -239,17 +239,32 @@ export async function getScriptShareData(token: string) {
 export async function startScriptViewSession(
   shareId: string,
   viewerEmail: string,
+  viewerName?: string,
 ): Promise<string | null> {
   const supabase = await createClient();
-  const { data } = await supabase
+
+  // Check for a recent view from this email (within 1 hour) to avoid duplicate rows on refresh
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data: existing } = await supabase
     .from('script_share_views')
     .select('id')
     .eq('share_id', shareId)
     .eq('viewer_email', viewerEmail)
+    .gte('viewed_at', oneHourAgo)
     .order('viewed_at', { ascending: false })
     .limit(1)
     .single();
-  return data ? (data as { id: string }).id : null;
+
+  if (existing) return (existing as { id: string }).id;
+
+  // Insert a new view row
+  const { data: inserted } = await supabase
+    .from('script_share_views')
+    .insert({ share_id: shareId, viewer_email: viewerEmail, viewer_name: viewerName ?? null, duration_seconds: 0 } as never)
+    .select('id')
+    .single();
+
+  return inserted ? (inserted as { id: string }).id : null;
 }
 
 export async function updateScriptViewDuration(viewId: string, durationSeconds: number) {

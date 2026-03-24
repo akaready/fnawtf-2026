@@ -546,9 +546,9 @@ export function ScriptLocationsPanel({
                           style={{ boxShadow: `0 0 0 2px ${loc.color}` }}
                         />
                       ) : (
-                        <span
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: loc.color }}
+                        <MapPin
+                          className="w-4 h-4 flex-shrink-0"
+                          style={{ color: loc.color }}
                         />
                       )}
                       <div className="flex-1 min-w-0">
