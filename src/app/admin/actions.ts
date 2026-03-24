@@ -5472,7 +5472,8 @@ export async function deleteProductReference(referenceId: string, storagePath: s
 
 // ── Script Shares ────────────────────────────────────────────────────────
 
-/** List all share links for a script, with full view data. */
+/** List all share links for a script, with full view data.
+ *  Resolves live version numbers from the snapshot script row (not the stale snapshot_major_version). */
 export async function getScriptShares(scriptId: string) {
   const { supabase } = await requireAuth();
   const { data, error } = await supabase
@@ -5481,15 +5482,54 @@ export async function getScriptShares(scriptId: string) {
     .eq('script_id', scriptId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
+
+  // Collect snapshot script IDs to resolve live version numbers
+  const snapshotIds = (data as unknown as Array<Record<string, unknown>>)
+    .map(r => r.snapshot_script_id as string | null)
+    .filter(Boolean) as string[];
+  const versionMap = new Map<string, number>();
+  if (snapshotIds.length > 0) {
+    const { data: scripts } = await supabase
+      .from('scripts')
+      .select('id, major_version')
+      .in('id', snapshotIds);
+    for (const s of (scripts ?? []) as { id: string; major_version: number }[]) {
+      versionMap.set(s.id, s.major_version);
+    }
+  }
+
   return (data as unknown as Array<Record<string, unknown>>).map((row) => {
     const views = Array.isArray(row.script_share_views) ? row.script_share_views as Array<Record<string, unknown>> : [];
+    // Use live version from script row, fall back to stored snapshot_major_version
+    const snapshotId = row.snapshot_script_id as string | null;
+    const liveVersion = snapshotId ? versionMap.get(snapshotId) : undefined;
     return {
       ...row,
+      snapshot_major_version: liveVersion ?? row.snapshot_major_version,
       view_count: views.length,
       views,
       script_share_views: undefined,
     };
   });
+}
+
+/** Get the next major version number for sharing (from DB, not computed client-side). */
+export async function getNextShareVersion(scriptId: string): Promise<number> {
+  const { supabase } = await requireAuth();
+  const { data: script } = await supabase
+    .from('scripts')
+    .select('script_group_id')
+    .eq('id', scriptId)
+    .single();
+  if (!script) return 1;
+  const groupId = (script as { script_group_id: string | null }).script_group_id;
+  if (!groupId) return 1;
+  const { data: versions } = await supabase
+    .from('scripts')
+    .select('major_version')
+    .eq('script_group_id', groupId);
+  if (!versions || versions.length === 0) return 1;
+  return Math.max(...(versions as { major_version: number }[]).map(v => v.major_version)) + 1;
 }
 
 /** Create a new share link for a published script. */

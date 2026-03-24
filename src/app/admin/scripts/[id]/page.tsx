@@ -23,6 +23,7 @@ export default async function ScriptEditorPage({ params }: { params: Promise<{ i
 
   return (
     <ScriptEditorClient
+      key={id}
       script={script as Parameters<typeof ScriptEditorClient>[0]['script']}
       initialScenes={scenes as Parameters<typeof ScriptEditorClient>[0]['initialScenes']}
       initialBeats={beats as Parameters<typeof ScriptEditorClient>[0]['initialBeats']}

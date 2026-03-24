@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Copy, Check, Plus, ExternalLink, Trash2 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
-import { getScriptShares, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
+import { getScriptShares, getNextShareVersion, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
 import type { ScriptShareRow } from '@/types/scripts';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -62,12 +62,17 @@ export function ScriptSharePanel({ open, onClose, scriptId }: Props) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [nextMajor, setNextMajor] = useState<number>(1);
 
   const loadShares = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getScriptShares(scriptId);
+      const [data, nextVer] = await Promise.all([
+        getScriptShares(scriptId),
+        getNextShareVersion(scriptId),
+      ]);
       setShares(data as unknown as ShareWithViews[]);
+      setNextMajor(nextVer);
     } finally {
       setLoading(false);
     }
@@ -85,11 +90,6 @@ export function ScriptSharePanel({ open, onClose, scriptId }: Props) {
       setSelectedId(shares[0].id);
     }
   }, [shares, selectedId]);
-
-  // Compute next version number
-  const nextMajor = shares.length > 0
-    ? Math.max(...shares.map(s => s.snapshot_major_version ?? 0)) + 1
-    : 1;
 
   const handleCreate = async () => {
     setCreating(true);
@@ -232,8 +232,17 @@ export function ScriptSharePanel({ open, onClose, scriptId }: Props) {
         <PanelFooter
           onSave={onClose}
           saveLabel="Done"
+          saveIcon={false}
           secondaryActions={
-            <>
+            selected ? (
+              <button
+                onClick={() => window.open(`/s/${selected.token}`, '_blank')}
+                className="btn-info inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <ExternalLink size={14} />
+                View
+              </button>
+            ) : (
               <button
                 onClick={() => window.open(`/s/preview/${scriptId}`, '_blank')}
                 className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
@@ -241,16 +250,7 @@ export function ScriptSharePanel({ open, onClose, scriptId }: Props) {
                 <ExternalLink size={14} />
                 Preview
               </button>
-              {selected && (
-                <button
-                  onClick={() => window.open(`/s/${selected.token}`, '_blank')}
-                  className="btn-info inline-flex items-center gap-2 px-4 py-2.5 text-sm"
-                >
-                  <ExternalLink size={14} />
-                  View
-                </button>
-              )}
-            </>
+            )
           }
         />
       </div>

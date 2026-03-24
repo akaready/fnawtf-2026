@@ -8,6 +8,8 @@ interface PanelFooterProps {
   onSave?: () => void;
   saveLabel?: string;
   saveDisabled?: boolean;
+  /** Set to false to hide the floppy disk icon on the save button */
+  saveIcon?: boolean;
   onDelete?: () => void;
   deleteDisabled?: boolean;
   /** Additional buttons between Save and Delete (status dropdowns, fetch buttons, etc.) */
@@ -22,6 +24,7 @@ export function PanelFooter({
   onSave,
   saveLabel = 'Save',
   saveDisabled = false,
+  saveIcon = true,
   onDelete,
   deleteDisabled = false,
   secondaryActions,
@@ -36,7 +39,7 @@ export function PanelFooter({
           disabled={saveDisabled}
           className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
         >
-          <Save size={14} />
+          {saveIcon && <Save size={14} />}
           {saveLabel}
         </button>
       )}

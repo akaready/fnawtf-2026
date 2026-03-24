@@ -104,12 +104,16 @@ export function ScriptEditorClient({
   const [showVersions, setShowVersions] = useState(false);
   const [products, setProducts] = useState<ScriptProductRow[]>(initialProducts);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(`script-sidebar-${script.id}`) === 'true';
+  });
   const [isFocused, setIsFocused] = useState(false);
   const [showPresentation, setShowPresentation] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
+  const [switchingVersion, setSwitchingVersion] = useState(false);
 
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean; content_mode?: string }[]>([]);
@@ -643,6 +647,15 @@ export function ScriptEditorClient({
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
+      {/* Version switching overlay */}
+      {switchingVersion && (
+        <div className="absolute inset-0 z-[200] flex items-center justify-center bg-admin-bg-base/60 backdrop-blur-sm">
+          <div className="flex items-center gap-3 text-admin-text-muted text-admin-sm">
+            <div className="w-5 h-5 border-2 border-admin-text-faint border-t-transparent rounded-full animate-spin" />
+            Loading version...
+          </div>
+        </div>
+      )}
       {/* Header — collapses when focused */}
       <div className={`relative flex-shrink-0 border-b border-admin-border transition-[max-height,border-bottom-width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isFocused ? 'max-h-0 border-b-0 overflow-hidden' : 'max-h-[7rem]'} ${versionPickerOpen ? 'z-[999]' : 'z-20'}`}>
       <AdminPageHeader
@@ -674,10 +687,14 @@ export function ScriptEditorClient({
               <div className={`relative ${versionPickerOpen ? 'z-50' : ''}`}>
                 <button
                   onClick={() => setVersionPickerOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-admin-mono font-bold rounded-full border transition-colors"
-                  style={{ borderColor: versionColor(script.major_version) + '40', backgroundColor: versionColor(script.major_version) + '15', color: versionColor(script.major_version) }}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-admin-mono font-bold rounded-full transition-colors ${script.is_published ? 'border' : 'border border-dashed'}`}
+                  style={{
+                    borderColor: versionColor(script.major_version) + '40',
+                    backgroundColor: script.is_published ? versionColor(script.major_version) + '15' : 'transparent',
+                    color: versionColor(script.major_version),
+                  }}
                 >
-                  {formatScriptVersion(script.major_version, script.minor_version, script.is_published)}
+                  {formatScriptVersion(script.major_version, script.minor_version, script.is_published)} — {script.is_published ? 'SHARED' : 'DRAFT'}
                   <ChevronDown size={10} />
                 </button>
                 {versionPickerOpen && (
@@ -686,31 +703,41 @@ export function ScriptEditorClient({
                     <div
                       className="absolute top-full left-0 mt-1 z-50 bg-admin-bg-overlay border border-admin-border rounded-lg shadow-xl py-1 animate-dropdown-in"
                     >
-                      {versions.map(v => (
-                        <button
+                      {[...versions].sort((a, b) => b.major_version - a.major_version || b.minor_version - a.minor_version).map(v => (
+                        <div
                           key={v.id}
+                          role="button"
                           onClick={() => {
                             setVersionPickerOpen(false);
-                            if (v.id !== script.id) router.push(`/admin/scripts/${v.id}`);
+                            if (v.id !== script.id) {
+                              setSwitchingVersion(true);
+                              router.push(`/admin/scripts/${v.id}`);
+                            }
                           }}
-                          className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
+                          className={`flex items-center px-3 py-1.5 text-xs cursor-pointer transition-colors ${
                             v.id === script.id
                               ? 'bg-admin-bg-active text-admin-text-primary'
                               : 'text-admin-text-secondary hover:bg-admin-bg-hover'
                           }`}
                         >
                           <span
-                            className="font-admin-mono font-bold px-2 py-0.5 rounded-full text-xs"
-                            style={{ backgroundColor: versionColor(v.major_version) + '20', color: versionColor(v.major_version) }}
+                            className={`font-admin-mono font-bold px-2 py-0.5 rounded-full text-xs w-[3.5rem] text-center flex-shrink-0 ${v.is_published ? 'border' : 'border border-dashed'}`}
+                            style={{
+                              backgroundColor: v.is_published ? versionColor(v.major_version) + '20' : 'transparent',
+                              color: versionColor(v.major_version),
+                              borderColor: versionColor(v.major_version) + '40',
+                            }}
                           >
                             {formatScriptVersion(v.major_version, v.minor_version, v.is_published)}
                           </span>
-                          {v.content_mode === 'scratchpad' ? <StickyNote size={14} className="text-admin-text-faint" /> : <Table2 size={14} className="text-admin-text-faint" />}
-                          {v.is_published && (
-                            <span className="text-[10px] font-medium text-admin-success">Published</span>
-                          )}
-                          <span className="text-admin-text-ghost font-admin-mono ml-auto">{new Date(v.created_at).toLocaleDateString()}</span>
-                        </button>
+                          <span className="flex justify-center text-admin-text-faint w-6 flex-shrink-0">
+                            {v.content_mode === 'scratchpad' ? <StickyNote size={14} /> : <Table2 size={14} />}
+                          </span>
+                          <span className="text-admin-text-ghost font-admin-mono w-[5.5rem] flex-shrink-0">{new Date(v.created_at).toLocaleDateString()}</span>
+                          <span className="text-admin-sm font-medium text-admin-success flex-shrink-0">
+                            {v.is_published ? 'SHARED' : ''}
+                          </span>
+                        </div>
                       ))}
                       {versions.length === 0 && (
                         <div className="px-3 py-2 text-xs text-admin-text-faint">Loading...</div>
@@ -738,10 +765,6 @@ export function ScriptEditorClient({
             <button onClick={() => setShowSettings(true)} className="btn-secondary px-2.5" title="Settings">
               <Settings size={14} />
             </button>
-            {/* Status label (read-only — publishing happens via Share Panel) */}
-            <span className={`${script.is_published ? 'btn-success' : 'btn-secondary'} gap-1.5 px-4 text-sm font-medium cursor-default`}>
-              {script.is_published ? 'Published' : 'Draft'}
-            </span>
             <button
               onClick={handleSaveAll}
               className="btn-primary px-5 text-sm"
@@ -780,7 +803,7 @@ export function ScriptEditorClient({
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
           </button>
           <button
-            onClick={() => setShowSidebar(prev => !prev)}
+            onClick={() => setShowSidebar(prev => { const next = !prev; localStorage.setItem(`script-sidebar-${script.id}`, String(next)); return next; })}
             className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
