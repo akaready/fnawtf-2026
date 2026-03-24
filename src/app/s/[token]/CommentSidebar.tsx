@@ -60,7 +60,7 @@ function formatRelativeTime(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'Just now';
+  if (diffMin < 1) return '1m';
   if (diffMin < 60) return `${diffMin}m`;
   const diffHrs = Math.floor(diffMin / 60);
   if (diffHrs < 24) return `${diffHrs}h`;
@@ -359,7 +359,7 @@ function CommentCard({
           <div className={`flex-1 min-w-0 ${threadExpanded ? 'pb-1' : ''}`}>
             {/* Name + time + actions + badge + #N */}
             <div className="flex items-center gap-2 cursor-pointer leading-6" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
-              <span className={`text-admin-sm font-semibold whitespace-nowrap min-w-0 overflow-hidden shrink ${!threadExpanded ? 'comment-name-fade' : ''} ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>
+              <span className={`text-admin-sm font-semibold whitespace-nowrap min-w-0 overflow-hidden shrink ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>
                 {firstNameStr}<span className={`comment-names-suffix ${!threadExpanded ? 'is-visible' : ''}`}>{(() => {
                   const rows = asScriptRows(allComments);
                   const seen = new Set<string>();
@@ -375,7 +375,7 @@ function CommentCard({
                   return `, ${rest[0]}, ${rest[1]}...`;
                 })()}</span>
               </span>
-              <span className={`text-admin-sm ${parent.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(parent.created_at)}</span>
+              <span className={`text-admin-sm flex-shrink-0 ${parent.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(parent.created_at)}</span>
 
               {/* Collapse chevron */}
               <ChevronDown
@@ -488,7 +488,7 @@ function CommentCard({
       </div>
 
       {/* ── Replies + Reply area — one animated wrapper ── */}
-      <div className={`comment-expand ${threadExpanded ? 'is-open' : ''}`}>
+      {threadExpanded && (
         <div>
           {/* Replies */}
           {hasReplies && (
@@ -570,7 +570,7 @@ function CommentCard({
             )}
           </AnimatePresence>
         </div>
-      </div>
+      )}
     </div>
   );
 }
