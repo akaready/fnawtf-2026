@@ -104,9 +104,9 @@ function Row({ c, shareId, onRefresh, hover, isLast }: {
     <div className="group/reply flex gap-2">
       {/* Left column: line above + avatar + line below */}
       <div className="flex flex-col items-center flex-shrink-0" style={{ width: AVATAR }}>
-        <div className="w-px h-2 bg-admin-border-subtle" />
+        <div className="w-0.5 h-2 bg-admin-border" />
         <div className="flex-shrink-0"><Avatar email={c.viewer_email} name={c.viewer_name} url={c.avatar_url} /></div>
-        {!isLast && <div className="w-px flex-1 bg-admin-border-subtle" />}
+        {!isLast && <div className="w-0.5 flex-1 bg-admin-border" />}
       </div>
       {/* Right column — pt aligns name with avatar */}
       <div className={`min-w-0 flex-1 pt-2 ${isLast ? 'pb-1' : 'pb-2'}`}>
@@ -246,7 +246,7 @@ function Thread({ thread, shareId, onRefresh }: {
           {/* Parent body with connector line on the left */}
           <div className="flex gap-2">
             <div className="flex flex-col items-center flex-shrink-0" style={{ width: AVATAR }}>
-              {hasReplies && <div className="w-px flex-1 bg-admin-border-subtle" />}
+              {hasReplies && <div className="w-0.5 flex-1 bg-admin-border" />}
             </div>
             <div className="min-w-0 flex-1 pb-1">
               <p className={`text-admin-sm whitespace-pre-wrap break-words mt-0.5 ${parent.resolved_at ? 'text-admin-text-faint' : 'text-admin-text-secondary'}`}>{parent.content}</p>
