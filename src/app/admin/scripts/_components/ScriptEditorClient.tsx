@@ -17,7 +17,7 @@ import {
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
   getCharacterReferenceMap, getLocationReferenceMap,
   getScriptProducts, getProductReferenceMap,
-  getScriptSharesByGroup, getShareComments,
+  getScriptSharesByGroup, getShareComments, getSnapshotBeats,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -211,23 +211,65 @@ export function ScriptEditorClient({
     });
   }, [script.script_group_id, script.major_version]);
 
-  // Load comments for a given share — keyed by beat_id directly
-  const loadCommentsForShare = useCallback((shareId: string) => {
+  // Load comments for a given share — maps snapshot beat IDs to current beat IDs by position
+  const loadCommentsForShare = useCallback(async (shareId: string) => {
     const share = groupShares.find(s => s.id === shareId);
     if (!share) { setCommentsMap(new Map()); return; }
 
-    getShareComments(share.id).then((comments) => {
+    try {
+      const comments = await getShareComments(share.id);
+      if (comments.length === 0) { setCommentsMap(new Map()); return; }
+
+      // Build position map: snapshot beat ID → position key ("sceneIdx:beatIdx")
+      const snapshotScriptId = (share as unknown as Record<string, unknown>).snapshot_script_id as string | null;
+      let beatIdMap: Map<string, string> | null = null; // snapshot beat ID → current beat ID
+
+      if (snapshotScriptId && snapshotScriptId !== script.id) {
+        const snapshot = await getSnapshotBeats(snapshotScriptId);
+        // Map snapshot beats to position keys
+        const snapshotPositions = new Map<string, string>(); // beat ID → "sceneIdx:beatIdx"
+        const snapshotSceneBeatCounts = new Map<string, number>();
+        for (const scene of snapshot.scenes) snapshotSceneBeatCounts.set(scene.id, 0);
+        const sortedSnapshotScenes = [...snapshot.scenes].sort((a, b) => a.sort_order - b.sort_order);
+        for (const beat of snapshot.beats) {
+          const sceneIdx = sortedSnapshotScenes.findIndex(s => s.id === beat.scene_id);
+          const beatIdx = snapshotSceneBeatCounts.get(beat.scene_id) ?? 0;
+          snapshotSceneBeatCounts.set(beat.scene_id, beatIdx + 1);
+          snapshotPositions.set(beat.id, `${sceneIdx}:${beatIdx}`);
+        }
+
+        // Map current beats to same position keys
+        const currentPositions = new Map<string, string>(); // "sceneIdx:beatIdx" → current beat ID
+        const sortedCurrentScenes = [...scenes].sort((a, b) => a.sort_order - b.sort_order);
+        const currentSceneBeatCounts = new Map<string, number>();
+        for (const scene of sortedCurrentScenes) currentSceneBeatCounts.set(scene.id, 0);
+        for (const beat of beats) {
+          const sceneIdx = sortedCurrentScenes.findIndex(s => s.id === beat.scene_id);
+          const beatIdx = currentSceneBeatCounts.get(beat.scene_id) ?? 0;
+          currentSceneBeatCounts.set(beat.scene_id, beatIdx + 1);
+          currentPositions.set(`${sceneIdx}:${beatIdx}`, beat.id);
+        }
+
+        // Build mapping: snapshot beat ID → current beat ID
+        beatIdMap = new Map();
+        for (const [snapshotBeatId, posKey] of snapshotPositions) {
+          const currentBeatId = currentPositions.get(posKey);
+          if (currentBeatId) beatIdMap.set(snapshotBeatId, currentBeatId);
+        }
+      }
+
       const map = new Map<string, ScriptShareCommentRow[]>();
       for (const comment of comments) {
-        if (!map.has(comment.beat_id)) map.set(comment.beat_id, []);
-        map.get(comment.beat_id)!.push(comment);
+        const mappedBeatId = beatIdMap?.get(comment.beat_id) ?? comment.beat_id;
+        if (!map.has(mappedBeatId)) map.set(mappedBeatId, []);
+        map.get(mappedBeatId)!.push(comment);
       }
       setCommentsMap(map);
-    }).catch((err) => {
+    } catch (err) {
       console.error('[Comments] Failed to load comments:', err);
       showError('Failed to load comments');
-    });
-  }, [groupShares]);
+    }
+  }, [groupShares, script.id, scenes, beats]);
 
   const handleRefreshComments = useCallback(() => {
     if (selectedShareId) loadCommentsForShare(selectedShareId);

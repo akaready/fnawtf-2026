@@ -5501,8 +5501,10 @@ export async function getScriptShares(scriptId: string) {
   return (data as unknown as Array<Record<string, unknown>>).map((row) => {
     const views = Array.isArray(row.script_share_views) ? row.script_share_views as Array<Record<string, unknown>> : [];
     // Use live version from script row, fall back to stored snapshot_major_version
+    // Skip resolution for legacy shares where snapshot points to the working script
     const snapshotId = row.snapshot_script_id as string | null;
-    const liveVersion = snapshotId ? versionMap.get(snapshotId) : undefined;
+    const scriptId = row.script_id as string | null;
+    const liveVersion = (snapshotId && snapshotId !== scriptId) ? versionMap.get(snapshotId) : undefined;
     return {
       ...row,
       snapshot_major_version: liveVersion ?? row.snapshot_major_version,
@@ -5607,7 +5609,28 @@ export async function getScriptSharesByGroup(scriptGroupId: string): Promise<imp
     .in('script_id', scriptIds)
     .order('snapshot_major_version', { ascending: false });
   if (error) throw new Error(error.message);
-  return (shares ?? []) as unknown as import('@/types/scripts').ScriptShareRow[];
+
+  // Resolve live version numbers from snapshot scripts
+  const snapshotIds = ((shares ?? []) as unknown as Record<string, unknown>[]).map(r => r.snapshot_script_id as string | null).filter(Boolean) as string[];
+  const versionMap = new Map<string, number>();
+  if (snapshotIds.length > 0) {
+    const { data: snapshotScripts } = await supabase
+      .from('scripts')
+      .select('id, major_version')
+      .in('id', snapshotIds);
+    for (const s of (snapshotScripts ?? []) as { id: string; major_version: number }[]) {
+      versionMap.set(s.id, s.major_version);
+    }
+  }
+
+  return ((shares ?? []) as unknown as import('@/types/scripts').ScriptShareRow[]).map(share => {
+    const row = share as unknown as Record<string, unknown>;
+    const snapshotId = row.snapshot_script_id as string | null;
+    const shareScriptId = row.script_id as string | null;
+    // Skip resolution for legacy shares where snapshot points to the working script
+    const liveVersion = (snapshotId && snapshotId !== shareScriptId) ? versionMap.get(snapshotId) : undefined;
+    return liveVersion !== undefined ? { ...share, snapshot_major_version: liveVersion } : share;
+  });
 }
 
 /** Fetch scenes + beats of a published snapshot script for position-map building. */

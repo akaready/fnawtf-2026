@@ -9,10 +9,10 @@ import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
-import { startScriptViewSession, updateScriptViewDuration } from './actions';
+import { startScriptViewSession, updateScriptViewDuration, getShareComments } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion } from '@/types/scripts';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow } from '@/types/scripts';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow } from '@/types/scripts';
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
@@ -67,8 +67,9 @@ export function ScriptShareClient({
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
-    audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: false,
+    audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: true,
   });
+  const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
   const [showSidebar, setShowSidebar] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
@@ -132,6 +133,24 @@ export function ScriptShareClient({
       }
     };
   }, [shareId, viewerEmail]);
+
+  // Load comments for this share
+  const loadComments = useCallback(async () => {
+    if (!shareId) return;
+    try {
+      const comments = await getShareComments(shareId) as unknown as ScriptShareCommentRow[];
+      const map = new Map<string, ScriptShareCommentRow[]>();
+      for (const comment of comments) {
+        if (!map.has(comment.beat_id)) map.set(comment.beat_id, []);
+        map.get(comment.beat_id)!.push(comment);
+      }
+      setCommentsMap(map);
+    } catch (err) {
+      console.error('[Comments] Failed to load:', err);
+    }
+  }, [shareId]);
+
+  useEffect(() => { loadComments(); }, [loadComments]);
 
   const versionLabel = formatScriptVersion(script.majorVersion, script.minorVersion, script.isPublished);
   const nextWidth = CONTAINER_LABELS[(containerIdx + 1) % CONTAINER_WIDTHS.length];
@@ -249,7 +268,7 @@ export function ScriptShareClient({
       )}
 
       {/* Toolbar */}
-      <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-black/50 flex-shrink-0">
+      <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSidebar(prev => !prev)}
@@ -276,7 +295,7 @@ export function ScriptShareClient({
         {/* Dots — absolutely centered to match header centering */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto">
-            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={['comments']} />
+            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
           </div>
         </div>
       </div>
@@ -313,6 +332,9 @@ export function ScriptShareClient({
               tags={typedTags}
               locations={typedLocations}
               products={typedProducts}
+              commentsMap={commentsMap}
+              shareId={shareId}
+              onRefreshComments={loadComments}
             />
           </div>
         </div>
