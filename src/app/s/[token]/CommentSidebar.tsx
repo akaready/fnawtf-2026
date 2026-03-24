@@ -132,14 +132,14 @@ function ReactionPills({
           <button
             key={r.emoji}
             onClick={() => onToggle(commentId, r.emoji)}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-admin-sm transition-colors ${
+            className={`relative inline-flex items-center gap-1 pl-1.5 pr-2 h-[22px] rounded-full text-admin-sm transition-colors border ${
               isMine
-                ? 'bg-white/20 text-white'
-                : 'bg-white/10 hover:bg-white/15 text-admin-text-faint'
+                ? 'bg-white/[0.12] border-transparent hover:border-white/10 text-white'
+                : 'bg-white/[0.06] border-transparent hover:border-white/[0.08] text-admin-text-faint'
             }`}
           >
             <span className="text-sm leading-none">{r.emoji}</span>
-            <span className="text-[11px] font-medium">{r.count}</span>
+            <span className="text-[10px] font-semibold text-white/80">{r.count}</span>
           </button>
         );
       })}
@@ -352,7 +352,7 @@ function CommentCard({
               </motion.div>
             </div>
             {/* Vertical line connecting to replies */}
-            {hasReplies && threadExpanded && <div className="w-0.5 flex-1 mt-1 bg-admin-border-subtle" />}
+            {hasReplies && threadExpanded && <div className="w-0.5 flex-1 bg-white/15" />}
           </div>
 
           {/* Right column: name, badge, text, actions */}
@@ -597,10 +597,10 @@ function ReplyRow({
       {/* Left column: connector line + avatar */}
       <div className="flex flex-col items-center flex-shrink-0">
         {/* Line from above */}
-        <div className="w-0.5 h-3 bg-admin-border-subtle" />
+        <div className="w-0.5 h-3 bg-white/15" />
         <Avatar email={reply.viewer_email} name={reply.viewer_name} url={reply.avatar_url} size={24} />
         {/* Line below (if not last) */}
-        {!isLast && <div className="w-0.5 flex-1 mt-1 bg-admin-border-subtle" />}
+        {!isLast && <div className="w-0.5 flex-1 bg-white/15" />}
       </div>
 
       {/* Right column — pt-3 aligns name with avatar (below h-3 connector) */}
