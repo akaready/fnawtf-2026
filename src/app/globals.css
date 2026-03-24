@@ -112,6 +112,7 @@
   --admin-cream-text:        #1a1410;
   --admin-cream-label:       #6b5c40;
 
+
   /* Toolbar accent colors (ROYGBIV) */
   --admin-toolbar-red:       #ef4444;
   --admin-toolbar-orange:    #ff6f2c;
@@ -271,6 +272,38 @@ html::-webkit-scrollbar {
 }
 .admin-scrollbar::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Gradient fade on thread name overflow */
+.comment-name-fade {
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
+}
+
+/* Clipping reveal for thread name suffix */
+.comment-names-suffix {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  transition: max-width 0.4s ease;
+}
+.comment-names-suffix.is-visible {
+  max-width: 12em;
+}
+
+/* Expand/collapse animation for comment threads */
+.comment-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s ease;
+}
+.comment-expand.is-open {
+  grid-template-rows: 1fr;
+}
+.comment-expand > div {
+  overflow: hidden;
 }
 
 /* Auto-hide scrollbar variant — hidden until hover (used by chat widget, etc.) */

@@ -293,42 +293,88 @@ function CommentCard({
     });
   };
 
+  // Compute stacked avatar data outside JSX so AnimatePresence works
+  const AVATAR_SIZE = 24;
+  const AVATAR_OFFSET = Math.round(AVATAR_SIZE * 0.3);
+  const avatarRows = asScriptRows(allComments);
+  const avatarSeen = new Set<string>();
+  const uniqueAvatars: ReturnType<typeof asScriptRows> = [];
+  for (const c of avatarRows) {
+    if (!avatarSeen.has(c.viewer_email)) { avatarSeen.add(c.viewer_email); uniqueAvatars.push(c); }
+    if (uniqueAvatars.length >= 3) break;
+  }
+  const avatarNudge = ((uniqueAvatars.length - 1) * AVATAR_OFFSET) / 2;
+  const bgAvatars = uniqueAvatars.slice(1);
+
   return (
     <div
       onClick={onNavigate}
-      className={`group/comment rounded-admin-lg border mx-3 mb-3 transition-colors cursor-pointer ${
+      className={`group/comment rounded-admin-lg border mx-3 mb-3 transition-colors cursor-pointer select-none ${
         isActive ? 'border-admin-border bg-admin-bg-overlay brightness-125' : 'border-admin-border-subtle bg-admin-bg-overlay'
       }`}
     >
       <div className={`p-3 rounded-t-admin-lg ${threadExpanded ? 'pb-0' : ''}`}>
         {/* Avatar column + content column layout */}
-        <div className={`flex gap-3 ${threadExpanded ? '' : 'items-center'}`}>
+        <div className="flex gap-3">
           {/* Left column: avatar + vertical connector line */}
-          <div className="flex flex-col items-start flex-shrink-0 cursor-pointer overflow-visible" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
-            {threadExpanded ? (
-              <Avatar email={parent.viewer_email} name={parent.viewer_name} url={parent.avatar_url} size={24} />
-            ) : (
-              <StackedAvatars comments={asScriptRows(allComments)} size={24} />
-            )}
+          <div className="flex flex-col items-center flex-shrink-0 cursor-pointer overflow-visible" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
+            <div className="relative flex-shrink-0" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, overflow: 'visible' }}>
+              {/* Background avatars — always rendered, animated via state */}
+              {bgAvatars.map((c, i) => {
+                const origIdx = i + 1;
+                const xPos = origIdx * AVATAR_OFFSET - avatarNudge;
+                const bgCount = bgAvatars.length;
+                // Expand: farthest drops first; Collapse: closest appears first
+                const exitDelay = (bgCount - 1 - i) * 0.1;
+                const enterDelay = i * 0.1;
+                return (
+                  <motion.div
+                    key={c.viewer_email}
+                    className="absolute top-0 rounded-full flex items-center justify-center overflow-hidden"
+                    style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, zIndex: uniqueAvatars.length - origIdx, left: xPos, border: '1px solid #000', pointerEvents: threadExpanded ? 'none' : 'auto' }}
+                    animate={threadExpanded
+                      ? { opacity: 0, y: 4, scale: 0.85, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1], delay: exitDelay } }
+                      : { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: [0.0, 0, 0.2, 1], delay: enterDelay } }
+                    }
+                  >
+                    <Avatar email={c.viewer_email} name={c.viewer_name} url={c.avatar_url} size={AVATAR_SIZE} />
+                  </motion.div>
+                );
+              })}
+              {/* Primary avatar — slides between stacked offset and center */}
+              <motion.div
+                className="absolute top-0"
+                style={{ zIndex: uniqueAvatars.length }}
+                animate={{ x: threadExpanded ? 0 : -avatarNudge }}
+                transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1], delay: threadExpanded ? (uniqueAvatars.length - 1) * 0.05 : 0 }}
+              >
+                <Avatar email={parent.viewer_email} name={parent.viewer_name} url={parent.avatar_url} size={AVATAR_SIZE} />
+              </motion.div>
+            </div>
             {/* Vertical line connecting to replies */}
             {hasReplies && threadExpanded && <div className="w-0.5 flex-1 mt-1 bg-admin-border-subtle" />}
           </div>
 
           {/* Right column: name, badge, text, actions */}
-          <div className={`flex-1 min-w-0 ${threadExpanded ? 'pb-4' : ''}`}>
+          <div className={`flex-1 min-w-0 ${threadExpanded ? 'pb-1' : ''}`}>
             {/* Name + time + actions + badge + #N */}
-            <div className="flex items-center gap-2 cursor-pointer" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
-              <AnimatePresence mode="wait" initial={false}>
-                {threadExpanded ? (
-                  <motion.span key="single-name" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                    className={`text-admin-sm font-semibold ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>{firstNameStr}</motion.span>
-                ) : (
-                  <motion.span key="thread-names" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                    className={`text-admin-sm truncate ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>
-                    {threadNames(asScriptRows(allComments))}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+            <div className="flex items-center gap-2 cursor-pointer leading-6" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
+              <span className={`text-admin-sm font-semibold whitespace-nowrap min-w-0 overflow-hidden shrink ${!threadExpanded ? 'comment-name-fade' : ''} ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>
+                {firstNameStr}<span className={`comment-names-suffix ${!threadExpanded ? 'is-visible' : ''}`}>{(() => {
+                  const rows = asScriptRows(allComments);
+                  const seen = new Set<string>();
+                  const names: string[] = [];
+                  for (const c of rows) {
+                    const n = c.viewer_name?.split(' ')[0] || 'Anonymous';
+                    if (!seen.has(n)) { seen.add(n); names.push(n); }
+                  }
+                  if (names.length <= 1) return '';
+                  const rest = names.slice(1);
+                  if (rest.length === 1) return `, and ${rest[0]}`;
+                  if (rest.length === 2) return `, ${rest[0]}, and ${rest[1]}`;
+                  return `, ${rest[0]}, ${rest[1]}...`;
+                })()}</span>
+              </span>
               <span className={`text-admin-sm ${parent.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(parent.created_at)}</span>
 
               {/* Collapse chevron */}
@@ -386,7 +432,7 @@ function CommentCard({
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); onNavigate(); }}
-                  className="rounded px-1.5 py-0.5 text-admin-sm font-mono font-semibold ml-1 flex-shrink-0"
+                  className="rounded px-1.5 py-0 text-admin-sm font-mono font-semibold ml-1 flex-shrink-0 leading-5"
                   style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#eab308' }}
                 >
                   {beatLabel}
@@ -394,75 +440,58 @@ function CommentCard({
               </span>
             </div>
 
-            {/* Comment body — hidden when collapsed */}
-            <AnimatePresence initial={false}>
-              {threadExpanded && (
-                <motion.div
-                  key="body"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-1.5">
-                    {editing ? (
-                      <div className="space-y-2 mt-1">
-                        <textarea
-                          value={editText}
-                          onChange={e => setEditText(e.target.value)}
-                          rows={3}
-                          className="w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-3 py-2 text-admin-sm text-white resize-none focus:outline-none"
-                          autoFocus
-                        />
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => { setEditing(false); setEditText(parent.content); }} className={BTN_CANCEL}>Cancel</button>
-                          <button onClick={handleSave} disabled={isPending} className={`h-7 px-3 text-admin-sm border rounded-admin-md transition-colors ${editText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}>Save</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <p className={`text-admin-sm leading-relaxed whitespace-pre-wrap inline ${needsClamp && !expanded ? 'line-clamp-6' : ''} ${parent.resolved_at ? 'text-white/30' : 'text-white/80'}`}>
-                          {parent.content}
-                        </p>
-                        {needsClamp && !expanded && (
-                          <div>
-                            <button onClick={() => setExpanded(true)} className="text-admin-sm text-admin-info mt-1 hover:underline">
-                              Read more
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Reaction pills */}
-                  {!editing && (
-                    <ReactionPills
-                      commentId={parent.id}
-                      reactions={reactions[parent.id] ?? []}
-                      viewerEmail={viewerEmail}
-                      onToggle={onToggleReaction}
+            {/* Comment body */}
+            {threadExpanded && (
+              <>
+                {editing ? (
+                  <div className="space-y-2 mt-1">
+                    <textarea
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      rows={3}
+                      className="w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-3 py-2 text-admin-sm text-white resize-none focus:outline-none"
+                      autoFocus
                     />
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => { setEditing(false); setEditText(parent.content); }} className={BTN_CANCEL}>Cancel</button>
+                      <button onClick={handleSave} disabled={isPending} className={`h-7 px-3 text-admin-sm border rounded-admin-md transition-colors ${editText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}>Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className={`text-admin-sm leading-relaxed whitespace-pre-wrap mt-0.5 ${needsClamp && !expanded ? 'line-clamp-6' : ''} ${parent.resolved_at ? 'text-white/30' : 'text-white/70'}`}>
+                      {parent.content}
+                    </p>
+                    {needsClamp && !expanded && (
+                      <div>
+                        <button onClick={() => setExpanded(true)} className="text-admin-sm text-admin-info mt-1 hover:underline">
+                          Read more
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Reaction pills */}
+                {!editing && (
+                  <ReactionPills
+                    commentId={parent.id}
+                    reactions={reactions[parent.id] ?? []}
+                    viewerEmail={viewerEmail}
+                    onToggle={onToggleReaction}
+                  />
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ── Replies ── */}
-      <AnimatePresence initial={false}>
-        {hasReplies && threadExpanded && (
-          <motion.div
-            key="replies"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1], delay: 0.05 }}
-            className="overflow-hidden"
-          >
+      {/* ── Replies + Reply area — one animated wrapper ── */}
+      <div className={`comment-expand ${threadExpanded ? 'is-open' : ''}`}>
+        <div>
+          {/* Replies */}
+          {hasReplies && (
             <div className="px-3 pb-1">
               {replies.map((reply, i) => (
                 <ReplyRow
@@ -477,66 +506,53 @@ function CommentCard({
                 />
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
 
-      {/* ── Reply area ── */}
-      <AnimatePresence initial={false}>
-        {threadExpanded && (
-          <motion.div
-            key="reply-area"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1], delay: 0.1 }}
-            className="overflow-hidden"
-          >
-            {replyOpen ? (
-              <div className="border-t border-admin-border-subtle bg-admin-bg-base p-3 rounded-b-admin-lg" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center gap-2">
-                  <textarea
-                    ref={replyTextareaRef}
-                    value={replyText}
-                    onChange={e => { setReplyText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                    placeholder="Reply..."
-                    rows={1}
-                    className="flex-1 bg-transparent text-sm text-white placeholder:text-admin-text-faint/25 resize-none focus:outline-none min-h-6 leading-6 overflow-hidden max-md:[font-size:16px] pl-1.5"
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); setReplyOpen(false); }
-                      if (e.key === 'Escape') { setReplyOpen(false); setReplyText(''); }
-                    }}
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => { setReplyOpen(false); setReplyText(''); }}
-                    className="w-7 h-7 flex-shrink-0 flex items-center justify-center border border-admin-border rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                  <button
-                    onClick={() => { handleReply(); setReplyOpen(false); }}
-                    disabled={isPending || !replyText.trim()}
-                    className={`w-7 h-7 flex-shrink-0 flex items-center justify-center border rounded-admin-md transition-colors ${replyText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}
-                  >
-                    <Send size={14} />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="border-t border-transparent p-3 rounded-b-admin-lg flex justify-end" onClick={e => e.stopPropagation()}>
+          {/* Reply area */}
+          {replyOpen ? (
+            <div className="border-t border-admin-border-subtle bg-admin-bg-base p-3 rounded-b-admin-lg" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center gap-2">
+                <textarea
+                  ref={replyTextareaRef}
+                  value={replyText}
+                  onChange={e => { setReplyText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                  placeholder="Reply..."
+                  rows={1}
+                  className="flex-1 bg-transparent text-sm text-white placeholder:text-admin-text-faint/25 resize-none focus:outline-none min-h-6 leading-6 overflow-hidden max-md:[font-size:16px] pl-1.5"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); setReplyOpen(false); }
+                    if (e.key === 'Escape') { setReplyOpen(false); setReplyText(''); }
+                  }}
+                  autoFocus
+                />
                 <button
-                  onClick={() => setReplyOpen(true)}
-                  className="h-7 inline-flex items-center gap-1.5 px-2.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors"
+                  onClick={() => { setReplyOpen(false); setReplyText(''); }}
+                  className="w-7 h-7 flex-shrink-0 flex items-center justify-center border border-admin-border rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
                 >
-                  Reply
-                  <CornerDownLeft size={14} />
+                  <X size={14} />
+                </button>
+                <button
+                  onClick={() => { handleReply(); setReplyOpen(false); }}
+                  disabled={isPending || !replyText.trim()}
+                  className={`w-7 h-7 flex-shrink-0 flex items-center justify-center border rounded-admin-md transition-colors ${replyText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}
+                >
+                  <Send size={14} />
                 </button>
               </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          ) : (
+            <div className="border-t border-transparent p-3 rounded-b-admin-lg flex justify-end" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => setReplyOpen(true)}
+                className="h-7 inline-flex items-center gap-1.5 px-2.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors"
+              >
+                Reply
+                <CornerDownLeft size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -588,9 +604,9 @@ function ReplyRow({
       </div>
 
       {/* Right column — pt-3 aligns name with avatar (below h-3 connector) */}
-      <div className={`flex-1 min-w-0 pt-3 ${isLast ? 'pb-1' : 'pb-2'}`}>
+      <div className="flex-1 min-w-0 pt-3 pb-1">
         {/* Name + time + actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 leading-6">
           <span className={`text-admin-sm font-semibold ${reply.resolved_at ? 'text-white/30' : 'text-white'}`}>{firstNameStr}</span>
           <span className={`text-admin-sm ${reply.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(reply.created_at)}</span>
           {/* Actions: dots + emoji (no checkmark for replies) */}
