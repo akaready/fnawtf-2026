@@ -17,7 +17,7 @@ import {
   getScriptCastMap, getScriptLocationOptionsMap, saveScratchContent, createModeVersion,
   getCharacterReferenceMap, getLocationReferenceMap,
   getScriptProducts, getProductReferenceMap,
-  getScriptSharesByGroup, getSnapshotBeats, getShareComments,
+  getScriptSharesByGroup, getShareComments,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -193,28 +193,12 @@ export function ScriptEditorClient({
         ?? null;
       if (!defaultShare) return;
       setSelectedShareId(defaultShare.id);
-      if (!defaultShare.snapshot_script_id) return;
       // Preload comments immediately for the default share
-      Promise.all([
-        getSnapshotBeats(defaultShare.snapshot_script_id),
-        getShareComments(defaultShare.id),
-      ]).then(([snapshotData, comments]) => {
-        const beatToPos = new Map<string, string>();
-        const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
-        sortedScenes.forEach((scene, sceneIdx) => {
-          const sceneBeats = snapshotData.beats
-            .filter(b => b.scene_id === scene.id)
-            .sort((a, b) => a.sort_order - b.sort_order);
-          sceneBeats.forEach((beat, beatIdx) => {
-            beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
-          });
-        });
+      getShareComments(defaultShare.id).then((comments) => {
         const map = new Map<string, ScriptShareCommentRow[]>();
         for (const comment of comments) {
-          const posKey = beatToPos.get(comment.beat_id);
-          if (!posKey) continue;
-          if (!map.has(posKey)) map.set(posKey, []);
-          map.get(posKey)!.push(comment);
+          if (!map.has(comment.beat_id)) map.set(comment.beat_id, []);
+          map.get(comment.beat_id)!.push(comment);
         }
         setCommentsMap(map);
       }).catch(err => console.error('[Comments] preload failed:', err));
@@ -224,39 +208,33 @@ export function ScriptEditorClient({
     });
   }, [script.script_group_id, script.major_version]);
 
-  // Build comments map when selected share changes
-  useEffect(() => {
-    if (!selectedShareId) { setCommentsMap(new Map()); return; }
-    const share = groupShares.find(s => s.id === selectedShareId);
-    if (!share || !share.snapshot_script_id) { setCommentsMap(new Map()); return; }
+  // Load comments for a given share — keyed by beat_id directly
+  const loadCommentsForShare = useCallback((shareId: string) => {
+    const share = groupShares.find(s => s.id === shareId);
+    if (!share) { setCommentsMap(new Map()); return; }
 
-    Promise.all([
-      getSnapshotBeats(share.snapshot_script_id),
-      getShareComments(share.id),
-    ]).then(([snapshotData, comments]) => {
-      const beatToPos = new Map<string, string>();
-      const sortedScenes = [...snapshotData.scenes].sort((a, b) => a.sort_order - b.sort_order);
-      sortedScenes.forEach((scene, sceneIdx) => {
-        const sceneBeats = snapshotData.beats
-          .filter(b => b.scene_id === scene.id)
-          .sort((a, b) => a.sort_order - b.sort_order);
-        sceneBeats.forEach((beat, beatIdx) => {
-          beatToPos.set(beat.id, `${sceneIdx}:${beatIdx}`);
-        });
-      });
+    getShareComments(share.id).then((comments) => {
       const map = new Map<string, ScriptShareCommentRow[]>();
       for (const comment of comments) {
-        const posKey = beatToPos.get(comment.beat_id);
-        if (!posKey) continue;
-        if (!map.has(posKey)) map.set(posKey, []);
-        map.get(posKey)!.push(comment);
+        if (!map.has(comment.beat_id)) map.set(comment.beat_id, []);
+        map.get(comment.beat_id)!.push(comment);
       }
       setCommentsMap(map);
     }).catch((err) => {
       console.error('[Comments] Failed to load comments:', err);
       showError('Failed to load comments');
     });
-  }, [selectedShareId, groupShares]);
+  }, [groupShares]);
+
+  const handleRefreshComments = useCallback(() => {
+    if (selectedShareId) loadCommentsForShare(selectedShareId);
+  }, [selectedShareId, loadCommentsForShare]);
+
+  // Build comments map when selected share changes
+  useEffect(() => {
+    if (!selectedShareId) { setCommentsMap(new Map()); return; }
+    loadCommentsForShare(selectedShareId);
+  }, [selectedShareId, loadCommentsForShare]);
 
   // Reset fractions to defaults when column visibility changes
   const handleColumnConfigChange = useCallback((config: ScriptColumnConfig) => {
@@ -988,6 +966,7 @@ export function ScriptEditorClient({
                 selectedShareId={selectedShareId}
                 onSelectShare={setSelectedShareId}
                 commentsMap={commentsMap}
+                onRefreshComments={handleRefreshComments}
               />
             ) : (
               <ScriptScratchPad
@@ -1068,6 +1047,7 @@ export function ScriptEditorClient({
         scriptId={script.id}
         isPublished={script.is_published}
         onPublish={handlePublish}
+        onUnpublish={handleUnpublish}
       />
       <ScriptVersionsPanel
         open={showVersions}

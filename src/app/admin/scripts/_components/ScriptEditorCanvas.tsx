@@ -71,6 +71,7 @@ interface Props {
   selectedShareId: string | null;
   onSelectShare: (shareId: string) => void;
   commentsMap: Map<string, ScriptShareCommentRow[]>;
+  onRefreshComments?: () => void;
 }
 
 export function ScriptEditorCanvas({
@@ -115,6 +116,7 @@ export function ScriptEditorCanvas({
   selectedShareId,
   onSelectShare,
   commentsMap,
+  onRefreshComments,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -430,7 +432,7 @@ export function ScriptEditorCanvas({
           if (controller.signal.aborted) break;
           const beat = scene.beats[i];
           if (storyboardFrames.some(f => f.beat_id === beat.id)) continue;
-          const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap, referenceMap);
+          const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap, referenceMap, tags);
           const beatRefs = references[beat.id] ?? [];
 
           // Collect location reference URLs if location is in 'references' mode
@@ -890,8 +892,7 @@ export function ScriptEditorCanvas({
                         };
                       });
                       return scene.beats.map((beat, i) => {
-                        const posKey = `${scene.sceneIndex}:${i}`;
-                        const beatComments = commentsMap.get(posKey) ?? [];
+                        const beatComments = commentsMap.get(beat.id) ?? [];
                         return (
                       <ScriptBeatRow
                         key={beat.id}
@@ -945,6 +946,8 @@ export function ScriptEditorCanvas({
                         onImageMove={onImageMove}
                         scenes={scenes}
                         beatComments={beatComments}
+                        commentShareId={selectedShareId ?? undefined}
+                        onRefreshComments={onRefreshComments}
                       />
                         );
                       });
