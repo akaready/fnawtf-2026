@@ -2,13 +2,18 @@
 
 import { useState, useRef, useEffect, useCallback, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen, Mail, Smile, MoreHorizontal, Send, ListFilter, Circle, Settings, Camera } from 'lucide-react';
+import { Pencil, Trash2, Check, X, PanelRightClose, PanelRightOpen, Mail, Smile, MoreHorizontal, Send, ListFilter, Circle, Settings, Camera, Eye, ChevronDown, CornerDownLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import gsap from 'gsap';
 import { getShareComments, updateComment, deleteComment, addReply, toggleResolved, getReactions, toggleReaction, getViewerProfile, updateViewerProfile, uploadViewerAvatar } from './actions';
 import { AnimatePresence } from 'framer-motion';
 import type { PresentationSlide } from '@/app/admin/scripts/_components/presentationUtils';
+import { EmojiPicker } from '@/lib/comments/EmojiPicker';
+import { StackedAvatars } from '@/lib/comments/StackedAvatars';
+import { threadNames } from '@/lib/comments/threadNames';
+import { Avatar } from '@/lib/comments/Avatar';
+import type { ScriptShareCommentRow } from '@/types/scripts';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -90,123 +95,19 @@ function groupIntoThreads(comments: ShareComment[]): CommentThread[] {
   return topLevel.map(parent => ({ parent, replies: replyMap.get(parent.id) ?? [] }));
 }
 
+/** Cast local ShareComment[] to ScriptShareCommentRow[] for shared components */
+function asScriptRows(comments: ShareComment[]): ScriptShareCommentRow[] {
+  return comments as unknown as ScriptShareCommentRow[];
+}
+
 // ── Shared styles ────────────────────────────────────────────────────────
 
 const BTN_CANCEL = 'h-7 px-3 text-admin-sm text-admin-text-faint hover:text-white border border-admin-border rounded-admin-md hover:bg-admin-bg-hover transition-colors';
-const BTN_REPLY = 'inline-flex items-center px-2 py-0.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors';
 const ICON_HOVER = 'p-1 rounded cursor-pointer transition-colors';
-
-// ── Avatar ───────────────────────────────────────────────────────────────
-
-function avatarColor(email: string): string {
-  let hash = 0;
-  for (const ch of email) hash = ((hash << 5) - hash + ch.charCodeAt(0)) | 0;
-  const colors = ['#e67e22','#3b82f6','#22c55e','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f59e0b','#14b8a6','#6366f1'];
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function getInitials(name: string | null, email: string): string {
-  if (name) {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-  return email.slice(0, 2).toUpperCase();
-}
-
-function CommentAvatar({ url, email, name, size = 32 }: { url: string | null; email: string; name: string | null; size?: number }) {
-  const px = `${size}px`;
-  if (url) {
-    return <img src={url} alt="" className="rounded-full object-cover flex-shrink-0" style={{ width: px, height: px }} />;
-  }
-  return (
-    <div className="rounded-full flex items-center justify-center flex-shrink-0" style={{ width: px, height: px, backgroundColor: avatarColor(email) }}>
-      <span className="text-black leading-none" style={{ fontSize: size * 0.5, fontWeight: 900 }}>{getInitials(name, email)}</span>
-    </div>
-  );
-}
 
 // ── Reaction types ───────────────────────────────────────────────────────
 
 type ReactionsMap = Record<string, { emoji: string; count: number; viewers: string[] }[]>;
-
-// ── Quick emoji palette ──────────────────────────────────────────────────
-
-const EMOJI_CATEGORIES = [
-  { label: 'Frequently Used', emojis: ['👍', '👎', '❤️', '🔥', '💯', '👀', '🎉', '😂', '😍', '🤔', '👏', '🙌'] },
-  { label: 'Smileys', emojis: ['😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😎', '🥳', '😏', '😢', '😭', '😤', '🤯', '🥺', '😱', '🤮'] },
-  { label: 'Gestures', emojis: ['👍', '👎', '👏', '🙌', '🤝', '✌️', '🤞', '🤙', '💪', '🫡', '🫶', '✋', '👋', '🖖', '🤘'] },
-  { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💔', '❣️', '💕', '💖', '💗', '💘'] },
-  { label: 'Objects', emojis: ['🔥', '⭐', '💯', '✅', '❌', '⚡', '💡', '🎯', '🏆', '🎬', '🎥', '📸', '🎵', '🎶'] },
-];
-
-function EmojiPicker({ onSelect, onClose, anchorRef }: { onSelect: (emoji: string) => void; onClose: () => void; anchorRef: React.RefObject<HTMLButtonElement | null> }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [search, setSearch] = useState('');
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-
-  useEffect(() => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPos({
-        top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 240),
-      });
-    }
-  }, [anchorRef]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      ref={ref}
-      className="w-[240px] h-[280px] border border-admin-border rounded-admin-lg shadow-2xl flex flex-col overflow-hidden bg-admin-bg-sidebar"
-      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999 }}
-      onClick={e => e.stopPropagation()}
-    >
-      {/* Search */}
-      <div className="px-3 py-2 bg-admin-bg-base flex-shrink-0 border-b border-admin-border">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search..."
-          className="w-full bg-transparent text-admin-sm text-white placeholder:text-admin-text-faint/30 focus:outline-none"
-          autoFocus
-        />
-      </div>
-      {/* Emoji grid */}
-      <div className="flex-1 overflow-y-auto admin-scrollbar px-2 pb-2 bg-admin-bg-hover">
-        {EMOJI_CATEGORIES.map(cat => {
-          const matchesSearch = !search || cat.label.toLowerCase().includes(search.toLowerCase());
-          if (!matchesSearch) return null;
-          return (
-            <div key={cat.label}>
-              <p className="text-[10px] uppercase tracking-wider text-admin-text-faint/50 mt-2 mb-1 px-0.5">{cat.label}</p>
-              <div className="grid grid-cols-7 gap-0.5">
-                {cat.emojis.map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => { onSelect(emoji); onClose(); }}
-                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-admin-bg-hover text-base transition-colors"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>,
-    document.body
-  );
-}
 
 // ── Reaction pills ───────────────────────────────────────────────────────
 
@@ -253,20 +154,25 @@ function CommentActionsMenu({
   viewerEmail,
   onRefresh,
   onStartEdit,
+  hoverClass = 'group-hover/comment',
 }: {
   commentId: string;
   viewerEmail: string;
   onRefresh: () => void;
   onStartEdit: () => void;
+  hoverClass?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setConfirmDelete(false); }
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false); setConfirmDelete(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -280,35 +186,38 @@ function CommentActionsMenu({
   };
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative inline-flex" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className={ICON_HOVER} style={{ color: '#666' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}
+        className={`w-6 h-6 flex items-center justify-center cursor-pointer transition-colors invisible ${hoverClass}:visible`}
+        style={{ color: '#666' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}
       >
-        <MoreHorizontal size={16} />
+        <span className="relative inline-flex items-center justify-center w-4 h-4">
+          <Circle size={16} />
+          <MoreHorizontal size={9} className="absolute" strokeWidth={3} />
+        </span>
       </button>
-      {open && (
-        <div className="fixed mt-1 bg-admin-bg-sidebar border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[130px]" style={{ zIndex: 9999, transform: 'translate(-90px, 0)' }}>
-          <button
-            onClick={() => { onStartEdit(); setOpen(false); }}
-            className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
-          >
-            <Pencil size={14} /> Edit
-          </button>
-          <button
-            onClick={() => {
-              if (confirmDelete) {
-                handleDelete();
-              } else {
-                setConfirmDelete(true);
-              }
-            }}
-            className="w-full text-left px-3 py-2 text-admin-sm text-admin-danger hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
-          >
-            <Trash2 size={14} /> {confirmDelete ? 'Confirm?' : 'Delete'}
-          </button>
-        </div>
-      )}
+      {open && (() => {
+        const r = ref.current?.getBoundingClientRect();
+        if (!r) return null;
+        return createPortal(
+          <div ref={menuRef} className="fixed z-[101] bg-admin-bg-sidebar border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[130px]" style={{ top: r.bottom + 4, left: r.right - 130 }}>
+              <button
+                onClick={() => { onStartEdit(); setOpen(false); }}
+                className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
+              >
+                <Pencil size={14} /> Edit
+              </button>
+              <button
+                onClick={() => { if (confirmDelete) { handleDelete(); } else { setConfirmDelete(true); } }}
+                className="w-full text-left px-3 py-2 text-admin-sm text-admin-danger hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
+              >
+                <Trash2 size={14} /> {confirmDelete ? 'Confirm?' : 'Delete'}
+              </button>
+            </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 }
@@ -342,22 +251,11 @@ function CommentCard({
 }) {
   const { parent, replies } = thread;
   const [expanded, setExpanded] = useState(false);
+  const [threadExpanded, setThreadExpanded] = useState(true);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const openReplyWith = (name?: string) => {
-    const text = name ? `@${name} ` : '';
-    setReplyText(text);
-    setReplyOpen(true);
-    setTimeout(() => {
-      if (replyTextareaRef.current) {
-        replyTextareaRef.current.focus();
-        replyTextareaRef.current.selectionStart = text.length;
-        replyTextareaRef.current.selectionEnd = text.length;
-      }
-    }, 0);
-  };
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(parent.content);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -365,7 +263,9 @@ function CommentCard({
   const [isPending, startTransition] = useTransition();
   const needsClamp = parent.content.length > 280 || parent.content.split('\n').length > 6;
 
-  const firstName = parent.viewer_name?.split(' ')[0] || 'Anonymous';
+  const firstNameStr = parent.viewer_name?.split(' ')[0] || 'Anonymous';
+  const hasReplies = replies.length > 0;
+  const allComments = [parent, ...replies];
 
   const handleSave = () => {
     if (!editText.trim()) return;
@@ -380,7 +280,6 @@ function CommentCard({
     if (!replyText.trim()) return;
     const content = replyText.trim();
     setReplyText('');
-    setReplyOpen(false);
     startTransition(async () => {
       await addReply(shareId, parent.id, viewerEmail, viewerName, content);
       onRefresh();
@@ -394,8 +293,6 @@ function CommentCard({
     });
   };
 
-  const hasReplies = replies.length > 0;
-
   return (
     <div
       onClick={onNavigate}
@@ -403,179 +300,243 @@ function CommentCard({
         isActive ? 'border-admin-border bg-admin-bg-overlay brightness-125' : 'border-admin-border-subtle bg-admin-bg-overlay'
       }`}
     >
-      <div className="p-3 pb-0 rounded-t-admin-lg">
+      <div className={`p-3 rounded-t-admin-lg ${threadExpanded ? 'pb-0' : ''}`}>
         {/* Avatar column + content column layout */}
-        <div className="flex gap-3">
+        <div className={`flex gap-3 ${threadExpanded ? '' : 'items-center'}`}>
           {/* Left column: avatar + vertical connector line */}
-          <div className="flex flex-col items-center flex-shrink-0">
-            <CommentAvatar url={parent.avatar_url} email={parent.viewer_email} name={parent.viewer_name} size={28} />
+          <div className="flex flex-col items-start flex-shrink-0 cursor-pointer overflow-visible" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
+            {threadExpanded ? (
+              <Avatar email={parent.viewer_email} name={parent.viewer_name} url={parent.avatar_url} size={24} />
+            ) : (
+              <StackedAvatars comments={asScriptRows(allComments)} size={24} />
+            )}
             {/* Vertical line connecting to replies */}
-            {hasReplies && <div className="w-0.5 flex-1 mt-1 bg-admin-border-subtle" />}
+            {hasReplies && threadExpanded && <div className="w-0.5 flex-1 mt-1 bg-admin-border-subtle" />}
           </div>
 
           {/* Right column: name, badge, text, actions */}
-          <div className="flex-1 min-w-0 pb-4">
-            {/* Name + time + badge + #N */}
-            <div className="flex items-center gap-2">
-              <span className="text-admin-sm font-semibold text-white">{firstName}</span>
-              <span className="text-admin-sm text-admin-text-faint">{formatRelativeTime(parent.created_at)}</span>
-              <span className="ml-auto flex items-center gap-1.5">
+          <div className={`flex-1 min-w-0 ${threadExpanded ? 'pb-4' : ''}`}>
+            {/* Name + time + actions + badge + #N */}
+            <div className="flex items-center gap-2 cursor-pointer" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
+              <AnimatePresence mode="wait" initial={false}>
+                {threadExpanded ? (
+                  <motion.span key="single-name" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    className={`text-admin-sm font-semibold ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>{firstNameStr}</motion.span>
+                ) : (
+                  <motion.span key="thread-names" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                    className={`text-admin-sm truncate ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>
+                    {threadNames(asScriptRows(allComments))}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              <span className={`text-admin-sm ${parent.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(parent.created_at)}</span>
+
+              {/* Collapse chevron */}
+              <ChevronDown
+                size={14}
+                className={`text-admin-text-faint transition-transform flex-shrink-0 ${!threadExpanded ? '-rotate-90' : ''}`}
+              />
+
+              {/* Actions + badge — right-aligned together */}
+              <span className="ml-auto flex items-center gap-0 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                {threadExpanded && isOwn && (
+                  <CommentActionsMenu
+                    commentId={parent.id}
+                    viewerEmail={viewerEmail}
+                    onRefresh={onRefresh}
+                    onStartEdit={() => { setEditing(true); setEditText(parent.content); }}
+                  />
+                )}
+                {threadExpanded && (
+                  <button ref={emojiTriggerRef} onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+                    className="w-6 h-6 flex items-center justify-center cursor-pointer transition-colors invisible group-hover/comment:visible"
+                    style={{ color: '#666' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = '#666')} title="React">
+                    <Smile size={16} />
+                  </button>
+                )}
+                {emojiPickerOpen && (
+                  <EmojiPicker
+                    onSelect={(emoji) => onToggleReaction(parent.id, emoji)}
+                    onClose={() => setEmojiPickerOpen(false)}
+                    anchorRef={emojiTriggerRef}
+                  />
+                )}
+                {threadExpanded && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleToggleResolved(); }}
+                    disabled={isPending}
+                    className={`w-6 h-6 flex items-center justify-center cursor-pointer transition-colors ${parent.resolved_at ? '' : 'invisible group-hover/comment:visible'}`}
+                    style={{ color: parent.resolved_at ? undefined : '#666' }}
+                    onMouseEnter={e => { if (!parent.resolved_at) e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={e => { if (!parent.resolved_at) e.currentTarget.style.color = '#666'; }}
+                    title={parent.resolved_at ? 'Mark unresolved' : 'Mark resolved'}
+                  >
+                    {parent.resolved_at ? (
+                      <span className="relative inline-flex items-center justify-center w-4 h-4">
+                        <Circle size={16} className="text-admin-success" style={{ fill: 'var(--admin-success)' }} />
+                        <Check size={10} className="absolute text-admin-bg-sidebar" strokeWidth={3} />
+                      </span>
+                    ) : (
+                      <span className="relative inline-flex items-center justify-center w-4 h-4">
+                        <Circle size={16} />
+                        <Check size={9} className="absolute" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); onNavigate(); }}
-                  className="rounded px-1.5 py-0.5 text-admin-sm font-mono font-semibold"
+                  className="rounded px-1.5 py-0.5 text-admin-sm font-mono font-semibold ml-1 flex-shrink-0"
                   style={{ background: 'rgba(234, 179, 8, 0.25)', color: '#eab308' }}
                 >
                   {beatLabel}
                 </button>
-                <span className="text-admin-sm text-admin-text-faint">#{parent.comment_number ?? ''}</span>
               </span>
             </div>
 
-            {/* Comment body */}
-            <div className="mt-1.5">
-              {editing ? (
-                <div className="space-y-2 mt-1">
-                  <textarea
-                    value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    rows={3}
-                    className="w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-3 py-2 text-admin-sm text-white resize-none focus:outline-none"
-                    autoFocus
-                  />
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => { setEditing(false); setEditText(parent.content); }} className={BTN_CANCEL}>Cancel</button>
-                    <button onClick={handleSave} disabled={isPending} className={`h-7 px-3 text-admin-sm border rounded-admin-md transition-colors ${editText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}>Save</button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className={`text-admin-sm text-white/80 leading-relaxed whitespace-pre-wrap inline ${needsClamp && !expanded ? 'line-clamp-6' : ''}`}>
-                    {parent.content}
-                  </p>
-                  {needsClamp && !expanded && (
-                    <div>
-                      <button onClick={() => setExpanded(true)} className="text-admin-sm text-admin-info mt-1 hover:underline">
-                        Read more
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Reaction pills */}
-            {!editing && (
-              <ReactionPills
-                commentId={parent.id}
-                reactions={reactions[parent.id] ?? []}
-                viewerEmail={viewerEmail}
-                onToggle={onToggleReaction}
-              />
-            )}
-
-            {/* Actions: Reply ... emoji dots resolved */}
-            {!editing && (
-              <div className="flex items-center mt-3" onClick={e => e.stopPropagation()}>
-                <button
-                  onClick={() => replyOpen ? setReplyOpen(false) : openReplyWith()}
-                  className={BTN_REPLY}
+            {/* Comment body — hidden when collapsed */}
+            <AnimatePresence initial={false}>
+              {threadExpanded && (
+                <motion.div
+                  key="body"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="overflow-hidden"
                 >
-                  Reply
-                </button>
-
-                <div className="ml-auto flex items-center gap-0.5">
-                  {/* Emoji + dots: hidden until card hover, individually white on icon hover */}
-                  <div className="flex items-center gap-0.5 invisible group-hover/comment:visible">
-                    <button ref={emojiTriggerRef} onClick={() => setEmojiPickerOpen(!emojiPickerOpen)} className={ICON_HOVER} style={{ color: '#666' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = '#666')} title="React">
-                      <Smile size={16} />
-                    </button>
-                    {isOwn && (
-                      <CommentActionsMenu
-                        commentId={parent.id}
-                        viewerEmail={viewerEmail}
-                        onRefresh={onRefresh}
-                        onStartEdit={() => { setEditing(true); setEditText(parent.content); }}
-                      />
+                  <div className="mt-1.5">
+                    {editing ? (
+                      <div className="space-y-2 mt-1">
+                        <textarea
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          rows={3}
+                          className="w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-3 py-2 text-admin-sm text-white resize-none focus:outline-none"
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => { setEditing(false); setEditText(parent.content); }} className={BTN_CANCEL}>Cancel</button>
+                          <button onClick={handleSave} disabled={isPending} className={`h-7 px-3 text-admin-sm border rounded-admin-md transition-colors ${editText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}>Save</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className={`text-admin-sm leading-relaxed whitespace-pre-wrap inline ${needsClamp && !expanded ? 'line-clamp-6' : ''} ${parent.resolved_at ? 'text-white/30' : 'text-white/80'}`}>
+                          {parent.content}
+                        </p>
+                        {needsClamp && !expanded && (
+                          <div>
+                            <button onClick={() => setExpanded(true)} className="text-admin-sm text-admin-info mt-1 hover:underline">
+                              Read more
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
-                  {emojiPickerOpen && (
-                    <EmojiPicker
-                      onSelect={(emoji) => onToggleReaction(parent.id, emoji)}
-                      onClose={() => setEmojiPickerOpen(false)}
-                      anchorRef={emojiTriggerRef}
+
+                  {/* Reaction pills */}
+                  {!editing && (
+                    <ReactionPills
+                      commentId={parent.id}
+                      reactions={reactions[parent.id] ?? []}
+                      viewerEmail={viewerEmail}
+                      onToggle={onToggleReaction}
                     />
                   )}
-                  {/* Resolved check: visible when resolved, hover-only when not */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleResolved(); }}
-                    disabled={isPending}
-                    className={`flex items-center justify-center cursor-pointer ${parent.resolved_at ? '' : 'invisible group-hover/comment:visible'}`}
-                    onMouseEnter={e => { if (!parent.resolved_at) e.currentTarget.style.color = '#fff'; }}
-                    onMouseLeave={e => { if (!parent.resolved_at) e.currentTarget.style.color = ''; }}
-                    title={parent.resolved_at ? 'Mark unresolved' : 'Mark resolved'}
-                  >
-                    {parent.resolved_at ? (
-                      <span className="relative inline-flex items-center justify-center w-[18px] h-[18px]">
-                        <Circle size={18} className="text-admin-success" style={{ fill: 'var(--admin-success)' }} />
-                        <Check size={11} className="absolute text-admin-bg-sidebar" strokeWidth={3} />
-                      </span>
-                    ) : (
-                      <span className="relative inline-flex items-center justify-center w-[18px] h-[18px]" style={{ color: '#666' }}>
-                        <Circle size={18} />
-                        <Check size={10} className="absolute" strokeWidth={3} />
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
       {/* ── Replies ── */}
-      {hasReplies && (
-        <div className="px-3 pb-1">
-          {replies.map((reply, i) => (
-            <ReplyRow
-              key={reply.id}
-              reply={reply}
-              isOwn={reply.viewer_email === viewerEmail}
-              viewerEmail={viewerEmail}
-              onRefresh={onRefresh}
-              isLast={i === replies.length - 1}
-              reactions={reactions[reply.id] ?? []}
-              onToggleReaction={onToggleReaction}
-              onReplyClick={() => openReplyWith(reply.viewer_name?.split(' ')[0] || 'Anonymous')}
-            />
-          ))}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {hasReplies && threadExpanded && (
+          <motion.div
+            key="replies"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1], delay: 0.05 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-1">
+              {replies.map((reply, i) => (
+                <ReplyRow
+                  key={reply.id}
+                  reply={reply}
+                  isOwn={reply.viewer_email === viewerEmail}
+                  viewerEmail={viewerEmail}
+                  onRefresh={onRefresh}
+                  isLast={i === replies.length - 1}
+                  reactions={reactions[reply.id] ?? []}
+                  onToggleReaction={onToggleReaction}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* ── Reply input ── */}
-      {replyOpen && (
-        <div className="border-t border-admin-border bg-admin-bg-base px-3 py-3 rounded-b-admin-lg" onClick={e => e.stopPropagation()}>
-          <textarea
-            ref={replyTextareaRef}
-            value={replyText}
-            onChange={e => setReplyText(e.target.value)}
-            placeholder="Leave your reply here..."
-            rows={2}
-            className="w-full bg-transparent text-sm text-white placeholder:text-admin-text-faint/25 resize-none focus:outline-none max-md:[font-size:16px]"
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
-          />
-          <div className="flex items-center justify-end gap-2 -mt-0.5">
-            <button onClick={() => { setReplyOpen(false); setReplyText(''); }} className={BTN_CANCEL}>Cancel</button>
-            <button
-              onClick={handleReply}
-              disabled={isPending || !replyText.trim()}
-              className={`h-7 w-7 flex items-center justify-center border rounded-admin-md transition-colors ${replyText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}
-            >
-              <Send size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Reply area ── */}
+      <AnimatePresence initial={false}>
+        {threadExpanded && (
+          <motion.div
+            key="reply-area"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1], delay: 0.1 }}
+            className="overflow-hidden"
+          >
+            {replyOpen ? (
+              <div className="border-t border-admin-border-subtle bg-admin-bg-base p-3 rounded-b-admin-lg" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <textarea
+                    ref={replyTextareaRef}
+                    value={replyText}
+                    onChange={e => { setReplyText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                    placeholder="Reply..."
+                    rows={1}
+                    className="flex-1 bg-transparent text-sm text-white placeholder:text-admin-text-faint/25 resize-none focus:outline-none min-h-6 leading-6 overflow-hidden max-md:[font-size:16px] pl-1.5"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); setReplyOpen(false); }
+                      if (e.key === 'Escape') { setReplyOpen(false); setReplyText(''); }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => { setReplyOpen(false); setReplyText(''); }}
+                    className="w-7 h-7 flex-shrink-0 flex items-center justify-center border border-admin-border rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                  <button
+                    onClick={() => { handleReply(); setReplyOpen(false); }}
+                    disabled={isPending || !replyText.trim()}
+                    className={`w-7 h-7 flex-shrink-0 flex items-center justify-center border rounded-admin-md transition-colors ${replyText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}
+                  >
+                    <Send size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-t border-transparent p-3 rounded-b-admin-lg flex justify-end" onClick={e => e.stopPropagation()}>
+                <button
+                  onClick={() => setReplyOpen(true)}
+                  className="h-7 inline-flex items-center gap-1.5 px-2.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors"
+                >
+                  Reply
+                  <CornerDownLeft size={14} />
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -590,7 +551,6 @@ function ReplyRow({
   isLast,
   reactions,
   onToggleReaction,
-  onReplyClick,
 }: {
   reply: ShareComment;
   isOwn: boolean;
@@ -599,14 +559,13 @@ function ReplyRow({
   isLast: boolean;
   reactions: { emoji: string; count: number; viewers: string[] }[];
   onToggleReaction: (commentId: string, emoji: string) => void;
-  onReplyClick: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(reply.content);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const emojiTriggerRef = useRef<HTMLButtonElement>(null);
   const [isPending, startTransition] = useTransition();
-  const firstName = reply.viewer_name?.split(' ')[0] || 'Anonymous';
+  const firstNameStr = reply.viewer_name?.split(' ')[0] || 'Anonymous';
 
   const handleSave = () => {
     if (!editText.trim()) return;
@@ -623,17 +582,41 @@ function ReplyRow({
       <div className="flex flex-col items-center flex-shrink-0">
         {/* Line from above */}
         <div className="w-0.5 h-3 bg-admin-border-subtle" />
-        <CommentAvatar url={reply.avatar_url} email={reply.viewer_email} name={reply.viewer_name} size={24} />
+        <Avatar email={reply.viewer_email} name={reply.viewer_name} url={reply.avatar_url} size={24} />
         {/* Line below (if not last) */}
         {!isLast && <div className="w-0.5 flex-1 mt-1 bg-admin-border-subtle" />}
       </div>
 
-      {/* Right column */}
-      <div className="flex-1 min-w-0 pb-4">
-        {/* Name + time */}
+      {/* Right column — pt-3 aligns name with avatar (below h-3 connector) */}
+      <div className={`flex-1 min-w-0 pt-3 ${isLast ? 'pb-1' : 'pb-2'}`}>
+        {/* Name + time + actions */}
         <div className="flex items-center gap-2">
-          <span className="text-admin-sm font-semibold text-white">{firstName}</span>
-          <span className="text-admin-sm text-admin-text-faint">{formatRelativeTime(reply.created_at)}</span>
+          <span className={`text-admin-sm font-semibold ${reply.resolved_at ? 'text-white/30' : 'text-white'}`}>{firstNameStr}</span>
+          <span className={`text-admin-sm ${reply.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(reply.created_at)}</span>
+          {/* Actions: dots + emoji (no checkmark for replies) */}
+          <span className="ml-auto flex items-center gap-0" onClick={e => e.stopPropagation()}>
+            {isOwn && (
+              <CommentActionsMenu
+                commentId={reply.id}
+                viewerEmail={viewerEmail}
+                onRefresh={onRefresh}
+                onStartEdit={() => { setEditing(true); setEditText(reply.content); }}
+                hoverClass="group-hover/reply"
+              />
+            )}
+            <button ref={emojiTriggerRef} onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+              className="w-6 h-6 flex items-center justify-center cursor-pointer transition-colors invisible group-hover/reply:visible"
+              style={{ color: '#666' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
+              <Smile size={16} />
+            </button>
+            {emojiPickerOpen && (
+              <EmojiPicker
+                onSelect={(emoji) => onToggleReaction(reply.id, emoji)}
+                onClose={() => setEmojiPickerOpen(false)}
+                anchorRef={emojiTriggerRef}
+              />
+            )}
+          </span>
         </div>
 
         {/* Body */}
@@ -652,7 +635,7 @@ function ReplyRow({
             </div>
           </div>
         ) : (
-          <p className="text-admin-sm text-white/70 leading-relaxed whitespace-pre-wrap mt-0.5">{reply.content}</p>
+          <p className={`text-admin-sm leading-relaxed whitespace-pre-wrap mt-0.5 ${reply.resolved_at ? 'text-white/30' : 'text-white/70'}`}>{reply.content}</p>
         )}
 
         {/* Reaction pills */}
@@ -664,40 +647,74 @@ function ReplyRow({
             onToggle={onToggleReaction}
           />
         )}
-
-        {/* Actions: Reply ... emoji dots */}
-        {!editing && (
-          <div className="flex items-center mt-3" onClick={e => e.stopPropagation()}>
-            <button
-              onClick={onReplyClick}
-              className={BTN_REPLY}
-            >
-              Reply
-            </button>
-            <div className="ml-auto flex items-center gap-0.5 invisible group-hover/reply:visible">
-              <button ref={emojiTriggerRef} onClick={() => setEmojiPickerOpen(!emojiPickerOpen)} className={ICON_HOVER} style={{ color: '#666' }} onMouseEnter={e => (e.currentTarget.style.color = '#fff')} onMouseLeave={e => (e.currentTarget.style.color = '#666')}>
-                <Smile size={16} />
-              </button>
-              {isOwn && (
-                <CommentActionsMenu
-                  commentId={reply.id}
-                  viewerEmail={viewerEmail}
-                  onRefresh={onRefresh}
-                  onStartEdit={() => { setEditing(true); setEditText(reply.content); }}
-                />
-              )}
-            </div>
-            {emojiPickerOpen && (
-              <EmojiPicker
-                onSelect={(emoji) => onToggleReaction(reply.id, emoji)}
-                onClose={() => setEmojiPickerOpen(false)}
-                anchorRef={emojiTriggerRef}
-              />
-            )}
-          </div>
-        )}
-
       </div>
+    </div>
+  );
+}
+
+// ── Filter dropdown ──────────────────────────────────────────────────────
+
+function FilterDropdown({
+  hideCompleted,
+  setHideCompleted,
+  hiddenUsers,
+  setHiddenUsers,
+  allUsers,
+  onClose,
+}: {
+  hideCompleted: boolean;
+  setHideCompleted: (v: boolean) => void;
+  hiddenUsers: Set<string>;
+  setHiddenUsers: (v: Set<string>) => void;
+  allUsers: { email: string; name: string }[];
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  return (
+    <div ref={ref} className="fixed mt-1 bg-admin-bg-sidebar border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[200px]" style={{ zIndex: 9999, transform: 'translate(-160px, 0)' }}>
+      <button
+        onClick={() => setHideCompleted(!hideCompleted)}
+        className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
+      >
+        <span className={`w-4 h-4 flex items-center justify-center rounded border transition-colors ${hideCompleted ? 'bg-admin-info border-admin-info' : 'border-admin-border'}`}>
+          {hideCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
+        </span>
+        Hide completed
+      </button>
+      {allUsers.length > 0 && (
+        <>
+          <div className="border-t border-admin-border my-1" />
+          <p className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-admin-text-faint/50">By User</p>
+          {allUsers.map(u => {
+            const hidden = hiddenUsers.has(u.email);
+            return (
+              <button
+                key={u.email}
+                onClick={() => {
+                  const next = new Set(hiddenUsers);
+                  if (hidden) next.delete(u.email); else next.add(u.email);
+                  setHiddenUsers(next);
+                }}
+                className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
+              >
+                <span className={`w-4 h-4 flex items-center justify-center rounded border transition-colors ${!hidden ? 'bg-admin-info border-admin-info' : 'border-admin-border'}`}>
+                  {!hidden && <Check size={10} className="text-white" strokeWidth={3} />}
+                </span>
+                {u.name}
+              </button>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
@@ -712,7 +729,6 @@ const iconVariants = {
 // ── Exported for reuse in CommentBottomSheet ────────────────────────────
 export {
   CommentCard as SharedCommentCard,
-  CommentAvatar as SharedCommentAvatar,
   formatRelativeTime as sharedFormatRelativeTime,
   buildBeatLabelMap as sharedBuildBeatLabelMap,
   groupIntoThreads as sharedGroupIntoThreads,
@@ -739,7 +755,11 @@ export function CommentSidebar({
   const [loading, setLoading] = useState(false);
   const [sortMode, setSortMode] = useState<'script' | 'oldest' | 'newest' | 'unresolved'>('script');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hiddenUsers, setHiddenUsers] = useState<Set<string>>(new Set());
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
   const commentListRef = useRef<HTMLDivElement>(null);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
   const emailFillRef = useRef<HTMLDivElement>(null);
@@ -875,6 +895,19 @@ export function CommentSidebar({
   const threads = groupIntoThreads(comments);
   const topLevelCount = threads.length;
 
+  // Build unique users list for filter
+  const allUsers = (() => {
+    const seen = new Set<string>();
+    const users: { email: string; name: string }[] = [];
+    for (const c of comments) {
+      if (!seen.has(c.viewer_email)) {
+        seen.add(c.viewer_email);
+        users.push({ email: c.viewer_email, name: c.viewer_name || c.viewer_email.split('@')[0] });
+      }
+    }
+    return users;
+  })();
+
   // Close sort menu on outside click
   useEffect(() => {
     if (!sortMenuOpen) return;
@@ -905,6 +938,15 @@ export function CommentSidebar({
     return new Date(b.parent.created_at).getTime() - new Date(a.parent.created_at).getTime();
   });
 
+  // Apply filters
+  const filteredThreads = sortedThreads.filter(t => {
+    if (hideCompleted && t.parent.resolved_at) return false;
+    if (hiddenUsers.size > 0 && hiddenUsers.has(t.parent.viewer_email)) return false;
+    return true;
+  });
+
+  const hasActiveFilters = hideCompleted || hiddenUsers.size > 0;
+
   return (
     <div className="hidden md:flex md:relative md:flex-shrink-0 md:h-full">
       {/* Re-open button */}
@@ -928,6 +970,30 @@ export function CommentSidebar({
               COMMENTS ({topLevelCount})
             </span>
             <div className="flex items-center gap-1">
+              {/* Filter dropdown */}
+              <div className="relative" ref={filterMenuRef}>
+                <button
+                  onClick={() => setFilterMenuOpen(!filterMenuOpen)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-admin-md transition-colors ${
+                    hasActiveFilters
+                      ? 'text-admin-info hover:text-admin-info hover:bg-admin-bg-hover'
+                      : 'text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover'
+                  }`}
+                  title="Filter comments"
+                >
+                  <Eye size={15} />
+                </button>
+                {filterMenuOpen && (
+                  <FilterDropdown
+                    hideCompleted={hideCompleted}
+                    setHideCompleted={setHideCompleted}
+                    hiddenUsers={hiddenUsers}
+                    setHiddenUsers={setHiddenUsers}
+                    allUsers={allUsers}
+                    onClose={() => setFilterMenuOpen(false)}
+                  />
+                )}
+              </div>
               {/* Sort dropdown */}
               <div className="relative" ref={sortMenuRef}>
                 <button
@@ -968,14 +1034,14 @@ export function CommentSidebar({
           </div>
 
           {/* Comment list */}
-          <div ref={commentListRef} className="flex-1 overflow-y-auto admin-scrollbar-auto pt-3 pb-3">
+          <div ref={commentListRef} className="flex-1 overflow-y-scroll admin-scrollbar pt-3 pb-3">
             {loading && comments.length === 0 && (
               <p className="px-4 py-6 text-admin-sm text-admin-text-faint text-center">Loading...</p>
             )}
             {!loading && comments.length === 0 && (
               <p className="px-4 py-6 text-admin-sm text-admin-text-faint text-center">No comments yet.</p>
             )}
-            {sortedThreads.map(thread => (
+            {filteredThreads.map(thread => (
               <div key={thread.parent.id} data-comment-email={thread.parent.viewer_email}>
               <CommentCard
                 thread={thread}
@@ -1017,10 +1083,10 @@ export function CommentSidebar({
                           ) : (
                             <div
                               className="w-16 h-16 rounded-full flex items-center justify-center"
-                              style={{ backgroundColor: spColor || avatarColor(viewerEmail) }}
+                              style={{ backgroundColor: spColor || '#e67e22' }}
                             >
                               <span className="text-black leading-none" style={{ fontSize: 32, fontWeight: 900 }}>
-                                {getInitials(viewerName, viewerEmail)}
+                                {viewerName ? (() => { const p = viewerName.trim().split(/\s+/); return p.length >= 2 ? (p[0][0] + p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase(); })() : viewerEmail.slice(0,2).toUpperCase()}
                               </span>
                             </div>
                           )}
@@ -1065,7 +1131,7 @@ export function CommentSidebar({
                                 className="w-5 h-5 rounded-full transition-transform hover:scale-125"
                                 style={{
                                   backgroundColor: c,
-                                  outline: (spColor || avatarColor(viewerEmail)) === c ? '2px solid white' : 'none',
+                                  outline: (spColor || '#e67e22') === c ? '2px solid white' : 'none',
                                   outlineOffset: '1px',
                                 }}
                               />
