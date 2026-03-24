@@ -5,7 +5,8 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getGridTemplate, getVisibleColumns } from '@/app/admin/scripts/_components/gridUtils';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
 import { StoryboardLayoutRenderer } from '@/app/admin/scripts/_components/StoryboardLayoutRenderer';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, CropConfig, StoryboardSlotFrame } from '@/types/scripts';
+import { ScriptCommentsCell } from '@/app/admin/scripts/_components/ScriptCommentsCell';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow, CropConfig, StoryboardSlotFrame } from '@/types/scripts';
 
 interface Scene {
   id: string;
@@ -49,6 +50,9 @@ interface Props {
   tags: ScriptTagRow[];
   locations: ScriptLocationRow[];
   products: ScriptProductRow[];
+  commentsMap: Map<string, ScriptShareCommentRow[]>;
+  shareId: string;
+  onRefreshComments: () => void;
 }
 
 export function ReadOnlyCanvas({
@@ -60,6 +64,9 @@ export function ReadOnlyCanvas({
   tags,
   locations,
   products,
+  commentsMap,
+  shareId,
+  onRefreshComments,
 }: Props) {
   const [collapsedScenes, setCollapsedScenes] = useState<Set<string>>(new Set());
   const colHeaderRef = useRef<HTMLDivElement>(null);
@@ -106,10 +113,10 @@ export function ReadOnlyCanvas({
   return (
     <div className="w-full">
       {/* Column headers — sticky */}
-      <div ref={colHeaderRef} className="sticky top-0 z-20 bg-black">
+      <div ref={colHeaderRef} className="sticky top-0 z-20 bg-black border-b border-admin-border">
         <div className="flex">
           <div className="w-10 flex-shrink-0" />
-          <div className="grid flex-1 border-r border-border" style={{ gridTemplateColumns: gridTemplate }}>
+          <div className="grid flex-1" style={{ gridTemplateColumns: gridTemplate }}>
             {visibleColumns.map((col) => (
               <div key={col.key} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}>
                 <span className="opacity-60">{col.label}</span>
@@ -126,7 +133,7 @@ export function ReadOnlyCanvas({
           <div key={scene.id} id={`scene-${scene.id}`}>
             {/* Scene header — sticky below column headers */}
             <div
-              className="sticky z-[15] flex items-center bg-[#141414] border-b border-border cursor-pointer select-none"
+              className="sticky z-[15] flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer select-none"
               style={{ top: colHeaderHeight }}
               onClick={() => toggleCollapse(scene.id)}
             >
@@ -156,14 +163,14 @@ export function ReadOnlyCanvas({
               return (
                 <div key={beat.id} id={`beat-${beat.id}`} className="relative">
                   {/* Beat letter gutter */}
-                  <div className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-[#1a1a1a]">
+                  <div className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-admin-border">
                     <span className="text-[10px] text-muted-foreground/30 font-mono">
                       {beatLetter(beatIdx + 1)}
                     </span>
                   </div>
 
                   {/* Content grid */}
-                  <div className="relative ml-10 min-w-0 border-r border-border">
+                  <div className="relative ml-10 min-w-0">
                     {/* Column border overlay */}
                     <div className="absolute inset-0 z-10 pointer-events-none grid" style={{ gridTemplateColumns: gridTemplate }}>
                       {columnConfig.audio && <div className="border-l border-l-[var(--admin-accent)]" />}
@@ -171,6 +178,7 @@ export function ReadOnlyCanvas({
                       {columnConfig.notes && <div className="border-l border-l-[var(--admin-warning)]" />}
                       {columnConfig.reference && <div className="border-l border-l-[var(--admin-danger)]" />}
                       {columnConfig.storyboard && <div className="border-l border-l-[var(--admin-success)]" />}
+                      {columnConfig.comments && <div className="border-l border-l-[var(--admin-cream)]" />}
                     </div>
 
                     {/* Grid cells */}
@@ -189,6 +197,11 @@ export function ReadOnlyCanvas({
                       )}
                       {columnConfig.storyboard && (
                         <ReadOnlyStoryboardCell frames={beatFrames} storyboardLayout={beat.storyboard_layout ?? null} />
+                      )}
+                      {columnConfig.comments && (
+                        <div className="border-b border-b-admin-border flex flex-col">
+                          <ScriptCommentsCell comments={commentsMap.get(beat.id) ?? []} shareId={shareId} beatId={beat.id} onRefresh={onRefreshComments} />
+                        </div>
                       )}
                     </div>
                   </div>
@@ -229,7 +242,7 @@ function ReadOnlyCell({
 
   return (
     <div
-      className="min-h-[2.5rem] px-3 py-2 text-sm text-foreground border-b border-b-[#1a1a1a] [&_strong]:font-bold"
+      className="min-h-[2.5rem] px-3 py-2 text-sm text-foreground border-b border-b-admin-border [&_strong]:font-bold"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -239,12 +252,12 @@ function ReadOnlyCell({
 
 function ReadOnlyReferenceCell({ references }: { references: Reference[] }) {
   if (references.length === 0) {
-    return <div className="min-h-[2.5rem] border-b border-b-[#1a1a1a]" />;
+    return <div className="min-h-[2.5rem] border-b border-b-admin-border flex items-center" />;
   }
 
   return (
-    <div className="min-h-[2.5rem] border-b border-b-[#1a1a1a]">
-      <div className={`grid ${references.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 p-1`}>
+    <div className="min-h-[2.5rem] border-b border-b-admin-border flex items-center">
+      <div className={`grid ${references.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 p-1 w-full`}>
         {references.map(ref => (
           <div key={ref.id} className="relative aspect-video rounded overflow-hidden">
             <img src={ref.image_url} alt="" className="w-full h-full object-cover" />
@@ -264,8 +277,8 @@ function ReadOnlyStoryboardCell({ frames, storyboardLayout }: { frames: Storyboa
 
   if (slottedFrames.length > 0) {
     return (
-      <div className="min-w-0 overflow-hidden border-b border-b-[#1a1a1a]">
-        <div className="mx-2 my-2">
+      <div className="min-w-0 overflow-hidden border-b border-b-admin-border flex items-center">
+        <div className="p-1 w-full">
           <StoryboardLayoutRenderer
             layout={storyboardLayout ?? 'single'}
             frames={slottedFrames}
@@ -279,12 +292,12 @@ function ReadOnlyStoryboardCell({ frames, storyboardLayout }: { frames: Storyboa
 
   const frame = frames[0];
   if (!frame) {
-    return <div className="min-h-[2.5rem] border-b border-b-[#1a1a1a]" />;
+    return <div className="min-h-[2.5rem] border-b border-b-admin-border flex items-center" />;
   }
 
   return (
-    <div className="min-w-0 overflow-hidden border-b border-b-[#1a1a1a]">
-      <div className="mx-2 my-2">
+    <div className="min-w-0 overflow-hidden border-b border-b-admin-border flex items-center">
+      <div className="p-1 w-full">
         <img src={frame.image_url} alt="" className="w-full aspect-video object-cover rounded" />
       </div>
     </div>

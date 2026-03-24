@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail } from 'lucide-react';
+import { motion } from 'framer-motion';
+import gsap from 'gsap';
+import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
 import { ScriptShareIntro } from './ScriptShareIntro';
@@ -11,11 +14,16 @@ import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
 import { startScriptViewSession, updateScriptViewDuration, getShareComments } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
-import { formatScriptVersion } from '@/types/scripts';
+import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow } from '@/types/scripts';
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
+
+const iconVariants = {
+  hidden: { opacity: 0, x: 8, width: 0, marginLeft: -8 },
+  visible: { opacity: 1, x: 0, width: 'auto', marginLeft: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+};
 
 interface Props {
   shareId: string;
@@ -74,6 +82,22 @@ export function ScriptShareClient({
   const [containerIdx, setContainerIdx] = useState(0);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const [isEmailHovered, setIsEmailHovered] = useState(false);
+  const emailBtnRef = useRef<HTMLAnchorElement>(null);
+  const emailFillRef = useRef<HTMLDivElement>(null);
+
+  useDirectionalFill(emailBtnRef, emailFillRef, {
+    onFillStart: () => {
+      setIsEmailHovered(true);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
+    },
+    onFillEnd: () => {
+      setIsEmailHovered(false);
+      const textSpan = emailBtnRef.current?.querySelector('span');
+      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
+    },
+  });
 
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
@@ -166,7 +190,8 @@ export function ScriptShareClient({
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  const btnCls = 'w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors';
+  const btnCls = 'h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors';
+  const btnOn = 'bg-admin-bg-active text-admin-text-secondary';
 
   // Build presentation slides data
   const refsByBeat: Record<string, { image_url: string }[]> = {};
@@ -237,7 +262,7 @@ export function ScriptShareClient({
               <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
               {clientLogoUrl && (
                 <>
-                  <span className="text-border text-xs">/</span>
+                  <span className="text-muted-foreground/30 text-lg leading-none select-none">⤫</span>
                   <img src={clientLogoUrl} alt="" className="h-5 object-contain admin-logo" />
                 </>
               )}
@@ -251,17 +276,48 @@ export function ScriptShareClient({
                     {clientName}{projectNumber ? ` \u00B7 #${projectNumber}` : ''}
                   </p>
                 )}
-                <h1 className="font-display text-lg font-bold text-foreground leading-tight truncate">
-                  {script.title}
-                </h1>
+                <div className="flex items-center justify-center gap-2.5">
+                  <h1 className="font-display text-lg font-bold text-foreground leading-tight truncate">
+                    {script.title}
+                  </h1>
+                  <span
+                    className={`flex-shrink-0 px-2.5 py-0.5 text-xs font-admin-mono font-bold rounded-full border ${script.isPublished ? '' : 'border-dashed'}`}
+                    style={{
+                      borderColor: versionColor(script.majorVersion) + '40',
+                      backgroundColor: script.isPublished ? versionColor(script.majorVersion) + '15' : 'transparent',
+                      color: versionColor(script.majorVersion),
+                    }}
+                  >
+                    {versionLabel}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Right — version tag */}
+            {/* Right — email button */}
             <div className="ml-auto flex-shrink-0">
-              <span className="inline-block px-3 py-1 text-xs font-mono font-bold text-muted-foreground bg-white/[0.05] border border-border rounded-full">
-                {versionLabel}
-              </span>
+              <a
+                ref={emailBtnRef}
+                href="mailto:hi@fna.wtf"
+                className="relative px-5 py-2 font-medium text-white bg-black border border-white rounded-lg overflow-hidden flex items-center justify-center"
+              >
+                <div
+                  ref={emailFillRef}
+                  className="absolute inset-0 bg-white pointer-events-none"
+                  style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
+                />
+                <span className="relative flex items-center justify-center gap-2 whitespace-nowrap text-sm" style={{ zIndex: 10 }}>
+                  <motion.span
+                    variants={iconVariants}
+                    initial="hidden"
+                    animate={isEmailHovered ? 'visible' : 'hidden'}
+                    className="flex items-center"
+                  >
+                    <Mail size={14} strokeWidth={1.5} />
+                  </motion.span>
+                  hi@fna.wtf
+                </span>
+              </a>
             </div>
           </div>
         </>
@@ -269,24 +325,27 @@ export function ScriptShareClient({
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0">
+        {/* Left — Scenes toggle */}
+        <button
+          onClick={() => setShowSidebar(prev => !prev)}
+          className={`${btnCls} gap-1.5 px-2 ${showSidebar ? btnOn : ''}`}
+          title={showSidebar ? 'Hide scenes' : 'Show scenes'}
+        >
+          {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+          <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
+        </button>
+        <div className="w-2" />
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setShowSidebar(prev => !prev)}
-            className={btnCls}
-            title={showSidebar ? 'Hide scenes' : 'Show scenes'}
-          >
-            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-          </button>
-          <button
             onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-            className={btnCls}
+            className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
             title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
           >
             <SeparatorVertical size={16} />
           </button>
           <button
             onClick={() => setIsFocused(prev => !prev)}
-            className={btnCls}
+            className={`${btnCls} w-8 ${isFocused ? btnOn : ''}`}
             title={isFocused ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}

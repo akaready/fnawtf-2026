@@ -645,7 +645,7 @@ export function ScriptEditorCanvas({
       {/* Persistent right border — above scene headers */}
       <div className="absolute top-0 bottom-0 right-0 w-px bg-admin-border z-[18] pointer-events-none" style={{ right: 0, left: 'auto' }} />
       {/* Column headers */}
-      <div ref={colHeaderRef} className="sticky top-0 z-20 bg-admin-bg-base">
+      <div ref={colHeaderRef} className="sticky top-0 z-20 bg-admin-bg-base border-b border-admin-border">
         <div className="flex">
           {/* Select-all checkbox */}
           <div
@@ -810,11 +810,9 @@ export function ScriptEditorCanvas({
               });
             }
           }
-          return scenes.map((scene, sceneIdx) => {
+          return scenes.map((scene) => {
           const isCollapsed = collapsedScenes.has(scene.id);
           const isEditing = editingSceneId === scene.id;
-          const prevCollapsed = sceneIdx > 0 && collapsedScenes.has(scenes[sceneIdx - 1].id);
-          const needsTopBorder = sceneIdx === 0 || !prevCollapsed;
           return (
             <SortableSceneItem key={scene.id} sceneId={scene.id}>
             {(sceneDragListeners) => (
@@ -823,7 +821,7 @@ export function ScriptEditorCanvas({
             >
               {/* Scene heading — click to collapse/expand, sticky below column headers */}
               <div
-                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer${needsTopBorder ? ' border-t' : ''}`}
+                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer`}
                 style={{ top: colHeaderHeight }}
                 onClick={(e) => {
                   e.stopPropagation();

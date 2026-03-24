@@ -836,24 +836,27 @@ export function ScriptEditorClient({
             }}
           />
           <div className="w-2" />
+          {/* Scenes toggle — far left */}
+          <button
+            onClick={() => setShowSidebar(prev => { const next = !prev; localStorage.setItem(`script-sidebar-${script.id}`, String(next)); return next; })}
+            className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors inline-flex items-center gap-1.5 ${showSidebar ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+            title={showSidebar ? 'Hide scenes' : 'Show scenes'}
+          >
+            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
+          </button>
+          <div className="w-2" />
           {/* Shared toolbar buttons */}
           <button
             onClick={toggleFocus}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors ${isFocused ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
             title={isFocused ? 'Exit focus mode' : 'Focus mode'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
           </button>
           <button
-            onClick={() => setShowSidebar(prev => { const next = !prev; localStorage.setItem(`script-sidebar-${script.id}`, String(next)); return next; })}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-            title={showSidebar ? 'Hide scenes' : 'Show scenes'}
-          >
-            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-          </button>
-          <button
             onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
+            className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors ${containerIdx !== 0 ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
             title={`Width: ${CONTAINER_LABELS[containerIdx]} → ${CONTAINER_LABELS[(containerIdx + 1) % CONTAINER_WIDTHS.length]}`}
           >
             <SeparatorVertical size={16} />
