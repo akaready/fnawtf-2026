@@ -276,7 +276,7 @@ function NewComment({ shareId, beatId, onDone }: { shareId: string; beatId: stri
   }, [text, shareId, beatId, onDone]);
 
   return (
-    <div className="border-t border-admin-border-subtle px-3 py-3 mt-auto bg-admin-bg-wash">
+    <div className="border-t border-admin-border-subtle px-3 py-2 mt-auto bg-admin-bg-wash">
       <div className="flex items-start gap-2">
         <div className="h-7 flex items-center"><Avatar email="admin" name="Admin" /></div>
         <textarea value={text} onChange={e => { setText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} rows={1}

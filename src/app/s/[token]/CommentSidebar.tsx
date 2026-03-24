@@ -134,8 +134,8 @@ function ReactionPills({
             onClick={() => onToggle(commentId, r.emoji)}
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-admin-sm transition-colors ${
               isMine
-                ? 'border border-admin-info/50 bg-admin-info/15 text-white'
-                : 'border border-admin-border bg-admin-bg-base hover:bg-admin-bg-hover text-admin-text-faint'
+                ? 'bg-white/20 text-white'
+                : 'bg-white/10 hover:bg-white/15 text-admin-text-faint'
             }`}
           >
             <span className="text-sm leading-none">{r.emoji}</span>
