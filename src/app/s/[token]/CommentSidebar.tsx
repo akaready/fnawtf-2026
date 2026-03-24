@@ -557,10 +557,9 @@ function CommentCard({
                 exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
                 className="border-t border-transparent p-3 rounded-b-admin-lg flex justify-end"
-                onClick={e => e.stopPropagation()}
               >
                 <button
-                  onClick={() => setReplyOpen(true)}
+                  onClick={(e) => { e.stopPropagation(); setReplyOpen(true); }}
                   className="h-7 inline-flex items-center gap-1.5 px-2.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors"
                 >
                   Reply
