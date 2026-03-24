@@ -509,48 +509,66 @@ function CommentCard({
           )}
 
           {/* Reply area */}
-          {replyOpen ? (
-            <div className="border-t border-admin-border-subtle bg-admin-bg-base p-3 rounded-b-admin-lg" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center gap-2">
-                <textarea
-                  ref={replyTextareaRef}
-                  value={replyText}
-                  onChange={e => { setReplyText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                  placeholder="Reply..."
-                  rows={1}
-                  className="flex-1 bg-transparent text-sm text-white placeholder:text-admin-text-faint/25 resize-none focus:outline-none min-h-6 leading-6 overflow-hidden max-md:[font-size:16px] pl-1.5"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); setReplyOpen(false); }
-                    if (e.key === 'Escape') { setReplyOpen(false); setReplyText(''); }
-                  }}
-                  autoFocus
-                />
-                <button
-                  onClick={() => { setReplyOpen(false); setReplyText(''); }}
-                  className="w-7 h-7 flex-shrink-0 flex items-center justify-center border border-admin-border rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
-                >
-                  <X size={14} />
-                </button>
-                <button
-                  onClick={() => { handleReply(); setReplyOpen(false); }}
-                  disabled={isPending || !replyText.trim()}
-                  className={`w-7 h-7 flex-shrink-0 flex items-center justify-center border rounded-admin-md transition-colors ${replyText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="border-t border-transparent p-3 rounded-b-admin-lg flex justify-end" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => setReplyOpen(true)}
-                className="h-7 inline-flex items-center gap-1.5 px-2.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors"
+          <AnimatePresence mode="wait" initial={false}>
+            {replyOpen ? (
+              <motion.div
+                key="reply-input"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                className="border-t border-admin-border-subtle bg-admin-bg-base p-3 rounded-b-admin-lg"
+                onClick={e => e.stopPropagation()}
               >
-                Reply
-                <CornerDownLeft size={14} />
-              </button>
-            </div>
-          )}
+                <div className="flex items-center gap-2">
+                  <textarea
+                    ref={replyTextareaRef}
+                    value={replyText}
+                    onChange={e => { setReplyText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+                    placeholder="Reply..."
+                    rows={1}
+                    className="flex-1 bg-transparent text-sm text-white placeholder:text-admin-text-faint/25 resize-none focus:outline-none min-h-6 leading-6 overflow-hidden max-md:[font-size:16px] pl-1.5"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); setReplyOpen(false); }
+                      if (e.key === 'Escape') { setReplyOpen(false); setReplyText(''); }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => { setReplyOpen(false); setReplyText(''); }}
+                    className="w-7 h-7 flex-shrink-0 flex items-center justify-center border border-admin-border rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                  <button
+                    onClick={() => { handleReply(); setReplyOpen(false); }}
+                    disabled={isPending || !replyText.trim()}
+                    className={`w-7 h-7 flex-shrink-0 flex items-center justify-center border rounded-admin-md transition-colors ${replyText.trim() ? 'border-white bg-white text-black hover:bg-white/90' : 'border-admin-border text-admin-text-faint cursor-not-allowed'}`}
+                  >
+                    <Send size={14} />
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="reply-button"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                className="border-t border-transparent p-3 rounded-b-admin-lg flex justify-end"
+                onClick={e => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setReplyOpen(true)}
+                  className="h-7 inline-flex items-center gap-1.5 px-2.5 text-admin-sm text-admin-text-faint border border-admin-border hover:text-white rounded-admin-md hover:bg-admin-bg-hover transition-colors"
+                >
+                  Reply
+                  <CornerDownLeft size={14} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
