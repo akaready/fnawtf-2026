@@ -54,6 +54,7 @@ interface Props {
   onImageMove?: (dragData: ImageDragData, dropData: ImageDropData) => void;
   scenes?: import('@/types/scripts').ComputedScene[];
   beatComments?: ScriptShareCommentRow[];
+  commentsLoading?: boolean;
   commentShareId?: string;
   onRefreshComments?: () => void;
 }
@@ -114,6 +115,7 @@ export function ScriptBeatRow({
   onImageMove,
   scenes,
   beatComments,
+  commentsLoading,
   commentShareId,
   onRefreshComments,
 }: Props) {
@@ -299,7 +301,12 @@ export function ScriptBeatRow({
             />
           )}
           {columnConfig.comments && (
-            <div className="border-b border-admin-border-subtle flex flex-col">
+            <div className="border-b border-admin-border-subtle flex flex-col relative">
+              {commentsLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-admin-bg-base/60 backdrop-blur-[2px]">
+                  <div className="w-4 h-4 border-2 border-admin-text-faint border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
               <ScriptCommentsCell comments={beatComments ?? []} shareId={commentShareId} beatId={beat.id} onRefresh={onRefreshComments} />
             </div>
           )}

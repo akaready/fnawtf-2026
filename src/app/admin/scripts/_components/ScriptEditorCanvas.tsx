@@ -71,6 +71,7 @@ interface Props {
   selectedShareId: string | null;
   onSelectShare: (shareId: string) => void;
   commentsMap: Map<string, ScriptShareCommentRow[]>;
+  commentsLoading?: boolean;
   onRefreshComments?: () => void;
 }
 
@@ -116,6 +117,7 @@ export function ScriptEditorCanvas({
   selectedShareId,
   onSelectShare,
   commentsMap,
+  commentsLoading,
   onRefreshComments,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -944,6 +946,7 @@ export function ScriptEditorCanvas({
                         onImageMove={onImageMove}
                         scenes={scenes}
                         beatComments={beatComments}
+                        commentsLoading={commentsLoading}
                         commentShareId={selectedShareId ?? undefined}
                         onRefreshComments={onRefreshComments}
                       />

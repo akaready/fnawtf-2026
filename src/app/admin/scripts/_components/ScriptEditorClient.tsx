@@ -104,10 +104,11 @@ export function ScriptEditorClient({
   const [showVersions, setShowVersions] = useState(false);
   const [products, setProducts] = useState<ScriptProductRow[]>(initialProducts);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
-  const [showSidebar, setShowSidebar] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem(`script-sidebar-${script.id}`) === 'true';
-  });
+  const [showSidebar, setShowSidebar] = useState(false);
+  useEffect(() => {
+    const stored = localStorage.getItem(`script-sidebar-${script.id}`);
+    if (stored === 'true') setShowSidebar(true);
+  }, [script.id]);
   const [isFocused, setIsFocused] = useState(false);
   const [showPresentation, setShowPresentation] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
@@ -131,6 +132,7 @@ export function ScriptEditorClient({
   const [groupShares, setGroupShares] = useState<ScriptShareRow[]>([]);
   const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
+  const [commentsLoading, setCommentsLoading] = useState(false);
   const sharesLoadedRef = useRef(false);
 
   // Hydrate from localStorage after mount to avoid SSR mismatch
@@ -216,6 +218,7 @@ export function ScriptEditorClient({
     const share = groupShares.find(s => s.id === shareId);
     if (!share) { setCommentsMap(new Map()); return; }
 
+    setCommentsLoading(true);
     try {
       const comments = await getShareComments(share.id);
       if (comments.length === 0) { setCommentsMap(new Map()); return; }
@@ -268,6 +271,8 @@ export function ScriptEditorClient({
     } catch (err) {
       console.error('[Comments] Failed to load comments:', err);
       showError('Failed to load comments');
+    } finally {
+      setCommentsLoading(false);
     }
   }, [groupShares, script.id, scenes, beats]);
 
@@ -966,6 +971,7 @@ export function ScriptEditorClient({
                 selectedShareId={selectedShareId}
                 onSelectShare={setSelectedShareId}
                 commentsMap={commentsMap}
+                commentsLoading={commentsLoading}
                 onRefreshComments={handleRefreshComments}
               />
             ) : (
