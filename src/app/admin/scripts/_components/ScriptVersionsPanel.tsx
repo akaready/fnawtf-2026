@@ -60,14 +60,10 @@ function SortableVersionCard({
   isCurrent,
   isEditing,
   editTitle,
-  editMajor,
-  editMinor,
   confirmDeleteId,
   duplicatingId,
   versionsCount,
   onEditTitleChange,
-  onEditMajorChange,
-  onEditMinorChange,
   onEditKeyDown,
   onStartEditing,
   onCancelEditing,
@@ -82,14 +78,10 @@ function SortableVersionCard({
   isCurrent: boolean;
   isEditing: boolean;
   editTitle: string;
-  editMajor: string;
-  editMinor: string;
   confirmDeleteId: string | null;
   duplicatingId: string | null;
   versionsCount: number;
   onEditTitleChange: (val: string) => void;
-  onEditMajorChange: (val: string) => void;
-  onEditMinorChange: (val: string) => void;
   onEditKeyDown: (e: React.KeyboardEvent, id: string) => void;
   onStartEditing: (v: VersionRow) => void;
   onCancelEditing: () => void;
@@ -127,28 +119,10 @@ function SortableVersionCard({
       <div className="flex items-center gap-3 px-4 pt-3.5 pb-1">
         {/* Version pill */}
         <span
-          className="font-admin-mono font-bold px-2.5 py-0.5 rounded-full text-admin-sm flex-shrink-0"
-          style={{ backgroundColor: color + '20', color }}
+          className={`font-admin-mono font-bold px-2.5 py-0.5 rounded-full text-admin-sm flex-shrink-0 ${v.is_published ? 'border' : 'border border-dashed'}`}
+          style={{ backgroundColor: v.is_published ? color + '20' : 'transparent', color, borderColor: color + '40' }}
         >
-          {isEditing ? (
-            <span className="flex items-center gap-0.5" onClick={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
-              <input
-                value={editMajor}
-                onChange={e => onEditMajorChange(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={e => onEditKeyDown(e, v.id)}
-                className="w-6 bg-transparent border-b border-current text-center outline-none"
-              />
-              <span>.</span>
-              <input
-                value={editMinor}
-                onChange={e => onEditMinorChange(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={e => onEditKeyDown(e, v.id)}
-                className="w-6 bg-transparent border-b border-current text-center outline-none"
-              />
-            </span>
-          ) : (
-            formatScriptVersion(v.major_version, v.minor_version, v.is_published)
-          )}
+          {formatScriptVersion(v.major_version, v.minor_version, v.is_published)}
         </span>
 
         {/* Title */}
@@ -170,7 +144,7 @@ function SortableVersionCard({
 
         {/* Version type indicator */}
         {v.minor_version === 0 && (
-          <span className="text-admin-sm font-medium text-admin-success flex-shrink-0">Shared</span>
+          <span className="text-admin-sm font-medium text-admin-success flex-shrink-0">SHARED</span>
         )}
       </div>
 
@@ -261,8 +235,6 @@ export function ScriptVersionsPanel({
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editMajor, setEditMajor] = useState('');
-  const [editMinor, setEditMinor] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const router = useRouter();
@@ -273,7 +245,8 @@ export function ScriptVersionsPanel({
     setLoading(true);
     try {
       const data = await getScriptVersions(scriptGroupId);
-      setVersions(data as unknown as VersionRow[]);
+      const sorted = (data as unknown as VersionRow[]).sort((a, b) => b.major_version - a.major_version || b.minor_version - a.minor_version);
+      setVersions(sorted);
     } finally {
       setLoading(false);
     }
@@ -335,8 +308,6 @@ export function ScriptVersionsPanel({
   const startEditing = (v: VersionRow) => {
     setEditingId(v.id);
     setEditTitle(v.title);
-    setEditMajor(String(v.major_version));
-    setEditMinor(String(v.minor_version));
   };
 
   const cancelEditing = () => {
@@ -344,16 +315,10 @@ export function ScriptVersionsPanel({
   };
 
   const saveEdits = async (id: string) => {
-    const major = parseInt(editMajor, 10);
-    const minor = parseInt(editMinor, 10);
-    if (isNaN(major) || isNaN(minor)) return;
-    await updateScript(id, {
-      title: editTitle,
-      major_version: major,
-      minor_version: minor,
-    });
+    if (!editTitle.trim()) return;
+    await updateScript(id, { title: editTitle.trim() });
     setVersions(prev => prev.map(v =>
-      v.id === id ? { ...v, title: editTitle, major_version: major, minor_version: minor } : v
+      v.id === id ? { ...v, title: editTitle.trim() } : v
     ));
     setEditingId(null);
   };
@@ -404,14 +369,10 @@ export function ScriptVersionsPanel({
                     isCurrent={v.id === scriptId}
                     isEditing={editingId === v.id}
                     editTitle={editTitle}
-                    editMajor={editMajor}
-                    editMinor={editMinor}
                     confirmDeleteId={confirmDeleteId}
                     duplicatingId={duplicatingId}
                     versionsCount={versions.length}
                     onEditTitleChange={setEditTitle}
-                    onEditMajorChange={setEditMajor}
-                    onEditMinorChange={setEditMinor}
                     onEditKeyDown={handleEditKeyDown}
                     onStartEditing={startEditing}
                     onCancelEditing={cancelEditing}

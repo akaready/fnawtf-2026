@@ -26,6 +26,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   scriptId: string;
+  onVersionChanged?: () => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ function formatDuration(seconds: number | null): string {
 
 // ── Main Panel ───────────────────────────────────────────────────────────
 
-export function ScriptSharePanel({ open, onClose, scriptId }: Props) {
+export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: Props) {
   const [shares, setShares] = useState<ShareWithViews[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -97,6 +98,7 @@ export function ScriptSharePanel({ open, onClose, scriptId }: Props) {
       const id = await createScriptShare(scriptId);
       await loadShares();
       setSelectedId(id);
+      onVersionChanged?.();
     } finally {
       setCreating(false);
     }
