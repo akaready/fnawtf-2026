@@ -141,7 +141,7 @@ function ReplyInput({ shareId, parentId, onDone, onFocusChange }: { shareId: str
       <div className="flex items-center gap-2 flex-1 py-1">
         <textarea
           value={text}
-          onChange={e => { setText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
+          onChange={e => { setText(e.target.value); e.target.style.height = ''; e.target.style.height = e.target.scrollHeight > 28 ? e.target.scrollHeight + 'px' : ''; }}
           onFocus={() => { setFocused(true); onFocusChange?.(true); }}
           onBlur={() => { setFocused(false); onFocusChange?.(false); }}
           placeholder="Reply..."
@@ -273,6 +273,8 @@ function Thread({ thread, shareId, onRefresh }: {
 function NewComment({ shareId, beatId, onDone }: { shareId: string; beatId: string; onDone: () => void }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submit = useCallback(async () => {
     if (!text.trim()) return;
     setSending(true);
@@ -280,13 +282,25 @@ function NewComment({ shareId, beatId, onDone }: { shareId: string; beatId: stri
     finally { setSending(false); }
   }, [text, shareId, beatId, onDone]);
 
+  const active = focused || !!text.trim();
+
   return (
     <div className="px-3 pb-2 mt-auto">
       <div className="flex items-center gap-2">
-        <div className="flex-shrink-0" style={{ width: AVATAR }}><Avatar email="admin" name="Admin" /></div>
-        <textarea value={text} onChange={e => { setText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} rows={1}
+        {/* Avatar slides up from below on focus */}
+        <div
+          className="flex-shrink-0 transition-all duration-200 ease-out"
+          style={{ width: active ? AVATAR : 0, opacity: active ? 1 : 0, transform: active ? 'scale(1)' : 'scale(0.5)' }}
+        >
+          <Avatar email="admin" name="Admin" />
+        </div>
+        <textarea ref={textareaRef} value={text}
+          onChange={e => { setText(e.target.value); e.target.style.height = ''; e.target.style.height = e.target.scrollHeight > 28 ? e.target.scrollHeight + 'px' : ''; }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          rows={1}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
-          placeholder="New comment..." className="flex-1 w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm leading-5 text-admin-text-primary placeholder:text-admin-text-faint resize-none overflow-hidden focus:outline-none focus:border-admin-text-muted min-h-7" />
+          placeholder="New comment..." className="flex-1 w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm leading-5 text-admin-text-primary placeholder:text-admin-text-faint resize-none overflow-hidden focus:outline-none focus:border-admin-text-muted min-h-7 transition-all duration-200" />
         <button onClick={submit} disabled={!text.trim() || sending}
           className={`h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}>
           <Send size={12} />
