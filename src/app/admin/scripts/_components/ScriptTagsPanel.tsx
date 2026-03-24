@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Trash2, Loader2, X as XIcon, Check } from 'lucide-react';
+import { Plus, Trash2, Loader2, X as XIcon, Check, Sparkles } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
@@ -9,6 +9,7 @@ import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { createScriptTag, updateScriptTag, deleteScriptTag } from '@/app/admin/actions';
 import { ColorPicker, PRESET_COLORS } from './ColorPicker';
 import type { ScriptTagRow } from '@/types/scripts';
+import { normalizeTagName } from '@/types/scripts';
 
 interface Props {
   open: boolean;
@@ -26,6 +27,7 @@ export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChan
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   // Local edits for dirty state tracking
+  const [generatingSnippet, setGeneratingSnippet] = useState(false);
   const [localEdits, setLocalEdits] = useState<Record<string, Partial<ScriptTagRow>>>({});
   const localEditsRef = useRef(localEdits);
   useEffect(() => { localEditsRef.current = localEdits; });
@@ -75,19 +77,22 @@ export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChan
     try {
       const slug = `tag-${crypto.randomUUID().slice(0, 8)}`;
       const color = newColor;
+      const normalizedName = normalizeTagName(newName.trim());
       const id = await createScriptTag(scriptGroupId, {
-        name: newName.trim(),
+        name: normalizedName,
         slug,
         category: 'general',
         color,
+        prompt_snippet: '',
       });
       const newTag: ScriptTagRow = {
         id,
         script_group_id: scriptGroupId,
-        name: newName.trim(),
+        name: normalizedName,
         slug,
         category: 'general',
         color,
+        prompt_snippet: '',
         created_at: new Date().toISOString(),
       };
       onTagsChange([...tags, newTag]);
@@ -102,7 +107,7 @@ export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChan
 
   // Local-only update — marks dirty, no server call
   const handleLocalUpdate = (tagId: string, field: string, value: string) => {
-    if (field === 'name') value = value.toLowerCase();
+    if (field === 'name') value = normalizeTagName(value);
     const updates: Partial<ScriptTagRow> = { [field]: value };
     setLocalEdits(prev => ({
       ...prev,
@@ -120,6 +125,27 @@ export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChan
       delete next[tagId];
       return next;
     });
+  };
+
+  const handleGenerateSnippet = async (tagId: string, tagName: string) => {
+    setGeneratingSnippet(true);
+    try {
+      const res = await fetch('/api/admin/tag-snippet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagName }),
+      });
+      const data = await res.json();
+      if (data.snippet) {
+        handleLocalUpdate(tagId, 'prompt_snippet', data.snippet);
+      } else {
+        console.error('Tag snippet generation failed:', data);
+      }
+    } catch (err) {
+      console.error('Tag snippet fetch error:', err);
+    } finally {
+      setGeneratingSnippet(false);
+    }
   };
 
   return (
@@ -226,7 +252,7 @@ export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChan
                     <input
                       autoFocus
                       value={newName}
-                      onChange={e => setNewName(e.target.value.toLowerCase())}
+                      onChange={e => setNewName(normalizeTagName(e.target.value))}
                       onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setShowNew(false); }}
                       placeholder="tag-name"
                       className="admin-input flex-1 text-base font-mono py-2 px-3"
@@ -260,6 +286,27 @@ export function ScriptTagsPanel({ open, onClose, scriptGroupId, tags, onTagsChan
                     />
                     <ColorPicker value={selectedWithEdits.color} onChange={c => handleLocalUpdate(selectedWithEdits.id, 'color', c)} />
                   </div>
+                </div>
+
+                {/* Prompt Snippet */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Storyboard Prompt Snippet</label>
+                  <textarea
+                    value={selectedWithEdits.prompt_snippet ?? ''}
+                    onChange={e => handleLocalUpdate(selectedWithEdits.id, 'prompt_snippet', e.target.value)}
+                    className="admin-input w-full text-admin-sm py-2 px-3 min-h-[80px] resize-none"
+                    style={{ fieldSizing: 'content' } as React.CSSProperties}
+                    placeholder="When this tag appears in a beat, this text is added to the storyboard generation prompt..."
+                  />
+                  <button
+                    onClick={() => handleGenerateSnippet(selectedWithEdits.id, selectedWithEdits.name)}
+                    disabled={generatingSnippet}
+                    className="btn-secondary px-3 py-2 text-xs flex items-center gap-1.5"
+                    title="Generate snippet from tag name"
+                  >
+                    {generatingSnippet ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                    Generate with AI
+                  </button>
                 </div>
               </div>
             ) : (
