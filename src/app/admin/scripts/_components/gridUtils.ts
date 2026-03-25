@@ -11,12 +11,12 @@ export const DEFAULT_FRACTIONS: Record<string, number> = {
 /** Compute CSS grid-template-columns from column config (fixed ratios) */
 export function getGridTemplate(config: ScriptColumnConfig): string {
   const parts: string[] = [];
-  if (config.audio)      parts.push('2fr');
-  if (config.visual)     parts.push('2fr');
-  if (config.notes)      parts.push('1fr');
-  if (config.reference)  parts.push('1fr');
-  if (config.storyboard) parts.push('1fr');
-  if (config.comments)   parts.push('2fr');
+  if (config.audio)      parts.push('minmax(0, 2fr)');
+  if (config.visual)     parts.push('minmax(0, 2fr)');
+  if (config.notes)      parts.push('minmax(0, 1fr)');
+  if (config.reference)  parts.push('minmax(0, 1fr)');
+  if (config.storyboard) parts.push('minmax(0, 1fr)');
+  if (config.comments)   parts.push('minmax(0, 2fr)');
   if (parts.length === 0) return '1fr';
   return parts.join(' ');
 }
@@ -42,11 +42,11 @@ export function getVisibleColumnKeys(config: ScriptColumnConfig): string[] {
 
 /** Compute CSS grid-template-columns respecting custom column order */
 export function getOrderedGridTemplate(config: ScriptColumnConfig, order: string[]): string {
-  const fractions: Record<string, string> = { audio: '2fr', visual: '2fr', notes: '1fr', reference: '1fr', storyboard: '1fr', comments: '2fr' };
+  const fractions: Record<string, string> = { audio: 'minmax(0, 2fr)', visual: 'minmax(0, 2fr)', notes: 'minmax(0, 1fr)', reference: 'minmax(0, 1fr)', storyboard: 'minmax(0, 1fr)', comments: 'minmax(0, 2fr)' };
   const parts: string[] = [];
   for (const key of order) {
     if (config[key as keyof ScriptColumnConfig]) {
-      parts.push(fractions[key] || '1fr');
+      parts.push(fractions[key] || 'minmax(0, 1fr)');
     }
   }
   return parts.length === 0 ? '1fr' : parts.join(' ');

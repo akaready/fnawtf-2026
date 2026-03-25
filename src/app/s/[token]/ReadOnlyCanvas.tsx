@@ -192,7 +192,7 @@ export function ReadOnlyCanvas({
                           reference: <ReadOnlyReferenceCell references={beatRefs} />,
                           storyboard: <ReadOnlyStoryboardCell frames={beatFrames} storyboardLayout={beat.storyboard_layout ?? null} />,
                           comments: (
-                            <div className="border-b border-b-admin-border flex flex-col">
+                            <div className="min-w-0 overflow-hidden border-b border-b-admin-border flex flex-col">
                               <ScriptCommentsCell comments={commentsMap.get(beat.id) ?? []} shareId={shareId} beatId={beat.id} onRefresh={onRefreshComments} />
                             </div>
                           ),
@@ -241,7 +241,7 @@ function ReadOnlyCell({
 
   return (
     <div
-      className="min-h-[2.5rem] px-3 py-2 text-sm text-foreground border-b border-b-admin-border [&_strong]:font-bold"
+      className="min-w-0 overflow-hidden break-words min-h-[2.5rem] px-3 py-2 text-sm text-foreground border-b border-b-admin-border [&_strong]:font-bold"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -251,11 +251,11 @@ function ReadOnlyCell({
 
 function ReadOnlyReferenceCell({ references }: { references: Reference[] }) {
   if (references.length === 0) {
-    return <div className="min-h-[2.5rem] border-b border-b-admin-border flex items-center" />;
+    return <div className="min-w-0 overflow-hidden min-h-[2.5rem] border-b border-b-admin-border flex items-center" />;
   }
 
   return (
-    <div className="min-h-[2.5rem] border-b border-b-admin-border flex items-center">
+    <div className="min-w-0 overflow-hidden min-h-[2.5rem] border-b border-b-admin-border flex items-center">
       <div className={`grid ${references.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-0.5 p-1 w-full`}>
         {references.map(ref => (
           <div key={ref.id} className="relative aspect-video rounded overflow-hidden">

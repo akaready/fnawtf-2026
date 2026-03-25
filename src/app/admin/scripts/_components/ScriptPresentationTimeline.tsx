@@ -197,7 +197,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       small={smallAvatars}
                     />
                   )}
-                  {beatLabel && showSceneBoundaryLabels && (
+                  {beatLabel && (showSceneBoundaryLabels || showSceneNumbersOnly) && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onSeek(i); }}
                       className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
@@ -205,18 +205,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       }`}
                       style={{ top: 20 }}
                     >
-                      {showAllLabels ? beatLabel : `${slide.sceneNumber}`}
-                    </button>
-                  )}
-                  {beatLabel && !showSceneBoundaryLabels && showSceneNumbersOnly && isSceneBoundary && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onSeek(i); }}
-                      className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
-                        isCurrent ? 'text-white bg-white/15' : 'text-[#888]'
-                      }`}
-                      style={{ top: 20 }}
-                    >
-                      {`${slide.sceneNumber}`}
+                      {showSceneBoundaryLabels ? beatLabel : `${slide.sceneNumber}`}
                     </button>
                   )}
                 </div>
@@ -239,10 +228,10 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                     small={smallAvatars}
                   />
                 )}
-                {beatLabel && (
+                {beatLabel && showAllLabels && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onSeek(i); }}
-                    className={`hidden md:inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                    className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
                       isCurrent ? 'text-white bg-white/15' : 'text-[#555]'
                     }`}
                     style={{ top: 16 }}

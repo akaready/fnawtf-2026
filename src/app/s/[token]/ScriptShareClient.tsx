@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, Camera } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, Camera, Menu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
@@ -11,6 +11,8 @@ import { buildPresentationSlides } from '@/app/admin/scripts/_components/present
 import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
+import { SceneBottomSheet } from './SceneBottomSheet';
+import { CommentBottomSheet } from './CommentBottomSheet';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
 import { startScriptViewSession, updateScriptViewDuration, getShareComments, getViewerProfile, updateViewerProfile, uploadViewerAvatar } from './actions';
@@ -82,8 +84,8 @@ export function ScriptShareClient({
   });
   const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMN_ORDER);
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
-  const [showSidebar, setShowSidebar] = useState(true);
-  const userWantsSidebar = useRef(true);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const userWantsSidebar = useRef(false);
 
   // Auto-collapse scenes sidebar when viewport is narrow
   useEffect(() => {
@@ -110,11 +112,13 @@ export function ScriptShareClient({
   const [commentSceneFilter, setCommentSceneFilter] = useState<'current' | 'all'>('all');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const userPopoverRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
   const presentationNavRef = useRef<{
     jumpToScene: (sceneId: string) => void;
@@ -325,7 +329,54 @@ export function ScriptShareClient({
       {/* Title header — collapses in focus mode */}
       {!isFocused && (
         <>
-          <div className="relative flex items-center px-4 py-4 md:px-8 md:py-6 border-b border-border flex-shrink-0">
+          {/* Mobile header */}
+          <div className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-sm font-bold text-foreground truncate">{script.title}</h1>
+                <span
+                  className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-admin-mono font-bold rounded-full border"
+                  style={{
+                    borderColor: versionColor(script.majorVersion) + '40',
+                    backgroundColor: script.isPublished ? versionColor(script.majorVersion) + '15' : 'transparent',
+                    color: versionColor(script.majorVersion),
+                  }}
+                >
+                  {versionLabel}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:text-white transition-colors flex-shrink-0"
+            >
+              <Menu size={16} />
+            </button>
+          </div>
+          {/* Mobile menu overlay */}
+          {mobileMenuOpen && (
+            <div className="md:hidden fixed inset-0 z-50 bg-black/80" onClick={() => setMobileMenuOpen(false)}>
+              <div className="absolute right-4 top-16 w-[250px] bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl p-4 space-y-3" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-3 pb-3 border-b border-admin-border">
+                  <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-4" />
+                  {clientLogoUrl && (
+                    <>
+                      <span className="text-muted-foreground/30 text-sm select-none">&#x2922;</span>
+                      <img src={clientLogoUrl} alt="" className="h-4 object-contain admin-logo" />
+                    </>
+                  )}
+                </div>
+                {clientName && (
+                  <p className="text-admin-sm text-admin-text-faint">{clientName}</p>
+                )}
+                <a href="mailto:hi@fna.wtf" className="flex items-center gap-2 text-admin-sm text-white/70 hover:text-white transition-colors">
+                  <Mail size={14} /> hi@fna.wtf
+                </a>
+              </div>
+            </div>
+          )}
+          {/* Desktop header */}
+          <div className="relative hidden md:flex items-center px-4 py-4 md:px-8 md:py-6 border-b border-border flex-shrink-0">
             {/* Left — logos */}
             <div className="flex items-center gap-4 flex-shrink-0">
               <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
@@ -339,7 +390,7 @@ export function ScriptShareClient({
 
             {/* Center — absolute positioned so it's truly centered regardless of left/right widths */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center min-w-0 px-40">
+              <div className="text-center min-w-0 max-w-[50%]">
                 {clientName && (
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-0.5 truncate">
                     {clientName}{projectNumber ? ` \u00B7 #${projectNumber}` : ''}
@@ -518,19 +569,19 @@ export function ScriptShareClient({
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0 overflow-hidden">
-        {/* Left — Scenes toggle + Fullscreen + Width */}
-        <div className="flex items-center gap-1">
+        {/* Left — Desktop: Scenes toggle + Fullscreen + Width */}
+        <div className="hidden md:flex items-center gap-1">
           <button
             onClick={() => { setShowSidebar(prev => { userWantsSidebar.current = !prev; return !prev; }); }}
             className={`${btnCls} gap-1.5 px-2 ${showSidebar ? btnOn : ''}`}
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
             {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-            <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
           </button>
           <button
             onClick={() => setIsFocused(prev => !prev)}
-            className={`hidden md:flex ${btnCls} w-8 ${isFocused ? btnOn : ''}`}
+            className={`${btnCls} w-8 ${isFocused ? btnOn : ''}`}
             title={isFocused ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
@@ -538,12 +589,32 @@ export function ScriptShareClient({
           {viewMode === 'table' && (
             <button
               onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-              className={`hidden md:flex ${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
+              className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
               title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
             >
               <SeparatorVertical size={16} />
             </button>
           )}
+        </div>
+        {/* Left — Mobile: Scenes bottom sheet (self-contained trigger + sheet) */}
+        <div className="flex md:hidden items-center gap-1">
+          <SceneBottomSheet
+            scenes={viewMode === 'table'
+              ? computedScenes.map(s => ({
+                  id: s.id,
+                  sceneNumber: s.sceneNumber,
+                  int_ext: s.int_ext,
+                  location_name: s.location_name,
+                  time_of_day: s.time_of_day,
+                  scene_description: s.scene_description ?? null,
+                  beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
+                }))
+              : presentationScenes}
+            activeSceneId={(viewMode === 'table' ? activeSceneId : presentationActiveSceneId) ?? ''}
+            onSelectScene={viewMode === 'table' ? handleSceneClick : (id) => presentationNavRef.current?.jumpToScene(id)}
+            activeBeatId={viewMode === 'story' ? (presentationActiveBeatId ?? undefined) : undefined}
+            onSelectBeat={viewMode === 'table' ? handleBeatClick : (id) => presentationNavRef.current?.jumpToBeat(id)}
+          />
         </div>
         {/* Center — view mode toggle */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -556,8 +627,21 @@ export function ScriptShareClient({
             </div>
           </div>
         </div>
-        {/* Right — mode-dependent controls */}
-        <div className="ml-auto flex-shrink-0 overflow-hidden">
+        {/* Right — Mobile: comments bottom sheet (self-contained trigger + sheet) */}
+        <div className="flex md:hidden ml-auto items-center">
+          <CommentBottomSheet
+            shareId={shareId}
+            currentBeatId={presentationActiveBeatId ?? null}
+            viewerEmail={viewerEmail}
+            viewerName={viewerName}
+            refreshKey={0}
+            slides={presentationSlides}
+            onNavigateToBeat={(id) => presentationNavRef.current?.jumpToBeat(id)}
+            onCommentAdded={loadComments}
+          />
+        </div>
+        {/* Right — Desktop: mode-dependent controls */}
+        <div className="ml-auto flex-shrink-0 overflow-hidden hidden md:block">
           <AnimatePresence mode="wait">
           {viewMode === 'table' ? (
             <motion.div key="table-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}>
@@ -565,6 +649,16 @@ export function ScriptShareClient({
             </motion.div>
           ) : (
             <motion.div key="story-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="flex items-center gap-1">
+              <AnimatePresence>
+                {commentsOpen && (
+                  <motion.div
+                    key="comment-controls"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex items-center gap-1"
+                  >
               {/* Filter dropdown */}
               <div className="relative" ref={filterDropdownRef}>
                 <button
@@ -644,6 +738,9 @@ export function ScriptShareClient({
                   document.body
                 )}
               </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {/* Comments toggle */}
               <button
                 onClick={() => presentationToggleCommentsRef.current?.()}
@@ -728,6 +825,7 @@ export function ScriptShareClient({
             onRegisterCommentsToggle={(fn) => { presentationToggleCommentsRef.current = fn; }}
             onRegisterNavCallbacks={(cbs) => { presentationNavRef.current = cbs; }}
             externalSidebar
+            onCommentsOpenChange={setCommentsOpen}
             commentHideCompleted={commentHideCompleted}
             commentSortMode={commentSortMode}
             commentSceneFilter={commentSceneFilter}

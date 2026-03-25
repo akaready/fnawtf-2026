@@ -152,6 +152,7 @@ interface Props {
   onRegisterCommentsToggle?: (toggle: () => void) => void;
   onRegisterNavCallbacks?: (callbacks: { jumpToScene: (sceneId: string) => void; jumpToBeat: (beatId: string) => void; getActiveSceneId: () => string | null; getActiveBeatId: () => string | null }) => void;
   externalSidebar?: boolean;
+  onCommentsOpenChange?: (open: boolean) => void;
   onSlideChange?: (sceneId: string, beatId: string | null) => void;
   commentHideCompleted?: boolean;
   commentSortMode?: 'script' | 'oldest' | 'newest' | 'unresolved';
@@ -183,6 +184,7 @@ export function ScriptPresentationView({
   onRegisterCommentsToggle,
   onRegisterNavCallbacks,
   externalSidebar = false,
+  onCommentsOpenChange,
   onSlideChange,
   commentHideCompleted,
   commentSortMode,
@@ -272,6 +274,10 @@ export function ScriptPresentationView({
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+  useEffect(() => {
+    onCommentsOpenChange?.(rightOpen);
+  }, [rightOpen, onCommentsOpenChange]);
+
   const [commentRefreshKey, setCommentRefreshKey] = useState(0);
   const [commentText, setCommentText] = useState('');
   const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -446,8 +452,8 @@ export function ScriptPresentationView({
 
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        {/* Mobile: scene nav top-left, comments top-right */}
-        <div className="md:hidden absolute top-4 left-4 z-30">
+        {/* Mobile: scene nav top-left, comments top-right (hidden when parent provides toolbar) */}
+        {!externalSidebar && <div className="md:hidden absolute top-4 left-4 z-30">
           <SceneBottomSheet
             scenes={scenes}
             activeSceneId={activeSceneId}
@@ -455,8 +461,8 @@ export function ScriptPresentationView({
             activeBeatId={activeBeatId}
             onSelectBeat={jumpToBeat}
           />
-        </div>
-        {!hideComments && <div className="md:hidden absolute top-4 right-4 z-30">
+        </div>}
+        {!externalSidebar && !hideComments && <div className="md:hidden absolute top-4 right-4 z-30">
           <CommentBottomSheet
             shareId={shareId}
             currentBeatId={current?.beatId ?? null}
