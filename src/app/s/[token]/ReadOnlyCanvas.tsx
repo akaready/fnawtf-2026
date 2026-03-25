@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { Fragment, useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { getGridTemplate, getVisibleColumns } from '@/app/admin/scripts/_components/gridUtils';
+import { getOrderedGridTemplate, getOrderedVisibleColumns, DEFAULT_COLUMN_ORDER } from '@/app/admin/scripts/_components/gridUtils';
 import { markdownToHtml } from '@/lib/scripts/parseContent';
 import { StoryboardLayoutRenderer } from '@/app/admin/scripts/_components/StoryboardLayoutRenderer';
 import { ScriptCommentsCell } from '@/app/admin/scripts/_components/ScriptCommentsCell';
@@ -53,6 +53,7 @@ interface Props {
   commentsMap: Map<string, ScriptShareCommentRow[]>;
   shareId: string;
   onRefreshComments: () => void;
+  columnOrder?: string[];
 }
 
 export function ReadOnlyCanvas({
@@ -67,6 +68,7 @@ export function ReadOnlyCanvas({
   commentsMap,
   shareId,
   onRefreshComments,
+  columnOrder,
 }: Props) {
   const [collapsedScenes, setCollapsedScenes] = useState<Set<string>>(new Set());
   const colHeaderRef = useRef<HTMLDivElement>(null);
@@ -78,8 +80,9 @@ export function ReadOnlyCanvas({
     }
   }, [columnConfig]);
 
-  const gridTemplate = getGridTemplate(columnConfig);
-  const visibleColumns = getVisibleColumns(columnConfig);
+  const order = columnOrder ?? DEFAULT_COLUMN_ORDER;
+  const gridTemplate = getOrderedGridTemplate(columnConfig, order);
+  const visibleColumns = getOrderedVisibleColumns(columnConfig, order);
 
   const toggleCollapse = (sceneId: string) => {
     setCollapsedScenes(prev => {
@@ -111,7 +114,8 @@ export function ReadOnlyCanvas({
   const beatLetter = (n: number) => String.fromCharCode(64 + n); // 1=A, 2=B...
 
   return (
-    <div className="w-full">
+    <div className="w-full overflow-x-auto">
+      <div className="min-w-[800px]">
       {/* Column headers — sticky */}
       <div ref={colHeaderRef} className="sticky top-0 z-20 bg-black border-b border-admin-border">
         <div className="flex">
@@ -173,36 +177,30 @@ export function ReadOnlyCanvas({
                   <div className="relative ml-10 min-w-0">
                     {/* Column border overlay */}
                     <div className="absolute inset-0 z-10 pointer-events-none grid" style={{ gridTemplateColumns: gridTemplate }}>
-                      {columnConfig.audio && <div className="border-l border-l-[var(--admin-accent)]" />}
-                      {columnConfig.visual && <div className="border-l border-l-[var(--admin-info)]" />}
-                      {columnConfig.notes && <div className="border-l border-l-[var(--admin-warning)]" />}
-                      {columnConfig.reference && <div className="border-l border-l-[var(--admin-danger)]" />}
-                      {columnConfig.storyboard && <div className="border-l border-l-[var(--admin-success)]" />}
-                      {columnConfig.comments && <div className="border-l border-l-[var(--admin-cream)]" />}
+                      {visibleColumns.map(col => (
+                        <div key={col.key} className={`border-l ${col.borderColor}`} />
+                      ))}
                     </div>
 
                     {/* Grid cells */}
                     <div className="grid items-stretch" style={{ gridTemplateColumns: gridTemplate }}>
-                      {columnConfig.audio && (
-                        <ReadOnlyCell content={beat.audio_content} characters={characters} tags={tags} locations={locations} products={products} />
-                      )}
-                      {columnConfig.visual && (
-                        <ReadOnlyCell content={beat.visual_content} characters={characters} tags={tags} locations={locations} products={products} />
-                      )}
-                      {columnConfig.notes && (
-                        <ReadOnlyCell content={beat.notes_content} characters={characters} tags={tags} locations={locations} products={products} />
-                      )}
-                      {columnConfig.reference && (
-                        <ReadOnlyReferenceCell references={beatRefs} />
-                      )}
-                      {columnConfig.storyboard && (
-                        <ReadOnlyStoryboardCell frames={beatFrames} storyboardLayout={beat.storyboard_layout ?? null} />
-                      )}
-                      {columnConfig.comments && (
-                        <div className="border-b border-b-admin-border flex flex-col">
-                          <ScriptCommentsCell comments={commentsMap.get(beat.id) ?? []} shareId={shareId} beatId={beat.id} onRefresh={onRefreshComments} />
-                        </div>
-                      )}
+                      {(() => {
+                        const cellRenderers: Record<string, React.ReactNode> = {
+                          audio: <ReadOnlyCell content={beat.audio_content} characters={characters} tags={tags} locations={locations} products={products} />,
+                          visual: <ReadOnlyCell content={beat.visual_content} characters={characters} tags={tags} locations={locations} products={products} />,
+                          notes: <ReadOnlyCell content={beat.notes_content} characters={characters} tags={tags} locations={locations} products={products} />,
+                          reference: <ReadOnlyReferenceCell references={beatRefs} />,
+                          storyboard: <ReadOnlyStoryboardCell frames={beatFrames} storyboardLayout={beat.storyboard_layout ?? null} />,
+                          comments: (
+                            <div className="border-b border-b-admin-border flex flex-col">
+                              <ScriptCommentsCell comments={commentsMap.get(beat.id) ?? []} shareId={shareId} beatId={beat.id} onRefresh={onRefreshComments} />
+                            </div>
+                          ),
+                        };
+                        return visibleColumns.map(col => (
+                          <Fragment key={col.key}>{cellRenderers[col.key]}</Fragment>
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -211,6 +209,7 @@ export function ReadOnlyCanvas({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 'use client';
 
+import { Fragment } from 'react';
 import { Check, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptBeatCell } from './ScriptBeatCell';
+import { DEFAULT_COLUMN_ORDER, getOrderedVisibleColumns } from './gridUtils';
 import type { ScriptBeatRow as BeatRow, ScriptCharacterRow, ScriptTagRow, ScriptColumnConfig, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ImageDragData, ImageDropData } from '@/types/scripts';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptStoryboardCell } from './ScriptStoryboardCell';
@@ -13,6 +15,7 @@ import type { ScriptShareCommentRow } from '@/types/scripts';
 interface Props {
   beat: BeatRow;
   columnConfig: ScriptColumnConfig;
+  columnOrder?: string[];
   characters: ScriptCharacterRow[];
   tags: ScriptTagRow[];
   references: ScriptBeatReferenceRow[];
@@ -76,6 +79,7 @@ export function ScriptBeatRow({
   columnConfig,
   characters,
   tags,
+  columnOrder,
   onUpdate,
   onDelete: _onDelete,
   onAddBeat,
@@ -134,9 +138,15 @@ export function ScriptBeatRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const order = columnOrder ?? DEFAULT_COLUMN_ORDER;
+  const orderedVisibleCols = getOrderedVisibleColumns(columnConfig, order);
+
   // Determine last text column for Tab→new beat
-  const hasNonTextAfter = columnConfig.reference || columnConfig.storyboard;
-  const lastTextCol = columnConfig.notes ? 'notes_content' : columnConfig.visual ? 'visual_content' : 'audio_content';
+  const textKeys = order.filter(k => ['audio', 'visual', 'notes'].includes(k) && columnConfig[k as keyof ScriptColumnConfig]);
+  const nonTextKeys = order.filter(k => ['reference', 'storyboard'].includes(k) && columnConfig[k as keyof ScriptColumnConfig]);
+  const hasNonTextAfter = nonTextKeys.length > 0;
+  const lastTextKey = textKeys[textKeys.length - 1];
+  const lastTextCol = lastTextKey ? `${lastTextKey}_content` : 'audio_content';
 
   return (
     <div
@@ -202,114 +212,118 @@ export function ScriptBeatRow({
           className="absolute inset-0 z-10 pointer-events-none grid"
           style={{ gridTemplateColumns: gridTemplate }}
         >
-          {columnConfig.audio && <div className="border-l border-l-[var(--admin-accent)]" />}
-          {columnConfig.visual && <div className="border-l border-l-[var(--admin-info)]" />}
-          {columnConfig.notes && <div className="border-l border-l-[var(--admin-warning)]" />}
-          {columnConfig.reference && <div className="border-l border-l-[var(--admin-danger)]" />}
-          {columnConfig.storyboard && <div className="border-l border-l-[var(--admin-success)]" />}
-          {columnConfig.comments && <div className="border-l border-l-[var(--admin-cream)]" />}
+          {orderedVisibleCols.map(col => (
+            <div key={col.key} className={`border-l ${col.borderColor}`} />
+          ))}
         </div>
 
         <div className="grid items-stretch" style={{ gridTemplateColumns: gridTemplate }}>
-          {columnConfig.audio && (
-            <ScriptBeatCell
-              value={beat.audio_content}
-              field="audio_content"
-              onChange={(v) => onUpdate(beat.id, 'audio_content', v)}
-              onAddBeat={onAddBeat}
-              onAddScene={onAddScene}
-              isLastColumn={lastTextCol === 'audio_content' && !hasNonTextAfter}
-              characters={characters}
-              tags={tags}
-              locations={locations}
-              products={products}
-              beatId={beat.id}
-            />
-          )}
-          {columnConfig.visual && (
-            <ScriptBeatCell
-              value={beat.visual_content}
-              field="visual_content"
-              onChange={(v) => onUpdate(beat.id, 'visual_content', v)}
-              onAddBeat={onAddBeat}
-              onAddScene={onAddScene}
-              isLastColumn={lastTextCol === 'visual_content' && !hasNonTextAfter}
-              characters={characters}
-              tags={tags}
-              locations={locations}
-              products={products}
-              beatId={beat.id}
-            />
-          )}
-          {columnConfig.notes && (
-            <ScriptBeatCell
-              value={beat.notes_content}
-              field="notes_content"
-              onChange={(v) => onUpdate(beat.id, 'notes_content', v)}
-              onAddBeat={onAddBeat}
-              onAddScene={onAddScene}
-              isLastColumn={lastTextCol === 'notes_content' && !hasNonTextAfter}
-              characters={characters}
-              tags={tags}
-              locations={locations}
-              products={products}
-              beatId={beat.id}
-            />
-          )}
-          {columnConfig.reference && (
-            <ScriptReferenceCell
-              beatId={beat.id}
-              references={references}
-              onUpload={(files) => onUploadReference(beat.id, files)}
-              onDelete={onDeleteReference}
-              onImageMove={onImageMove}
-            />
-          )}
-          {columnConfig.storyboard && (
-            <ScriptStoryboardCell
-              frames={storyboardFrames}
-              layout={storyboardLayout}
-              beatId={beat.id}
-              sceneId={sceneId}
-              scriptId={scriptId}
-              audioContent={beat.audio_content}
-              visualContent={beat.visual_content}
-              notesContent={beat.notes_content}
-              beatReferenceUrls={references.map(r => r.image_url)}
-              style={scriptStyle}
-              styleReferences={styleReferences}
-              onFramesChange={onFramesChange}
-              onLayoutChange={onLayoutChange}
-              batchGenerating={batchGenerating}
-              onCancelGeneration={onCancelGeneration}
-              scene={scene}
-              beatIndex={beatNumber - 1}
-              characters={characters}
-              locations={locations}
-              products={products}
-              castMap={castMap}
-              referenceMap={referenceMap}
-              locationReferenceMap={locationReferenceMap}
-              scriptTitle={scriptTitle}
-              scriptVersion={scriptVersion}
-              beatLabel={beatLetter(beatNumber)}
-              sceneFrames={sceneFrames}
-              allScriptSlides={allScriptSlides}
-              onImageMove={onImageMove}
-              scenes={scenes}
-              tags={tags}
-            />
-          )}
-          {columnConfig.comments && (
-            <div className="border-b border-admin-border-subtle flex flex-col relative">
-              {commentsLoading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-admin-bg-base/60 backdrop-blur-[2px]">
-                  <div className="w-4 h-4 border-2 border-admin-text-faint border-t-transparent rounded-full animate-spin" />
+          {(() => {
+            const cellRenderers: Record<string, React.ReactNode> = {
+              audio: (
+                <ScriptBeatCell
+                  value={beat.audio_content}
+                  field="audio_content"
+                  onChange={(v) => onUpdate(beat.id, 'audio_content', v)}
+                  onAddBeat={onAddBeat}
+                  onAddScene={onAddScene}
+                  isLastColumn={lastTextCol === 'audio_content' && !hasNonTextAfter}
+                  characters={characters}
+                  tags={tags}
+                  locations={locations}
+                  products={products}
+                  beatId={beat.id}
+                />
+              ),
+              visual: (
+                <ScriptBeatCell
+                  value={beat.visual_content}
+                  field="visual_content"
+                  onChange={(v) => onUpdate(beat.id, 'visual_content', v)}
+                  onAddBeat={onAddBeat}
+                  onAddScene={onAddScene}
+                  isLastColumn={lastTextCol === 'visual_content' && !hasNonTextAfter}
+                  characters={characters}
+                  tags={tags}
+                  locations={locations}
+                  products={products}
+                  beatId={beat.id}
+                />
+              ),
+              notes: (
+                <ScriptBeatCell
+                  value={beat.notes_content}
+                  field="notes_content"
+                  onChange={(v) => onUpdate(beat.id, 'notes_content', v)}
+                  onAddBeat={onAddBeat}
+                  onAddScene={onAddScene}
+                  isLastColumn={lastTextCol === 'notes_content' && !hasNonTextAfter}
+                  characters={characters}
+                  tags={tags}
+                  locations={locations}
+                  products={products}
+                  beatId={beat.id}
+                />
+              ),
+              reference: (
+                <ScriptReferenceCell
+                  beatId={beat.id}
+                  references={references}
+                  onUpload={(files) => onUploadReference(beat.id, files)}
+                  onDelete={onDeleteReference}
+                  onImageMove={onImageMove}
+                />
+              ),
+              storyboard: (
+                <ScriptStoryboardCell
+                  frames={storyboardFrames}
+                  layout={storyboardLayout}
+                  beatId={beat.id}
+                  sceneId={sceneId}
+                  scriptId={scriptId}
+                  audioContent={beat.audio_content}
+                  visualContent={beat.visual_content}
+                  notesContent={beat.notes_content}
+                  beatReferenceUrls={references.map(r => r.image_url)}
+                  style={scriptStyle}
+                  styleReferences={styleReferences}
+                  onFramesChange={onFramesChange}
+                  onLayoutChange={onLayoutChange}
+                  batchGenerating={batchGenerating}
+                  onCancelGeneration={onCancelGeneration}
+                  scene={scene}
+                  beatIndex={beatNumber - 1}
+                  characters={characters}
+                  locations={locations}
+                  products={products}
+                  castMap={castMap}
+                  referenceMap={referenceMap}
+                  locationReferenceMap={locationReferenceMap}
+                  scriptTitle={scriptTitle}
+                  scriptVersion={scriptVersion}
+                  beatLabel={beatLetter(beatNumber)}
+                  sceneFrames={sceneFrames}
+                  allScriptSlides={allScriptSlides}
+                  onImageMove={onImageMove}
+                  scenes={scenes}
+                  tags={tags}
+                />
+              ),
+              comments: (
+                <div className="border-b border-admin-border-subtle flex flex-col relative">
+                  {commentsLoading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-admin-bg-base/60 backdrop-blur-[2px]">
+                      <div className="w-4 h-4 border-2 border-admin-text-faint border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  <ScriptCommentsCell comments={beatComments ?? []} shareId={commentShareId} beatId={beat.id} onRefresh={onRefreshComments} />
                 </div>
-              )}
-              <ScriptCommentsCell comments={beatComments ?? []} shareId={commentShareId} beatId={beat.id} onRefresh={onRefreshComments} />
-            </div>
-          )}
+              ),
+            };
+            return orderedVisibleCols.map(col => (
+              <Fragment key={col.key}>{cellRenderers[col.key]}</Fragment>
+            ));
+          })()}
         </div>
       </div>
 

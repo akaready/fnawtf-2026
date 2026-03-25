@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
+import { DEFAULT_COLUMN_ORDER } from '@/app/admin/scripts/_components/gridUtils';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
 import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
@@ -85,6 +86,7 @@ export function ScriptShareClient({
     }
     return base;
   });
+  const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMN_ORDER);
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
   const [showSidebar, setShowSidebar] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
@@ -177,7 +179,7 @@ export function ScriptShareClient({
 
   // Load comments for this share
   const loadComments = useCallback(async () => {
-    if (!shareId) return;
+    if (!shareId || sharePreferences.table_columns?.comments === false) return;
     try {
       const comments = await getShareComments(shareId) as unknown as ScriptShareCommentRow[];
       const map = new Map<string, ScriptShareCommentRow[]>();
@@ -189,7 +191,7 @@ export function ScriptShareClient({
     } catch (err) {
       console.error('[Comments] Failed to load:', err);
     }
-  }, [shareId]);
+  }, [shareId, sharePreferences.table_columns?.comments]);
 
   useEffect(() => { loadComments(); }, [loadComments]);
 
@@ -371,7 +373,7 @@ export function ScriptShareClient({
         {/* Right — mode-dependent controls */}
         <div className="ml-auto flex-shrink-0">
           {viewMode === 'table' ? (
-            excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} /> : null
+            excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null
           ) : (
             <button
               onClick={() => presentationToggleCommentsRef.current?.()}
@@ -413,6 +415,7 @@ export function ScriptShareClient({
               <ReadOnlyCanvas
                   scenes={computedScenes}
                   columnConfig={columnConfig}
+                  columnOrder={columnOrder}
                   references={typedReferences}
                   storyboardFrames={typedStoryboardFrames}
                   characters={typedCharacters}

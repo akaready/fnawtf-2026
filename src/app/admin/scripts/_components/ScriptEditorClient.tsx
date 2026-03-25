@@ -22,7 +22,7 @@ import {
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
-import { DEFAULT_FRACTIONS } from './gridUtils';
+import { DEFAULT_FRACTIONS, DEFAULT_COLUMN_ORDER } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
 import { ScriptSceneSidebar } from './ScriptSceneSidebar';
 import { SceneNav } from './SceneNav';
@@ -128,6 +128,7 @@ export function ScriptEditorClient({
 
   const defaultColumns: ScriptColumnConfig = { audio: true, visual: true, notes: false, reference: false, storyboard: false, comments: false };
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>(defaultColumns);
+  const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMN_ORDER);
   const [columnFractions, setColumnFractions] = useState<Record<string, number>>(DEFAULT_FRACTIONS);
   const [groupShares, setGroupShares] = useState<ScriptShareRow[]>([]);
   const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
@@ -877,7 +878,7 @@ export function ScriptEditorClient({
         {/* Center zone */}
         <div className="flex-1 flex justify-center items-center gap-4">
           {contentMode === 'table' && (
-            <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} compact />
+            <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} compact columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} />
           )}
         </div>
         {/* Right zone — panel toggles */}
@@ -932,6 +933,7 @@ export function ScriptEditorClient({
               <ScriptEditorCanvas
                 scenes={computedScenes}
                 columnConfig={columnConfig}
+                columnOrder={columnOrder}
                 columnFractions={columnFractions}
                 onColumnFractionsChange={setColumnFractions}
                 characters={characters}

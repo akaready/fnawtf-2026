@@ -22,7 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { ScriptBeatRow } from './ScriptBeatRow';
-import { getGridTemplateFromFractions, getVisibleColumns, getVisibleColumnKeys } from './gridUtils';
+import { getOrderedGridTemplateFromFractions, getOrderedVisibleColumns, getOrderedVisibleColumnKeys, DEFAULT_COLUMN_ORDER } from './gridUtils';
 import { useColumnResize } from './useColumnResize';
 import { buildRichPrompt } from './storyboardUtils';
 import type { ComputedScene, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptColumnConfig, ScriptSceneRow, ScriptBeatReferenceRow, ScriptStoryboardFrameRow, ScriptStyleRow, ScriptStyleReferenceRow, CharacterCastWithContact, CharacterReferenceRow, LocationReferenceRow, ScriptProductRow, ScriptShareRow, ScriptShareCommentRow, StoryboardSlotFrame } from '@/types/scripts';
@@ -32,6 +32,7 @@ import { ScriptCommentsVersionPicker } from './ScriptCommentsVersionPicker';
 interface Props {
   scenes: ComputedScene[];
   columnConfig: ScriptColumnConfig;
+  columnOrder?: string[];
   columnFractions: Record<string, number>;
   onColumnFractionsChange: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   characters: ScriptCharacterRow[];
@@ -78,6 +79,7 @@ interface Props {
 export function ScriptEditorCanvas({
   scenes,
   columnConfig,
+  columnOrder,
   columnFractions,
   onColumnFractionsChange,
   characters,
@@ -382,9 +384,10 @@ export function ScriptEditorCanvas({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const visibleColumns = getVisibleColumns(columnConfig);
-  const visibleKeys = getVisibleColumnKeys(columnConfig);
-  const gridTemplate = getGridTemplateFromFractions(columnConfig, columnFractions);
+  const order = columnOrder ?? DEFAULT_COLUMN_ORDER;
+  const visibleColumns = getOrderedVisibleColumns(columnConfig, order);
+  const visibleKeys = getOrderedVisibleColumnKeys(columnConfig, order);
+  const gridTemplate = getOrderedGridTemplateFromFractions(columnConfig, columnFractions, order);
 
   // Column resize
   const headerGridRef = useRef<HTMLDivElement>(null);
@@ -812,7 +815,7 @@ export function ScriptEditorCanvas({
               });
             }
           }
-          return scenes.map((scene) => {
+          return scenes.map((scene, sceneIdx) => {
           const isCollapsed = collapsedScenes.has(scene.id);
           const isEditing = editingSceneId === scene.id;
           return (
@@ -823,7 +826,7 @@ export function ScriptEditorCanvas({
             >
               {/* Scene heading — click to collapse/expand, sticky below column headers */}
               <div
-                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer`}
+                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer ${sceneIdx > 0 ? 'border-t -mt-px' : ''}`}
                 style={{ top: colHeaderHeight }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -898,6 +901,7 @@ export function ScriptEditorCanvas({
                         key={beat.id}
                         beat={beat}
                         columnConfig={columnConfig}
+                        columnOrder={order}
                         gridTemplate={gridTemplate}
                         characters={characters}
                         tags={tags}
