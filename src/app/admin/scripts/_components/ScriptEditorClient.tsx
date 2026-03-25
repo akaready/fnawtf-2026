@@ -981,6 +981,7 @@ export function ScriptEditorClient({
                 commentsLoading={commentsLoading}
                 onRefreshComments={handleRefreshComments}
                 commentsBeatIdMap={commentsBeatIdMap}
+                showCommentAvatars={showCommentsSidebar}
                 onUpdateScene={handleUpdateScene}
                 onDeleteScene={handleDeleteScene}
               />

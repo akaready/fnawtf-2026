@@ -61,6 +61,7 @@ interface Props {
   commentsLoading?: boolean;
   onRefreshComments?: () => void;
   commentsBeatIdMap?: Map<string, string> | null;
+  showCommentAvatars?: boolean;
   onUpdateScene?: (sceneId: string, data: Record<string, unknown>) => void;
   onDeleteScene?: (sceneId: string) => void;
 }
@@ -102,6 +103,7 @@ export function ScriptStoryEditor({
   commentsMap,
   commentsLoading: _commentsLoading,
   commentsBeatIdMap,
+  showCommentAvatars = false,
   onRefreshComments,
   onUpdateScene,
   onDeleteScene,
@@ -349,11 +351,11 @@ export function ScriptStoryEditor({
           slides={slides}
           currentIndex={idx}
           onSeek={handleSeek}
-          commentAuthors={commentAuthors}
-          onClickCommentAvatar={(beatId) => {
+          commentAuthors={showCommentAvatars ? commentAuthors : undefined}
+          onClickCommentAvatar={showCommentAvatars ? (beatId) => {
             const i = slides.findIndex(s => s.beatId === beatId);
             if (i >= 0) handleSeek(i);
-          }}
+          } : undefined}
         />
       </div>
 

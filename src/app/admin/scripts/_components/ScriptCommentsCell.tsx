@@ -108,7 +108,7 @@ function Actions({ id, content, resolved, onRefresh, hover, isParent }: { id: st
 }
 
 /* Reply row — exact same pattern as presentation page ReplyRow */
-function Row({ c, shareId, onRefresh, hover, isLast, highlight }: {
+function Row({ c, shareId: _shareId, onRefresh, hover, isLast, highlight }: {
   c: ScriptShareCommentRow; shareId?: string; onRefresh?: () => void; hover: string; isLast: boolean; highlight?: boolean;
 }) {
   const resolved = !!c.resolved_at;
@@ -126,7 +126,7 @@ function Row({ c, shareId, onRefresh, hover, isLast, highlight }: {
         <div className="flex items-center gap-1">
           <span className={`text-admin-sm font-semibold truncate ${resolved ? 'text-admin-text-faint' : 'text-admin-text-primary'}`}>{firstName(c.viewer_name, c.viewer_email)}</span>
           <span className="text-admin-sm text-admin-text-faint flex-shrink-0">{formatRelativeTime(c.created_at)}</span>
-          {shareId && onRefresh && <span className="ml-auto"><Actions id={c.id} content={c.content} resolved={resolved} onRefresh={onRefresh} hover={hover} /></span>}
+          {onRefresh && <span className="ml-auto"><Actions id={c.id} content={c.content} resolved={resolved} onRefresh={onRefresh} hover={hover} /></span>}
         </div>
         <p className={`text-admin-sm whitespace-pre-wrap break-words mt-0.5 ${resolved ? 'text-admin-text-faint' : 'text-admin-text-secondary'}`}>{c.content}</p>
       </div>
@@ -236,7 +236,7 @@ function Thread({ thread, shareId, onRefresh }: {
 
         {/* Right column: name + body */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setExpanded(x => !x)}>
+          <div className="group/namerow flex items-center gap-1 cursor-pointer select-none" onClick={() => setExpanded(x => !x)}>
             <span className={`text-admin-sm font-semibold whitespace-nowrap ${parent.resolved_at ? 'text-admin-text-faint' : 'text-admin-text-primary'}`}>
               {firstName(parent.viewer_name, parent.viewer_email)}<span className={`comment-names-suffix ${!expanded ? 'is-visible' : ''}`}>{(() => {
                 const seen = new Set<string>();
@@ -254,7 +254,7 @@ function Thread({ thread, shareId, onRefresh }: {
             </span>
             <span className="text-admin-sm text-admin-text-faint flex-shrink-0">{formatRelativeTime(parent.created_at)}</span>
             <span className={`text-admin-text-faint transition-all opacity-0 group-hover/thread:opacity-100 ${expanded ? '' : '-rotate-90'}`}><ChevronDown size={10} /></span>
-            {shareId && <span className="ml-auto"><Actions id={parent.id} content={parent.content} resolved={!!parent.resolved_at} onRefresh={refresh} hover="group-hover/thread" isParent /></span>}
+            <span className="ml-auto"><Actions id={parent.id} content={parent.content} resolved={!!parent.resolved_at} onRefresh={refresh} hover="group-hover/namerow" isParent /></span>
           </div>
         </div>
       </div>
