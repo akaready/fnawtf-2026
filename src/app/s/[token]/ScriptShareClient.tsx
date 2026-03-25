@@ -114,6 +114,7 @@ export function ScriptShareClient({
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const userPopoverRef = useRef<HTMLDivElement>(null);
+  const userPopoverMenuRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
@@ -154,9 +155,9 @@ export function ScriptShareClient({
   useEffect(() => {
     if (!userPopoverOpen) return;
     const handler = (e: MouseEvent) => {
-      if (userPopoverRef.current && !userPopoverRef.current.contains(e.target as Node)) {
-        setUserPopoverOpen(false);
-      }
+      const t = e.target as Node;
+      if (userPopoverRef.current?.contains(t) || userPopoverMenuRef.current?.contains(t)) return;
+      setUserPopoverOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -440,8 +441,15 @@ export function ScriptShareClient({
                     <User size={16} />
                   )}
                 </button>
-                {userPopoverOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-[320px] bg-[#111] border border-admin-border rounded-lg shadow-xl z-50 overflow-hidden">
+                {userPopoverOpen && createPortal(
+                  <div
+                    ref={userPopoverMenuRef}
+                    className="fixed w-[320px] bg-[#111] border border-admin-border rounded-lg shadow-xl z-[9999] overflow-hidden"
+                    style={{
+                      top: (userPopoverRef.current?.getBoundingClientRect().bottom ?? 0) + 8,
+                      right: window.innerWidth - (userPopoverRef.current?.getBoundingClientRect().right ?? 0),
+                    }}
+                  >
                     {/* Header */}
                     <div className="px-4 py-3 border-b border-white/[0.06]">
                       <p className="text-admin-sm text-admin-text-faint">Commenting as:</p>
@@ -562,7 +570,8 @@ export function ScriptShareClient({
                         Cancel
                       </button>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {/* Email button */}
@@ -750,6 +759,7 @@ export function ScriptShareClient({
                 <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-widest">
                   Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
                 </span>
+                {(() => { const c = Array.from(commentsMap.values()).reduce((s, a) => s + a.length, 0); return c > 0 ? <span className="md:hidden text-[9px] font-bold bg-admin-text-primary text-admin-bg-base rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{c}</span> : null; })()}
               </button>
             </motion.div>
           )}
@@ -782,7 +792,7 @@ export function ScriptShareClient({
 
         <AnimatePresence mode="wait">
         {viewMode === 'table' ? (
-          <motion.div key="table-content" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
+          <motion.div key="table-content" initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex-1 min-w-0 overflow-auto admin-scrollbar">
             <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
               <ReadOnlyCanvas
                   scenes={computedScenes}
@@ -801,7 +811,7 @@ export function ScriptShareClient({
               </div>
             </motion.div>
         ) : (
-          <motion.div key="story-content" initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex-1 flex min-h-0">
+          <motion.div key="story-content" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex-1 flex min-h-0">
           <ScriptPresentationView
             slides={presentationSlides}
             onClose={() => setShowIntro(true)}
@@ -836,48 +846,44 @@ export function ScriptShareClient({
         </AnimatePresence>
       </div>
 
-      {/* Mobile bottom sheets — rendered at component level, triggered by toolbar */}
-      {mobileSceneSheetOpen && (
-        <div className="md:hidden">
-          <SceneBottomSheet
-            scenes={viewMode === 'table'
-              ? computedScenes.map(s => ({
-                  id: s.id,
-                  sceneNumber: s.sceneNumber,
-                  int_ext: s.int_ext,
-                  location_name: s.location_name,
-                  time_of_day: s.time_of_day,
-                  scene_description: s.scene_description ?? null,
-                  beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
-                }))
-              : presentationScenes}
-            activeSceneId={(viewMode === 'table' ? activeSceneId : presentationActiveSceneId) ?? ''}
-            onSelectScene={(id) => {
-              if (viewMode === 'table') handleSceneClick(id); else presentationNavRef.current?.jumpToScene(id);
-              setMobileSceneSheetOpen(false);
-            }}
-            activeBeatId={viewMode === 'story' ? (presentationActiveBeatId ?? undefined) : undefined}
-            onSelectBeat={(id) => {
-              if (viewMode === 'table') handleBeatClick(id); else presentationNavRef.current?.jumpToBeat(id);
-              setMobileSceneSheetOpen(false);
-            }}
-          />
-        </div>
-      )}
-      {mobileCommentSheetOpen && (
-        <div className="md:hidden">
-          <CommentBottomSheet
-            shareId={shareId}
-            currentBeatId={presentationActiveBeatId ?? null}
-            viewerEmail={viewerEmail}
-            viewerName={viewerName}
-            refreshKey={0}
-            slides={presentationSlides}
-            onNavigateToBeat={(id) => presentationNavRef.current?.jumpToBeat(id)}
-            onCommentAdded={loadComments}
-          />
-        </div>
-      )}
+      {/* Mobile bottom sheets — always mounted, externally controlled by toolbar */}
+      <div className="md:hidden">
+        <SceneBottomSheet
+          scenes={viewMode === 'table'
+            ? computedScenes.map(s => ({
+                id: s.id,
+                sceneNumber: s.sceneNumber,
+                int_ext: s.int_ext,
+                location_name: s.location_name,
+                time_of_day: s.time_of_day,
+                scene_description: s.scene_description ?? null,
+                beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
+              }))
+            : presentationScenes}
+          activeSceneId={(viewMode === 'table' ? activeSceneId : presentationActiveSceneId) ?? ''}
+          onSelectScene={(id) => {
+            if (viewMode === 'table') handleSceneClick(id); else presentationNavRef.current?.jumpToScene(id);
+          }}
+          activeBeatId={viewMode === 'story' ? (presentationActiveBeatId ?? undefined) : undefined}
+          onSelectBeat={(id) => {
+            if (viewMode === 'table') handleBeatClick(id); else presentationNavRef.current?.jumpToBeat(id);
+          }}
+          externalOpen={mobileSceneSheetOpen}
+          onClose={() => setMobileSceneSheetOpen(false)}
+        />
+        <CommentBottomSheet
+          shareId={shareId}
+          currentBeatId={presentationActiveBeatId ?? null}
+          viewerEmail={viewerEmail}
+          viewerName={viewerName}
+          refreshKey={0}
+          slides={presentationSlides}
+          onNavigateToBeat={(id) => presentationNavRef.current?.jumpToBeat(id)}
+          onCommentAdded={loadComments}
+          externalOpen={mobileCommentSheetOpen}
+          onClose={() => setMobileCommentSheetOpen(false)}
+        />
+      </div>
 
     </div>
   );

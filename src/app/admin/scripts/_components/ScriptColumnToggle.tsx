@@ -75,7 +75,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
     const dotItems = visibleColumns.map(c => c.key);
 
     const inner = (
-      <div className="flex items-center gap-0.5 md:gap-1 overflow-hidden flex-shrink min-w-0">
+      <div className="flex items-center gap-0 md:gap-1 overflow-hidden min-w-0">
         {visibleColumns.map(({ key, label, color, rawColor }) =>
           isDraggable ? (
             <SortableDot
@@ -87,10 +87,10 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
               onClick={() => toggle(key)}
             />
           ) : (
-            <div key={key} className="relative group/dot flex-shrink-0">
+            <div key={key} className="relative group/dot">
               <button
                 onClick={() => toggle(key)}
-                className="flex items-center justify-center w-7 h-7 md:w-[30px] md:h-[30px] rounded-lg transition-all duration-200 hover:bg-admin-bg-hover"
+                className="flex items-center justify-center w-6 h-6 md:w-[30px] md:h-[30px] rounded-lg transition-all duration-200 hover:bg-admin-bg-hover"
               >
                 <span className={`block w-2.5 h-2.5 rounded-full transition-colors ${config[key] ? color : 'bg-admin-text-ghost'}`} />
               </button>
@@ -178,10 +178,10 @@ function SortableDot({ id, rawColor, isActive, label, onClick }: {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative group/dot flex-shrink-0">
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative group/dot">
       <button
         onClick={onClick}
-        className="flex items-center justify-center w-7 h-7 md:w-[30px] md:h-[30px] rounded-lg transition-all duration-200 hover:bg-admin-bg-hover cursor-grab active:cursor-grabbing"
+        className="flex items-center justify-center w-6 h-6 md:w-[30px] md:h-[30px] rounded-lg transition-all duration-200 hover:bg-admin-bg-hover cursor-grab active:cursor-grabbing"
       >
         <span
           className={`block w-2.5 h-2.5 rounded-full transition-opacity ${isActive ? 'opacity-100' : 'opacity-30 hover:opacity-60'}`}

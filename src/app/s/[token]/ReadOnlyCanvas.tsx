@@ -114,15 +114,15 @@ export function ReadOnlyCanvas({
   const beatLetter = (n: number) => String.fromCharCode(64 + n); // 1=A, 2=B...
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
       <div className="min-w-[800px]">
       {/* Column headers — sticky */}
       <div ref={colHeaderRef} className="sticky top-0 z-20 bg-black border-b border-admin-border">
         <div className="flex">
-          <div className="w-10 flex-shrink-0 sticky left-0 bg-black z-[21]" />
+          <div className="w-10 flex-shrink-0 sticky left-0 bg-black z-[21] border-r border-r-admin-border" />
           <div className="grid flex-1" style={{ gridTemplateColumns: gridTemplate }}>
             {visibleColumns.map((col) => (
-              <div key={col.key} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}>
+              <div key={col.key} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-widest bg-black ${col.color} border-l ${col.borderColor}`}>
                 <span className="opacity-60">{col.label}</span>
               </div>
             ))}
@@ -167,7 +167,7 @@ export function ReadOnlyCanvas({
               return (
                 <div key={beat.id} id={`beat-${beat.id}`} className="flex">
                   {/* Beat letter gutter */}
-                  <div className="sticky left-0 z-[5] w-10 flex-shrink-0 flex items-center justify-center border-b border-b-admin-border bg-black">
+                  <div className="sticky left-0 z-[10] w-10 flex-shrink-0 flex items-center justify-center border-b border-b-admin-border border-r border-r-admin-border bg-black">
                     <span className="text-[10px] text-muted-foreground/30 font-mono">
                       {beatLetter(beatIdx + 1)}
                     </span>

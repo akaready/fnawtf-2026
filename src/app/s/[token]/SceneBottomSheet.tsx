@@ -20,10 +20,18 @@ interface Props {
   onSelectScene: (sceneId: string) => void;
   activeBeatId?: string | null;
   onSelectBeat?: (beatId: string) => void;
+  /** When provided, hides the built-in trigger and uses external open state */
+  externalOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeBeatId, onSelectBeat }: Props) {
-  const [open, setOpen] = useState(false);
+export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeBeatId, onSelectBeat, externalOpen, onClose }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen ?? internalOpen;
+  const setOpen = (v: boolean) => {
+    if (externalOpen !== undefined) { if (!v && onClose) onClose(); }
+    else setInternalOpen(v);
+  };
 
   const handleSelect = (sceneId: string) => {
     onSelectScene(sceneId);
@@ -32,14 +40,16 @@ export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeB
 
   return (
     <>
-      {/* Trigger button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="w-9 h-9 flex items-center justify-center rounded-admin-md bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
-        title="Scenes"
-      >
-        <List size={16} />
-      </button>
+      {/* Trigger button — hidden when externally controlled */}
+      {externalOpen === undefined && (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-admin-md bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors"
+          title="Scenes"
+        >
+          <List size={16} />
+        </button>
+      )}
 
       {/* Backdrop */}
       {open && (

@@ -22,10 +22,17 @@ interface Props {
   slides: PresentationSlide[];
   onNavigateToBeat: (beatId: string) => void;
   onCommentAdded: () => void;
+  externalOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function CommentBottomSheet({ shareId, currentBeatId, viewerEmail, viewerName, refreshKey, slides, onNavigateToBeat, onCommentAdded }: Props) {
-  const [open, setOpen] = useState(false);
+export function CommentBottomSheet({ shareId, currentBeatId, viewerEmail, viewerName, refreshKey, slides, onNavigateToBeat, onCommentAdded, externalOpen, onClose }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen ?? internalOpen;
+  const setOpen = (v: boolean) => {
+    if (externalOpen !== undefined) { if (!v && onClose) onClose(); }
+    else setInternalOpen(v);
+  };
   const [comments, setComments] = useState<ShareComment[]>([]);
   const [reactions, setReactions] = useState<ReactionsMap>({});
   const [loading, setLoading] = useState(false);
@@ -114,8 +121,8 @@ export function CommentBottomSheet({ shareId, currentBeatId, viewerEmail, viewer
 
   return (
     <>
-      {/* Trigger button */}
-      <button
+      {/* Trigger button — hidden when externally controlled */}
+      {externalOpen === undefined && <button
         onClick={() => { setOpen(true); loadComments(); }}
         className="w-9 h-9 flex items-center justify-center rounded-admin-md bg-[#1a1a1a] text-white/70 hover:bg-[#252525] hover:text-white transition-colors relative"
         title="Comments"
@@ -126,7 +133,7 @@ export function CommentBottomSheet({ shareId, currentBeatId, viewerEmail, viewer
             {topLevelCount}
           </span>
         )}
-      </button>
+      </button>}
 
       {/* Backdrop */}
       {open && (
