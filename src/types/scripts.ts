@@ -352,6 +352,7 @@ export interface ScriptShareRow {
   label: string;
   is_active: boolean;
   share_mode: ShareMode;
+  share_preferences: Record<string, unknown> | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

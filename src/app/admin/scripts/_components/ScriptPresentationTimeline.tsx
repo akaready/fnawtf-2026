@@ -177,7 +177,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                   {beatLabel && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onSeek(i); }}
-                      className={`absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                      className={`hidden sm:inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
                         isCurrent ? 'text-white bg-white/15' : 'text-[#888]'
                       }`}
                       style={{ top: 20 }}
@@ -207,7 +207,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                 {beatLabel && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onSeek(i); }}
-                    className={`absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                    className={`hidden md:inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
                       isCurrent ? 'text-white bg-white/15' : 'text-[#555]'
                     }`}
                     style={{ top: 16 }}

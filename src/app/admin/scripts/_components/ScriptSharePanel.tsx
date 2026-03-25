@@ -5,7 +5,8 @@ import { X, Copy, Check, Plus, ExternalLink, Trash2 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { getScriptShares, getNextShareVersion, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
-import type { ScriptShareRow } from '@/types/scripts';
+import type { ScriptShareRow, SharePreferences } from '@/types/scripts';
+import { resolveSharePreferences } from '@/types/scripts';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
     }
   };
 
-  const handleUpdate = async (shareId: string, updates: { notes?: string; access_code?: string; share_mode?: string }) => {
+  const handleUpdate = async (shareId: string, updates: { notes?: string; access_code?: string; share_mode?: string; share_preferences?: Record<string, unknown> }) => {
     await updateScriptShare(shareId, updates);
     setShares(prev => prev.map(s => s.id === shareId ? { ...s, ...updates } as ShareWithViews : s));
   };
@@ -260,6 +261,147 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
   );
 }
 
+// ── Share Preferences Controls ───────────────────────────────────────────
+
+function SharePreferencesControls({
+  share,
+  onUpdate,
+}: {
+  share: ShareWithViews;
+  onUpdate: (shareId: string, updates: { share_mode?: string; share_preferences?: Record<string, unknown> }) => void;
+}) {
+  const prefs = resolveSharePreferences(share.share_preferences, share.share_mode);
+
+  const update = (patch: Partial<SharePreferences>) => {
+    const next = { ...prefs, ...patch };
+    onUpdate(share.id, {
+      share_preferences: next as unknown as Record<string, unknown>,
+      share_mode: next.default_view === 'table' ? 'table' : 'presentation',
+    });
+  };
+
+  const TABLE_COLUMNS: { key: string; label: string }[] = [
+    { key: 'audio', label: 'Audio' },
+    { key: 'visual', label: 'Visual' },
+    { key: 'notes', label: 'Notes' },
+    { key: 'reference', label: 'Reference' },
+    { key: 'storyboard', label: 'Storyboard' },
+    { key: 'comments', label: 'Comments' },
+  ];
+
+  const PRESENTATION_COLUMNS: { key: string; label: string }[] = [
+    { key: 'visual', label: 'Visual' },
+    { key: 'notes', label: 'Notes' },
+    { key: 'reference', label: 'Reference' },
+    { key: 'comments', label: 'Comments' },
+  ];
+
+  return (
+    <div className="space-y-5">
+      {/* Default View */}
+      <div className="space-y-1.5">
+        <label className="admin-label">Default View</label>
+        <div className="flex gap-0.5 bg-admin-bg-inset border border-admin-border rounded-admin-md p-0.5">
+          {([['story', 'Story'], ['table', 'Table']] as const).map(([mode, label]) => (
+            <button
+              key={mode}
+              onClick={() => { if (prefs.default_view !== mode) update({ default_view: mode }); }}
+              className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors ${
+                prefs.default_view === mode
+                  ? 'bg-admin-text-primary text-admin-bg-base'
+                  : 'text-admin-text-ghost hover:text-admin-text-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Allowed Views */}
+      <div className="space-y-2">
+        <label className="admin-label">Allowed Views</label>
+        <div className="space-y-1.5">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={prefs.allow_story_view}
+              onChange={() => {
+                if (prefs.allow_story_view && !prefs.allow_table_view) return;
+                const next = !prefs.allow_story_view;
+                const patch: Partial<SharePreferences> = { allow_story_view: next };
+                if (!next) patch.allow_table_view = true;
+                if (!next && prefs.default_view === 'story') patch.default_view = 'table';
+                update(patch);
+              }}
+              className="accent-admin-accent"
+            />
+            <span className="text-admin-sm text-admin-text-primary">Allow Story View</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={prefs.allow_table_view}
+              onChange={() => {
+                if (prefs.allow_table_view && !prefs.allow_story_view) return;
+                const next = !prefs.allow_table_view;
+                const patch: Partial<SharePreferences> = { allow_table_view: next };
+                if (!next) patch.allow_story_view = true;
+                if (!next && prefs.default_view === 'table') patch.default_view = 'story';
+                update(patch);
+              }}
+              className="accent-admin-accent"
+            />
+            <span className="text-admin-sm text-admin-text-primary">Allow Table View</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Table Column Visibility */}
+      <div className="space-y-2">
+        <label className="admin-label">Table Column Visibility</label>
+        <div className="space-y-1.5">
+          {TABLE_COLUMNS.map(({ key, label }) => {
+            const checked = prefs.table_columns?.[key as keyof typeof prefs.table_columns] !== false;
+            return (
+              <label key={key} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => update({ table_columns: { ...prefs.table_columns, [key]: !checked } })}
+                  className="accent-admin-accent"
+                />
+                <span className="text-admin-sm text-admin-text-primary">{label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Presentation Panel Visibility */}
+      <div className="space-y-2">
+        <label className="admin-label">Presentation Panel Visibility</label>
+        <div className="space-y-1.5">
+          {PRESENTATION_COLUMNS.map(({ key, label }) => {
+            const checked = prefs.presentation_columns?.[key as keyof typeof prefs.presentation_columns] !== false;
+            return (
+              <label key={key} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => update({ presentation_columns: { ...prefs.presentation_columns, [key]: !checked } })}
+                  className="accent-admin-accent"
+                />
+                <span className="text-admin-sm text-admin-text-primary">{label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Detail pane ──────────────────────────────────────────────────────────
 
 function ShareDetail({
@@ -275,7 +417,7 @@ function ShareDetail({
   copiedCode: string | null;
   onCopyLink: (token: string, id: string) => void;
   onCopyCode: (code: string, id: string) => void;
-  onUpdate: (shareId: string, updates: { notes?: string; access_code?: string; share_mode?: string }) => void;
+  onUpdate: (shareId: string, updates: { notes?: string; access_code?: string; share_mode?: string; share_preferences?: Record<string, unknown> }) => void;
 }) {
   const [accessCode, setAccessCode] = useState(share.access_code);
   const [notes, setNotes] = useState(share.notes ?? '');
@@ -306,25 +448,8 @@ function ShareDetail({
         </div>
       </div>
 
-      {/* Share mode */}
-      <div className="space-y-1.5">
-        <label className="admin-label">View Mode</label>
-        <div className="flex gap-0.5 bg-admin-bg-inset border border-admin-border rounded-admin-md p-0.5">
-          {([['presentation', 'Presentation'], ['table', 'Script Table']] as const).map(([mode, label]) => (
-            <button
-              key={mode}
-              onClick={() => { if (share.share_mode !== mode) onUpdate(share.id, { share_mode: mode }); }}
-              className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors ${
-                share.share_mode === mode
-                  ? 'bg-admin-text-primary text-admin-bg-base'
-                  : 'text-admin-text-ghost hover:text-admin-text-muted'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Share preferences */}
+      <SharePreferencesControls share={share} onUpdate={onUpdate} />
 
       {/* Version header */}
       <div className="flex items-center gap-3 py-1">
