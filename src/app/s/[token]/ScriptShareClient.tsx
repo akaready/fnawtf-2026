@@ -635,13 +635,13 @@ export function ScriptShareClient({
             <motion.div key="story-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="flex items-center gap-1">
               <AnimatePresence>
                 {commentsOpen && (
+                  <>
                   <motion.div
-                    key="comment-controls"
+                    key="filter-btn"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex items-center gap-1"
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
                   >
               {/* Filter dropdown */}
               <div className="relative" ref={filterDropdownRef}>
@@ -684,6 +684,14 @@ export function ScriptShareClient({
                   document.body
                 )}
               </div>
+              </motion.div>
+              <motion.div
+                key="sort-btn"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+              >
               {/* Sort dropdown */}
               <div className="relative" ref={sortDropdownRef}>
                 <button
@@ -723,6 +731,7 @@ export function ScriptShareClient({
                 )}
               </div>
                   </motion.div>
+                  </>
                 )}
               </AnimatePresence>
               {/* Comments toggle */}
