@@ -471,15 +471,17 @@ export function ScriptStoryEditor({
               transition={{ duration: 0.25 }}
               className="border-l-2 border-l-[var(--admin-cream)] border-t border-admin-border bg-admin-bg-base px-4 py-3"
             >
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-1 mb-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-ghost">Comments</p>
-                <ScriptCommentsVersionPicker
-                  shares={groupShares}
-                  selectedShareId={selectedShareId}
-                  currentMajorVersion={scriptVersion}
-                  onSelect={onSelectShare}
-                  inline
-                />
+                <div className="[&_button]:!text-admin-text-ghost [&_button]:!opacity-100 [&_button]:hover:!text-admin-text-primary">
+                  <ScriptCommentsVersionPicker
+                    shares={groupShares}
+                    selectedShareId={selectedShareId}
+                    currentMajorVersion={scriptVersion}
+                    onSelect={onSelectShare}
+                    inline
+                  />
+                </div>
               </div>
               <ScriptCommentsCell
                 comments={beatComments}
