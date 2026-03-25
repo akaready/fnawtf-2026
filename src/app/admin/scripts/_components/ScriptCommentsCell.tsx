@@ -68,12 +68,12 @@ function MoreMenu({ id, content, onRefresh, hover }: {
   );
 }
 
-function Actions({ id, content, resolved, onRefresh, hover, isOwn, isParent }: { id: string; content: string; resolved: boolean; onRefresh: () => void; hover: string; isOwn?: boolean; isParent?: boolean }) {
+function Actions({ id, content, resolved, onRefresh, hover, isParent }: { id: string; content: string; resolved: boolean; onRefresh: () => void; hover: string; isParent?: boolean }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiRef = useRef<HTMLButtonElement>(null);
   return (
     <div className="flex items-center gap-0.5">
-      {isOwn && <MoreMenu id={id} content={content} onRefresh={onRefresh} hover={hover} />}
+      <MoreMenu id={id} content={content} onRefresh={onRefresh} hover={hover} />
       <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-[18px] h-[18px] flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? '' : `invisible ${hover}:visible`}`}>
         <Smile size={14} />
       </button>
@@ -114,7 +114,7 @@ function Row({ c, shareId, onRefresh, hover, isLast, highlight }: {
         <div className="flex items-center gap-1">
           <span className={`text-admin-sm font-semibold truncate ${resolved ? 'text-admin-text-faint' : 'text-admin-text-primary'}`}>{firstName(c.viewer_name, c.viewer_email)}</span>
           <span className="text-admin-sm text-admin-text-faint flex-shrink-0">{formatRelativeTime(c.created_at)}</span>
-          {shareId && onRefresh && <span className="ml-auto"><Actions id={c.id} content={c.content} resolved={resolved} onRefresh={onRefresh} hover={hover} isOwn={c.viewer_email === 'admin'} /></span>}
+          {shareId && onRefresh && <span className="ml-auto"><Actions id={c.id} content={c.content} resolved={resolved} onRefresh={onRefresh} hover={hover} /></span>}
         </div>
         <p className={`text-admin-sm whitespace-pre-wrap break-words mt-0.5 ${resolved ? 'text-admin-text-faint' : 'text-admin-text-secondary'}`}>{c.content}</p>
       </div>
@@ -242,7 +242,7 @@ function Thread({ thread, shareId, onRefresh }: {
             </span>
             <span className="text-admin-sm text-admin-text-faint flex-shrink-0">{formatRelativeTime(parent.created_at)}</span>
             <span className={`text-admin-text-faint transition-all opacity-0 group-hover/thread:opacity-100 ${expanded ? '' : '-rotate-90'}`}><ChevronDown size={10} /></span>
-            {shareId && <span className="ml-auto"><Actions id={parent.id} content={parent.content} resolved={!!parent.resolved_at} onRefresh={refresh} hover="group-hover/thread" isOwn={parent.viewer_email === 'admin'} isParent /></span>}
+            {shareId && <span className="ml-auto"><Actions id={parent.id} content={parent.content} resolved={!!parent.resolved_at} onRefresh={refresh} hover="group-hover/thread" isParent /></span>}
           </div>
         </div>
       </div>
