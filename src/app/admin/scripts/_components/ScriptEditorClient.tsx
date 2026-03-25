@@ -1058,7 +1058,7 @@ export function ScriptEditorClient({
               className="flex-shrink-0 h-full overflow-hidden border-l border-admin-border flex flex-col"
             >
               {/* Toolbar header */}
-              <div className="h-8 flex items-center justify-end pr-3 pl-2 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+              <div className="h-8 flex items-center justify-end pr-5 pl-2 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
                 <div className="flex items-center gap-0.5">
                   {/* Filter (eye) — dropdown */}
                   <div className="relative">
