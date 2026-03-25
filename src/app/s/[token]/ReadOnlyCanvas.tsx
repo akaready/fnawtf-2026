@@ -115,7 +115,7 @@ export function ReadOnlyCanvas({
 
   return (
     <div className="w-full">
-      <div className="min-w-[800px]">
+      <div style={{ minWidth: Math.max(800, visibleColumns.length * 200) }}>
       {/* Column headers — sticky */}
       <div ref={colHeaderRef} className="sticky top-0 z-20 bg-black border-b border-admin-border">
         <div className="flex">

@@ -39,7 +39,7 @@ export function ViewSwitcher<K extends string>({
             className={`px-3 py-[9px] transition-colors flex items-center gap-1.5 ${
               isActive
                 ? 'bg-admin-warning-bg text-admin-warning'
-                : 'text-yellow-500/50 hover:text-admin-warning hover:bg-admin-warning-bg'
+                : 'text-yellow-500/50 hover:text-admin-warning'
             }`}
             title={v.label}
           >

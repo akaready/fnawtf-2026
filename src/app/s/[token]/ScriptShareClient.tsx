@@ -335,16 +335,16 @@ export function ScriptShareClient({
       {!isFocused && (
         <motion.div
           key="share-header"
-          initial={{ height: 'auto', opacity: 1 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
+          initial={false}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -100, opacity: 0 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden"
         >
           {/* Mobile header */}
-          <div className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="flex md:hidden items-center gap-3 px-3 py-2 border-b border-border flex-shrink-0">
+            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-4 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              {clientName && <p className="text-[10px] text-muted-foreground/50 truncate">{clientName}</p>}
               <div className="flex items-center gap-2">
                 <h1 className="font-display text-sm font-bold text-foreground truncate">{script.title}</h1>
                 <span
@@ -389,16 +389,10 @@ export function ScriptShareClient({
             </div>
           )}
           {/* Desktop header */}
-          <div className="relative hidden md:flex items-center px-4 py-4 md:px-8 md:py-6 border-b border-border flex-shrink-0">
-            {/* Left — logos */}
+          <div className="relative hidden md:flex items-center px-4 py-4 md:px-8 md:py-4 border-b border-border flex-shrink-0">
+            {/* Left — logo */}
             <div className="flex items-center gap-4 flex-shrink-0">
               <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
-              {clientLogoUrl && (
-                <>
-                  <span className="text-muted-foreground/30 text-lg leading-none select-none">⤫</span>
-                  <img src={clientLogoUrl} alt="" className="h-5 object-contain admin-logo" />
-                </>
-              )}
             </div>
 
             {/* Center — absolute positioned so it's truly centered regardless of left/right widths */}
@@ -575,14 +569,6 @@ export function ScriptShareClient({
                   document.body
                 )}
               </div>
-              {/* Email button */}
-              <a
-                href="mailto:hi@fna.wtf"
-                className="w-10 h-10 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors"
-                title="hi@fna.wtf"
-              >
-                <Mail size={16} />
-              </a>
             </div>
           </div>
         </motion.div>
@@ -615,30 +601,40 @@ export function ScriptShareClient({
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
           </button>
-          {viewMode === 'table' && (
-            <button
-              onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-              className={`${btnCls} w-8 hidden md:flex ${containerIdx !== 0 ? btnOn : ''}`}
-              title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
-            >
-              <SeparatorVertical size={16} />
-            </button>
-          )}
+          <AnimatePresence>
+            {viewMode === 'table' && (
+              <motion.div
+                key="width-btn"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <button
+                  onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
+                  className={`${btnCls} w-8 hidden md:flex ${containerIdx !== 0 ? btnOn : ''}`}
+                  title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
+                >
+                  <SeparatorVertical size={16} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         {/* Center — view mode toggle */}
-        <div className="flex-1 flex items-center justify-center min-w-0 px-2">
-          <div className="hidden md:block">
+        <div className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto">
             <ViewSwitcher views={availableViews} activeView={viewMode} showLabels onChange={(mode) => setViewMode(mode)} />
           </div>
-          <div className="md:hidden">
-            <ViewSwitcher views={availableViews} activeView={viewMode} onChange={(mode) => setViewMode(mode)} />
-          </div>
+        </div>
+        <div className="flex-1 flex md:hidden items-center justify-center min-w-0 px-2">
+          <ViewSwitcher views={availableViews} activeView={viewMode} onChange={(mode) => setViewMode(mode)} />
         </div>
         {/* Right — mode-dependent controls */}
-        <div className="flex-shrink-0 overflow-hidden">
+        <div className="flex-shrink-0 overflow-hidden min-w-[200px] flex justify-end">
           <AnimatePresence mode="wait">
           {viewMode === 'table' ? (
-            <motion.div key="table-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}>
+            <motion.div key="table-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}>
             {excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null}
             </motion.div>
           ) : (
@@ -649,9 +645,8 @@ export function ScriptShareClient({
                   <motion.div
                     key="filter-btn"
                     initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+                    animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: 0.05 } }}
+                    exit={{ opacity: 0, y: 10, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1], delay: 0.05 } }}
                   >
               {/* Filter dropdown */}
               <div className="relative" ref={filterDropdownRef}>
@@ -698,9 +693,8 @@ export function ScriptShareClient({
               <motion.div
                 key="sort-btn"
                 initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+                animate={{ opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: 0.1 } }}
+                exit={{ opacity: 0, y: 10, transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1], delay: 0 } }}
               >
               {/* Sort dropdown */}
               <div className="relative" ref={sortDropdownRef}>
