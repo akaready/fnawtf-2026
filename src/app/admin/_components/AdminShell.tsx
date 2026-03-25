@@ -14,18 +14,21 @@ import { ChatWidget } from './chat/ChatWidget';
 import { ChatPanel } from './chat/ChatPanel';
 import { ToastProvider } from './AdminToast';
 
+import type { AdminRole } from '@/types/proposal';
+
 interface Props {
   children: ReactNode;
   userEmail: string;
+  adminRole?: AdminRole | null;
 }
 
-export function AdminShell({ children, userEmail }: Props) {
+export function AdminShell({ children, userEmail, adminRole }: Props) {
   return (
     <ThemeProvider>
       <ToastProvider>
         <Suspense fallback={null}>
           <ChatProvider>
-            <AdminShellInner userEmail={userEmail}>{children}</AdminShellInner>
+            <AdminShellInner userEmail={userEmail} adminRole={adminRole}>{children}</AdminShellInner>
           </ChatProvider>
         </Suspense>
       </ToastProvider>
@@ -33,7 +36,7 @@ export function AdminShell({ children, userEmail }: Props) {
   );
 }
 
-function AdminShellInner({ children, userEmail }: Props) {
+function AdminShellInner({ children, userEmail: _userEmail, adminRole }: Props) {
   const { theme, toggleTheme } = useTheme();
   const { isOpen, isSidebarMode, chatWidth, setChatWidth, isDragging, setIsDragging } = useChatContext();
   const chatSidebarOpen = isSidebarMode && isOpen;
@@ -158,11 +161,14 @@ function AdminShellInner({ children, userEmail }: Props) {
     if (parent) setNavSubmenuOpen(parent.href || parent.label);
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Admin-only settings menu items (SEO, Website, Style Guide)
+  // Admin-only settings menu items — filtered by role
   const settingsItems = [
-    { href: '/admin/seo',        label: 'SEO',         icon: Globe },
-    { href: '/admin/styleguide', label: 'Style Guide', icon: Palette },
-  ];
+    { href: '/admin/seo',        label: 'SEO',         icon: Globe,   minRole: 'admin' as const },
+    { href: '/admin/styleguide', label: 'Style Guide', icon: Palette, minRole: 'super_admin' as const },
+  ].filter(item =>
+    adminRole === 'super_admin' ||
+    (adminRole === 'admin' && item.minRole === 'admin')
+  );
 
   return (
     <div className="admin-shell flex h-screen bg-admin-bg-base text-admin-text-primary overflow-hidden">
@@ -345,7 +351,7 @@ function AdminShellInner({ children, userEmail }: Props) {
                 <LogOut size={15} strokeWidth={1.75} />
               </button>
               <div className="flex-1" />
-              {userEmail === 'ready@fna.wtf' && (
+              {adminRole && settingsItems.length > 0 && (
                 <motion.div layout="position" className="relative">
                   <button
                     ref={settingsBtnRef}

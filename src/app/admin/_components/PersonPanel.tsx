@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Trash2, Save, Loader2, X, Check,
   Mail, Phone, Building2, Briefcase, StickyNote, Image as ImageIcon,
@@ -23,6 +23,7 @@ import {
   getHeadshots,
   setFeaturedHeadshot,
   deleteHeadshot,
+  uploadContactAvatar,
   type ClientRow,
   type HeadshotRow,
 } from '../actions';
@@ -71,6 +72,8 @@ export function PersonPanel({
   const [urlSearching, setUrlSearching] = useState(false);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'headshots' | 'roles' | 'projects'>('details');
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { setPanelContext } = useChatContext();
 
@@ -171,6 +174,22 @@ export function PersonPanel({
   const handleChange = (field: string, value: unknown) => {
     setDraft((prev) => prev ? { ...prev, [field]: value } : prev);
     handleDirty();
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !draft?.id) return;
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('contactId', draft.id);
+      const publicUrl = await uploadContactAvatar(fd);
+      handleChange('headshot_url', publicUrl);
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
   };
 
   const handleClose = () => {
@@ -299,17 +318,37 @@ export function PersonPanel({
 
       {/* Header */}
       <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-admin-border bg-admin-bg-sidebar flex-shrink-0">
-        {draft.headshot_url ? (
-          <img src={draft.headshot_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-admin-bg-hover flex items-center justify-center flex-shrink-0 text-admin-text-ghost">
-            <ImageIcon size={16} />
+        <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+        <button
+          type="button"
+          onClick={() => avatarInputRef.current?.click()}
+          disabled={avatarUploading || !draft.id}
+          className="group/avatar relative w-10 h-10 rounded-full flex-shrink-0 cursor-pointer overflow-hidden"
+          title="Change profile photo"
+        >
+          {draft.headshot_url ? (
+            <img src={draft.headshot_url} alt="" className="w-full h-full rounded-full object-cover" />
+          ) : (
+            <div className="w-full h-full rounded-full bg-admin-bg-hover flex items-center justify-center text-admin-text-ghost">
+              <ImageIcon size={16} />
+            </div>
+          )}
+          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+            {avatarUploading ? <Loader2 size={14} className="animate-spin text-white" /> : <RefreshCw size={14} className="text-white" />}
           </div>
-        )}
+        </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-semibold text-admin-text-primary truncate">
-            {person ? `${draft.first_name} ${draft.last_name}`.trim() || 'Untitled' : 'New Contact'}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-admin-text-primary truncate">
+              {person ? `${draft.first_name} ${draft.last_name}`.trim() || 'Untitled' : 'New Contact'}
+            </h2>
+            {draft.admin_role && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-admin-sm text-admin-sm font-medium bg-admin-warning-bg text-admin-warning border border-admin-warning-border">
+                <Star size={10} fill="currentColor" />
+                {draft.admin_role === 'super_admin' ? 'Super Admin' : 'Admin'}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center flex-shrink-0">
           <SaveDot status={autoSave.status} />

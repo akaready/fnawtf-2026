@@ -7,6 +7,7 @@ export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'accepted';
 export type SectionType = 'text' | 'video' | 'projects' | 'quote' | 'calendar' | 'custom_text';
 
 export type ContactType = 'contact' | 'crew' | 'staff' | 'vendor' | 'cast';
+export type AdminRole = 'admin' | 'super_admin';
 
 export interface ContactRow {
   id: string;
@@ -25,6 +26,8 @@ export interface ContactRow {
   instagram_url: string | null;
   imdb_url: string | null;
   appearance_prompt: string | null;
+  admin_role: AdminRole | null;
+  supabase_user_id: string | null;
   created_at: string;
   updated_at: string;
 }

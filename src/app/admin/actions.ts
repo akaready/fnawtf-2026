@@ -5689,3 +5689,29 @@ export async function deleteScriptShare(shareId: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/scripts');
 }
+
+// ── Contact Avatar Upload ──────────────────────────────────────────────
+
+export async function uploadContactAvatar(formData: FormData): Promise<string> {
+  const file = formData.get('file') as File;
+  const contactId = formData.get('contactId') as string;
+  if (!file || !contactId) throw new Error('Missing file or contactId');
+
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+  const ext = file.name.split('.').pop() ?? 'png';
+  const path = `contacts/${contactId}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage.from('headshots').upload(path, file, { upsert: true });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data: { publicUrl } } = supabase.storage.from('headshots').getPublicUrl(path);
+
+  const { error: updateError } = await supabase
+    .from('contacts')
+    .update({ headshot_url: publicUrl })
+    .eq('id', contactId);
+  if (updateError) throw new Error(updateError.message);
+
+  return publicUrl;
+}

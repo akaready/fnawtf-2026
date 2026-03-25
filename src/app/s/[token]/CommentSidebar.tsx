@@ -357,7 +357,7 @@ function CommentCard({
             {/* Name + time + actions + badge + #N */}
             <div className="flex items-center gap-2 cursor-pointer leading-6" onClick={(e) => { e.stopPropagation(); setThreadExpanded(prev => !prev); }}>
               <span className={`text-admin-sm font-semibold whitespace-nowrap min-w-0 overflow-hidden shrink ${parent.resolved_at ? 'text-white/30' : 'text-white'}`}>
-                {firstNameStr}<span className={`comment-names-suffix ${!threadExpanded ? 'is-visible' : ''}`}>{(() => {
+                {firstNameStr}{parent.is_admin && <span className="ml-1 inline-flex items-center px-1 py-px rounded text-[9px] font-bold leading-none bg-white/15 text-white/60 uppercase tracking-wider">FNA</span>}<span className={`comment-names-suffix ${!threadExpanded ? 'is-visible' : ''}`}>{(() => {
                   const rows = asScriptRows(allComments);
                   const seen = new Set<string>();
                   const names: string[] = [];
@@ -621,7 +621,7 @@ function ReplyRow({
       <div className="flex-1 min-w-0 pt-3 pb-1">
         {/* Name + time + actions */}
         <div className="flex items-center gap-2 leading-6">
-          <span className={`text-admin-sm font-semibold ${reply.resolved_at ? 'text-white/30' : 'text-white'}`}>{firstNameStr}</span>
+          <span className={`text-admin-sm font-semibold ${reply.resolved_at ? 'text-white/30' : 'text-white'}`}>{firstNameStr}</span>{reply.is_admin && <span className="inline-flex items-center px-1 py-px rounded text-[9px] font-bold leading-none bg-white/15 text-white/60 uppercase tracking-wider">FNA</span>}
           <span className={`text-admin-sm ${reply.resolved_at ? 'text-white/20' : 'text-admin-text-faint'}`}>{formatRelativeTime(reply.created_at)}</span>
           {/* Actions: dots + emoji (no checkmark for replies) */}
           <span className="ml-auto flex items-center gap-0" onClick={e => e.stopPropagation()}>
@@ -986,7 +986,7 @@ export function CommentSidebar({
 
       {/* Sidebar */}
       <div
-        className={`h-full border-l border-admin-border bg-admin-bg-nav overflow-hidden z-10 relative transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[320px]' : 'w-0'}`}
+        className={`h-full border-l border-admin-border bg-[#030303] overflow-hidden z-10 relative transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[320px]' : 'w-0'}`}
       >
         <div className="w-[320px] h-full flex flex-col">
           {/* Header */}

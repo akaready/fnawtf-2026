@@ -207,6 +207,8 @@ export function ContactsManager({ initialContacts, companies, projects, contactP
         instagram_url: null,
         imdb_url: null,
         appearance_prompt: null,
+        admin_role: null,
+        supabase_user_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

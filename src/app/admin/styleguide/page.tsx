@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { resolveAdminContact } from '@/lib/auth/resolveAdminContact';
 import { StyleGuideClient } from './_components/StyleGuideClient';
 
 export default async function StyleGuidePage() {
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const contact = await resolveAdminContact();
 
-  if (!session || session.user.email !== 'ready@fna.wtf') {
+  if (!contact || contact.admin_role !== 'super_admin') {
     redirect('/admin');
   }
 

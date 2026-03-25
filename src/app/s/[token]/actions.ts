@@ -6,6 +6,37 @@ import { setShareAuthCookie, verifySharePassword } from '@/lib/share/auth';
 import { notifySlack } from '@/lib/slack/notify';
 import { formatScriptVersion } from '@/types/scripts';
 
+/** Resolve 'admin' placeholder to real user info from the current session */
+async function resolveAdminEmail(
+  viewerEmail: string,
+  viewerName: string | null,
+): Promise<{ email: string; name: string | null; isAdmin: boolean }> {
+  if (viewerEmail !== 'admin') return { email: viewerEmail, name: viewerName, isAdmin: false };
+
+  const { createClient: createServerClient } = await import('@/lib/supabase/server');
+  const serverSupa = await createServerClient();
+  const { data: { session } } = await serverSupa.auth.getSession();
+  if (!session?.user?.email) return { email: viewerEmail, name: viewerName, isAdmin: true };
+
+  const service = createServiceClient();
+  const { data: contact } = await service
+    .from('contacts')
+    .select('first_name, last_name, admin_role')
+    .eq('email', session.user.email)
+    .single();
+
+  if (contact) {
+    const c = contact as unknown as { first_name: string; last_name: string; admin_role: string | null };
+    return {
+      email: session.user.email,
+      name: [c.first_name, c.last_name].filter(Boolean).join(' ') || null,
+      isAdmin: !!c.admin_role,
+    };
+  }
+
+  return { email: session.user.email, name: viewerName, isAdmin: true };
+}
+
 export async function verifyScriptShareAccess(
   token: string,
   email: string,
@@ -430,9 +461,15 @@ export async function addComment(
   viewerEmail: string,
   viewerName: string | null,
   content: string,
+  isAdmin?: boolean,
 ) {
   if (!shareId || !beatId) throw new Error('Missing share or beat ID');
   const supabase = createServiceClient();
+
+  const resolved = await resolveAdminEmail(viewerEmail, viewerName);
+  const finalEmail = resolved.email;
+  const finalName = resolved.name;
+  const finalIsAdmin = isAdmin || resolved.isAdmin;
 
   const { count } = await supabase
     .from('script_share_comments' as never)
@@ -446,10 +483,11 @@ export async function addComment(
     .insert({
       share_id: shareId,
       beat_id: beatId,
-      viewer_email: viewerEmail,
-      viewer_name: viewerName,
+      viewer_email: finalEmail,
+      viewer_name: finalName,
       content,
       comment_number: commentNumber,
+      ...(finalIsAdmin ? { is_admin: true } : {}),
     } as never)
     .select('id')
     .single();
@@ -463,21 +501,23 @@ export async function updateComment(
   content: string,
 ) {
   const supabase = createServiceClient();
+  const resolved = await resolveAdminEmail(viewerEmail, null);
   const { error } = await supabase
     .from('script_share_comments' as never)
     .update({ content } as never)
     .eq('id', commentId)
-    .eq('viewer_email', viewerEmail);
+    .eq('viewer_email', resolved.email);
   if (error) throw new Error((error as { message: string }).message);
 }
 
 export async function deleteComment(commentId: string, viewerEmail: string) {
   const supabase = createServiceClient();
+  const resolved = await resolveAdminEmail(viewerEmail, null);
   const { error } = await supabase
     .from('script_share_comments' as never)
     .update({ deleted_at: new Date().toISOString() } as never)
     .eq('id', commentId)
-    .eq('viewer_email', viewerEmail);
+    .eq('viewer_email', resolved.email);
   if (error) throw new Error((error as { message: string }).message);
 }
 
@@ -487,8 +527,10 @@ export async function addReply(
   viewerEmail: string,
   viewerName: string | null,
   content: string,
+  isAdmin?: boolean,
 ) {
   const supabase = createServiceClient();
+  const resolved = await resolveAdminEmail(viewerEmail, viewerName);
 
   const { data: parent } = await supabase
     .from('script_share_comments' as never)
@@ -510,11 +552,12 @@ export async function addReply(
     .insert({
       share_id: shareId,
       beat_id: beatId,
-      viewer_email: viewerEmail,
-      viewer_name: viewerName,
+      viewer_email: resolved.email,
+      viewer_name: resolved.name,
       content,
       parent_comment_id: parentCommentId,
       comment_number: commentNumber,
+      ...((isAdmin || resolved.isAdmin) ? { is_admin: true } : {}),
     } as never)
     .select('id')
     .single();
@@ -547,12 +590,13 @@ export async function getReactions(commentIds: string[]) {
 
 export async function toggleReaction(commentId: string, viewerEmail: string, emoji: string) {
   const supabase = createServiceClient();
+  const resolved = await resolveAdminEmail(viewerEmail, null);
   // Check if reaction exists
   const { data: existing } = await supabase
     .from('script_share_comment_reactions' as never)
     .select('id')
     .eq('comment_id', commentId)
-    .eq('viewer_email', viewerEmail)
+    .eq('viewer_email', resolved.email)
     .eq('emoji', emoji)
     .single();
   if (existing) {
@@ -564,13 +608,14 @@ export async function toggleReaction(commentId: string, viewerEmail: string, emo
   } else {
     await supabase
       .from('script_share_comment_reactions' as never)
-      .insert({ comment_id: commentId, viewer_email: viewerEmail, emoji } as never);
+      .insert({ comment_id: commentId, viewer_email: resolved.email, emoji } as never);
     return true;
   }
 }
 
 export async function toggleResolved(commentId: string, viewerEmail: string) {
   const supabase = createServiceClient();
+  const resolved = await resolveAdminEmail(viewerEmail, null);
 
   const { data: existing } = await supabase
     .from('script_share_comments' as never)
@@ -583,7 +628,7 @@ export async function toggleResolved(commentId: string, viewerEmail: string) {
     .from('script_share_comments' as never)
     .update(isResolved
       ? { resolved_at: null, resolved_by: null } as never
-      : { resolved_at: new Date().toISOString(), resolved_by: viewerEmail } as never
+      : { resolved_at: new Date().toISOString(), resolved_by: resolved.email } as never
     )
     .eq('id', commentId);
   if (error) throw new Error((error as { message: string }).message);

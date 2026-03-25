@@ -273,6 +273,8 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
         instagram_url: newInstagram.trim() || null,
         imdb_url: newImdb.trim() || null,
         appearance_prompt: null,
+        admin_role: null,
+        supabase_user_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         pivot_id: pivotId,
