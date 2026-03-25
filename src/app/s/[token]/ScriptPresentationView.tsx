@@ -150,6 +150,8 @@ interface Props {
   hideReference?: boolean;
   hideComments?: boolean;
   onRegisterCommentsToggle?: (toggle: () => void) => void;
+  onRegisterNavCallbacks?: (callbacks: { jumpToScene: (sceneId: string) => void; jumpToBeat: (beatId: string) => void; getActiveSceneId: () => string | null; getActiveBeatId: () => string | null }) => void;
+  externalSidebar?: boolean;
 }
 
 /* ─── Component ─── */
@@ -173,6 +175,9 @@ export function ScriptPresentationView({
   hideNotes = false,
   hideReference = false,
   hideComments = false,
+  onRegisterCommentsToggle,
+  onRegisterNavCallbacks,
+  externalSidebar = false,
 }: Props) {
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -369,6 +374,20 @@ export function ScriptPresentationView({
     if (slideIdx >= 0) setIdx(slideIdx);
   }, [slides]);
 
+  /* ── Register callbacks for parent toolbar control ── */
+  useEffect(() => {
+    onRegisterCommentsToggle?.(toggleRight);
+  }, [onRegisterCommentsToggle, toggleRight]);
+
+  useEffect(() => {
+    onRegisterNavCallbacks?.({
+      jumpToScene,
+      jumpToBeat,
+      getActiveSceneId: () => current?.sceneId ?? null,
+      getActiveBeatId: () => current?.beatId ?? null,
+    });
+  }, [onRegisterNavCallbacks, jumpToScene, jumpToBeat, current?.sceneId, current?.beatId]);
+
   /* ── Active beat ID ── */
   const activeBeatId = current?.beatId ?? null;
 
@@ -385,8 +404,8 @@ export function ScriptPresentationView({
 
   return (
     <div className="flex-1 flex min-h-0 bg-black">
-      {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
-      <div className="hidden md:block relative flex-shrink-0 h-full">
+      {/* ════ LEFT SIDEBAR — Scene Nav (hidden when parent provides sidebar) ════ */}
+      {!externalSidebar && <div className="hidden md:block relative flex-shrink-0 h-full">
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}
         <button
           onClick={() => toggleLeft()}
@@ -408,7 +427,7 @@ export function ScriptPresentationView({
               onCollapse={() => toggleLeft()}
             />
         </SceneSidebarShell>
-      </div>
+      </div>}
 
       {/* ════ CENTER COLUMN ════ */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">

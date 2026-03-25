@@ -94,6 +94,12 @@ export function ScriptShareClient({
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
   const emailFillRef = useRef<HTMLDivElement>(null);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
+  const presentationNavRef = useRef<{
+    jumpToScene: (sceneId: string) => void;
+    jumpToBeat: (beatId: string) => void;
+    getActiveSceneId: () => string | null;
+    getActiveBeatId: () => string | null;
+  } | null>(null);
 
   useDirectionalFill(emailBtnRef, emailFillRef, {
     onFillStart: () => {
@@ -378,11 +384,11 @@ export function ScriptShareClient({
 
       {/* Content area */}
       <div className="flex-1 flex min-h-0">
-        {viewMode === 'table' ? (
-          <>
-            <SceneSidebarShell open={showSidebar}>
-              <SceneNav
-                scenes={computedScenes.map(s => ({
+        {/* Shared scene sidebar */}
+        <SceneSidebarShell open={showSidebar}>
+          <SceneNav
+            scenes={viewMode === 'table'
+              ? computedScenes.map(s => ({
                   id: s.id,
                   sceneNumber: s.sceneNumber,
                   int_ext: s.int_ext,
@@ -390,15 +396,19 @@ export function ScriptShareClient({
                   time_of_day: s.time_of_day,
                   scene_description: s.scene_description ?? null,
                   beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
-                }))}
-                activeSceneId={activeSceneId}
-                onSelectScene={handleSceneClick}
-                onSelectBeat={handleBeatClick}
-              />
-            </SceneSidebarShell>
-            <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
-              <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
-                <ReadOnlyCanvas
+                }))
+              : presentationScenes}
+            activeSceneId={viewMode === 'table' ? activeSceneId : (presentationNavRef.current?.getActiveSceneId() ?? null)}
+            onSelectScene={viewMode === 'table' ? handleSceneClick : (id) => presentationNavRef.current?.jumpToScene(id)}
+            onSelectBeat={viewMode === 'table' ? handleBeatClick : (id) => presentationNavRef.current?.jumpToBeat(id)}
+            activeBeatId={viewMode === 'story' ? (presentationNavRef.current?.getActiveBeatId() ?? undefined) : undefined}
+          />
+        </SceneSidebarShell>
+
+        {viewMode === 'table' ? (
+          <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
+            <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
+              <ReadOnlyCanvas
                   scenes={computedScenes}
                   columnConfig={columnConfig}
                   references={typedReferences}
@@ -413,7 +423,6 @@ export function ScriptShareClient({
                 />
               </div>
             </div>
-          </>
         ) : (
           <ScriptPresentationView
             slides={presentationSlides}
@@ -435,6 +444,8 @@ export function ScriptShareClient({
             hideReference={sharePreferences.presentation_columns?.reference === false}
             hideComments={sharePreferences.presentation_columns?.comments === false}
             onRegisterCommentsToggle={(fn) => { presentationToggleCommentsRef.current = fn; }}
+            onRegisterNavCallbacks={(cbs) => { presentationNavRef.current = cbs; }}
+            externalSidebar
           />
         )}
       </div>
