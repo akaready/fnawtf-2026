@@ -34,9 +34,9 @@ function MoreMenu({ id, content, onRefresh }: {
         <textarea value={editText} onChange={e => setEditText(e.target.value)} rows={1}
           className="flex-1 bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm text-admin-text-primary resize-none focus:outline-none h-7" autoFocus />
         <button onClick={async () => { await updateComment(id, 'admin', editText.trim()); setEditing(false); onRefresh(); }}
-          className="w-6 h-6 flex items-center justify-center text-admin-success"><Check size={14} /></button>
+          className="w-5 h-5 flex items-center justify-center text-admin-success"><Check size={14} /></button>
         <button onClick={() => { setEditing(false); setEditText(content); }}
-          className="w-6 h-6 flex items-center justify-center text-admin-text-faint"><ChevronDown size={14} className="rotate-90" /></button>
+          className="w-5 h-5 flex items-center justify-center text-admin-text-faint"><ChevronDown size={14} className="rotate-90" /></button>
       </div>
     );
   }
@@ -45,10 +45,10 @@ function MoreMenu({ id, content, onRefresh }: {
   return (
     <>
       <button ref={btnRef} onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        className={`w-6 h-6 flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors`}>
-        <span className="relative inline-flex items-center justify-center w-6 h-6">
-          <Circle size={14} />
-          <MoreHorizontal size={8} className="absolute" strokeWidth={3} />
+        className={`w-5 h-5 flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors`}>
+        <span className="relative inline-flex items-center justify-center w-5 h-5">
+          <Circle size={18} />
+          <MoreHorizontal size={10} className="absolute" strokeWidth={3} />
         </span>
       </button>
       {open && r && createPortal(
@@ -84,22 +84,22 @@ function Actions({ id, content, resolved, onRefresh, isParent }: { id: string; c
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="flex items-center gap-0.5 opacity-0 group-hover/thread:opacity-100 transition-opacity">
+    <div className="flex items-center gap-0 opacity-0 group-hover/thread:opacity-100 transition-opacity">
       <MoreMenu id={id} content={content} onRefresh={onRefresh} />
-      <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-6 h-6 flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? 'opacity-100' : ''}`}>
-        <Smile size={14} />
+      <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-5 h-5 flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? 'opacity-100' : ''}`}>
+        <Smile size={18} />
       </button>
       {emojiOpen && <EmojiPicker anchorRef={emojiRef} onSelect={async emoji => { await toggleReaction(id, 'admin', emoji); onRefresh(); }} onClose={() => setEmojiOpen(false)} />}
-      {isParent && <button onClick={async e => { e.stopPropagation(); await toggleResolved(id, 'admin'); onRefresh(); }} className="flex items-center justify-center cursor-pointer" title={resolved ? 'Mark unresolved' : 'Mark resolved'}>
+      {isParent && <button onClick={async e => { e.stopPropagation(); await toggleResolved(id, 'admin'); onRefresh(); }} className="w-5 h-5 flex items-center justify-center cursor-pointer" title={resolved ? 'Mark unresolved' : 'Mark resolved'}>
         {resolved ? (
-          <span className="relative inline-flex items-center justify-center w-6 h-6">
-            <Circle size={14} className="text-admin-success" style={{ fill: 'var(--admin-success)' }} />
-            <Check size={9} className="absolute text-admin-bg-sidebar" strokeWidth={3} />
+          <span className="relative inline-flex items-center justify-center w-5 h-5">
+            <Circle size={18} className="text-admin-success" style={{ fill: 'var(--admin-success)' }} />
+            <Check size={11} className="absolute text-admin-bg-sidebar" strokeWidth={3} />
           </span>
         ) : (
-          <span className="relative inline-flex items-center justify-center w-6 h-6 text-admin-text-faint">
-            <Circle size={14} />
-            <Check size={9} className="absolute" strokeWidth={3} />
+          <span className="relative inline-flex items-center justify-center w-5 h-5 text-admin-text-faint">
+            <Circle size={18} />
+            <Check size={11} className="absolute" strokeWidth={3} />
           </span>
         )}
       </button>}
