@@ -65,7 +65,7 @@ export function SceneBottomSheet({ scenes, activeSceneId, onSelectScene, activeB
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
-        <div className="bg-[#111111] border-t border-admin-border-subtle rounded-t-2xl max-h-[70vh] flex flex-col">
+        <div className="bg-admin-bg-raised border-t border-admin-border-subtle rounded-t-2xl max-h-[70vh] flex flex-col">
           {/* Handle + header */}
           <div className="flex flex-col items-center pt-4 pb-3 px-5 flex-shrink-0">
             <div className="w-10 h-1 rounded-full bg-white/10 mb-4" />

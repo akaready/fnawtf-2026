@@ -559,7 +559,7 @@ export function ScriptPresentationView({
           {/* ── Bordered content block: scene heading + all beat cells ── */}
           <div className="w-full max-w-5xl flex-shrink-0 border border-border rounded-lg overflow-hidden mb-6">
             {/* Scene heading */}
-            <div className="flex items-center gap-0 bg-[#141414] border-b border-border min-h-[44px]">
+            <div className="flex items-center gap-0 bg-admin-bg-raised border-b border-border min-h-[44px]">
               <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-1 pr-3">
                 {current.sceneNumber}{slides.filter(s => s.sceneId === current.sceneId).length > 1 ? current.beatLetter : ''}
               </span>
