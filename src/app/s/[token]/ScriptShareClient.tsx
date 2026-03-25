@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, X, Camera } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, Camera } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
@@ -384,11 +385,11 @@ export function ScriptShareClient({
                     </div>
                     {/* Body */}
                     <div className="px-4 py-4 space-y-4">
-                      {/* Avatar + color picker */}
-                      <div className="flex items-start gap-4">
+                      {/* Avatar */}
+                      <div className="flex justify-center">
                         <div className="relative group/avatar flex-shrink-0">
                           <div
-                            className="w-14 h-14 rounded-admin-md overflow-hidden flex items-center justify-center text-white text-admin-lg font-bold"
+                            className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white text-admin-lg font-bold"
                             style={{ backgroundColor: profileAvatarUrl ? undefined : profileColor }}
                           >
                             {profileAvatarUrl ? (
@@ -399,7 +400,7 @@ export function ScriptShareClient({
                           </div>
                           <button
                             onClick={() => avatarInputRef.current?.click()}
-                            className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center rounded-admin-md"
+                            className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center rounded-full"
                           >
                             <Camera size={16} className="text-white" />
                           </button>
@@ -423,22 +424,23 @@ export function ScriptShareClient({
                             }}
                           />
                         </div>
-                        {!profileAvatarUrl && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {['#ef4444','#e67e22','#f59e0b','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899'].map(color => (
-                              <button
-                                key={color}
-                                onClick={() => setProfileColor(color)}
-                                className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110"
-                                style={{
-                                  backgroundColor: color,
-                                  borderColor: profileColor === color ? 'white' : 'transparent',
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
                       </div>
+                      {/* Color picker */}
+                      {!profileAvatarUrl && (
+                        <div className="flex items-center justify-between">
+                          {['#ef4444','#e67e22','#f59e0b','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899'].map(color => (
+                            <button
+                              key={color}
+                              onClick={() => setProfileColor(color)}
+                              className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110"
+                              style={{
+                                backgroundColor: color,
+                                borderColor: profileColor === color ? 'white' : 'transparent',
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
                       {/* Name inputs */}
                       <div className="grid grid-cols-2 gap-2">
                         <input
@@ -465,14 +467,7 @@ export function ScriptShareClient({
                       />
                     </div>
                     {/* Footer — Save + Cancel */}
-                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-white/[0.06]">
-                      <button
-                        onClick={() => setUserPopoverOpen(false)}
-                        className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
-                        title="Cancel"
-                      >
-                        <X size={16} />
-                      </button>
+                    <div className="flex items-center gap-2 px-4 py-3 border-t border-white/[0.06]">
                       <button
                         disabled={profileSaving}
                         onClick={async () => {
@@ -492,10 +487,15 @@ export function ScriptShareClient({
                             setProfileSaving(false);
                           }
                         }}
-                        className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-success hover:bg-admin-success/10 transition-colors"
-                        title="Save"
+                        className="btn-primary px-3 py-2 text-xs"
                       >
-                        <Check size={16} />
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setUserPopoverOpen(false)}
+                        className="btn-secondary px-3 py-2 text-xs"
+                      >
+                        Cancel
                       </button>
                     </div>
                   </div>
@@ -572,8 +572,14 @@ export function ScriptShareClient({
                 >
                   <Eye size={16} />
                 </button>
-                {filterDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[180px] z-50">
+                {filterDropdownOpen && createPortal(
+                  <div
+                    className="fixed bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[180px] z-[9999]"
+                    style={{
+                      top: (filterDropdownRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                      right: window.innerWidth - (filterDropdownRef.current?.getBoundingClientRect().right ?? 0),
+                    }}
+                  >
                     <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-admin-text-faint/50">By Scene</p>
                     {(['all', 'current'] as const).map(mode => (
                       <button
@@ -593,7 +599,8 @@ export function ScriptShareClient({
                       Hide Resolved
                       {commentHideCompleted && <Check size={14} className="text-admin-info" />}
                     </button>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {/* Sort dropdown */}
@@ -605,8 +612,14 @@ export function ScriptShareClient({
                 >
                   <ListFilter size={16} />
                 </button>
-                {sortDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[170px] z-50">
+                {sortDropdownOpen && createPortal(
+                  <div
+                    className="fixed bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[170px] z-[9999]"
+                    style={{
+                      top: (sortDropdownRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                      right: window.innerWidth - (sortDropdownRef.current?.getBoundingClientRect().right ?? 0),
+                    }}
+                  >
                     <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-admin-text-faint/50">Sort by...</p>
                     {([
                       { key: 'script' as const, label: 'Script Order' },
@@ -623,7 +636,8 @@ export function ScriptShareClient({
                         {commentSortMode === opt.key && <Check size={14} className="text-admin-info" />}
                       </button>
                     ))}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {/* Comments toggle */}
