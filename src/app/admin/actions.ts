@@ -5427,14 +5427,33 @@ export async function deleteProductReference(referenceId: string, storagePath: s
 
 // ── Script Shares ────────────────────────────────────────────────────────
 
-/** List all share links for a script, with full view data.
+/** List all share links for a script group, with full view data.
  *  Resolves live version numbers from the snapshot script row (not the stale snapshot_major_version). */
 export async function getScriptShares(scriptId: string) {
   const { supabase } = await requireAuth();
+
+  // Get the group ID so we find shares across all versions
+  const { data: scriptRow } = await supabase
+    .from('scripts')
+    .select('script_group_id')
+    .eq('id', scriptId)
+    .single();
+  const groupId = (scriptRow as { script_group_id: string } | null)?.script_group_id;
+
+  // Get all script IDs in the group
+  let scriptIds = [scriptId];
+  if (groupId) {
+    const { data: groupScripts } = await supabase
+      .from('scripts')
+      .select('id')
+      .eq('script_group_id', groupId);
+    if (groupScripts) scriptIds = (groupScripts as { id: string }[]).map(s => s.id);
+  }
+
   const { data, error } = await supabase
     .from('script_shares')
     .select('*, script_share_views(id, viewer_email, viewer_name, duration_seconds, viewed_at)')
-    .eq('script_id', scriptId)
+    .in('script_id', scriptIds)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
