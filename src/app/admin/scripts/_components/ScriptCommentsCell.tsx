@@ -84,13 +84,13 @@ function Actions({ id, content, resolved, onRefresh, isParent }: { id: string; c
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="flex items-center gap-0 opacity-0 group-hover/thread:opacity-100 transition-opacity">
+    <div className="flex items-center gap-px opacity-0 group-hover/thread:opacity-100 transition-opacity">
       <MoreMenu id={id} content={content} onRefresh={onRefresh} />
       <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-5 h-5 flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? 'opacity-100' : ''}`}>
         <Smile size={18} />
       </button>
       {emojiOpen && <EmojiPicker anchorRef={emojiRef} onSelect={async emoji => { await toggleReaction(id, 'admin', emoji); onRefresh(); }} onClose={() => setEmojiOpen(false)} />}
-      {isParent && <button onClick={async e => { e.stopPropagation(); await toggleResolved(id, 'admin'); onRefresh(); }} className="w-5 h-5 flex items-center justify-center cursor-pointer" title={resolved ? 'Mark unresolved' : 'Mark resolved'}>
+      {isParent && <button onClick={async e => { e.stopPropagation(); await toggleResolved(id, 'admin'); onRefresh(); }} className="w-5 h-5 flex items-center justify-center cursor-pointer text-admin-text-faint hover:text-admin-text-muted transition-colors" title={resolved ? 'Mark unresolved' : 'Mark resolved'}>
         {resolved ? (
           <span className="relative inline-flex items-center justify-center w-5 h-5">
             <Circle size={18} className="text-admin-success" style={{ fill: 'var(--admin-success)' }} />
