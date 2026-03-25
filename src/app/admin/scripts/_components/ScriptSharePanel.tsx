@@ -360,7 +360,7 @@ function SharePreferencesControls({
       {/* Table Column Visibility */}
       <div className="space-y-2">
         <label className="admin-label">Table Column Visibility</label>
-        <div className="space-y-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           {TABLE_COLUMNS.map(({ key, label }) => {
             const checked = prefs.table_columns?.[key as keyof typeof prefs.table_columns] !== false;
             return (
@@ -380,8 +380,8 @@ function SharePreferencesControls({
 
       {/* Presentation Panel Visibility */}
       <div className="space-y-2">
-        <label className="admin-label">Presentation Panel Visibility</label>
-        <div className="space-y-1.5">
+        <label className="admin-label">Story View Panel Visibility</label>
+        <div className="grid grid-cols-2 gap-1.5">
           {PRESENTATION_COLUMNS.map(({ key, label }) => {
             const checked = prefs.presentation_columns?.[key as keyof typeof prefs.presentation_columns] !== false;
             return (
@@ -476,7 +476,7 @@ function ShareDetail({
           />
           <button
             onClick={() => onCopyCode(share.access_code, share.id)}
-            className="w-9 h-9 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 border border-admin-border-subtle"
+            className="w-10 h-10 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 border border-admin-border-subtle"
             title="Copy access code"
           >
             {copiedCode === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}

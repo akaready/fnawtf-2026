@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import { restrictToParentElement } from '@dnd-kit/modifiers';
 import type { DragEndEvent } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -93,7 +94,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
               >
                 <span className={`block w-2.5 h-2.5 rounded-full transition-colors ${config[key] ? color : 'bg-admin-text-ghost'}`} />
               </button>
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-admin-sm font-medium text-admin-text-primary bg-admin-bg-overlay border border-admin-border rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-admin-sm font-medium text-admin-text-primary bg-admin-bg-raised border border-admin-border rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none z-30">
                 {label}
               </span>
             </div>
@@ -104,7 +105,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
 
     if (isDraggable) {
       return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
           <SortableContext items={dotItems} strategy={horizontalListSortingStrategy}>
             {inner}
           </SortableContext>
@@ -150,7 +151,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
 
   if (isDraggable) {
     return (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
         <SortableContext items={labelItems} strategy={horizontalListSortingStrategy}>
           {labelInner}
         </SortableContext>
@@ -187,7 +188,7 @@ function SortableDot({ id, rawColor, isActive, label, onClick }: {
           style={{ backgroundColor: rawColor }}
         />
       </button>
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-admin-sm font-medium text-admin-text-primary bg-admin-bg-overlay border border-admin-border rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none">
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-admin-sm font-medium text-admin-text-primary bg-admin-bg-raised border border-admin-border rounded whitespace-nowrap opacity-0 group-hover/dot:opacity-100 transition-opacity pointer-events-none z-30">
         {label}
       </span>
     </div>

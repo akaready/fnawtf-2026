@@ -377,10 +377,13 @@ export function ScriptShareClient({
           ) : (
             <button
               onClick={() => presentationToggleCommentsRef.current?.()}
-              className={`${btnCls} w-8`}
+              className={`${btnCls} gap-1.5 px-2 w-auto`}
               title="Comments"
             >
               <MessageSquare size={16} />
+              <span className="text-[10px] font-semibold uppercase tracking-widest">
+                Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
+              </span>
             </button>
           )}
         </div>
