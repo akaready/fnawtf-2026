@@ -119,7 +119,7 @@ export function ReadOnlyCanvas({
       {/* Column headers — sticky */}
       <div ref={colHeaderRef} className="sticky top-0 z-20 bg-black border-b border-admin-border">
         <div className="flex">
-          <div className="w-10 flex-shrink-0" />
+          <div className="w-10 flex-shrink-0 sticky left-0 bg-black z-[21]" />
           <div className="grid flex-1" style={{ gridTemplateColumns: gridTemplate }}>
             {visibleColumns.map((col) => (
               <div key={col.key} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-widest ${col.color} border-l ${col.borderColor}`}>
@@ -165,16 +165,16 @@ export function ReadOnlyCanvas({
               const beatFrames = frameMap.get(beat.id) ?? [];
 
               return (
-                <div key={beat.id} id={`beat-${beat.id}`} className="relative">
+                <div key={beat.id} id={`beat-${beat.id}`} className="flex">
                   {/* Beat letter gutter */}
-                  <div className="absolute left-0 top-0 w-10 h-full flex items-center justify-center border-b border-b-admin-border">
+                  <div className="sticky left-0 z-[5] w-10 flex-shrink-0 flex items-center justify-center border-b border-b-admin-border bg-black">
                     <span className="text-[10px] text-muted-foreground/30 font-mono">
                       {beatLetter(beatIdx + 1)}
                     </span>
                   </div>
 
                   {/* Content grid */}
-                  <div className="relative ml-10 min-w-0">
+                  <div className="relative flex-1 min-w-0">
                     {/* Column border overlay */}
                     <div className="absolute inset-0 z-10 pointer-events-none grid" style={{ gridTemplateColumns: gridTemplate }}>
                       {visibleColumns.map(col => (

@@ -151,10 +151,60 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
   for (const s of slides) beatsPerScene[s.sceneId] = (beatsPerScene[s.sceneId] ?? 0) + 1;
 
   const pxPerSlide = slides.length > 1 ? trackWidth / (slides.length - 1) : 999;
-  const showAllLabels = pxPerSlide >= 80;
-  const showSceneBoundaryLabels = pxPerSlide >= 50;
-  const showSceneNumbersOnly = pxPerSlide >= 30;
   const smallAvatars = pxPerSlide < 50;
+
+  // Compute which scene boundary labels to show by checking for collisions
+  // Estimate label width: ~9px per character + 16px padding
+  const charWidth = 9;
+  const labelPad = 16;
+  const minGap = 8; // minimum px gap between labels
+
+  // Build candidate labels at each density level
+  const sceneBoundaryIndices = Array.from(sceneBoundarySet).sort((a, b) => a - b);
+
+  // Try full labels first (e.g. "101A"), then numbers only ("101"), then nothing
+  type LabelCandidate = { idx: number; text: string; pxLeft: number; width: number };
+
+  function buildCandidates(mode: 'full' | 'numbers'): LabelCandidate[] {
+    return sceneBoundaryIndices.map(i => {
+      const slide = slides[i];
+      const isSingle = beatsPerScene[slide.sceneId] === 1;
+      const text = mode === 'full'
+        ? (isSingle ? `${slide.sceneNumber}` : `${slide.sceneNumber}${slide.beatLetter ?? ''}`)
+        : `${slide.sceneNumber}`;
+      const pxLeft = slides.length > 1 ? (i / (slides.length - 1)) * trackWidth : 0;
+      return { idx: i, text, pxLeft, width: text.length * charWidth + labelPad };
+    });
+  }
+
+  function hasCollisions(candidates: LabelCandidate[]): boolean {
+    for (let i = 1; i < candidates.length; i++) {
+      const prev = candidates[i - 1];
+      const curr = candidates[i];
+      const prevRight = prev.pxLeft + prev.width / 2;
+      const currLeft = curr.pxLeft - curr.width / 2;
+      if (currLeft - prevRight < minGap) return true;
+    }
+    return false;
+  }
+
+  // Try full labels → numbers only → nothing
+  const fullCandidates = buildCandidates('full');
+  const numberCandidates = buildCandidates('numbers');
+
+  let labelMode: 'full' | 'numbers' | 'none' = 'none';
+  if (!hasCollisions(fullCandidates)) labelMode = 'full';
+  else if (!hasCollisions(numberCandidates)) labelMode = 'numbers';
+
+  // For non-boundary beat letters, only show if full labels fit AND there's enough pxPerSlide
+  const showBeatLetters = labelMode === 'full' && pxPerSlide >= 55;
+
+  // Build the set of visible labels
+  const visibleLabels = new Map<number, string>();
+  if (labelMode !== 'none') {
+    const candidates = labelMode === 'full' ? fullCandidates : numberCandidates;
+    for (const c of candidates) visibleLabels.set(c.idx, c.text);
+  }
 
   const playheadLeft = slides.length > 1 ? `${(currentIndex / (slides.length - 1)) * 100}%` : '0%';
 
@@ -197,7 +247,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       small={smallAvatars}
                     />
                   )}
-                  {beatLabel && (showSceneBoundaryLabels || showSceneNumbersOnly) && (
+                  {visibleLabels.has(i) && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onSeek(i); }}
                       className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
@@ -205,7 +255,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       }`}
                       style={{ top: 20 }}
                     >
-                      {showSceneBoundaryLabels ? beatLabel : `${slide.sceneNumber}`}
+                      {visibleLabels.get(i)}
                     </button>
                   )}
                 </div>
@@ -228,7 +278,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                     small={smallAvatars}
                   />
                 )}
-                {beatLabel && showAllLabels && (
+                {beatLabel && showBeatLetters && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onSeek(i); }}
                     className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${

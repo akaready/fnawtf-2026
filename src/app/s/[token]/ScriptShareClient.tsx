@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, Camera, Menu } from 'lucide-react';
+import { List, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, Camera } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
@@ -119,6 +119,8 @@ export function ScriptShareClient({
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSceneSheetOpen, setMobileSceneSheetOpen] = useState(false);
+  const [mobileCommentSheetOpen, setMobileCommentSheetOpen] = useState(false);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
   const presentationNavRef = useRef<{
     jumpToScene: (sceneId: string) => void;
@@ -327,11 +329,20 @@ export function ScriptShareClient({
   return (
     <div className="flex flex-col h-screen bg-black text-foreground">
       {/* Title header — collapses in focus mode */}
+      <AnimatePresence>
       {!isFocused && (
-        <>
+        <motion.div
+          key="share-header"
+          initial={{ height: 'auto', opacity: 1 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="overflow-hidden"
+        >
           {/* Mobile header */}
           <div className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
             <div className="flex-1 min-w-0">
+              {clientName && <p className="text-[10px] text-muted-foreground/50 truncate">{clientName}</p>}
               <div className="flex items-center gap-2">
                 <h1 className="font-display text-sm font-bold text-foreground truncate">{script.title}</h1>
                 <span
@@ -350,7 +361,7 @@ export function ScriptShareClient({
               onClick={() => setMobileMenuOpen(prev => !prev)}
               className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:text-white transition-colors flex-shrink-0"
             >
-              <Menu size={16} />
+              <User size={16} />
             </button>
           </div>
           {/* Mobile menu overlay */}
@@ -564,24 +575,32 @@ export function ScriptShareClient({
               </a>
             </div>
           </div>
-        </>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0 overflow-hidden">
-        {/* Left — Desktop: Scenes toggle + Fullscreen + Width */}
-        <div className="hidden md:flex items-center gap-1">
+        {/* Left — Scenes toggle + Fullscreen + Width */}
+        <div className="flex items-center gap-1">
+          {/* Desktop: sidebar toggle; Mobile: bottom sheet trigger */}
           <button
-            onClick={() => { setShowSidebar(prev => { userWantsSidebar.current = !prev; return !prev; }); }}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                setMobileSceneSheetOpen(true);
+              } else {
+                setShowSidebar(prev => { userWantsSidebar.current = !prev; return !prev; });
+              }
+            }}
             className={`${btnCls} gap-1.5 px-2 ${showSidebar ? btnOn : ''}`}
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
-            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-            <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
+            <List size={16} />
+            <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
           </button>
           <button
             onClick={() => setIsFocused(prev => !prev)}
-            className={`${btnCls} w-8 ${isFocused ? btnOn : ''}`}
+            className={`${btnCls} w-8 hidden md:flex ${isFocused ? btnOn : ''}`}
             title={isFocused ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
@@ -589,59 +608,24 @@ export function ScriptShareClient({
           {viewMode === 'table' && (
             <button
               onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-              className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
+              className={`${btnCls} w-8 hidden md:flex ${containerIdx !== 0 ? btnOn : ''}`}
               title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
             >
               <SeparatorVertical size={16} />
             </button>
           )}
         </div>
-        {/* Left — Mobile: Scenes bottom sheet (self-contained trigger + sheet) */}
-        <div className="flex md:hidden items-center gap-1">
-          <SceneBottomSheet
-            scenes={viewMode === 'table'
-              ? computedScenes.map(s => ({
-                  id: s.id,
-                  sceneNumber: s.sceneNumber,
-                  int_ext: s.int_ext,
-                  location_name: s.location_name,
-                  time_of_day: s.time_of_day,
-                  scene_description: s.scene_description ?? null,
-                  beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
-                }))
-              : presentationScenes}
-            activeSceneId={(viewMode === 'table' ? activeSceneId : presentationActiveSceneId) ?? ''}
-            onSelectScene={viewMode === 'table' ? handleSceneClick : (id) => presentationNavRef.current?.jumpToScene(id)}
-            activeBeatId={viewMode === 'story' ? (presentationActiveBeatId ?? undefined) : undefined}
-            onSelectBeat={viewMode === 'table' ? handleBeatClick : (id) => presentationNavRef.current?.jumpToBeat(id)}
-          />
-        </div>
         {/* Center — view mode toggle */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto">
-            <div className="hidden md:block">
-              <ViewSwitcher views={availableViews} activeView={viewMode} showLabels onChange={(mode) => setViewMode(mode)} />
-            </div>
-            <div className="md:hidden">
-              <ViewSwitcher views={availableViews} activeView={viewMode} onChange={(mode) => setViewMode(mode)} />
-            </div>
+        <div className="flex-1 flex items-center justify-center min-w-0 px-2">
+          <div className="hidden md:block">
+            <ViewSwitcher views={availableViews} activeView={viewMode} showLabels onChange={(mode) => setViewMode(mode)} />
+          </div>
+          <div className="md:hidden">
+            <ViewSwitcher views={availableViews} activeView={viewMode} onChange={(mode) => setViewMode(mode)} />
           </div>
         </div>
-        {/* Right — Mobile: comments bottom sheet (self-contained trigger + sheet) */}
-        <div className="flex md:hidden ml-auto items-center">
-          <CommentBottomSheet
-            shareId={shareId}
-            currentBeatId={presentationActiveBeatId ?? null}
-            viewerEmail={viewerEmail}
-            viewerName={viewerName}
-            refreshKey={0}
-            slides={presentationSlides}
-            onNavigateToBeat={(id) => presentationNavRef.current?.jumpToBeat(id)}
-            onCommentAdded={loadComments}
-          />
-        </div>
-        {/* Right — Desktop: mode-dependent controls */}
-        <div className="ml-auto flex-shrink-0 overflow-hidden hidden md:block">
+        {/* Right — mode-dependent controls */}
+        <div className="flex-shrink-0 overflow-hidden">
           <AnimatePresence mode="wait">
           {viewMode === 'table' ? (
             <motion.div key="table-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}>
@@ -743,12 +727,18 @@ export function ScriptShareClient({
               </AnimatePresence>
               {/* Comments toggle */}
               <button
-                onClick={() => presentationToggleCommentsRef.current?.()}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    setMobileCommentSheetOpen(true);
+                  } else {
+                    presentationToggleCommentsRef.current?.();
+                  }
+                }}
                 className={`${btnCls} gap-1.5 px-2 w-auto`}
                 title="Comments"
               >
                 <MessageSquare size={16} />
-                <span className="text-[10px] font-semibold uppercase tracking-widest">
+                <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-widest">
                   Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
                 </span>
               </button>
@@ -783,7 +773,7 @@ export function ScriptShareClient({
 
         <AnimatePresence mode="wait">
         {viewMode === 'table' ? (
-          <motion.div key="table-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
+          <motion.div key="table-content" initial={{ x: 300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -300, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
             <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
               <ReadOnlyCanvas
                   scenes={computedScenes}
@@ -802,7 +792,7 @@ export function ScriptShareClient({
               </div>
             </motion.div>
         ) : (
-          <motion.div key="story-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1 flex min-h-0">
+          <motion.div key="story-content" initial={{ x: -300, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 300, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="flex-1 flex min-h-0">
           <ScriptPresentationView
             slides={presentationSlides}
             onClose={() => setShowIntro(true)}
@@ -836,6 +826,49 @@ export function ScriptShareClient({
         )}
         </AnimatePresence>
       </div>
+
+      {/* Mobile bottom sheets — rendered at component level, triggered by toolbar */}
+      {mobileSceneSheetOpen && (
+        <div className="md:hidden">
+          <SceneBottomSheet
+            scenes={viewMode === 'table'
+              ? computedScenes.map(s => ({
+                  id: s.id,
+                  sceneNumber: s.sceneNumber,
+                  int_ext: s.int_ext,
+                  location_name: s.location_name,
+                  time_of_day: s.time_of_day,
+                  scene_description: s.scene_description ?? null,
+                  beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
+                }))
+              : presentationScenes}
+            activeSceneId={(viewMode === 'table' ? activeSceneId : presentationActiveSceneId) ?? ''}
+            onSelectScene={(id) => {
+              if (viewMode === 'table') handleSceneClick(id); else presentationNavRef.current?.jumpToScene(id);
+              setMobileSceneSheetOpen(false);
+            }}
+            activeBeatId={viewMode === 'story' ? (presentationActiveBeatId ?? undefined) : undefined}
+            onSelectBeat={(id) => {
+              if (viewMode === 'table') handleBeatClick(id); else presentationNavRef.current?.jumpToBeat(id);
+              setMobileSceneSheetOpen(false);
+            }}
+          />
+        </div>
+      )}
+      {mobileCommentSheetOpen && (
+        <div className="md:hidden">
+          <CommentBottomSheet
+            shareId={shareId}
+            currentBeatId={presentationActiveBeatId ?? null}
+            viewerEmail={viewerEmail}
+            viewerName={viewerName}
+            refreshKey={0}
+            slides={presentationSlides}
+            onNavigateToBeat={(id) => presentationNavRef.current?.jumpToBeat(id)}
+            onCommentAdded={loadComments}
+          />
+        </div>
+      )}
 
     </div>
   );
