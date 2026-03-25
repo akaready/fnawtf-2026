@@ -192,9 +192,17 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
   const fullCandidates = buildCandidates('full');
   const numberCandidates = buildCandidates('numbers');
 
-  let labelMode: 'full' | 'numbers' | 'none' = 'none';
-  if (!hasCollisions(fullCandidates)) labelMode = 'full';
-  else if (!hasCollisions(numberCandidates)) labelMode = 'numbers';
+  let labelMode: 'full' | 'numbers' | 'none';
+  if (trackWidth === 0) {
+    // Before ResizeObserver fires, use simple threshold fallback
+    labelMode = pxPerSlide >= 55 ? 'full' : pxPerSlide >= 30 ? 'numbers' : 'none';
+  } else if (!hasCollisions(fullCandidates)) {
+    labelMode = 'full';
+  } else if (!hasCollisions(numberCandidates)) {
+    labelMode = 'numbers';
+  } else {
+    labelMode = 'none';
+  }
 
   // For non-boundary beat letters, only show if full labels fit AND there's enough pxPerSlide
   const showBeatLetters = labelMode === 'full' && pxPerSlide >= 55;

@@ -176,7 +176,7 @@ export function ReadOnlyCanvas({
                   {/* Content grid */}
                   <div className="relative flex-1 min-w-0">
                     {/* Column border overlay */}
-                    <div className="absolute inset-0 z-10 pointer-events-none grid" style={{ gridTemplateColumns: gridTemplate }}>
+                    <div className="absolute inset-0 z-[5] pointer-events-none grid" style={{ gridTemplateColumns: gridTemplate }}>
                       {visibleColumns.map(col => (
                         <div key={col.key} className={`border-l ${col.borderColor}`} />
                       ))}
