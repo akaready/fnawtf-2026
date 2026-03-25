@@ -78,8 +78,12 @@ export function ScriptShareClient({
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
   const [viewMode, setViewMode] = useState<'story' | 'table'>(sharePreferences.default_view);
-  const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
-    audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: true,
+  const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>(() => {
+    const base: ScriptColumnConfig = { audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: true };
+    for (const key of Object.keys(base) as (keyof ScriptColumnConfig)[]) {
+      if (sharePreferences.table_columns?.[key] === false) base[key] = false;
+    }
+    return base;
   });
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
   const [showSidebar, setShowSidebar] = useState(true);
@@ -89,6 +93,7 @@ export function ScriptShareClient({
   const [isEmailHovered, setIsEmailHovered] = useState(false);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
   const emailFillRef = useRef<HTMLDivElement>(null);
+  const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
 
   useDirectionalFill(emailBtnRef, emailFillRef, {
     onFillStart: () => {
@@ -196,6 +201,11 @@ export function ScriptShareClient({
 
   const btnCls = 'h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors';
   const btnOn = 'bg-admin-bg-active text-admin-text-secondary';
+
+  // Columns disabled by admin — can't be toggled by viewer
+  const excludedColumns = Object.entries(sharePreferences.table_columns ?? {})
+    .filter(([, v]) => v === false)
+    .map(([k]) => k as keyof ScriptColumnConfig);
 
   // Build presentation slides data
   const refsByBeat: Record<string, { image_url: string }[]> = {};
@@ -353,10 +363,10 @@ export function ScriptShareClient({
         {/* Right — mode-dependent controls */}
         <div className="ml-auto flex-shrink-0">
           {viewMode === 'table' ? (
-            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
+            excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} /> : null
           ) : (
             <button
-              onClick={() => {/* will wire up later */}}
+              onClick={() => presentationToggleCommentsRef.current?.()}
               className={`${btnCls} w-8`}
               title="Comments"
             >
@@ -420,6 +430,11 @@ export function ScriptShareClient({
             tags={typedTags}
             locations={typedLocations}
             products={typedProducts}
+            hideVisual={sharePreferences.presentation_columns?.visual === false}
+            hideNotes={sharePreferences.presentation_columns?.notes === false}
+            hideReference={sharePreferences.presentation_columns?.reference === false}
+            hideComments={sharePreferences.presentation_columns?.comments === false}
+            onRegisterCommentsToggle={(fn) => { presentationToggleCommentsRef.current = fn; }}
           />
         )}
       </div>

@@ -145,6 +145,11 @@ interface Props {
   tags?: ScriptTagRow[];
   locations?: ScriptLocationRow[];
   products?: ScriptProductRow[];
+  hideVisual?: boolean;
+  hideNotes?: boolean;
+  hideReference?: boolean;
+  hideComments?: boolean;
+  onRegisterCommentsToggle?: (toggle: () => void) => void;
 }
 
 /* ─── Component ─── */
@@ -164,6 +169,10 @@ export function ScriptPresentationView({
   tags = [],
   locations = [],
   products = [],
+  hideVisual = false,
+  hideNotes = false,
+  hideReference = false,
+  hideComments = false,
 }: Props) {
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -364,9 +373,9 @@ export function ScriptPresentationView({
   const activeBeatId = current?.beatId ?? null;
 
   /* ── Build content panels ── */
-  const showVisual = !!current.visualContent.trim();
-  const showNotes = !!current.notesContent.trim();
-  const showReference = current.referenceImageUrls.length > 0;
+  const showVisual = !hideVisual && !!current.visualContent.trim();
+  const showNotes = !hideNotes && !!current.notesContent.trim();
+  const showReference = !hideReference && current.referenceImageUrls.length > 0;
 
   /* ── Scene heading text ── */
   const activeScene = scenes.find(s => s.id === activeSceneId);
@@ -413,7 +422,7 @@ export function ScriptPresentationView({
             onSelectBeat={jumpToBeat}
           />
         </div>
-        <div className="md:hidden absolute top-4 right-4 z-30">
+        {!hideComments && <div className="md:hidden absolute top-4 right-4 z-30">
           <CommentBottomSheet
             shareId={shareId}
             currentBeatId={current?.beatId ?? null}
@@ -424,7 +433,7 @@ export function ScriptPresentationView({
             onNavigateToBeat={jumpToBeat}
             onCommentAdded={handleCommentAdded}
           />
-        </div>
+        </div>}
         {/* Scrollable center content */}
         <div className="flex-1 flex flex-col items-center px-4 md:px-6 pt-4 min-h-0 overflow-y-scroll admin-scrollbar">
 
@@ -624,7 +633,7 @@ export function ScriptPresentationView({
         </div>
 
         {/* Floating comment input — fixed above content */}
-        {current && (
+        {!hideComments && current && (
           <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center px-4 md:px-6 pointer-events-none">
             <div className="w-full max-w-xl md:max-w-2xl pointer-events-auto">
               <div className="bg-[#111111] border border-white/[0.14] rounded-xl shadow-[0_-8px_40px_rgba(0,0,0,0.7),0_-2px_15px_rgba(0,0,0,0.5)] flex items-center gap-3 pl-2 pr-2 py-2">
@@ -682,7 +691,7 @@ export function ScriptPresentationView({
       </div>
 
       {/* ════ RIGHT SIDEBAR — Comments ════ */}
-      <CommentSidebar
+      {!hideComments && <CommentSidebar
         shareId={shareId}
         currentBeatId={current?.beatId ?? null}
         viewerEmail={viewerEmail}
@@ -696,7 +705,7 @@ export function ScriptPresentationView({
         onCommentAdded={handleCommentAdded}
         scrollToEmail={scrollToEmail}
         onScrollToEmailHandled={() => setScrollToEmail(null)}
-      />
+      />}
     </div>
   );
 }
