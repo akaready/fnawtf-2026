@@ -50,6 +50,10 @@ interface Props {
   scrollToEmail?: string | null;
   onScrollToEmailHandled?: () => void;
   hideReopenButton?: boolean;
+  externalHideCompleted?: boolean;
+  externalSortMode?: 'script' | 'oldest' | 'newest' | 'unresolved';
+  externalSceneFilter?: 'current' | 'all';
+  externalCurrentSceneId?: string | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -776,6 +780,10 @@ export function CommentSidebar({
   scrollToEmail,
   onScrollToEmailHandled,
   hideReopenButton = false,
+  externalHideCompleted,
+  externalSortMode,
+  externalSceneFilter,
+  externalCurrentSceneId,
 }: Props) {
   const [comments, setComments] = useState<ShareComment[]>([]);
   const [reactions, setReactions] = useState<ReactionsMap>({});
@@ -788,6 +796,10 @@ export function CommentSidebar({
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const commentListRef = useRef<HTMLDivElement>(null);
+
+  // Use external controls when provided (toolbar-driven), else internal state
+  const effectiveHideCompleted = externalHideCompleted ?? hideCompleted;
+  const effectiveSortMode = externalSortMode ?? sortMode;
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
   const emailFillRef = useRef<HTMLDivElement>(null);
   const [_isEmailHovered, setIsEmailHovered] = useState(false);
@@ -947,15 +959,15 @@ export function CommentSidebar({
 
   // Sort threads
   const sortedThreads = [...threads].sort((a, b) => {
-    if (sortMode === 'script') {
+    if (effectiveSortMode === 'script') {
       const aIdx = slides.findIndex(s => s.beatId === a.parent.beat_id);
       const bIdx = slides.findIndex(s => s.beatId === b.parent.beat_id);
       return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
     }
-    if (sortMode === 'oldest') {
+    if (effectiveSortMode === 'oldest') {
       return new Date(a.parent.created_at).getTime() - new Date(b.parent.created_at).getTime();
     }
-    if (sortMode === 'unresolved') {
+    if (effectiveSortMode === 'unresolved') {
       const aR = a.parent.resolved_at ? 1 : 0;
       const bR = b.parent.resolved_at ? 1 : 0;
       if (aR !== bR) return aR - bR; // unresolved first
@@ -967,12 +979,17 @@ export function CommentSidebar({
 
   // Apply filters
   const filteredThreads = sortedThreads.filter(t => {
-    if (hideCompleted && t.parent.resolved_at) return false;
+    if (effectiveHideCompleted && t.parent.resolved_at) return false;
     if (hiddenUsers.size > 0 && hiddenUsers.has(t.parent.viewer_email)) return false;
+    // Scene filter — only show comments for current scene's beats
+    if (externalSceneFilter === 'current' && externalCurrentSceneId) {
+      const sceneBeatIds = new Set(slides.filter(s => s.sceneId === externalCurrentSceneId).map(s => s.beatId));
+      if (!sceneBeatIds.has(t.parent.beat_id)) return false;
+    }
     return true;
   });
 
-  const hasActiveFilters = hideCompleted || hiddenUsers.size > 0;
+  const hasActiveFilters = effectiveHideCompleted || hiddenUsers.size > 0;
 
   return (
     <div className="hidden md:flex md:relative md:flex-shrink-0 md:h-full">
@@ -993,8 +1010,8 @@ export function CommentSidebar({
         className={`h-full border-l border-admin-border bg-[#030303] overflow-hidden z-10 relative transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[320px]' : 'w-0'}`}
       >
         <div className="w-[320px] h-full flex flex-col">
-          {/* Header — compact when externally controlled */}
-          <div className={`flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0 ${hideReopenButton ? 'h-[2.5rem]' : 'h-[3rem]'}`}>
+          {/* Header — hidden when toolbar provides controls */}
+          <div className={`flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0 ${hideReopenButton ? 'hidden' : 'h-[3rem]'}`}>
             {!hideReopenButton && (
               <span className="text-admin-sm font-semibold uppercase tracking-widest text-admin-text-faint">
                 COMMENTS ({topLevelCount})

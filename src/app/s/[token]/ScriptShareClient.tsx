@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter } from 'lucide-react';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
@@ -95,6 +95,9 @@ export function ScriptShareClient({
   const [presentationActiveBeatId, setPresentationActiveBeatId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isEmailHovered, setIsEmailHovered] = useState(false);
+  const [commentHideCompleted, setCommentHideCompleted] = useState(false);
+  const [commentSortMode, setCommentSortMode] = useState<'script' | 'oldest' | 'newest' | 'unresolved'>('script');
+  const [commentSceneFilter, setCommentSceneFilter] = useState<'current' | 'all'>('all');
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
   const emailFillRef = useRef<HTMLDivElement>(null);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
@@ -375,16 +378,55 @@ export function ScriptShareClient({
           {viewMode === 'table' ? (
             excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null
           ) : (
-            <button
-              onClick={() => presentationToggleCommentsRef.current?.()}
-              className={`${btnCls} gap-1.5 px-2 w-auto`}
-              title="Comments"
-            >
-              <MessageSquare size={16} />
-              <span className="text-[10px] font-semibold uppercase tracking-widest">
-                Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
-              </span>
-            </button>
+            <div className="ml-auto flex-shrink-0 flex items-center gap-1">
+              {/* Scene filter toggle */}
+              <div className="flex items-center rounded-lg border border-admin-border overflow-hidden">
+                {(['current', 'all'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setCommentSceneFilter(mode)}
+                    className={`px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
+                      commentSceneFilter === mode
+                        ? 'bg-admin-bg-active text-admin-text-secondary'
+                        : 'text-admin-text-ghost hover:text-admin-text-muted'
+                    }`}
+                  >
+                    {mode === 'current' ? 'Scene' : 'All'}
+                  </button>
+                ))}
+              </div>
+              {/* Filter button */}
+              <button
+                onClick={() => setCommentHideCompleted(prev => !prev)}
+                className={`${btnCls} w-8 ${commentHideCompleted ? btnOn : ''}`}
+                title={commentHideCompleted ? 'Show resolved' : 'Hide resolved'}
+              >
+                <Eye size={16} />
+              </button>
+              {/* Sort button */}
+              <button
+                onClick={() => {
+                  const modes = ['script', 'oldest', 'newest', 'unresolved'] as const;
+                  const idx = modes.indexOf(commentSortMode);
+                  setCommentSortMode(modes[(idx + 1) % modes.length]);
+                }}
+                className={`${btnCls} w-8 ${commentSortMode !== 'script' ? btnOn : ''}`}
+                title={`Sort: ${commentSortMode}`}
+              >
+                <ListFilter size={16} />
+              </button>
+              {/* Comments toggle */}
+              <button
+                onClick={() => presentationToggleCommentsRef.current?.()}
+                className={`${btnCls} gap-1.5 px-2 w-auto`}
+                title="Comments"
+              >
+                <MessageSquare size={16} />
+                <span className="text-[10px] font-semibold uppercase tracking-widest">
+                  Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
+                </span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -454,6 +496,10 @@ export function ScriptShareClient({
             onRegisterCommentsToggle={(fn) => { presentationToggleCommentsRef.current = fn; }}
             onRegisterNavCallbacks={(cbs) => { presentationNavRef.current = cbs; }}
             externalSidebar
+            commentHideCompleted={commentHideCompleted}
+            commentSortMode={commentSortMode}
+            commentSceneFilter={commentSceneFilter}
+            currentSceneId={presentationActiveSceneId}
             onSlideChange={(sceneId, beatId) => { setPresentationActiveSceneId(sceneId); setPresentationActiveBeatId(beatId); }}
           />
         )}

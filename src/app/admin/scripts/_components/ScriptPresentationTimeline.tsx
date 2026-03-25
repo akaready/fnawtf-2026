@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { PresentationSlide } from './presentationUtils';
 import type { CommentAuthor } from '@/app/s/[token]/actions';
@@ -94,6 +94,16 @@ interface Props {
 export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, commentAuthors, onClickCommentAvatar }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(0);
+
+  useEffect(() => {
+    if (!trackRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) setTrackWidth(entry.contentRect.width);
+    });
+    observer.observe(trackRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const indexFromClientX = useCallback((clientX: number) => {
     const track = trackRef.current;
@@ -133,6 +143,11 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
   // Count beats per scene to decide label format
   const beatsPerScene: Record<string, number> = {};
   for (const s of slides) beatsPerScene[s.sceneId] = (beatsPerScene[s.sceneId] ?? 0) + 1;
+
+  const pxPerSlide = slides.length > 1 ? trackWidth / (slides.length - 1) : 999;
+  const showAllLabels = pxPerSlide >= 60;
+  const showSceneBoundaryLabels = pxPerSlide >= 35;
+  const showSceneNumbersOnly = pxPerSlide >= 20;
 
   const playheadLeft = slides.length > 1 ? `${(currentIndex / (slides.length - 1)) * 100}%` : '0%';
 
@@ -174,15 +189,26 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       onClickAvatar={(email) => onClickCommentAvatar(slide.beatId, email)}
                     />
                   )}
-                  {beatLabel && (
+                  {beatLabel && showSceneBoundaryLabels && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onSeek(i); }}
-                      className={`hidden sm:inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                      className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
                         isCurrent ? 'text-white bg-white/15' : 'text-[#888]'
                       }`}
                       style={{ top: 20 }}
                     >
-                      {beatLabel}
+                      {showAllLabels ? beatLabel : `${slide.sceneNumber}`}
+                    </button>
+                  )}
+                  {beatLabel && !showSceneBoundaryLabels && showSceneNumbersOnly && isSceneBoundary && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSeek(i); }}
+                      className={`inline-flex absolute left-1/2 -translate-x-1/2 font-mono text-sm whitespace-nowrap cursor-pointer transition-colors rounded-admin-sm px-2 py-0.5 hover:text-white hover:bg-white/20 pointer-events-auto ${
+                        isCurrent ? 'text-white bg-white/15' : 'text-[#888]'
+                      }`}
+                      style={{ top: 20 }}
+                    >
+                      {`${slide.sceneNumber}`}
                     </button>
                   )}
                 </div>

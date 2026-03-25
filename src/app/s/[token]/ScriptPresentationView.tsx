@@ -153,6 +153,10 @@ interface Props {
   onRegisterNavCallbacks?: (callbacks: { jumpToScene: (sceneId: string) => void; jumpToBeat: (beatId: string) => void; getActiveSceneId: () => string | null; getActiveBeatId: () => string | null }) => void;
   externalSidebar?: boolean;
   onSlideChange?: (sceneId: string, beatId: string | null) => void;
+  commentHideCompleted?: boolean;
+  commentSortMode?: 'script' | 'oldest' | 'newest' | 'unresolved';
+  commentSceneFilter?: 'current' | 'all';
+  currentSceneId?: string | null;
 }
 
 /* ─── Component ─── */
@@ -180,6 +184,10 @@ export function ScriptPresentationView({
   onRegisterNavCallbacks,
   externalSidebar = false,
   onSlideChange,
+  commentHideCompleted,
+  commentSortMode,
+  commentSceneFilter,
+  currentSceneId,
 }: Props) {
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -732,6 +740,10 @@ export function ScriptPresentationView({
         scrollToEmail={scrollToEmail}
         onScrollToEmailHandled={() => setScrollToEmail(null)}
         hideReopenButton={externalSidebar}
+        externalHideCompleted={commentHideCompleted}
+        externalSortMode={commentSortMode}
+        externalSceneFilter={commentSceneFilter}
+        externalCurrentSceneId={currentSceneId}
       />}
     </div>
   );
