@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Copy, Check, Plus, ExternalLink, Trash2, Play, Table2 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { getScriptShares, getNextShareVersion, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
+import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import type { ScriptShareRow, SharePreferences } from '@/types/scripts';
 import { resolveSharePreferences } from '@/types/scripts';
 
@@ -297,22 +298,15 @@ function SharePreferencesControls({
       {/* Default View */}
       <div className="space-y-1.5">
         <label className="admin-label">Default View</label>
-        <div className="flex gap-0.5 bg-admin-bg-inset border border-admin-border rounded-admin-md p-0.5">
-          {([['story', 'Story', Play], ['table', 'Table', Table2]] as const).map(([mode, label, Icon]) => (
-            <button
-              key={mode}
-              onClick={() => { if (prefs.default_view !== mode) update({ default_view: mode }); }}
-              className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors inline-flex items-center justify-center gap-1.5 ${
-                prefs.default_view === mode
-                  ? 'bg-admin-warning text-admin-bg-base'
-                  : 'text-admin-text-ghost hover:text-admin-text-muted'
-              }`}
-            >
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
-        </div>
+        <ViewSwitcher
+          views={[
+            { key: 'story' as const, icon: Play, label: 'Story' },
+            { key: 'table' as const, icon: Table2, label: 'Table' },
+          ]}
+          activeView={prefs.default_view}
+          onChange={(view) => update({ default_view: view })}
+          showLabels
+        />
       </div>
 
       {/* Allowed Views */}
