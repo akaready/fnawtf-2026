@@ -245,7 +245,7 @@ export function ScriptStoryEditor({
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center overflow-y-auto admin-scrollbar px-6 pt-4 pb-8">
+    <div className="flex-1 flex flex-col items-center overflow-y-scroll admin-scrollbar px-6 pt-4 pb-8">
 
       {/* ═══ Storyboard hero — 16:9 with prev / edit / next overlay ═══ */}
       {columnConfig.storyboard && <><div className="group/hero relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base" style={{ aspectRatio: '16/9' }}>
@@ -350,6 +350,10 @@ export function ScriptStoryEditor({
           currentIndex={idx}
           onSeek={handleSeek}
           commentAuthors={commentAuthors}
+          onClickCommentAvatar={(beatId) => {
+            const i = slides.findIndex(s => s.beatId === beatId);
+            if (i >= 0) handleSeek(i);
+          }}
         />
       </div>
 
