@@ -84,7 +84,7 @@ function Actions({ id, content, resolved, onRefresh, isParent }: { id: string; c
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="flex items-center gap-px opacity-0 group-hover/thread:opacity-100 transition-opacity">
+    <div className="flex items-center gap-1 opacity-0 group-hover/thread:opacity-100 transition-opacity">
       <MoreMenu id={id} content={content} onRefresh={onRefresh} />
       <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-5 h-5 flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? 'opacity-100' : ''}`}>
         <Smile size={18} />
@@ -97,7 +97,7 @@ function Actions({ id, content, resolved, onRefresh, isParent }: { id: string; c
             <Check size={11} className="absolute text-admin-bg-sidebar" strokeWidth={3} />
           </span>
         ) : (
-          <span className="relative inline-flex items-center justify-center w-5 h-5 text-admin-text-faint">
+          <span className="relative inline-flex items-center justify-center w-5 h-5">
             <Circle size={18} />
             <Check size={11} className="absolute" strokeWidth={3} />
           </span>
