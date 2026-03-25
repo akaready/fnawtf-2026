@@ -19,8 +19,8 @@ interface Props {
   onRefresh?: () => void;
 }
 
-function MoreMenu({ id, content, onRefresh, hover }: {
-  id: string; content: string; onRefresh: () => void; hover: string;
+function MoreMenu({ id, content, onRefresh }: {
+  id: string; content: string; onRefresh: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -45,7 +45,7 @@ function MoreMenu({ id, content, onRefresh, hover }: {
   return (
     <>
       <button ref={btnRef} onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-        className={`w-[18px] h-[18px] flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${open ? '' : `invisible ${hover}:visible`}`}>
+        className={`w-[18px] h-[18px] flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors`}>
         <span className="relative inline-flex items-center justify-center w-[18px] h-[18px]">
           <Circle size={14} />
           <MoreHorizontal size={8} className="absolute" strokeWidth={3} />
@@ -80,17 +80,17 @@ function MoreMenu({ id, content, onRefresh, hover }: {
   );
 }
 
-function Actions({ id, content, resolved, onRefresh, hover, isParent }: { id: string; content: string; resolved: boolean; onRefresh: () => void; hover: string; isParent?: boolean }) {
+function Actions({ id, content, resolved, onRefresh, isParent }: { id: string; content: string; resolved: boolean; onRefresh: () => void; isParent?: boolean }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="flex items-center gap-0.5">
-      <MoreMenu id={id} content={content} onRefresh={onRefresh} hover={hover} />
-      <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-[18px] h-[18px] flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? '' : `invisible ${hover}:visible`}`}>
+    <div className="flex items-center gap-0.5 opacity-0 group-hover/thread:opacity-100 transition-opacity">
+      <MoreMenu id={id} content={content} onRefresh={onRefresh} />
+      <button ref={emojiRef} onClick={e => { e.stopPropagation(); setEmojiOpen(o => !o); }} className={`w-[18px] h-[18px] flex items-center justify-center text-admin-text-faint hover:text-admin-text-muted transition-colors ${emojiOpen ? 'opacity-100' : ''}`}>
         <Smile size={14} />
       </button>
       {emojiOpen && <EmojiPicker anchorRef={emojiRef} onSelect={async emoji => { await toggleReaction(id, 'admin', emoji); onRefresh(); }} onClose={() => setEmojiOpen(false)} />}
-      {isParent && <button onClick={async e => { e.stopPropagation(); await toggleResolved(id, 'admin'); onRefresh(); }} className={`flex items-center justify-center cursor-pointer ${resolved ? '' : `invisible ${hover}:visible`}`} title={resolved ? 'Mark unresolved' : 'Mark resolved'}>
+      {isParent && <button onClick={async e => { e.stopPropagation(); await toggleResolved(id, 'admin'); onRefresh(); }} className="flex items-center justify-center cursor-pointer" title={resolved ? 'Mark unresolved' : 'Mark resolved'}>
         {resolved ? (
           <span className="relative inline-flex items-center justify-center w-[18px] h-[18px]">
             <Circle size={14} className="text-admin-success" style={{ fill: 'var(--admin-success)' }} />
@@ -108,8 +108,8 @@ function Actions({ id, content, resolved, onRefresh, hover, isParent }: { id: st
 }
 
 /* Reply row — exact same pattern as presentation page ReplyRow */
-function Row({ c, shareId: _shareId, onRefresh, hover, isLast, highlight }: {
-  c: ScriptShareCommentRow; shareId?: string; onRefresh?: () => void; hover: string; isLast: boolean; highlight?: boolean;
+function Row({ c, shareId: _shareId, onRefresh, isLast, highlight }: {
+  c: ScriptShareCommentRow; shareId?: string; onRefresh?: () => void; isLast: boolean; highlight?: boolean;
 }) {
   const resolved = !!c.resolved_at;
   const lineColor = highlight ? 'bg-admin-text-muted' : 'bg-admin-border';
@@ -126,7 +126,7 @@ function Row({ c, shareId: _shareId, onRefresh, hover, isLast, highlight }: {
         <div className="flex items-center gap-1">
           <span className={`text-admin-sm font-semibold truncate ${resolved ? 'text-admin-text-faint' : 'text-admin-text-primary'}`}>{firstName(c.viewer_name, c.viewer_email)}</span>
           <span className="text-admin-sm text-admin-text-faint flex-shrink-0">{formatRelativeTime(c.created_at)}</span>
-          {onRefresh && <span className="ml-auto"><Actions id={c.id} content={c.content} resolved={resolved} onRefresh={onRefresh} hover={hover} /></span>}
+          {onRefresh && <span className="ml-auto"><Actions id={c.id} content={c.content} resolved={resolved} onRefresh={onRefresh} /></span>}
         </div>
         <p className={`text-admin-sm whitespace-pre-wrap break-words mt-0.5 ${resolved ? 'text-admin-text-faint' : 'text-admin-text-secondary'}`}>{c.content}</p>
       </div>
@@ -254,7 +254,7 @@ function Thread({ thread, shareId, onRefresh }: {
             </span>
             <span className="text-admin-sm text-admin-text-faint flex-shrink-0">{formatRelativeTime(parent.created_at)}</span>
             <span className={`text-admin-text-faint transition-all opacity-0 group-hover/thread:opacity-100 ${expanded ? '' : '-rotate-90'}`}><ChevronDown size={10} /></span>
-            <span className="ml-auto"><Actions id={parent.id} content={parent.content} resolved={!!parent.resolved_at} onRefresh={refresh} hover="group-hover/namerow" isParent /></span>
+            <span className="ml-auto"><Actions id={parent.id} content={parent.content} resolved={!!parent.resolved_at} onRefresh={refresh} isParent /></span>
           </div>
         </div>
       </div>
@@ -273,7 +273,7 @@ function Thread({ thread, shareId, onRefresh }: {
           </div>
           {/* Replies */}
           {hasReplies && replies.map((r, i) => (
-            <Row key={r.id} c={r} shareId={shareId} onRefresh={refresh} hover="group-hover/reply" isLast={!shareId && i === replies.length - 1} highlight={replyFocused} />
+            <Row key={r.id} c={r} shareId={shareId} onRefresh={refresh} isLast={!shareId && i === replies.length - 1} highlight={replyFocused} />
           ))}
           {shareId && <ReplyInput shareId={shareId} parentId={parent.id} onDone={refresh} onFocusChange={setReplyFocused} />}
         </div>
