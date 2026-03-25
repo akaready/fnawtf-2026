@@ -10,6 +10,8 @@ interface Props {
   selectedShareId: string | null;
   currentMajorVersion: number;
   onSelect: (shareId: string) => void;
+  /** Render inline (relative) instead of absolute-positioned */
+  inline?: boolean;
 }
 
 export function ScriptCommentsVersionPicker({
@@ -17,6 +19,7 @@ export function ScriptCommentsVersionPicker({
   selectedShareId,
   currentMajorVersion,
   onSelect,
+  inline = false,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -26,7 +29,7 @@ export function ScriptCommentsVersionPicker({
     && selectedShare.snapshot_major_version !== currentMajorVersion;
 
   return (
-    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+    <div className={inline ? 'relative' : 'absolute right-2 top-1/2 -translate-y-1/2'}>
       <button
         onClick={(e) => { if (!loaded) return; e.stopPropagation(); setOpen(o => !o); }}
         disabled={!loaded}

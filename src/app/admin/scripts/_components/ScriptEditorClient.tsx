@@ -924,7 +924,7 @@ export function ScriptEditorClient({
               <SceneNav
                 scenes={computedScenes.map(s => ({ id: s.id, sceneNumber: s.sceneNumber, int_ext: s.int_ext, location_name: s.location_name, time_of_day: s.time_of_day, scene_description: (s as unknown as { scene_description?: string | null }).scene_description ?? null, beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })) }))}
                 activeSceneId={activeSceneId}
-                onSelectScene={setActiveSceneId}
+                onSelectScene={(id) => { setActiveSceneId(id); setActiveBeatId(null); }}
                 activeBeatId={activeBeatId}
                 onSelectBeat={(beatId) => {
                   setActiveBeatId(beatId);
@@ -1115,15 +1115,14 @@ export function ScriptEditorClient({
                       </>
                     )}
                   </div>
-                  {/* Version picker — override absolute positioning for inline use */}
-                  <div className="relative group/colhdr [&>div]:!static [&>div]:!translate-y-0 [&>div>button]:!p-0 w-7 h-7 flex items-center justify-center">
-                    <ScriptCommentsVersionPicker
-                      shares={groupShares}
-                      selectedShareId={selectedShareId}
-                      currentMajorVersion={script.major_version}
-                      onSelect={(id) => { setSelectedShareId(id); handleRefreshComments(); }}
-                    />
-                  </div>
+                  {/* Version picker */}
+                  <ScriptCommentsVersionPicker
+                    shares={groupShares}
+                    selectedShareId={selectedShareId}
+                    currentMajorVersion={script.major_version}
+                    onSelect={(id) => { setSelectedShareId(id); handleRefreshComments(); }}
+                    inline
+                  />
                 </div>
               </div>
               {/* Sidebar content */}
