@@ -379,8 +379,8 @@ export function ScriptStoryEditor({
         {/* Audio (2/3) + Visual (1/3) */}
         {columnConfig.audio && (
           <div className={`grid transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${columnConfig.visual ? 'xl:grid-cols-3' : ''}`}>
-            <div className={`border-l-2 border-l-[var(--admin-accent)] border-t border-admin-border bg-admin-bg-base px-5 py-4 ${columnConfig.visual ? 'xl:col-span-2' : ''}`}>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-ghost mb-2">Audio</p>
+            <div className={`border-l-2 border-l-[var(--admin-accent)] border-t border-admin-border bg-admin-bg-base px-4 py-3 ${columnConfig.visual ? 'xl:col-span-2' : ''}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-ghost mb-1.5">Audio</p>
               <div className="[&_[contenteditable]]:!text-base [&_[contenteditable]]:md:!text-lg [&_[contenteditable]]:!leading-relaxed">
               <ScriptBeatCell
                 value={currentBeat.audio_content}
