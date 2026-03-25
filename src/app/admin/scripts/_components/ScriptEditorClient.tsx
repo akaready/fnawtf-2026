@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { PanelLeftClose, PanelLeftOpen, Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play } from 'lucide-react';
+import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown } from 'lucide-react';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -29,6 +29,8 @@ import { SceneNav } from './SceneNav';
 import { SceneSidebarShell } from './SceneSidebarShell';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
 import { ScriptStoryEditor } from './ScriptStoryEditor';
+import { CommentSidebar } from '@/app/s/[token]/CommentSidebar';
+import { buildPresentationSlides } from './presentationUtils';
 import { ScriptCharactersPanel } from './ScriptCharactersPanel';
 import { ScriptTagsPanel } from './ScriptTagsPanel';
 import { ScriptLocationsPanel } from './ScriptLocationsPanel';
@@ -109,6 +111,11 @@ export function ScriptEditorClient({
     if (stored === 'true') setShowSidebar(true);
   }, [script.id]);
   const [isFocused, setIsFocused] = useState(false);
+  const [showCommentsSidebar, setShowCommentsSidebar] = useState(false);
+  const [commentRefreshKey, setCommentRefreshKey] = useState(0);
+  const [commentHideCompleted, setCommentHideCompleted] = useState(false);
+  const [commentSortMode, setCommentSortMode] = useState<'script' | 'oldest' | 'newest' | 'unresolved'>('script');
+  const [commentSceneFilter, _setCommentSceneFilter] = useState<'current' | 'all'>('all');
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
@@ -842,15 +849,26 @@ export function ScriptEditorClient({
             }}
           />
           <div className="w-2" />
-          {/* Scenes toggle + Fullscreen — far left */}
+          {/* Scenes toggle */}
           <button
             onClick={() => setShowSidebar(prev => { const next = !prev; localStorage.setItem(`script-sidebar-${script.id}`, String(next)); return next; })}
             className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors inline-flex items-center gap-1.5 ${showSidebar ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
-            {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            <List size={16} />
             <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
           </button>
+          {/* Comments sidebar toggle — story mode only */}
+          {contentMode === 'story' && (
+            <button
+              onClick={() => setShowCommentsSidebar(prev => !prev)}
+              className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors inline-flex items-center gap-1.5 ${showCommentsSidebar ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+              title={showCommentsSidebar ? 'Hide comments' : 'Show comments'}
+            >
+              <MessageSquare size={16} />
+              <span className="text-[10px] font-semibold uppercase tracking-widest">Comments</span>
+            </button>
+          )}
           <button
             onClick={toggleFocus}
             className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors ${isFocused ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
@@ -858,8 +876,6 @@ export function ScriptEditorClient({
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
           </button>
-          <div className="w-2" />
-          {/* Shared toolbar buttons */}
           <button
             onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
             className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors ${containerIdx !== 0 ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
@@ -915,6 +931,27 @@ export function ScriptEditorClient({
                 onReorder={handleReorderScenes}
                 showAddButton
                 onAddScene={handleAddScene}
+                headerActions={contentMode === 'story' && showCommentsSidebar ? (
+                  <>
+                    <button
+                      onClick={() => setCommentHideCompleted(prev => !prev)}
+                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentHideCompleted ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+                      title={commentHideCompleted ? 'Show resolved' : 'Hide resolved'}
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button
+                      onClick={() => setCommentSortMode(prev => {
+                        const modes: typeof prev[] = ['script', 'oldest', 'newest', 'unresolved'];
+                        return modes[(modes.indexOf(prev) + 1) % modes.length];
+                      })}
+                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentSortMode !== 'script' ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+                      title={`Sort: ${commentSortMode}`}
+                    >
+                      <ArrowUpDown size={14} />
+                    </button>
+                  </>
+                ) : undefined}
               />
             )}
         </SceneSidebarShell>
@@ -945,6 +982,7 @@ export function ScriptEditorClient({
                 activeBeatId={activeBeatId}
                 onUpdateBeat={handleUpdateBeat}
                 onSelectScene={setActiveSceneId}
+                onSelectBeat={(beatId) => setActiveBeatId(beatId)}
                 onUploadReference={handleUploadReference}
                 onDeleteReference={handleDeleteReference}
                 castMap={castMap}
@@ -1022,6 +1060,34 @@ export function ScriptEditorClient({
             )}
           </div>
         </div>
+
+        {/* Comments sidebar — story mode */}
+        {contentMode === 'story' && showCommentsSidebar && selectedShareId && (
+          <CommentSidebar
+            shareId={selectedShareId}
+            currentBeatId={activeBeatId}
+            viewerEmail="admin"
+            viewerName={null}
+            open={showCommentsSidebar}
+            onToggle={() => setShowCommentsSidebar(false)}
+            refreshKey={commentRefreshKey}
+            slides={buildPresentationSlides(computedScenes, storyboardFrames, refsByBeat)}
+            onNavigateToBeat={(beatId) => {
+              setActiveBeatId(beatId);
+              const scene = computedScenes.find(s => s.beats.some(b => b.id === beatId));
+              if (scene) setActiveSceneId(scene.id);
+            }}
+            onCommentAdded={() => {
+              setCommentRefreshKey(k => k + 1);
+              handleRefreshComments();
+            }}
+            hideReopenButton
+            externalHideCompleted={commentHideCompleted}
+            externalSortMode={commentSortMode}
+            externalSceneFilter={commentSceneFilter}
+            externalCurrentSceneId={activeSceneId}
+          />
+        )}
       </div>
 
       {/* Panels */}

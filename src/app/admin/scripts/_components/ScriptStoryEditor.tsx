@@ -41,6 +41,7 @@ interface Props {
   activeBeatId: string | null;
   onUpdateBeat: (beatId: string, field: string, value: string) => void;
   onSelectScene: (sceneId: string) => void;
+  onSelectBeat?: (beatId: string) => void;
   onUploadReference: (beatId: string, files: FileList) => void;
   onDeleteReference: (refId: string) => void;
   castMap?: Record<string, CharacterCastWithContact[]>;
@@ -79,6 +80,7 @@ export function ScriptStoryEditor({
   activeBeatId,
   onUpdateBeat,
   onSelectScene,
+  onSelectBeat,
   onUploadReference,
   onDeleteReference,
   castMap,
@@ -126,26 +128,26 @@ export function ScriptStoryEditor({
     setIdx(i => {
       const next = Math.min(i + 1, slides.length - 1);
       const s = slides[next];
-      if (s) onSelectScene(s.sceneId);
+      if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
       return next;
     });
-  }, [slides, onSelectScene]);
+  }, [slides, onSelectScene, onSelectBeat]);
 
   const goPrev = useCallback(() => {
     setIdx(i => {
       const next = Math.max(i - 1, 0);
       const s = slides[next];
-      if (s) onSelectScene(s.sceneId);
+      if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
       return next;
     });
-  }, [slides, onSelectScene]);
+  }, [slides, onSelectScene, onSelectBeat]);
 
   const handleSeek = useCallback((i: number) => {
     const clamped = Math.max(0, Math.min(i, slides.length - 1));
     setIdx(clamped);
     const s = slides[clamped];
-    if (s) onSelectScene(s.sceneId);
-  }, [slides, onSelectScene]);
+    if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
+  }, [slides, onSelectScene, onSelectBeat]);
 
   /* ── Keyboard nav ── */
   useEffect(() => {
@@ -218,7 +220,7 @@ export function ScriptStoryEditor({
     <div className="flex-1 flex flex-col items-center overflow-y-auto admin-scrollbar px-6 pt-4 pb-8">
 
       {/* ═══ Storyboard hero — 16:9 with prev / edit / next overlay ═══ */}
-      <div className="group/hero relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base" style={{ aspectRatio: '16/9' }}>
+      {columnConfig.storyboard && <><div className="group/hero relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base" style={{ aspectRatio: '16/9' }}>
         {/* Image */}
         {beatFrames.length > 1 && currentBeat.storyboard_layout && currentBeat.storyboard_layout !== 'single' ? (
           <StoryboardLayoutRenderer
@@ -257,7 +259,7 @@ export function ScriptStoryEditor({
             className="p-3 rounded-full bg-black/50 text-white/60 hover:bg-black/70 hover:text-white transition-colors"
             title="Edit storyboard"
           >
-            <Pencil size={18} />
+            <Pencil size={22} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); goNext(); }}
@@ -311,6 +313,7 @@ export function ScriptStoryEditor({
           onLayoutChange={handleLayoutChange}
         />
       )}
+      </>}
 
       {/* ═══ Timeline ═══ */}
       <div className="w-full max-w-5xl flex-shrink-0 mt-4 mb-4">

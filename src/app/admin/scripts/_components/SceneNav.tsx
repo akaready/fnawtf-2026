@@ -49,7 +49,8 @@ interface Props {
   /** Show "New Scene" footer button (admin editor only) */
   showAddButton?: boolean;
   onAddScene?: () => void;
-
+  /** Optional action buttons rendered in the header row */
+  headerActions?: React.ReactNode;
 }
 
 function buildSlug(scene: SceneData): string {
@@ -68,6 +69,7 @@ export function SceneNav({
   onReorder,
   showAddButton = false,
   onAddScene,
+  headerActions,
 }: Props) {
   const dndId = useId();
   const sensors = useSensors(
@@ -141,6 +143,12 @@ export function SceneNav({
             </button>
           )}
           <span className="text-xs font-semibold uppercase tracking-widest text-admin-text-faint">Scenes</span>
+          {headerActions && <div className="flex items-center gap-0.5">{headerActions}</div>}
+        </div>
+      )}
+      {!showHeader && headerActions && (
+        <div className="flex items-center justify-end gap-0.5 px-3 py-2 border-b border-admin-border flex-shrink-0">
+          {headerActions}
         </div>
       )}
 
