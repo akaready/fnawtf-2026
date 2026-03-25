@@ -28,8 +28,7 @@ import { ScriptSceneSidebar } from './ScriptSceneSidebar';
 import { SceneNav } from './SceneNav';
 import { SceneSidebarShell } from './SceneSidebarShell';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
-import { ScriptPresentation } from './ScriptPresentation';
-import { buildPresentationSlides } from './presentationUtils';
+import { ScriptStoryEditor } from './ScriptStoryEditor';
 import { ScriptCharactersPanel } from './ScriptCharactersPanel';
 import { ScriptTagsPanel } from './ScriptTagsPanel';
 import { ScriptLocationsPanel } from './ScriptLocationsPanel';
@@ -110,7 +109,6 @@ export function ScriptEditorClient({
     if (stored === 'true') setShowSidebar(true);
   }, [script.id]);
   const [isFocused, setIsFocused] = useState(false);
-  const [showPresentation, setShowPresentation] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
@@ -832,13 +830,15 @@ export function ScriptEditorClient({
           {/* Mode toggle — table / scratchpad */}
           <ViewSwitcher
             views={[
+              { key: 'story' as ContentMode, icon: Play, label: 'Story' },
               { key: 'table' as ContentMode, icon: Table2, label: 'Table' },
               { key: 'scratchpad' as ContentMode, icon: ScrollText, label: 'Scratchpad' },
             ]}
             activeView={contentMode}
             onChange={(mode) => {
-              if (mode === 'scratchpad' && contentMode === 'table') handleModeSwitch();
-              if (mode === 'table' && contentMode === 'scratchpad') setShowExtractModal(true);
+              if (mode === 'scratchpad' && contentMode !== 'scratchpad') handleModeSwitch();
+              else if (mode !== 'scratchpad' && contentMode === 'scratchpad') setShowExtractModal(true);
+              else setContentMode(mode);
             }}
           />
           <div className="w-2" />
@@ -867,17 +867,10 @@ export function ScriptEditorClient({
           >
             <SeparatorVertical size={16} />
           </button>
-          <button
-            onClick={() => setShowPresentation(true)}
-            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors"
-            title="Present"
-          >
-            <Play size={16} />
-          </button>
         </div>
         {/* Center zone */}
         <div className="flex-1 flex justify-center items-center gap-4">
-          {contentMode === 'table' && (
+          {contentMode !== 'scratchpad' && (
             <ScriptColumnToggle config={columnConfig} onChange={handleColumnConfigChange} compact columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} />
           )}
         </div>
@@ -929,7 +922,45 @@ export function ScriptEditorClient({
         {/* Main editor — constrained by container width toggle */}
         <div className="flex-1 min-w-0 min-h-0 h-full">
           <div className={`h-full flex flex-col transition-[max-width,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] border-l border-r ${containerIdx > 0 ? `${CONTAINER_WIDTHS[containerIdx]} mx-auto border-admin-border` : 'border-transparent'}`}>
-            {contentMode === 'table' ? (
+            {contentMode === 'story' ? (
+              <ScriptStoryEditor
+                scenes={computedScenes}
+                columnConfig={columnConfig}
+                columnOrder={columnOrder}
+                onColumnConfigChange={handleColumnConfigChange}
+                onColumnOrderChange={setColumnOrder}
+                characters={characters}
+                tags={tags}
+                locations={locations}
+                products={products}
+                references={refsByBeat}
+                storyboardFrames={storyboardFrames}
+                scriptStyle={scriptStyle}
+                styleReferences={styleReferences}
+                scriptId={script.id}
+                scriptGroupId={script.script_group_id!}
+                onFrameGenerated={handleFrameChange}
+                onFramesBatchChange={handleFramesBatchChange}
+                activeSceneId={activeSceneId}
+                activeBeatId={activeBeatId}
+                onUpdateBeat={handleUpdateBeat}
+                onSelectScene={setActiveSceneId}
+                onUploadReference={handleUploadReference}
+                onDeleteReference={handleDeleteReference}
+                castMap={castMap}
+                referenceMap={referenceMap}
+                locationReferenceMap={locationReferenceMap}
+                scriptTitle={script.title}
+                scriptVersion={script.major_version}
+                onImageMove={handleImageMove}
+                groupShares={groupShares}
+                selectedShareId={selectedShareId}
+                onSelectShare={setSelectedShareId}
+                commentsMap={commentsMap}
+                commentsLoading={commentsLoading}
+                onRefreshComments={handleRefreshComments}
+              />
+            ) : contentMode === 'table' ? (
               <ScriptEditorCanvas
                 scenes={computedScenes}
                 columnConfig={columnConfig}
@@ -1062,18 +1093,6 @@ export function ScriptEditorClient({
         scriptGroupId={script.script_group_id!}
         onNavigate={(id) => { setShowVersions(false); router.push(`/admin/scripts/${id}`); }}
       />
-      {showPresentation && (
-        <ScriptPresentation
-          slides={buildPresentationSlides(computedScenes, storyboardFrames, refsByBeat)}
-          columnConfig={columnConfig}
-          onClose={() => setShowPresentation(false)}
-          scriptTitle={script.title}
-          clientName={script.project?.client_name}
-          clientLogoUrl={script.project?.client?.logo_url}
-          versionLabel={formatScriptVersion(script.major_version, script.minor_version, script.is_published)}
-        />
-      )}
-
       <ScriptExtractModal
         open={showExtractModal}
         onClose={() => setShowExtractModal(false)}

@@ -163,7 +163,7 @@ function ReplyInput({ shareId, parentId, onDone, onFocusChange }: { shareId: str
         />
         <button
           onClick={submit}
-          className={`min-h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}
+          className={`self-stretch w-8 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}
         >
           <Send size={12} />
         </button>
@@ -314,7 +314,7 @@ function NewComment({ shareId, beatId, onDone }: { shareId: string; beatId: stri
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } }}
           placeholder="New comment..." className="flex-1 w-full bg-admin-bg-base border border-admin-border rounded-admin-md px-2 py-1 text-admin-sm leading-5 text-admin-text-primary placeholder:text-admin-text-faint resize-none overflow-hidden focus:outline-none focus:border-admin-text-muted min-h-7 transition-all duration-200" />
         <button onClick={submit} disabled={!text.trim() || sending}
-          className={`min-h-7 w-7 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}>
+          className={`self-stretch w-8 flex-shrink-0 flex items-center justify-center rounded-admin-md border transition-colors ${text.trim() ? 'bg-admin-text-primary text-admin-bg-base border-admin-text-primary hover:opacity-90' : 'text-admin-text-faint border-admin-border'}`}>
           <Send size={12} />
         </button>
       </div>
