@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2 } from 'lucide-react';
+import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { useDirectionalFill } from '@/hooks/useDirectionalFill';
@@ -350,11 +351,25 @@ export function ScriptShareClient({
             <SeparatorVertical size={16} />
           </button>
         </div>
-        {/* Dots — absolutely centered to match header centering */}
+        {/* Center — view mode toggle */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto">
-            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
+            <ViewSwitcher
+              views={[
+                { key: 'presentation' as const, icon: Play, label: 'Story View' },
+                { key: 'table' as const, icon: Table2, label: 'Table View' },
+              ]}
+              activeView="table"
+              showLabels
+              onChange={(mode) => {
+                if (mode === 'presentation') setShowIntro(true);
+              }}
+            />
           </div>
+        </div>
+        {/* Right — column dots */}
+        <div className="ml-auto flex-shrink-0">
+          <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
         </div>
       </div>
 
