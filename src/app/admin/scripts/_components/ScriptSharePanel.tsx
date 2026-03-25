@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Plus, ExternalLink, Trash2 } from 'lucide-react';
+import { X, Copy, Check, Plus, ExternalLink, Trash2, Play, Table2 } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
-import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import { getScriptShares, getNextShareVersion, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
 import type { ScriptShareRow, SharePreferences } from '@/types/scripts';
 import { resolveSharePreferences } from '@/types/scripts';
@@ -145,18 +144,6 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
         <div className="flex-1 flex min-h-0">
           {/* Left sidebar */}
           <div className="w-[220px] flex-shrink-0 border-r border-admin-border flex flex-col">
-            {/* Add button */}
-            <div className="flex-shrink-0 border-b border-admin-border px-3 py-3">
-              <button
-                onClick={handleCreate}
-                disabled={creating}
-                className="w-full flex items-center gap-1.5 px-4 text-xs text-admin-text-muted hover:text-admin-text-primary bg-admin-bg-active hover:bg-admin-bg-hover-strong border border-transparent rounded-lg h-[36px] transition-colors disabled:opacity-40"
-              >
-                <Plus size={12} />
-                {creating ? 'Creating...' : `Create v${nextMajor}`}
-              </button>
-            </div>
-
             {/* List */}
             <div className="flex-1 overflow-y-auto admin-scrollbar-auto py-2">
               {loading && shares.length === 0 && (
@@ -179,7 +166,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
                         {share.snapshot_major_version ? `v${share.snapshot_major_version}` : 'Legacy'}
                       </span>
                       <span className="text-admin-sm text-admin-text-faint">
-                        {share.view_count} view{share.view_count !== 1 ? 's' : ''}
+                        {new Date(share.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                   </button>
@@ -213,7 +200,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
           </div>
 
           {/* Right detail pane */}
-          <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar-auto">
+          <div className="flex-1 min-w-0 flex flex-col">
             {selected ? (
               <ShareDetail
                 share={selected}
@@ -224,7 +211,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
                 onUpdate={handleUpdate}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-admin-sm text-admin-text-faint">
+              <div className="flex items-center justify-center flex-1 text-admin-sm text-admin-text-faint">
                 {shares.length === 0 ? 'Create a shareable version to get started.' : 'Select a link to edit.'}
               </div>
             )}
@@ -232,30 +219,39 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
         </div>
 
         {/* Footer */}
-        <PanelFooter
-          onSave={onClose}
-          saveLabel="Done"
-          saveIcon={false}
-          secondaryActions={
-            selected ? (
-              <button
-                onClick={() => window.open(`/s/${selected.token}`, '_blank')}
-                className="btn-info inline-flex items-center gap-2 px-4 py-2.5 text-sm"
-              >
-                <ExternalLink size={14} />
-                View
-              </button>
-            ) : (
-              <button
-                onClick={() => window.open(`/s/preview/${scriptId}`, '_blank')}
-                className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
-              >
-                <ExternalLink size={14} />
-                Preview
-              </button>
-            )
-          }
-        />
+        <div className="flex items-center gap-2 px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+          >
+            <Plus size={14} />
+            {creating ? 'Creating...' : `Create v${nextMajor}`}
+          </button>
+          {selected ? (
+            <button
+              onClick={() => window.open(`/s/${selected.token}`, '_blank')}
+              className="btn-info inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+            >
+              <ExternalLink size={14} />
+              View
+            </button>
+          ) : (
+            <button
+              onClick={() => window.open(`/s/preview/${scriptId}`, '_blank')}
+              className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+            >
+              <ExternalLink size={14} />
+              Preview
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm ml-auto"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </PanelDrawer>
   );
@@ -302,16 +298,17 @@ function SharePreferencesControls({
       <div className="space-y-1.5">
         <label className="admin-label">Default View</label>
         <div className="flex gap-0.5 bg-admin-bg-inset border border-admin-border rounded-admin-md p-0.5">
-          {([['story', 'Story'], ['table', 'Table']] as const).map(([mode, label]) => (
+          {([['story', 'Story', Play], ['table', 'Table', Table2]] as const).map(([mode, label, Icon]) => (
             <button
               key={mode}
               onClick={() => { if (prefs.default_view !== mode) update({ default_view: mode }); }}
-              className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors ${
+              className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors inline-flex items-center justify-center gap-1.5 ${
                 prefs.default_view === mode
-                  ? 'bg-admin-text-primary text-admin-bg-base'
+                  ? 'bg-admin-warning/15 text-admin-warning'
                   : 'text-admin-text-ghost hover:text-admin-text-muted'
               }`}
             >
+              <Icon size={13} />
               {label}
             </button>
           ))}
@@ -334,7 +331,7 @@ function SharePreferencesControls({
                 if (!next && prefs.default_view === 'story') patch.default_view = 'table';
                 update(patch);
               }}
-              className="accent-admin-accent"
+              className="accent-[var(--admin-warning)]"
             />
             <span className="text-admin-sm text-admin-text-primary">Allow Story View</span>
           </label>
@@ -350,7 +347,7 @@ function SharePreferencesControls({
                 if (!next && prefs.default_view === 'table') patch.default_view = 'story';
                 update(patch);
               }}
-              className="accent-admin-accent"
+              className="accent-[var(--admin-warning)]"
             />
             <span className="text-admin-sm text-admin-text-primary">Allow Table View</span>
           </label>
@@ -369,7 +366,7 @@ function SharePreferencesControls({
                   type="checkbox"
                   checked={checked}
                   onChange={() => update({ table_columns: { ...prefs.table_columns, [key]: !checked } })}
-                  className="accent-admin-accent"
+                  className="accent-[var(--admin-warning)]"
                 />
                 <span className="text-admin-sm text-admin-text-primary">{label}</span>
               </label>
@@ -390,7 +387,7 @@ function SharePreferencesControls({
                   type="checkbox"
                   checked={checked}
                   onChange={() => update({ presentation_columns: { ...prefs.presentation_columns, [key]: !checked } })}
-                  className="accent-admin-accent"
+                  className="accent-[var(--admin-warning)]"
                 />
                 <span className="text-admin-sm text-admin-text-primary">{label}</span>
               </label>
@@ -421,6 +418,7 @@ function ShareDetail({
 }) {
   const [accessCode, setAccessCode] = useState(share.access_code);
   const [notes, setNotes] = useState(share.notes ?? '');
+  const [activeTab, setActiveTab] = useState<'details' | 'views'>('details');
 
   useEffect(() => {
     setAccessCode(share.access_code);
@@ -430,110 +428,120 @@ function ShareDetail({
   const fullUrl = `fna.wtf/s/${share.token}`;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Link */}
-      <div className="space-y-1.5">
-        <label className="admin-label">Share URL</label>
-        <div className="flex items-center gap-2 bg-admin-bg-inset border border-admin-border-subtle rounded-admin-md px-3 py-2.5">
-          <code className="flex-1 text-admin-base font-admin-mono text-admin-text-secondary truncate">
-            {fullUrl}
-          </code>
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* Tab strip */}
+      <div className="flex items-center gap-1 border-b border-admin-border px-6 py-2 flex-shrink-0 bg-admin-bg-wash">
+        {(['details', 'views'] as const).map(tab => (
           <button
-            onClick={() => onCopyLink(share.token, share.id)}
-            className="w-7 h-7 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
-            title="Copy link"
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-3 py-1 text-admin-sm font-medium rounded-admin-sm transition-colors ${
+              activeTab === tab
+                ? 'bg-admin-bg-active text-admin-text-primary'
+                : 'text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover'
+            }`}
           >
-            {copiedId === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
+            {tab === 'details' ? 'Details' : 'Views'}
           </button>
-        </div>
+        ))}
       </div>
 
-      {/* Share preferences */}
-      <SharePreferencesControls share={share} onUpdate={onUpdate} />
-
-      {/* Version header */}
-      <div className="flex items-center gap-3 py-1">
-        <span className="text-admin-lg font-bold text-admin-cream">
-          {share.snapshot_major_version ? `v${share.snapshot_major_version}` : 'Legacy share'}
-        </span>
-        <span className="text-admin-sm text-admin-text-faint">
-          Created {new Date(share.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </span>
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-admin-border-subtle" />
-
-      {/* Access code */}
-      <div className="space-y-1.5">
-        <label className="admin-label">Access Code</label>
-        <div className="flex items-center gap-2">
-          <input
-            value={accessCode}
-            onChange={e => setAccessCode(e.target.value)}
-            onBlur={() => { if (accessCode !== share.access_code) onUpdate(share.id, { access_code: accessCode }); }}
-            className="admin-input flex-1 font-admin-mono"
-          />
-          <button
-            onClick={() => onCopyCode(share.access_code, share.id)}
-            className="w-10 h-10 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 border border-admin-border-subtle"
-            title="Copy access code"
-          >
-            {copiedCode === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-1.5">
-        <label className="admin-label">What to Look For</label>
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          onBlur={() => { if (notes !== (share.notes ?? '')) onUpdate(share.id, { notes: notes || undefined }); }}
-          placeholder="Guidance for the reviewer..."
-          rows={4}
-          className="admin-input w-full resize-none leading-relaxed"
-        />
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-admin-border-subtle" />
-
-      {/* Views */}
-      <div className="space-y-3">
-        <label className="admin-label">
-          Views ({share.view_count})
-        </label>
-        {share.views.length === 0 ? (
-          <p className="text-admin-sm text-admin-text-faint">No views yet</p>
-        ) : (
-          <div className="space-y-1">
-            {share.views
-              .sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime())
-              .map(view => (
-                <div
-                  key={view.id}
-                  className="flex items-center gap-3 px-3 py-2 rounded-admin-sm bg-admin-bg-inset text-admin-sm"
+      {/* Tab content */}
+      <div className="flex-1 overflow-y-auto admin-scrollbar-auto">
+        {activeTab === 'details' ? (
+          <div className="p-6 space-y-6">
+            {/* Link */}
+            <div className="space-y-1.5">
+              <label className="admin-label">Share URL</label>
+              <div className="flex items-center gap-2 bg-admin-bg-inset border border-admin-border-subtle rounded-admin-md px-3 py-2.5">
+                <code className="flex-1 text-admin-base font-admin-mono text-admin-text-secondary truncate">
+                  {fullUrl}
+                </code>
+                <button
+                  onClick={() => onCopyLink(share.token, share.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-admin-sm text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+                  title="Copy link"
                 >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-admin-text-primary font-medium">
-                      {view.viewer_name || 'Anonymous'}
-                    </span>
-                    {view.viewer_email && (
-                      <span className="text-admin-text-faint ml-1.5">
-                        {view.viewer_email}
+                  {copiedId === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Access code */}
+            <div className="space-y-1.5">
+              <label className="admin-label">Access Code</label>
+              <div className="flex items-center gap-2">
+                <input
+                  value={accessCode}
+                  onChange={e => setAccessCode(e.target.value)}
+                  onBlur={() => { if (accessCode !== share.access_code) onUpdate(share.id, { access_code: accessCode }); }}
+                  className="admin-input flex-1 font-admin-mono"
+                />
+                <button
+                  onClick={() => onCopyCode(share.access_code, share.id)}
+                  className="w-10 h-10 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 border border-admin-border-subtle"
+                  title="Copy access code"
+                >
+                  {copiedCode === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <label className="admin-label">What to Look For</label>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                onBlur={() => { if (notes !== (share.notes ?? '')) onUpdate(share.id, { notes: notes || undefined }); }}
+                placeholder="Guidance for the reviewer..."
+                rows={4}
+                className="admin-input w-full resize-none leading-relaxed"
+              />
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-admin-border-subtle" />
+
+            {/* Share preferences / settings */}
+            <SharePreferencesControls share={share} onUpdate={onUpdate} />
+          </div>
+        ) : (
+          <div className="p-6 space-y-3">
+            <label className="admin-label">
+              Views ({share.view_count})
+            </label>
+            {share.views.length === 0 ? (
+              <p className="text-admin-sm text-admin-text-faint">No views yet</p>
+            ) : (
+              <div className="space-y-1">
+                {share.views
+                  .sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime())
+                  .map(view => (
+                    <div
+                      key={view.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-admin-sm bg-admin-bg-inset text-admin-sm"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className="text-admin-text-primary font-medium">
+                          {view.viewer_name || 'Anonymous'}
+                        </span>
+                        {view.viewer_email && (
+                          <span className="text-admin-text-faint ml-1.5">
+                            {view.viewer_email}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-admin-text-ghost font-admin-mono text-xs flex-shrink-0">
+                        {formatDuration(view.duration_seconds)}
                       </span>
-                    )}
-                  </div>
-                  <span className="text-admin-text-ghost font-admin-mono text-xs flex-shrink-0">
-                    {formatDuration(view.duration_seconds)}
-                  </span>
-                  <span className="text-admin-text-ghost text-xs flex-shrink-0">
-                    {timeAgo(view.viewed_at)}
-                  </span>
-                </div>
-              ))}
+                      <span className="text-admin-text-ghost text-xs flex-shrink-0">
+                        {timeAgo(view.viewed_at)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
       </div>
