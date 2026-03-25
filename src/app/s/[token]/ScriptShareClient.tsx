@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, X, Camera } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { DEFAULT_COLUMN_ORDER } from '@/app/admin/scripts/_components/gridUtils';
@@ -554,11 +555,14 @@ export function ScriptShareClient({
           </div>
         </div>
         {/* Right — mode-dependent controls */}
-        <div className="ml-auto flex-shrink-0">
+        <div className="ml-auto flex-shrink-0 overflow-hidden">
+          <AnimatePresence mode="wait">
           {viewMode === 'table' ? (
-            excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null
+            <motion.div key="table-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}>
+            {excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null}
+            </motion.div>
           ) : (
-            <div className="ml-auto flex-shrink-0 flex items-center gap-1">
+            <motion.div key="story-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="flex items-center gap-1">
               {/* Filter dropdown */}
               <div className="relative" ref={filterDropdownRef}>
                 <button
@@ -633,8 +637,9 @@ export function ScriptShareClient({
                   Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
                 </span>
               </button>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -661,8 +666,9 @@ export function ScriptShareClient({
           />
         </SceneSidebarShell>
 
+        <AnimatePresence mode="wait">
         {viewMode === 'table' ? (
-          <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
+          <motion.div key="table-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
             <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
               <ReadOnlyCanvas
                   scenes={computedScenes}
@@ -679,8 +685,9 @@ export function ScriptShareClient({
                   onRefreshComments={loadComments}
                 />
               </div>
-            </div>
+            </motion.div>
         ) : (
+          <motion.div key="story-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="flex-1 flex min-h-0">
           <ScriptPresentationView
             slides={presentationSlides}
             onClose={() => setShowIntro(true)}
@@ -709,7 +716,9 @@ export function ScriptShareClient({
             currentSceneId={presentationActiveSceneId}
             onSlideChange={(sceneId, beatId) => { setPresentationActiveSceneId(sceneId); setPresentationActiveBeatId(beatId); }}
           />
+          </motion.div>
         )}
+        </AnimatePresence>
       </div>
 
     </div>
