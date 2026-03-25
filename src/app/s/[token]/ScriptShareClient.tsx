@@ -112,7 +112,9 @@ export function ScriptShareClient({
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const userPopoverRef = useRef<HTMLDivElement>(null);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
   const presentationNavRef = useRef<{
     jumpToScene: (sceneId: string) => void;
@@ -154,25 +156,25 @@ export function ScriptShareClient({
     return () => document.removeEventListener('mousedown', handler);
   }, [userPopoverOpen]);
 
-  // Click-outside handler for filter dropdown
+  // Click-outside handler for filter dropdown (check both trigger + portaled menu)
   useEffect(() => {
     if (!filterDropdownOpen) return;
     const handler = (e: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
-        setFilterDropdownOpen(false);
-      }
+      const t = e.target as Node;
+      if (filterDropdownRef.current?.contains(t) || filterMenuRef.current?.contains(t)) return;
+      setFilterDropdownOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [filterDropdownOpen]);
 
-  // Click-outside handler for sort dropdown
+  // Click-outside handler for sort dropdown (check both trigger + portaled menu)
   useEffect(() => {
     if (!sortDropdownOpen) return;
     const handler = (e: MouseEvent) => {
-      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
-        setSortDropdownOpen(false);
-      }
+      const t = e.target as Node;
+      if (sortDropdownRef.current?.contains(t) || sortMenuRef.current?.contains(t)) return;
+      setSortDropdownOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -574,6 +576,7 @@ export function ScriptShareClient({
                 </button>
                 {filterDropdownOpen && createPortal(
                   <div
+                    ref={filterMenuRef}
                     className="fixed bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[180px] z-[9999]"
                     style={{
                       top: (filterDropdownRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
@@ -614,6 +617,7 @@ export function ScriptShareClient({
                 </button>
                 {sortDropdownOpen && createPortal(
                   <div
+                    ref={sortMenuRef}
                     className="fixed bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[170px] z-[9999]"
                     style={{
                       top: (sortDropdownRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
