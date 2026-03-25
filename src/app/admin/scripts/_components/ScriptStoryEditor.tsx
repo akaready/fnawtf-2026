@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ScriptBeatCell } from './ScriptBeatCell';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
 import { ScriptCommentsCell } from './ScriptCommentsCell';
+import { ScriptCommentsVersionPicker } from './ScriptCommentsVersionPicker';
 import { ScriptPresentationTimeline } from './ScriptPresentationTimeline';
 import { StoryboardLayoutRenderer } from './StoryboardLayoutRenderer';
 import { StoryboardGenerateModal } from './StoryboardGenerateModal';
@@ -90,11 +91,11 @@ export function ScriptStoryEditor({
   referenceMap,
   locationReferenceMap,
   scriptTitle: _scriptTitle,
-  scriptVersion: _scriptVersion,
+  scriptVersion,
   onImageMove,
-  groupShares: _groupShares,
+  groupShares,
   selectedShareId,
-  onSelectShare: _onSelectShare,
+  onSelectShare,
   commentsMap,
   commentsLoading: _commentsLoading,
   onRefreshComments,
@@ -113,10 +114,10 @@ export function ScriptStoryEditor({
   useEffect(() => {
     if (activeBeatId) {
       const i = slides.findIndex(s => s.beatId === activeBeatId);
-      if (i >= 0 && i !== idx) setIdx(i);
+      if (i >= 0) setIdx(i);
     } else if (activeSceneId) {
       const i = slides.findIndex(s => s.sceneId === activeSceneId);
-      if (i >= 0 && i !== idx) setIdx(i);
+      if (i >= 0) setIdx(i);
     }
   }, [activeBeatId, activeSceneId, slides]);
 
@@ -204,6 +205,23 @@ export function ScriptStoryEditor({
 
   /* ── Comments for current beat ── */
   const beatComments = current ? (commentsMap.get(current.beatId) ?? []) : [];
+
+  /* ── Build comment authors map for timeline avatars ── */
+  const commentAuthors = useMemo(() => {
+    const authors: Record<string, { email: string; name: string | null; avatar_url: string | null; avatar_color: string | null }[]> = {};
+    for (const [beatId, comments] of commentsMap) {
+      const seen = new Set<string>();
+      const beatAuthors: typeof authors[string] = [];
+      for (const c of comments) {
+        if (!c.parent_comment_id && !seen.has(c.viewer_email)) {
+          seen.add(c.viewer_email);
+          beatAuthors.push({ email: c.viewer_email, name: c.viewer_name, avatar_url: null, avatar_color: null });
+        }
+      }
+      if (beatAuthors.length > 0) authors[beatId] = beatAuthors;
+    }
+    return authors;
+  }, [commentsMap]);
 
   /* ── Storyboard generate modal ── */
   const [modalOpen, setModalOpen] = useState(false);
@@ -325,6 +343,7 @@ export function ScriptStoryEditor({
           slides={slides}
           currentIndex={idx}
           onSeek={handleSeek}
+          commentAuthors={commentAuthors}
         />
       </div>
 
@@ -452,7 +471,15 @@ export function ScriptStoryEditor({
               transition={{ duration: 0.25 }}
               className="border-l-2 border-l-[var(--admin-cream)] border-t border-admin-border bg-admin-bg-base px-4 py-3"
             >
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-ghost mb-1.5">Comments</p>
+              <div className="relative group/colhdr flex items-center mb-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-ghost">Comments</p>
+                <ScriptCommentsVersionPicker
+                  shares={groupShares}
+                  selectedShareId={selectedShareId}
+                  currentMajorVersion={scriptVersion}
+                  onSelect={onSelectShare}
+                />
+              </div>
               <ScriptCommentsCell
                 comments={beatComments}
                 shareId={selectedShareId ?? undefined}

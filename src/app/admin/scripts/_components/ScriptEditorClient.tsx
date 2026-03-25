@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, History } from 'lucide-react';
+import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
@@ -31,6 +31,7 @@ import { SceneSidebarShell } from './SceneSidebarShell';
 import { ScriptColumnToggle } from './ScriptColumnToggle';
 import { ScriptStoryEditor } from './ScriptStoryEditor';
 import { CommentSidebar } from '@/app/s/[token]/CommentSidebar';
+import { ScriptCommentsVersionPicker } from './ScriptCommentsVersionPicker';
 import { buildPresentationSlides } from './presentationUtils';
 import { ScriptCharactersPanel } from './ScriptCharactersPanel';
 import { ScriptTagsPanel } from './ScriptTagsPanel';
@@ -117,6 +118,8 @@ export function ScriptEditorClient({
   const [commentHideCompleted, setCommentHideCompleted] = useState(false);
   const [commentSortMode, setCommentSortMode] = useState<'script' | 'oldest' | 'newest' | 'unresolved'>('script');
   const [commentSceneFilter, _setCommentSceneFilter] = useState<'current' | 'all'>('all');
+  const [commentFilterOpen, setCommentFilterOpen] = useState(false);
+  const [commentSortOpen, setCommentSortOpen] = useState(false);
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
@@ -124,7 +127,7 @@ export function ScriptEditorClient({
 
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
   const [versions, setVersions] = useState<{ id: string; version: number; status: string; created_at: string; major_version: number; minor_version: number; is_published: boolean; content_mode?: string }[]>([]);
-  const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'table');
+  const [contentMode, setContentMode] = useState<ContentMode>(initialScript.content_mode ?? 'story');
   const [scratchContent, setScratchContent] = useState(initialScript.scratch_content ?? '');
   const [showExtractModal, setShowExtractModal] = useState(false);
   const [scratchScenes, setScratchScenes] = useState<ScratchScene[]>([]);
@@ -1057,55 +1060,69 @@ export function ScriptEditorClient({
               {/* Toolbar header */}
               <div className="h-8 flex items-center justify-end px-2 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
                 <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => setCommentHideCompleted(prev => !prev)}
-                    className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentHideCompleted ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
-                    title={commentHideCompleted ? 'Show resolved' : 'Hide resolved'}
-                  >
-                    <Eye size={14} />
-                  </button>
-                  <button
-                    onClick={() => setCommentSortMode(prev => {
-                      const modes: typeof prev[] = ['script', 'oldest', 'newest', 'unresolved'];
-                      return modes[(modes.indexOf(prev) + 1) % modes.length];
-                    })}
-                    className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentSortMode !== 'script' ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
-                    title={`Sort: ${commentSortMode}`}
-                  >
-                    <ArrowUpDown size={14} />
-                  </button>
+                  {/* Filter (eye) — dropdown */}
                   <div className="relative">
                     <button
-                      onClick={() => {
-                        const el = document.getElementById('story-version-picker');
-                        if (el) el.classList.toggle('hidden');
-                      }}
-                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${
-                        (() => {
-                          const sel = groupShares.find(s => s.id === selectedShareId);
-                          return sel?.snapshot_major_version != null && sel.snapshot_major_version !== script.major_version;
-                        })() ? 'bg-admin-bg-active text-admin-text-secondary' : ''
-                      }`}
-                      title="Switch version"
+                      onClick={() => { setCommentFilterOpen(prev => !prev); setCommentSortOpen(false); }}
+                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentHideCompleted ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+                      title="Filter comments"
                     >
-                      <History size={14} />
+                      <Eye size={14} />
                     </button>
-                    <div id="story-version-picker" className="hidden absolute top-full right-0 mt-1 z-30 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[80px]">
-                      {groupShares.map(s => {
-                        const ver = s.snapshot_major_version ?? 0;
-                        const color = versionColor(ver);
-                        return (
+                    {commentFilterOpen && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setCommentFilterOpen(false)} />
+                        <div className="absolute top-full right-0 mt-1 z-30 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[160px]">
                           <button
-                            key={s.id}
-                            onClick={() => { setSelectedShareId(s.id); document.getElementById('story-version-picker')?.classList.add('hidden'); handleRefreshComments(); }}
-                            className={`w-full px-3 py-1.5 text-left text-admin-sm hover:bg-admin-bg-hover transition-colors flex items-center gap-2 ${s.id === selectedShareId ? 'bg-admin-bg-active' : ''}`}
+                            onClick={() => setCommentHideCompleted(prev => !prev)}
+                            className="w-full text-left px-3 py-2 text-admin-sm text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5"
                           >
-                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                            <span className="text-admin-text-primary">v{ver}</span>
+                            <span className={`w-4 h-4 flex items-center justify-center rounded border transition-colors ${commentHideCompleted ? 'bg-admin-info border-admin-info' : 'border-admin-border'}`}>
+                              {commentHideCompleted && <Check size={10} className="text-white" strokeWidth={3} />}
+                            </span>
+                            Hide resolved
                           </button>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* Sort — dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setCommentSortOpen(prev => !prev); setCommentFilterOpen(false); }}
+                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentSortMode !== 'script' ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+                      title={`Sort: ${commentSortMode}`}
+                    >
+                      <ArrowUpDown size={14} />
+                    </button>
+                    {commentSortOpen && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setCommentSortOpen(false)} />
+                        <div className="absolute top-full right-0 mt-1 z-30 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[160px]">
+                          {(['script', 'oldest', 'newest', 'unresolved'] as const).map(mode => (
+                            <button
+                              key={mode}
+                              onClick={() => { setCommentSortMode(mode); setCommentSortOpen(false); }}
+                              className={`w-full text-left px-3 py-2 text-admin-sm hover:bg-admin-bg-hover transition-colors flex items-center gap-2.5 ${commentSortMode === mode ? 'text-admin-text-primary' : 'text-admin-text-muted'}`}
+                            >
+                              <span className={`w-4 h-4 flex items-center justify-center rounded border transition-colors ${commentSortMode === mode ? 'bg-admin-info border-admin-info' : 'border-admin-border'}`}>
+                                {commentSortMode === mode && <Check size={10} className="text-white" strokeWidth={3} />}
+                              </span>
+                              {mode === 'script' ? 'Script order' : mode.charAt(0).toUpperCase() + mode.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* Version picker — override absolute positioning for inline use */}
+                  <div className="relative group/colhdr [&>div]:!static [&>div]:!translate-y-0 [&>div>button]:!p-0 w-7 h-7 flex items-center justify-center">
+                    <ScriptCommentsVersionPicker
+                      shares={groupShares}
+                      selectedShareId={selectedShareId}
+                      currentMajorVersion={script.major_version}
+                      onSelect={(id) => { setSelectedShareId(id); handleRefreshComments(); }}
+                    />
                   </div>
                 </div>
               </div>

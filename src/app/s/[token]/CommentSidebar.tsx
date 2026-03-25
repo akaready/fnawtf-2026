@@ -929,7 +929,7 @@ export function CommentSidebar({
 
       {/* Sidebar */}
       <div
-        className={`h-full border-l border-admin-border bg-[#030303] overflow-hidden z-10 relative transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[320px]' : 'w-0'}`}
+        className={`h-full border-l border-admin-border bg-admin-bg-sidebar overflow-hidden z-10 relative transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[320px]' : 'w-0'}`}
       >
         <div className="w-[320px] h-full flex flex-col">
           {/* Header — hidden when toolbar provides controls */}
