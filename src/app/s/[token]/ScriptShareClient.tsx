@@ -331,16 +331,7 @@ export function ScriptShareClient({
   return (
     <div className="flex flex-col h-screen bg-black text-foreground">
       {/* Title header — collapses in focus mode */}
-      <AnimatePresence>
-      {!isFocused && (
-        <motion.div
-          key="share-header"
-          initial={false}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -100, opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="overflow-hidden"
-        >
+      <div className={`flex-shrink-0 transition-[max-height,opacity,border-bottom-width] ease-[cubic-bezier(0.22,1,0.36,1)] overflow-hidden ${isFocused ? 'max-h-0 opacity-0 duration-300' : 'max-h-[10rem] duration-500'}`}>
           {/* Mobile header */}
           <div className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
             <div className="flex-1 min-w-0">
@@ -575,9 +566,7 @@ export function ScriptShareClient({
               </div>
             </div>
           </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
+      </div>
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0 overflow-hidden">

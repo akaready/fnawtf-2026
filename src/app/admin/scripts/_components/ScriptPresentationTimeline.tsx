@@ -155,9 +155,9 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
 
   // Compute which scene boundary labels to show by checking for collisions
   // Estimate label width: ~9px per character + 16px padding
-  const charWidth = 9;
-  const labelPad = 16;
-  const minGap = 8; // minimum px gap between labels
+  const charWidth = 7;
+  const labelPad = 12;
+  const minGap = 4; // minimum px gap between labels
 
   // Build candidate labels at each density level
   const sceneBoundaryIndices = Array.from(sceneBoundarySet).sort((a, b) => a - b);
@@ -177,42 +177,50 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
     });
   }
 
-  function hasCollisions(candidates: LabelCandidate[]): boolean {
-    for (let i = 1; i < candidates.length; i++) {
-      const prev = candidates[i - 1];
-      const curr = candidates[i];
+  // Greedy label placement: show as many labels as fit without overlap
+  function greedyPlace(candidates: LabelCandidate[]): LabelCandidate[] {
+    if (candidates.length === 0) return [];
+    const placed: LabelCandidate[] = [];
+    for (const c of candidates) {
+      if (placed.length === 0) { placed.push(c); continue; }
+      const prev = placed[placed.length - 1];
       const prevRight = prev.pxLeft + prev.width / 2;
-      const currLeft = curr.pxLeft - curr.width / 2;
-      if (currLeft - prevRight < minGap) return true;
+      const currLeft = c.pxLeft - c.width / 2;
+      if (currLeft - prevRight >= minGap) placed.push(c);
     }
-    return false;
+    return placed;
   }
 
-  // Try full labels → numbers only → nothing
+  // Try full labels first, fall back to numbers-only if fewer than half survive
   const fullCandidates = buildCandidates('full');
   const numberCandidates = buildCandidates('numbers');
 
-  let labelMode: 'full' | 'numbers' | 'none';
+  let labelMode: 'full' | 'numbers';
+  let placedCandidates: LabelCandidate[];
+
   if (trackWidth === 0) {
-    // Before ResizeObserver fires, use simple threshold fallback
-    labelMode = pxPerSlide >= 55 ? 'full' : pxPerSlide >= 30 ? 'numbers' : 'none';
-  } else if (!hasCollisions(fullCandidates)) {
+    // Before ResizeObserver fires, show labels by default
     labelMode = 'full';
-  } else if (!hasCollisions(numberCandidates)) {
-    labelMode = 'numbers';
+    placedCandidates = fullCandidates;
   } else {
-    labelMode = 'none';
+    const fullPlaced = greedyPlace(fullCandidates);
+    const numberPlaced = greedyPlace(numberCandidates);
+    // Use full if at least half of scenes fit, otherwise use numbers
+    if (fullPlaced.length >= sceneBoundaryIndices.length / 2) {
+      labelMode = 'full';
+      placedCandidates = fullPlaced;
+    } else {
+      labelMode = 'numbers';
+      placedCandidates = numberPlaced;
+    }
   }
 
   // For non-boundary beat letters, only show if full labels fit AND there's enough pxPerSlide
   const showBeatLetters = labelMode === 'full' && pxPerSlide >= 55;
 
-  // Build the set of visible labels
+  // Build the set of visible labels from greedy placement
   const visibleLabels = new Map<number, string>();
-  if (labelMode !== 'none') {
-    const candidates = labelMode === 'full' ? fullCandidates : numberCandidates;
-    for (const c of candidates) visibleLabels.set(c.idx, c.text);
-  }
+  for (const c of placedCandidates) visibleLabels.set(c.idx, c.text);
 
   const playheadLeft = slides.length > 1 ? `${(currentIndex / (slides.length - 1)) * 100}%` : '0%';
 

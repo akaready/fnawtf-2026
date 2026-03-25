@@ -1,6 +1,6 @@
 export type ScriptStatus = 'draft' | 'review' | 'locked';
 export type IntExt = 'INT' | 'EXT' | 'INT/EXT';
-export type ContentMode = 'table' | 'scratchpad';
+export type ContentMode = 'story' | 'table' | 'scratchpad';
 
 export interface ScriptRow {
   id: string;
