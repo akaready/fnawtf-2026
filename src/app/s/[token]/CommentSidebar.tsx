@@ -52,6 +52,8 @@ interface Props {
   externalSortMode?: 'script' | 'oldest' | 'newest' | 'unresolved';
   externalSceneFilter?: 'current' | 'all';
   externalCurrentSceneId?: string | null;
+  /** Map snapshot beat IDs → current beat IDs (for admin cross-version comments) */
+  beatIdMap?: Map<string, string>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -782,6 +784,7 @@ export function CommentSidebar({
   externalSortMode,
   externalSceneFilter,
   externalCurrentSceneId,
+  beatIdMap,
 }: Props) {
   const [comments, setComments] = useState<ShareComment[]>([]);
   const [reactions, setReactions] = useState<ReactionsMap>({});
@@ -805,8 +808,12 @@ export function CommentSidebar({
     setLoading(true);
     try {
       const data = await getShareComments(shareId);
-      setComments(data as ShareComment[]);
-      const commentIds = (data as ShareComment[]).map(c => c.id);
+      // Remap snapshot beat IDs → current beat IDs when a map is provided
+      const remapped = beatIdMap
+        ? (data as ShareComment[]).map(c => ({ ...c, beat_id: beatIdMap.get(c.beat_id) ?? c.beat_id }))
+        : (data as ShareComment[]);
+      setComments(remapped);
+      const commentIds = remapped.map(c => c.id);
       if (commentIds.length > 0) {
         const r = await getReactions(commentIds);
         setReactions(r);
@@ -814,7 +821,7 @@ export function CommentSidebar({
     } finally {
       setLoading(false);
     }
-  }, [shareId]);
+  }, [shareId, beatIdMap]);
 
   // Reload comments AND refresh timeline avatars
   const loadCommentsAndRefreshAuthors = useCallback(async () => {

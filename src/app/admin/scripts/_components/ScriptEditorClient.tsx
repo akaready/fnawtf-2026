@@ -140,6 +140,7 @@ export function ScriptEditorClient({
   const [selectedShareId, setSelectedShareId] = useState<string | null>(null);
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsBeatIdMap, setCommentsBeatIdMap] = useState<Map<string, string> | null>(null);
   const sharesLoadedRef = useRef(false);
 
   // Hydrate from localStorage after mount to avoid SSR mismatch
@@ -267,6 +268,7 @@ export function ScriptEditorClient({
           if (currentBeatId) beatIdMap.set(snapshotBeatId, currentBeatId);
         }
       }
+      setCommentsBeatIdMap(beatIdMap);
 
       const map = new Map<string, ScriptShareCommentRow[]>();
       for (const comment of comments) {
@@ -975,6 +977,8 @@ export function ScriptEditorClient({
                 commentsMap={commentsMap}
                 commentsLoading={commentsLoading}
                 onRefreshComments={handleRefreshComments}
+                onUpdateScene={handleUpdateScene}
+                onDeleteScene={handleDeleteScene}
               />
             ) : contentMode === 'table' ? (
               <ScriptEditorCanvas
@@ -1045,14 +1049,13 @@ export function ScriptEditorClient({
             <motion.div
               key="comments-sidebar"
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 360, opacity: 1 }}
+              animate={{ width: 320, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="flex-shrink-0 h-full overflow-hidden border-l border-admin-border flex flex-col"
             >
               {/* Toolbar header */}
-              <div className="h-[3rem] flex items-center justify-between px-3 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Comments</span>
+              <div className="h-8 flex items-center justify-end px-2 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
                 <div className="flex items-center gap-0.5">
                   <button
                     onClick={() => setCommentHideCompleted(prev => !prev)}
@@ -1131,6 +1134,7 @@ export function ScriptEditorClient({
                   externalSortMode={commentSortMode}
                   externalSceneFilter={commentSceneFilter}
                   externalCurrentSceneId={activeSceneId}
+                  beatIdMap={commentsBeatIdMap ?? undefined}
                 />
               </div>
             </motion.div>

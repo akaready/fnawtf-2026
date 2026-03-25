@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { List, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, Camera } from 'lucide-react';
+import { List, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ArrowUpDown, User, Check, Camera } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
@@ -696,7 +696,7 @@ export function ScriptShareClient({
                   className={`${btnCls} w-8 ${commentSortMode !== 'script' ? btnOn : ''}`}
                   title="Sort comments"
                 >
-                  <ListFilter size={16} />
+                  <ArrowUpDown size={16} />
                 </button>
                 {sortDropdownOpen && createPortal(
                   <div

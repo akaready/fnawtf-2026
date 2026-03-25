@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Check, X, ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, ImageIcon } from 'lucide-react';
 import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScriptBeatCell } from './ScriptBeatCell';
@@ -76,7 +76,7 @@ export function ScriptStoryEditor({
   scriptStyle,
   styleReferences,
   scriptId,
-  scriptGroupId: _scriptGroupId,
+  scriptGroupId,
   onFrameGenerated: _onFrameGenerated,
   onFramesBatchChange,
   activeSceneId,
@@ -168,11 +168,6 @@ export function ScriptStoryEditor({
     return () => document.removeEventListener('keydown', handler);
   }, [goNext, goPrev]);
 
-  /* ── Scene heading ── */
-  const sceneHeading = currentScene
-    ? `${currentScene.int_ext}. ${currentScene.location_name || 'UNTITLED LOCATION'}${currentScene.time_of_day ? ` \u2014 ${currentScene.time_of_day}` : ''}`
-    : '';
-
   /* ── Build lightbox slides for storyboard cell ── */
   const allScriptSlides: LightboxSlide[] = useMemo(() => {
     return slides
@@ -213,6 +208,9 @@ export function ScriptStoryEditor({
   /* ── Storyboard generate modal ── */
   const [modalOpen, setModalOpen] = useState(false);
   const [sceneEditing, setSceneEditing] = useState(false);
+
+  // Reset editing when scene changes
+  useEffect(() => { setSceneEditing(false); }, [currentScene?.id]);
 
   if (!current || !currentScene || !currentBeat) {
     return (
@@ -335,18 +333,16 @@ export function ScriptStoryEditor({
       <div className="w-full max-w-5xl flex-shrink-0 border border-admin-border rounded-lg overflow-hidden mb-6 [&_.border-admin-border-subtle]:border-transparent">
 
         {/* Scene heading */}
-        <div className="flex items-center gap-0 bg-admin-bg-sidebar min-h-[44px]">
-          <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-1 pr-3">
-            {current.sceneNumber}{currentScene.beats.length > 1 ? current.beatLetter : ''}
-          </span>
-          <div className="flex items-center flex-1 min-w-0">
-            <span className="text-admin-sm font-medium text-admin-text-faint uppercase tracking-wider">
-              {sceneHeading}
-              {(currentScene as unknown as { scene_description?: string | null }).scene_description && (
-                <><span className="text-admin-text-ghost mx-1.5">&bull;</span><span className="text-admin-text-muted font-normal uppercase">{(currentScene as unknown as { scene_description?: string | null }).scene_description}</span></>
-              )}
-            </span>
-          </div>
+        <div className="bg-admin-bg-raised">
+          <ScriptSceneHeader
+            scene={currentScene}
+            scriptGroupId={scriptGroupId}
+            locations={locations}
+            onUpdate={(sceneId, data) => onUpdateScene?.(sceneId, data)}
+            onDelete={onDeleteScene}
+            editing={sceneEditing}
+            onEditingChange={setSceneEditing}
+          />
         </div>
 
         {/* Audio (2/3) + Visual (1/3) */}
