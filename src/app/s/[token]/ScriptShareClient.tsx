@@ -1,11 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User } from 'lucide-react';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
-import { motion } from 'framer-motion';
-import gsap from 'gsap';
-import { useDirectionalFill } from '@/hooks/useDirectionalFill';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { DEFAULT_COLUMN_ORDER } from '@/app/admin/scripts/_components/gridUtils';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
@@ -21,11 +18,6 @@ import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocati
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
-
-const iconVariants = {
-  hidden: { opacity: 0, x: 8, width: 0, marginLeft: -8 },
-  visible: { opacity: 1, x: 0, width: 'auto', marginLeft: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
-};
 
 interface Props {
   shareId: string;
@@ -94,12 +86,11 @@ export function ScriptShareClient({
   const [presentationActiveSceneId, setPresentationActiveSceneId] = useState<string | null>(null);
   const [presentationActiveBeatId, setPresentationActiveBeatId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const [isEmailHovered, setIsEmailHovered] = useState(false);
+  const [userPopoverOpen, setUserPopoverOpen] = useState(false);
   const [commentHideCompleted, setCommentHideCompleted] = useState(false);
   const [commentSortMode, setCommentSortMode] = useState<'script' | 'oldest' | 'newest' | 'unresolved'>('script');
   const [commentSceneFilter, setCommentSceneFilter] = useState<'current' | 'all'>('all');
-  const emailBtnRef = useRef<HTMLAnchorElement>(null);
-  const emailFillRef = useRef<HTMLDivElement>(null);
+  const userPopoverRef = useRef<HTMLDivElement>(null);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
   const presentationNavRef = useRef<{
     jumpToScene: (sceneId: string) => void;
@@ -108,18 +99,17 @@ export function ScriptShareClient({
     getActiveBeatId: () => string | null;
   } | null>(null);
 
-  useDirectionalFill(emailBtnRef, emailFillRef, {
-    onFillStart: () => {
-      setIsEmailHovered(true);
-      const textSpan = emailBtnRef.current?.querySelector('span');
-      if (textSpan) gsap.to(textSpan, { color: '#000000', duration: 0.3, ease: 'power2.out' });
-    },
-    onFillEnd: () => {
-      setIsEmailHovered(false);
-      const textSpan = emailBtnRef.current?.querySelector('span');
-      if (textSpan) gsap.to(textSpan, { color: '#ffffff', duration: 0.3, ease: 'power2.out' });
-    },
-  });
+  // Click-outside handler for user popover
+  useEffect(() => {
+    if (!userPopoverOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (userPopoverRef.current && !userPopoverRef.current.contains(e.target as Node)) {
+        setUserPopoverOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [userPopoverOpen]);
 
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
@@ -304,29 +294,36 @@ export function ScriptShareClient({
               </div>
             </div>
 
-            {/* Right — email button (hidden on mobile) */}
-            <div className="ml-auto flex-shrink-0 hidden md:block">
+            {/* Right — user settings + email */}
+            <div className="ml-auto flex-shrink-0 hidden md:flex items-center gap-2">
+              {/* User settings popover */}
+              <div className="relative" ref={userPopoverRef}>
+                <button
+                  onClick={() => setUserPopoverOpen(prev => !prev)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors overflow-hidden"
+                  title="Profile settings"
+                >
+                  <User size={16} />
+                </button>
+                {userPopoverOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-[300px] bg-[#111] border border-admin-border rounded-lg shadow-xl z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-admin-border">
+                      <p className="text-admin-sm text-admin-text-faint">Commenting as:</p>
+                      <p className="text-admin-sm text-white font-medium">{viewerName ?? viewerEmail} <span className="text-admin-text-faint">({viewerEmail})</span></p>
+                    </div>
+                    <div className="px-4 py-4 space-y-3">
+                      <p className="text-[10px] uppercase tracking-widest text-admin-text-faint">Profile settings are managed in the comments panel</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Simple email button */}
               <a
-                ref={emailBtnRef}
                 href="mailto:hi@fna.wtf"
-                className="relative px-5 py-2 font-medium text-white bg-black border border-white rounded-lg overflow-hidden flex items-center justify-center"
+                className="w-9 h-9 rounded-full flex items-center justify-center border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors"
+                title="hi@fna.wtf"
               >
-                <div
-                  ref={emailFillRef}
-                  className="absolute inset-0 bg-white pointer-events-none"
-                  style={{ zIndex: 0, transform: 'scaleX(0)', transformOrigin: '0 50%' }}
-                />
-                <span className="relative flex items-center justify-center gap-2 whitespace-nowrap text-sm" style={{ zIndex: 10 }}>
-                  <motion.span
-                    variants={iconVariants}
-                    initial="hidden"
-                    animate={isEmailHovered ? 'visible' : 'hidden'}
-                    className="flex items-center"
-                  >
-                    <Mail size={14} strokeWidth={1.5} />
-                  </motion.span>
-                  hi@fna.wtf
-                </span>
+                <Mail size={16} />
               </a>
             </div>
           </div>
