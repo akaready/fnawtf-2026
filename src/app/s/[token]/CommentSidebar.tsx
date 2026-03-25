@@ -993,8 +993,8 @@ export function CommentSidebar({
         className={`h-full border-l border-admin-border bg-[#030303] overflow-hidden z-10 relative transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'w-[320px]' : 'w-0'}`}
       >
         <div className="w-[320px] h-full flex flex-col">
-          {/* Header */}
-          <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
+          {/* Header — compact when externally controlled */}
+          <div className={`flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0 ${hideReopenButton ? 'h-[2.5rem]' : 'h-[3rem]'}`}>
             {!hideReopenButton && (
               <span className="text-admin-sm font-semibold uppercase tracking-widest text-admin-text-faint">
                 COMMENTS ({topLevelCount})
@@ -1267,7 +1267,7 @@ export function CommentSidebar({
                       <Check size={14} />
                     </button>
                   </motion.div>
-                ) : (
+                ) : !hideReopenButton ? (
                   <motion.a
                     key="email-btn"
                     initial={{ opacity: 0, y: -10 }}
@@ -1283,7 +1283,7 @@ export function CommentSidebar({
                       hi@fna.wtf
                     </span>
                   </motion.a>
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
           </div>
