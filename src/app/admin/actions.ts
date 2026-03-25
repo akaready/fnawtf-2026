@@ -5560,7 +5560,7 @@ export async function getScriptSharesByGroup(scriptGroupId: string): Promise<imp
   const scriptIds = (scripts as { id: string }[]).map(s => s.id);
   const { data: shares, error } = await supabase
     .from('script_shares')
-    .select('id, script_id, snapshot_script_id, snapshot_major_version, label, is_active, share_mode, token, access_code, notes, created_by, created_at, updated_at')
+    .select('id, script_id, snapshot_script_id, snapshot_major_version, label, is_active, share_mode, share_preferences, token, access_code, notes, created_by, created_at, updated_at')
     .in('script_id', scriptIds)
     .order('snapshot_major_version', { ascending: false });
   if (error) throw new Error(error.message);
@@ -5646,7 +5646,7 @@ export async function getShareComments(shareId: string): Promise<import('@/types
 /** Update a script share link. */
 export async function updateScriptShare(
   shareId: string,
-  updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string },
+  updates: { label?: string; notes?: string; access_code?: string; is_active?: boolean; share_mode?: string; share_preferences?: Record<string, unknown> },
 ) {
   const { supabase } = await requireAuth();
   const { error } = await supabase

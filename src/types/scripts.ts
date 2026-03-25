@@ -225,6 +225,41 @@ export interface ScriptColumnConfig {
   comments: boolean;
 }
 
+/** Per-share visibility preferences set by admin in the share panel */
+export interface SharePreferences {
+  allow_story_view: boolean;
+  allow_table_view: boolean;
+  default_view: 'story' | 'table';
+  table_columns?: Partial<Record<keyof ScriptColumnConfig, boolean>>;
+  presentation_columns?: {
+    visual?: boolean;
+    notes?: boolean;
+    reference?: boolean;
+    comments?: boolean;
+  };
+}
+
+export const DEFAULT_SHARE_PREFERENCES: SharePreferences = {
+  allow_story_view: true,
+  allow_table_view: true,
+  default_view: 'story',
+};
+
+/** Merge raw JSONB from DB with defaults, with backwards compat for share_mode */
+export function resolveSharePreferences(
+  raw: Record<string, unknown> | null | undefined,
+  shareMode?: string,
+): SharePreferences {
+  if (raw && Object.keys(raw).length > 0) {
+    return { ...DEFAULT_SHARE_PREFERENCES, ...raw } as SharePreferences;
+  }
+  // Backwards compat: derive from share_mode
+  return {
+    ...DEFAULT_SHARE_PREFERENCES,
+    default_view: shareMode === 'table' ? 'table' : 'story',
+  };
+}
+
 export interface CropConfig {
   x: number;      // 0.0–1.0, horizontal origin (0 = left edge, 1 = right edge)
   y: number;      // 0.0–1.0, vertical origin (0 = top, 1 = bottom)

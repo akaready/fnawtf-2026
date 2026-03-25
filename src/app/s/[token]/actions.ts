@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { setShareAuthCookie, verifySharePassword } from '@/lib/share/auth';
 import { notifySlack } from '@/lib/slack/notify';
-import { formatScriptVersion } from '@/types/scripts';
+import { formatScriptVersion, resolveSharePreferences } from '@/types/scripts';
 
 /** Resolve 'admin' placeholder to real user info from the current session */
 async function resolveAdminEmail(
@@ -127,7 +127,7 @@ export async function getScriptShareData(token: string) {
   // Fetch share (anon can read active shares via RLS)
   const { data: share, error: shareErr } = await supabase
     .from('script_shares')
-    .select('id, script_id, snapshot_script_id, notes, token, is_active, share_mode')
+    .select('id, script_id, snapshot_script_id, notes, token, is_active, share_mode, share_preferences')
     .eq('token', token)
     .eq('is_active', true)
     .single();
@@ -141,6 +141,7 @@ export async function getScriptShareData(token: string) {
     notes: string | null;
     token: string;
     share_mode: string;
+    share_preferences: Record<string, unknown> | null;
   };
 
   // Use the published snapshot if one exists; fall back to live script for old shares
@@ -244,6 +245,7 @@ export async function getScriptShareData(token: string) {
     shareId: s.id,
     shareNotes: s.notes,
     shareMode: s.share_mode as 'presentation' | 'table',
+    sharePreferences: resolveSharePreferences(s.share_preferences, s.share_mode),
     script: {
       id: sc.id,
       title: sc.title,
