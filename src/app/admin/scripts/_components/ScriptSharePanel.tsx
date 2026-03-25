@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Plus, ExternalLink, Trash2, Play, Table2 } from 'lucide-react';
+import { X, Copy, Check, Plus, ExternalLink, Trash2, Play, Table2, Save } from 'lucide-react';
 import { PanelDrawer } from '@/app/admin/_components/PanelDrawer';
 import { getScriptShares, getNextShareVersion, createScriptShare, updateScriptShare, deleteScriptShare } from '@/app/admin/actions';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import type { ScriptShareRow, SharePreferences } from '@/types/scripts';
-import { resolveSharePreferences } from '@/types/scripts';
+import { resolveSharePreferences, versionColor } from '@/types/scripts';
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -161,15 +161,20 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
                   }`}
                 >
                   <button onClick={() => setSelectedId(share.id)} className="flex-1 flex items-center gap-2.5 min-w-0">
-                    <span className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-admin-success" />
-                    <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <span className="text-admin-base font-bold text-admin-cream">
-                        {share.snapshot_major_version ? `v${share.snapshot_major_version}` : 'Legacy'}
-                      </span>
-                      <span className="text-admin-sm text-admin-text-faint">
-                        {new Date(share.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
+                    {(() => {
+                      const color = versionColor(share.snapshot_major_version ?? 0);
+                      return (
+                        <span
+                          className="flex-shrink-0 px-3 py-1 text-admin-base font-bold rounded-full border"
+                          style={{ color, borderColor: color + '40', backgroundColor: color + '15' }}
+                        >
+                          v{share.snapshot_major_version ?? '?'}
+                        </span>
+                      );
+                    })()}
+                    <span className="text-admin-sm text-admin-text-faint">
+                      {new Date(share.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
                   </button>
                   <span className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
                     {confirmDeleteId === share.id ? (
@@ -221,18 +226,33 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
 
         {/* Footer */}
         <div className="flex items-center gap-2 px-6 py-4 border-t border-admin-border flex-shrink-0 bg-admin-bg-wash">
-          <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Plus size={14} />
-            {creating ? 'Creating...' : `Create v${nextMajor}`}
-          </button>
+          {selected && (
+            <button
+              onClick={() => { /* save is handled by auto-save via onUpdate */ }}
+              className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+            >
+              <Save size={14} />
+              Save
+            </button>
+          )}
+          {(() => {
+            const color = versionColor(nextMajor);
+            return (
+              <button
+                onClick={handleCreate}
+                disabled={creating}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-admin-md border transition-colors disabled:opacity-50"
+                style={{ color, borderColor: color + '60', backgroundColor: color + '15' }}
+              >
+                <Plus size={14} />
+                {creating ? 'Creating...' : `Create v${nextMajor}`}
+              </button>
+            );
+          })()}
           {selected ? (
             <button
               onClick={() => window.open(`/s/${selected.token}`, '_blank')}
-              className="btn-info inline-flex items-center gap-2 px-4 py-2.5 text-sm"
+              className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
             >
               <ExternalLink size={14} />
               View
@@ -246,12 +266,6 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
               Preview
             </button>
           )}
-          <button
-            onClick={onClose}
-            className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
-          >
-            Done
-          </button>
         </div>
       </div>
     </PanelDrawer>
