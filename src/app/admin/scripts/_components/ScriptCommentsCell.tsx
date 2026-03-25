@@ -24,6 +24,7 @@ function MoreMenu({ id, content, onRefresh, hover }: {
 }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editText, setEditText] = useState(content);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -52,14 +53,25 @@ function MoreMenu({ id, content, onRefresh, hover }: {
       </button>
       {open && r && createPortal(
         <>
-          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[100]" onClick={() => { setOpen(false); setConfirmDelete(false); }} />
           <div className="fixed z-[101] bg-admin-bg-overlay border border-admin-border rounded-admin-md py-1 shadow-lg min-w-[100px]" style={{ top: r.bottom + 4, left: Math.max(4, r.left - 40) }}>
             <button onClick={() => { setOpen(false); setEditing(true); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-admin-sm text-admin-text-primary hover:bg-admin-bg-hover">
               <Pencil size={12} /> Edit
             </button>
-            <button onClick={async () => { setOpen(false); await deleteComment(id, 'admin'); onRefresh(); }} className="w-full flex items-center gap-2 px-3 py-1.5 text-admin-sm text-admin-danger hover:bg-admin-bg-hover">
-              <Trash2 size={12} /> Delete
-            </button>
+            {confirmDelete ? (
+              <div className="flex items-center gap-1 px-3 py-1.5">
+                <button onClick={async () => { setOpen(false); setConfirmDelete(false); await deleteComment(id, 'admin'); onRefresh(); }} className="flex items-center gap-1 text-admin-sm text-admin-danger hover:text-red-300 transition-colors">
+                  <Check size={12} /> Confirm
+                </button>
+                <button onClick={() => setConfirmDelete(false)} className="flex items-center gap-1 text-admin-sm text-admin-text-faint hover:text-admin-text-primary transition-colors ml-2">
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} className="w-full flex items-center gap-2 px-3 py-1.5 text-admin-sm text-admin-danger hover:bg-admin-bg-hover">
+                <Trash2 size={12} /> Delete
+              </button>
+            )}
           </div>
         </>,
         document.body
