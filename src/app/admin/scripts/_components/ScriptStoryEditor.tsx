@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Pencil, ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Trash2, Check, X, ImageIcon } from 'lucide-react';
+import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScriptBeatCell } from './ScriptBeatCell';
 import { ScriptReferenceCell } from './ScriptReferenceCell';
@@ -56,6 +57,8 @@ interface Props {
   commentsMap: Map<string, ScriptShareCommentRow[]>;
   commentsLoading?: boolean;
   onRefreshComments?: () => void;
+  onUpdateScene?: (sceneId: string, data: Record<string, unknown>) => void;
+  onDeleteScene?: (sceneId: string) => void;
 }
 
 export function ScriptStoryEditor({
@@ -95,6 +98,8 @@ export function ScriptStoryEditor({
   commentsMap,
   commentsLoading: _commentsLoading,
   onRefreshComments,
+  onUpdateScene,
+  onDeleteScene,
 }: Props) {
   /* ── Build slides ── */
   const slides = useMemo(
@@ -207,6 +212,7 @@ export function ScriptStoryEditor({
 
   /* ── Storyboard generate modal ── */
   const [modalOpen, setModalOpen] = useState(false);
+  const [sceneEditing, setSceneEditing] = useState(false);
 
   if (!current || !currentScene || !currentBeat) {
     return (

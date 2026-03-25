@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown } from 'lucide-react';
+import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, History } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
@@ -856,7 +857,6 @@ export function ScriptEditorClient({
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
             <List size={16} />
-            <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
           </button>
           {/* Comments sidebar toggle — story mode only */}
           {contentMode === 'story' && (
@@ -866,7 +866,6 @@ export function ScriptEditorClient({
               title={showCommentsSidebar ? 'Hide comments' : 'Show comments'}
             >
               <MessageSquare size={16} />
-              <span className="text-[10px] font-semibold uppercase tracking-widest">Comments</span>
             </button>
           )}
           <button
@@ -931,27 +930,6 @@ export function ScriptEditorClient({
                 onReorder={handleReorderScenes}
                 showAddButton
                 onAddScene={handleAddScene}
-                headerActions={contentMode === 'story' && showCommentsSidebar ? (
-                  <>
-                    <button
-                      onClick={() => setCommentHideCompleted(prev => !prev)}
-                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentHideCompleted ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
-                      title={commentHideCompleted ? 'Show resolved' : 'Hide resolved'}
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <button
-                      onClick={() => setCommentSortMode(prev => {
-                        const modes: typeof prev[] = ['script', 'oldest', 'newest', 'unresolved'];
-                        return modes[(modes.indexOf(prev) + 1) % modes.length];
-                      })}
-                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentSortMode !== 'script' ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
-                      title={`Sort: ${commentSortMode}`}
-                    >
-                      <ArrowUpDown size={14} />
-                    </button>
-                  </>
-                ) : undefined}
               />
             )}
         </SceneSidebarShell>
@@ -1062,32 +1040,102 @@ export function ScriptEditorClient({
         </div>
 
         {/* Comments sidebar — story mode */}
-        {contentMode === 'story' && showCommentsSidebar && selectedShareId && (
-          <CommentSidebar
-            shareId={selectedShareId}
-            currentBeatId={activeBeatId}
-            viewerEmail="admin"
-            viewerName={null}
-            open={showCommentsSidebar}
-            onToggle={() => setShowCommentsSidebar(false)}
-            refreshKey={commentRefreshKey}
-            slides={buildPresentationSlides(computedScenes, storyboardFrames, refsByBeat)}
-            onNavigateToBeat={(beatId) => {
-              setActiveBeatId(beatId);
-              const scene = computedScenes.find(s => s.beats.some(b => b.id === beatId));
-              if (scene) setActiveSceneId(scene.id);
-            }}
-            onCommentAdded={() => {
-              setCommentRefreshKey(k => k + 1);
-              handleRefreshComments();
-            }}
-            hideReopenButton
-            externalHideCompleted={commentHideCompleted}
-            externalSortMode={commentSortMode}
-            externalSceneFilter={commentSceneFilter}
-            externalCurrentSceneId={activeSceneId}
-          />
-        )}
+        <AnimatePresence>
+          {contentMode === 'story' && showCommentsSidebar && selectedShareId && (
+            <motion.div
+              key="comments-sidebar"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 360, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="flex-shrink-0 h-full overflow-hidden border-l border-admin-border flex flex-col"
+            >
+              {/* Toolbar header */}
+              <div className="h-[3rem] flex items-center justify-between px-3 border-b border-admin-border flex-shrink-0 bg-admin-bg-inset">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-faint">Comments</span>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => setCommentHideCompleted(prev => !prev)}
+                    className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentHideCompleted ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+                    title={commentHideCompleted ? 'Show resolved' : 'Hide resolved'}
+                  >
+                    <Eye size={14} />
+                  </button>
+                  <button
+                    onClick={() => setCommentSortMode(prev => {
+                      const modes: typeof prev[] = ['script', 'oldest', 'newest', 'unresolved'];
+                      return modes[(modes.indexOf(prev) + 1) % modes.length];
+                    })}
+                    className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${commentSortMode !== 'script' ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
+                    title={`Sort: ${commentSortMode}`}
+                  >
+                    <ArrowUpDown size={14} />
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        const el = document.getElementById('story-version-picker');
+                        if (el) el.classList.toggle('hidden');
+                      }}
+                      className={`w-7 h-7 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors ${
+                        (() => {
+                          const sel = groupShares.find(s => s.id === selectedShareId);
+                          return sel?.snapshot_major_version != null && sel.snapshot_major_version !== script.major_version;
+                        })() ? 'bg-admin-bg-active text-admin-text-secondary' : ''
+                      }`}
+                      title="Switch version"
+                    >
+                      <History size={14} />
+                    </button>
+                    <div id="story-version-picker" className="hidden absolute top-full right-0 mt-1 z-30 bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[80px]">
+                      {groupShares.map(s => {
+                        const ver = s.snapshot_major_version ?? 0;
+                        const color = versionColor(ver);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => { setSelectedShareId(s.id); document.getElementById('story-version-picker')?.classList.add('hidden'); handleRefreshComments(); }}
+                            className={`w-full px-3 py-1.5 text-left text-admin-sm hover:bg-admin-bg-hover transition-colors flex items-center gap-2 ${s.id === selectedShareId ? 'bg-admin-bg-active' : ''}`}
+                          >
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                            <span className="text-admin-text-primary">v{ver}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Sidebar content */}
+              <div className="flex-1 min-h-0">
+                <CommentSidebar
+                  shareId={selectedShareId}
+                  currentBeatId={activeBeatId}
+                  viewerEmail="admin"
+                  viewerName={null}
+                  open
+                  onToggle={() => setShowCommentsSidebar(false)}
+                  refreshKey={commentRefreshKey}
+                  slides={buildPresentationSlides(computedScenes, storyboardFrames, refsByBeat)}
+                  onNavigateToBeat={(beatId) => {
+                    setActiveBeatId(beatId);
+                    const scene = computedScenes.find(s => s.beats.some(b => b.id === beatId));
+                    if (scene) setActiveSceneId(scene.id);
+                  }}
+                  onCommentAdded={() => {
+                    setCommentRefreshKey(k => k + 1);
+                    handleRefreshComments();
+                  }}
+                  hideReopenButton
+                  externalHideCompleted={commentHideCompleted}
+                  externalSortMode={commentSortMode}
+                  externalSceneFilter={commentSceneFilter}
+                  externalCurrentSceneId={activeSceneId}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Panels */}
