@@ -731,6 +731,7 @@ export function ScriptPresentationView({
         onCommentAdded={handleCommentAdded}
         scrollToEmail={scrollToEmail}
         onScrollToEmailHandled={() => setScrollToEmail(null)}
+        hideReopenButton={externalSidebar}
       />}
     </div>
   );

@@ -49,6 +49,7 @@ interface Props {
   onCommentAdded: () => void;
   scrollToEmail?: string | null;
   onScrollToEmailHandled?: () => void;
+  hideReopenButton?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -774,6 +775,7 @@ export function CommentSidebar({
   onCommentAdded: _onCommentAdded,
   scrollToEmail,
   onScrollToEmailHandled,
+  hideReopenButton = false,
 }: Props) {
   const [comments, setComments] = useState<ShareComment[]>([]);
   const [reactions, setReactions] = useState<ReactionsMap>({});
@@ -974,15 +976,17 @@ export function CommentSidebar({
 
   return (
     <div className="hidden md:flex md:relative md:flex-shrink-0 md:h-full">
-      {/* Re-open button */}
-      <button
-        onClick={onToggle}
-        className={`absolute right-4 top-4 z-[5] h-8 flex items-center gap-1.5 px-3 rounded-admin-md bg-admin-bg-overlay text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        title="Show comments"
-      >
-        <span className="text-admin-sm font-semibold uppercase tracking-widest whitespace-nowrap">Comments ({topLevelCount})</span>
-        <PanelRightOpen size={16} />
-      </button>
+      {/* Re-open button — hidden when toolbar provides comments toggle */}
+      {!hideReopenButton && (
+        <button
+          onClick={onToggle}
+          className={`absolute right-4 top-4 z-[5] h-8 flex items-center gap-1.5 px-3 rounded-admin-md bg-admin-bg-overlay text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary transition-opacity duration-300 ${open ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          title="Show comments"
+        >
+          <span className="text-admin-sm font-semibold uppercase tracking-widest whitespace-nowrap">Comments ({topLevelCount})</span>
+          <PanelRightOpen size={16} />
+        </button>
+      )}
 
       {/* Sidebar */}
       <div
@@ -991,10 +995,12 @@ export function CommentSidebar({
         <div className="w-[320px] h-full flex flex-col">
           {/* Header */}
           <div className="h-[3rem] flex items-center justify-between px-4 border-b border-admin-border flex-shrink-0">
-            <span className="text-admin-sm font-semibold uppercase tracking-widest text-admin-text-faint">
-              COMMENTS ({topLevelCount})
-            </span>
-            <div className="flex items-center gap-1">
+            {!hideReopenButton && (
+              <span className="text-admin-sm font-semibold uppercase tracking-widest text-admin-text-faint">
+                COMMENTS ({topLevelCount})
+              </span>
+            )}
+            <div className={`flex items-center gap-1 ${hideReopenButton ? 'ml-auto' : ''}`}>
               {/* Filter dropdown */}
               <div className="relative" ref={filterMenuRef}>
                 <button
@@ -1049,12 +1055,14 @@ export function CommentSidebar({
                   </div>
                 )}
               </div>
-              <button
-                onClick={onToggle}
-                className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
-              >
-                <PanelRightClose size={16} />
-              </button>
+              {!hideReopenButton && (
+                <button
+                  onClick={onToggle}
+                  className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+                >
+                  <PanelRightClose size={16} />
+                </button>
+              )}
             </div>
           </div>
 
