@@ -298,15 +298,17 @@ function SharePreferencesControls({
       {/* Default View */}
       <div className="space-y-1.5">
         <label className="admin-label">Default View</label>
-        <ViewSwitcher
-          views={[
-            { key: 'story' as const, icon: Play, label: 'Story' },
-            { key: 'table' as const, icon: Table2, label: 'Table' },
-          ]}
-          activeView={prefs.default_view}
-          onChange={(view) => update({ default_view: view })}
-          showLabels
-        />
+        <div className="flex">
+          <ViewSwitcher
+            views={[
+              { key: 'story' as const, icon: Play, label: 'Story' },
+              { key: 'table' as const, icon: Table2, label: 'Table' },
+            ]}
+            activeView={prefs.default_view}
+            onChange={(view) => update({ default_view: view })}
+            showLabels
+          />
+        </div>
       </div>
 
       {/* Allowed Views */}
