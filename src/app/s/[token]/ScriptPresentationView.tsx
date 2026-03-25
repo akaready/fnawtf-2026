@@ -375,7 +375,7 @@ export function ScriptPresentationView({
     : current.sceneName;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex">
+    <div className="flex-1 flex min-h-0 bg-black">
       {/* ════ LEFT SIDEBAR — Scene Nav ════ */}
       <div className="hidden md:block relative flex-shrink-0 h-full">
         {/* Re-open button — always rendered, hidden behind sidebar via z-index */}

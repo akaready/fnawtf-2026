@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { ScriptShareClient } from '@/app/s/[token]/ScriptShareClient';
+import { DEFAULT_SHARE_PREFERENCES } from '@/types/scripts';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -130,6 +131,7 @@ export default async function ScriptPreviewPage({ params }: Props) {
       shareId={latestShareId}
       shareNotes={shareNotes}
       shareMode="presentation"
+      sharePreferences={DEFAULT_SHARE_PREFERENCES}
       script={{
         id: sc.id,
         title: sc.title,

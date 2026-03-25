@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2 } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare } from 'lucide-react';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
@@ -16,7 +16,7 @@ import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarS
 import { startScriptViewSession, updateScriptViewDuration, getShareComments } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow } from '@/types/scripts';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow, SharePreferences } from '@/types/scripts';
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
@@ -30,6 +30,7 @@ interface Props {
   shareId: string;
   shareNotes: string | null;
   shareMode: 'presentation' | 'table';
+  sharePreferences: SharePreferences;
   script: {
     id: string;
     title: string;
@@ -57,7 +58,8 @@ interface Props {
 export function ScriptShareClient({
   shareId,
   shareNotes,
-  shareMode,
+  shareMode: _shareMode,
+  sharePreferences,
   script,
   projectTitle,
   projectNumber,
@@ -75,6 +77,7 @@ export function ScriptShareClient({
   viewerName,
 }: Props) {
   const [showIntro, setShowIntro] = useState(true);
+  const [viewMode, setViewMode] = useState<'story' | 'table'>(sharePreferences.default_view);
   const [columnConfig, setColumnConfig] = useState<ScriptColumnConfig>({
     audio: true, visual: true, notes: true, reference: true, storyboard: true, comments: true,
   });
@@ -229,29 +232,12 @@ export function ScriptShareClient({
     );
   }
 
-  // Presentation mode
-  if (shareMode === 'presentation') {
-    return (
-      <ScriptPresentationView
-        slides={presentationSlides}
-        onClose={() => setShowIntro(true)}
-        scriptTitle={script.title}
-        clientName={clientName ?? undefined}
-        clientLogoUrl={clientLogoUrl}
-        versionLabel={versionLabel}
-        scenes={presentationScenes}
-        shareId={shareId}
-        viewerEmail={viewerEmail}
-        viewerName={viewerName}
-        characters={typedCharacters}
-        tags={typedTags}
-        locations={typedLocations}
-        products={typedProducts}
-      />
-    );
-  }
+  const availableViews = [
+    ...(sharePreferences.allow_story_view ? [{ key: 'story' as const, icon: Play, label: 'Story View' }] : []),
+    ...(sharePreferences.allow_table_view ? [{ key: 'table' as const, icon: Table2, label: 'Table View' }] : []),
+  ];
 
-  // Table mode — existing table view
+  // Unified layout
   return (
     <div className="flex flex-col h-screen bg-black text-foreground">
       {/* Title header — collapses in focus mode */}
@@ -343,74 +329,99 @@ export function ScriptShareClient({
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
           </button>
-          <button
-            onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-            className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
-            title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
-          >
-            <SeparatorVertical size={16} />
-          </button>
+          {viewMode === 'table' && (
+            <button
+              onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
+              className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
+              title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
+            >
+              <SeparatorVertical size={16} />
+            </button>
+          )}
         </div>
         {/* Center — view mode toggle */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto">
             <ViewSwitcher
-              views={[
-                { key: 'presentation' as const, icon: Play, label: 'Story View' },
-                { key: 'table' as const, icon: Table2, label: 'Table View' },
-              ]}
-              activeView="table"
+              views={availableViews}
+              activeView={viewMode}
               showLabels
-              onChange={(mode) => {
-                if (mode === 'presentation') setShowIntro(true);
-              }}
+              onChange={(mode) => setViewMode(mode)}
             />
           </div>
         </div>
-        {/* Right — column dots */}
+        {/* Right — mode-dependent controls */}
         <div className="ml-auto flex-shrink-0">
-          <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
+          {viewMode === 'table' ? (
+            <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact />
+          ) : (
+            <button
+              onClick={() => {/* will wire up later */}}
+              className={`${btnCls} w-8`}
+              title="Comments"
+            >
+              <MessageSquare size={16} />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Content area */}
       <div className="flex-1 flex min-h-0">
-        {/* Sidebar */}
-        <SceneSidebarShell open={showSidebar}>
-            <SceneNav
-              scenes={computedScenes.map(s => ({
-                id: s.id,
-                sceneNumber: s.sceneNumber,
-                int_ext: s.int_ext,
-                location_name: s.location_name,
-                time_of_day: s.time_of_day,
-                scene_description: s.scene_description ?? null,
-                beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
-              }))}
-              activeSceneId={activeSceneId}
-              onSelectScene={handleSceneClick}
-              onSelectBeat={handleBeatClick}
-            />
-        </SceneSidebarShell>
-
-        {/* Main canvas */}
-        <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
-          <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
-            <ReadOnlyCanvas
-              scenes={computedScenes}
-              columnConfig={columnConfig}
-              references={typedReferences}
-              storyboardFrames={typedStoryboardFrames}
-              characters={typedCharacters}
-              tags={typedTags}
-              locations={typedLocations}
-              products={typedProducts}
-              commentsMap={commentsMap}
-              shareId={shareId}
-              onRefreshComments={loadComments}
-            />
-          </div>
-        </div>
+        {viewMode === 'table' ? (
+          <>
+            <SceneSidebarShell open={showSidebar}>
+              <SceneNav
+                scenes={computedScenes.map(s => ({
+                  id: s.id,
+                  sceneNumber: s.sceneNumber,
+                  int_ext: s.int_ext,
+                  location_name: s.location_name,
+                  time_of_day: s.time_of_day,
+                  scene_description: s.scene_description ?? null,
+                  beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
+                }))}
+                activeSceneId={activeSceneId}
+                onSelectScene={handleSceneClick}
+                onSelectBeat={handleBeatClick}
+              />
+            </SceneSidebarShell>
+            <div className="flex-1 min-w-0 overflow-y-auto admin-scrollbar">
+              <div className={`${CONTAINER_WIDTHS[containerIdx]} mx-auto`}>
+                <ReadOnlyCanvas
+                  scenes={computedScenes}
+                  columnConfig={columnConfig}
+                  references={typedReferences}
+                  storyboardFrames={typedStoryboardFrames}
+                  characters={typedCharacters}
+                  tags={typedTags}
+                  locations={typedLocations}
+                  products={typedProducts}
+                  commentsMap={commentsMap}
+                  shareId={shareId}
+                  onRefreshComments={loadComments}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <ScriptPresentationView
+            slides={presentationSlides}
+            onClose={() => setShowIntro(true)}
+            scriptTitle={script.title}
+            clientName={clientName ?? undefined}
+            clientLogoUrl={clientLogoUrl}
+            versionLabel={versionLabel}
+            scenes={presentationScenes}
+            shareId={shareId}
+            viewerEmail={viewerEmail}
+            viewerName={viewerName}
+            characters={typedCharacters}
+            tags={typedTags}
+            locations={typedLocations}
+            products={typedProducts}
+          />
+        )}
       </div>
 
     </div>
