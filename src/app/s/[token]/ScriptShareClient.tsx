@@ -81,6 +81,22 @@ export function ScriptShareClient({
   const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_COLUMN_ORDER);
   const [commentsMap, setCommentsMap] = useState<Map<string, ScriptShareCommentRow[]>>(new Map());
   const [showSidebar, setShowSidebar] = useState(true);
+  const userWantsSidebar = useRef(true);
+
+  // Auto-collapse scenes sidebar when viewport is narrow
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w < 1100) {
+        setShowSidebar(false);
+      } else {
+        setShowSidebar(userWantsSidebar.current);
+      }
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
   const [containerIdx, setContainerIdx] = useState(0);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
   const [presentationActiveSceneId, setPresentationActiveSceneId] = useState<string | null>(null);
@@ -502,7 +518,7 @@ export function ScriptShareClient({
         {/* Left — Scenes toggle + Fullscreen + Width */}
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setShowSidebar(prev => !prev)}
+            onClick={() => { setShowSidebar(prev => { userWantsSidebar.current = !prev; return !prev; }); }}
             className={`${btnCls} gap-1.5 px-2 ${showSidebar ? btnOn : ''}`}
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
