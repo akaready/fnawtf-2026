@@ -152,6 +152,7 @@ interface Props {
   onRegisterCommentsToggle?: (toggle: () => void) => void;
   onRegisterNavCallbacks?: (callbacks: { jumpToScene: (sceneId: string) => void; jumpToBeat: (beatId: string) => void; getActiveSceneId: () => string | null; getActiveBeatId: () => string | null }) => void;
   externalSidebar?: boolean;
+  onSlideChange?: (sceneId: string, beatId: string | null) => void;
 }
 
 /* ─── Component ─── */
@@ -178,6 +179,7 @@ export function ScriptPresentationView({
   onRegisterCommentsToggle,
   onRegisterNavCallbacks,
   externalSidebar = false,
+  onSlideChange,
 }: Props) {
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -387,6 +389,11 @@ export function ScriptPresentationView({
       getActiveBeatId: () => current?.beatId ?? null,
     });
   }, [onRegisterNavCallbacks, jumpToScene, jumpToBeat, current?.sceneId, current?.beatId]);
+
+  /* ── Notify parent of slide changes ── */
+  useEffect(() => {
+    if (current) onSlideChange?.(current.sceneId, current.beatId);
+  }, [current?.sceneId, current?.beatId, onSlideChange]);
 
   /* ── Active beat ID ── */
   const activeBeatId = current?.beatId ?? null;

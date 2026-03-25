@@ -89,6 +89,8 @@ export function ScriptShareClient({
   const [showSidebar, setShowSidebar] = useState(true);
   const [containerIdx, setContainerIdx] = useState(0);
   const [activeSceneId, setActiveSceneId] = useState<string | null>(null);
+  const [presentationActiveSceneId, setPresentationActiveSceneId] = useState<string | null>(null);
+  const [presentationActiveBeatId, setPresentationActiveBeatId] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isEmailHovered, setIsEmailHovered] = useState(false);
   const emailBtnRef = useRef<HTMLAnchorElement>(null);
@@ -259,7 +261,7 @@ export function ScriptShareClient({
       {/* Title header — collapses in focus mode */}
       {!isFocused && (
         <>
-          <div className="relative flex items-center px-8 py-6 border-b border-border flex-shrink-0">
+          <div className="relative flex items-center px-4 py-4 md:px-8 md:py-6 border-b border-border flex-shrink-0">
             {/* Left — logos */}
             <div className="flex items-center gap-4 flex-shrink-0">
               <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-5" />
@@ -297,8 +299,8 @@ export function ScriptShareClient({
               </div>
             </div>
 
-            {/* Right — email button */}
-            <div className="ml-auto flex-shrink-0">
+            {/* Right — email button (hidden on mobile) */}
+            <div className="ml-auto flex-shrink-0 hidden md:block">
               <a
                 ref={emailBtnRef}
                 href="mailto:hi@fna.wtf"
@@ -328,7 +330,7 @@ export function ScriptShareClient({
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0">
-        {/* Left — Scenes toggle + Fullscreen */}
+        {/* Left — Scenes toggle + Fullscreen + Width */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSidebar(prev => !prev)}
@@ -336,11 +338,11 @@ export function ScriptShareClient({
             title={showSidebar ? 'Hide scenes' : 'Show scenes'}
           >
             {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-            <span className="text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
+            <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-widest">Scenes</span>
           </button>
           <button
             onClick={() => setIsFocused(prev => !prev)}
-            className={`${btnCls} w-8 ${isFocused ? btnOn : ''}`}
+            className={`hidden md:flex ${btnCls} w-8 ${isFocused ? btnOn : ''}`}
             title={isFocused ? 'Exit fullscreen' : 'Fullscreen'}
           >
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
@@ -348,7 +350,7 @@ export function ScriptShareClient({
           {viewMode === 'table' && (
             <button
               onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
-              className={`${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
+              className={`hidden md:flex ${btnCls} w-8 ${containerIdx !== 0 ? btnOn : ''}`}
               title={`Width: ${CONTAINER_LABELS[containerIdx]} \u2192 ${nextWidth}`}
             >
               <SeparatorVertical size={16} />
@@ -358,12 +360,12 @@ export function ScriptShareClient({
         {/* Center — view mode toggle */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto">
-            <ViewSwitcher
-              views={availableViews}
-              activeView={viewMode}
-              showLabels
-              onChange={(mode) => setViewMode(mode)}
-            />
+            <div className="hidden md:block">
+              <ViewSwitcher views={availableViews} activeView={viewMode} showLabels onChange={(mode) => setViewMode(mode)} />
+            </div>
+            <div className="md:hidden">
+              <ViewSwitcher views={availableViews} activeView={viewMode} onChange={(mode) => setViewMode(mode)} />
+            </div>
           </div>
         </div>
         {/* Right — mode-dependent controls */}
@@ -398,10 +400,10 @@ export function ScriptShareClient({
                   beats: s.beats.map(b => ({ id: b.id, sort_order: b.sort_order })),
                 }))
               : presentationScenes}
-            activeSceneId={viewMode === 'table' ? activeSceneId : (presentationNavRef.current?.getActiveSceneId() ?? null)}
+            activeSceneId={viewMode === 'table' ? activeSceneId : presentationActiveSceneId}
             onSelectScene={viewMode === 'table' ? handleSceneClick : (id) => presentationNavRef.current?.jumpToScene(id)}
             onSelectBeat={viewMode === 'table' ? handleBeatClick : (id) => presentationNavRef.current?.jumpToBeat(id)}
-            activeBeatId={viewMode === 'story' ? (presentationNavRef.current?.getActiveBeatId() ?? undefined) : undefined}
+            activeBeatId={viewMode === 'story' ? (presentationActiveBeatId ?? undefined) : undefined}
           />
         </SceneSidebarShell>
 
@@ -446,6 +448,7 @@ export function ScriptShareClient({
             onRegisterCommentsToggle={(fn) => { presentationToggleCommentsRef.current = fn; }}
             onRegisterNavCallbacks={(cbs) => { presentationNavRef.current = cbs; }}
             externalSidebar
+            onSlideChange={(sceneId, beatId) => { setPresentationActiveSceneId(sceneId); setPresentationActiveBeatId(beatId); }}
           />
         )}
       </div>
