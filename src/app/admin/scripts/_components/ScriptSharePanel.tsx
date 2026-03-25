@@ -247,7 +247,7 @@ export function ScriptSharePanel({ open, onClose, scriptId, onVersionChanged }: 
           )}
           <button
             onClick={onClose}
-            className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm ml-auto"
+            className="btn-secondary inline-flex items-center gap-2 px-4 py-2.5 text-sm"
           >
             Done
           </button>
@@ -304,7 +304,7 @@ function SharePreferencesControls({
               onClick={() => { if (prefs.default_view !== mode) update({ default_view: mode }); }}
               className={`flex-1 py-1.5 text-admin-sm font-medium rounded-admin-sm transition-colors inline-flex items-center justify-center gap-1.5 ${
                 prefs.default_view === mode
-                  ? 'bg-admin-warning/15 text-admin-warning'
+                  ? 'bg-admin-warning text-admin-bg-base'
                   : 'text-admin-text-ghost hover:text-admin-text-muted'
               }`}
             >
@@ -331,7 +331,7 @@ function SharePreferencesControls({
                 if (!next && prefs.default_view === 'story') patch.default_view = 'table';
                 update(patch);
               }}
-              className="accent-[var(--admin-warning)]"
+              className="w-4 h-4 rounded border-admin-border bg-transparent accent-white"
             />
             <span className="text-admin-sm text-admin-text-primary">Allow Story View</span>
           </label>
@@ -347,7 +347,7 @@ function SharePreferencesControls({
                 if (!next && prefs.default_view === 'table') patch.default_view = 'story';
                 update(patch);
               }}
-              className="accent-[var(--admin-warning)]"
+              className="w-4 h-4 rounded border-admin-border bg-transparent accent-white"
             />
             <span className="text-admin-sm text-admin-text-primary">Allow Table View</span>
           </label>
@@ -366,7 +366,7 @@ function SharePreferencesControls({
                   type="checkbox"
                   checked={checked}
                   onChange={() => update({ table_columns: { ...prefs.table_columns, [key]: !checked } })}
-                  className="accent-[var(--admin-warning)]"
+                  className="w-4 h-4 rounded border-admin-border bg-transparent accent-white"
                 />
                 <span className="text-admin-sm text-admin-text-primary">{label}</span>
               </label>
@@ -387,7 +387,7 @@ function SharePreferencesControls({
                   type="checkbox"
                   checked={checked}
                   onChange={() => update({ presentation_columns: { ...prefs.presentation_columns, [key]: !checked } })}
-                  className="accent-[var(--admin-warning)]"
+                  className="w-4 h-4 rounded border-admin-border bg-transparent accent-white"
                 />
                 <span className="text-admin-sm text-admin-text-primary">{label}</span>
               </label>
