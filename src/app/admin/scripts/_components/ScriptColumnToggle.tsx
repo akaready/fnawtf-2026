@@ -75,7 +75,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
     const dotItems = visibleColumns.map(c => c.key);
 
     const inner = (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 overflow-hidden">
         {visibleColumns.map(({ key, label, color, rawColor }) =>
           isDraggable ? (
             <SortableDot
@@ -120,7 +120,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
   const labelItems = visibleColumns.map(c => c.key);
 
   const labelInner = (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 overflow-hidden">
       {visibleColumns.map(({ key, label, color }) =>
         isDraggable ? (
           <SortableLabel

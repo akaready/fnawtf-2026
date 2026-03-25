@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ListFilter, User, Check, X, Camera } from 'lucide-react';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
 import { DEFAULT_COLUMN_ORDER } from '@/app/admin/scripts/_components/gridUtils';
@@ -11,7 +11,7 @@ import { ScriptPresentationView } from './ScriptPresentationView';
 import { ReadOnlyCanvas } from './ReadOnlyCanvas';
 import { SceneNav } from '@/app/admin/scripts/_components/SceneNav';
 import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarShell';
-import { startScriptViewSession, updateScriptViewDuration, getShareComments } from './actions';
+import { startScriptViewSession, updateScriptViewDuration, getShareComments, getViewerProfile, updateViewerProfile, uploadViewerAvatar } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow, SharePreferences } from '@/types/scripts';
@@ -90,7 +90,11 @@ export function ScriptShareClient({
   const [commentHideCompleted, setCommentHideCompleted] = useState(false);
   const [commentSortMode, setCommentSortMode] = useState<'script' | 'oldest' | 'newest' | 'unresolved'>('script');
   const [commentSceneFilter, setCommentSceneFilter] = useState<'current' | 'all'>('all');
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const userPopoverRef = useRef<HTMLDivElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
   const presentationNavRef = useRef<{
     jumpToScene: (sceneId: string) => void;
@@ -98,6 +102,27 @@ export function ScriptShareClient({
     getActiveSceneId: () => string | null;
     getActiveBeatId: () => string | null;
   } | null>(null);
+
+  // Profile editor state
+  const [profileFirstName, setProfileFirstName] = useState(viewerName?.split(' ')[0] ?? '');
+  const [profileLastName, setProfileLastName] = useState(viewerName?.split(' ').slice(1).join(' ') ?? '');
+  const profileEmail = viewerEmail;
+  const [profileColor, setProfileColor] = useState('#e67e22');
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Load profile on mount
+  useEffect(() => {
+    getViewerProfile(viewerEmail).then(p => {
+      if (p) {
+        if (p.first_name) setProfileFirstName(p.first_name);
+        if (p.last_name) setProfileLastName(p.last_name);
+        if (p.avatar_color) setProfileColor(p.avatar_color);
+        if (p.headshot_url) setProfileAvatarUrl(p.headshot_url);
+      }
+    });
+  }, [viewerEmail]);
 
   // Click-outside handler for user popover
   useEffect(() => {
@@ -110,6 +135,30 @@ export function ScriptShareClient({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [userPopoverOpen]);
+
+  // Click-outside handler for filter dropdown
+  useEffect(() => {
+    if (!filterDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setFilterDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterDropdownOpen]);
+
+  // Click-outside handler for sort dropdown
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [sortDropdownOpen]);
 
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
@@ -300,27 +349,145 @@ export function ScriptShareClient({
               <div className="relative" ref={userPopoverRef}>
                 <button
                   onClick={() => setUserPopoverOpen(prev => !prev)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors overflow-hidden"
+                  className="w-10 h-10 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors overflow-hidden"
                   title="Profile settings"
                 >
-                  <User size={16} />
+                  {profileAvatarUrl ? (
+                    <img src={profileAvatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={16} />
+                  )}
                 </button>
                 {userPopoverOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-[300px] bg-[#111] border border-admin-border rounded-lg shadow-xl z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-admin-border">
+                  <div className="absolute right-0 top-full mt-2 w-[320px] bg-[#111] border border-admin-border rounded-lg shadow-xl z-50 overflow-hidden">
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b border-white/[0.06]">
                       <p className="text-admin-sm text-admin-text-faint">Commenting as:</p>
-                      <p className="text-admin-sm text-white font-medium">{viewerName ?? viewerEmail} <span className="text-admin-text-faint">({viewerEmail})</span></p>
+                      <p className="text-admin-sm text-white font-medium">{profileFirstName || profileLastName ? `${profileFirstName} ${profileLastName}`.trim() : viewerEmail} <span className="text-admin-text-faint">({profileEmail})</span></p>
                     </div>
-                    <div className="px-4 py-4 space-y-3">
-                      <p className="text-[10px] uppercase tracking-widest text-admin-text-faint">Profile settings are managed in the comments panel</p>
+                    {/* Body */}
+                    <div className="px-4 py-4 space-y-4">
+                      {/* Avatar + color picker */}
+                      <div className="flex items-start gap-4">
+                        <div className="relative group/avatar flex-shrink-0">
+                          <div
+                            className="w-14 h-14 rounded-admin-md overflow-hidden flex items-center justify-center text-white text-admin-lg font-bold"
+                            style={{ backgroundColor: profileAvatarUrl ? undefined : profileColor }}
+                          >
+                            {profileAvatarUrl ? (
+                              <img src={profileAvatarUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{(profileFirstName?.[0] ?? viewerEmail[0] ?? '?').toUpperCase()}</span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => avatarInputRef.current?.click()}
+                            className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center rounded-admin-md"
+                          >
+                            <Camera size={16} className="text-white" />
+                          </button>
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const fd = new FormData();
+                              fd.append('file', file);
+                              fd.append('email', viewerEmail);
+                              try {
+                                const url = await uploadViewerAvatar(fd);
+                                setProfileAvatarUrl(url);
+                              } catch (err) {
+                                console.error('Avatar upload failed:', err);
+                              }
+                            }}
+                          />
+                        </div>
+                        {!profileAvatarUrl && (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {['#ef4444','#e67e22','#f59e0b','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899'].map(color => (
+                              <button
+                                key={color}
+                                onClick={() => setProfileColor(color)}
+                                className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110"
+                                style={{
+                                  backgroundColor: color,
+                                  borderColor: profileColor === color ? 'white' : 'transparent',
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* Name inputs */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={profileFirstName}
+                          onChange={(e) => setProfileFirstName(e.target.value)}
+                          placeholder="First name"
+                          className="w-full px-3 py-2 text-admin-sm bg-white/[0.06] border border-white/[0.14] rounded-lg text-white placeholder:text-admin-text-faint outline-none focus:border-white/30"
+                        />
+                        <input
+                          type="text"
+                          value={profileLastName}
+                          onChange={(e) => setProfileLastName(e.target.value)}
+                          placeholder="Last name"
+                          className="w-full px-3 py-2 text-admin-sm bg-white/[0.06] border border-white/[0.14] rounded-lg text-white placeholder:text-admin-text-faint outline-none focus:border-white/30"
+                        />
+                      </div>
+                      {/* Email (read-only) */}
+                      <input
+                        type="email"
+                        value={profileEmail}
+                        readOnly
+                        className="w-full px-3 py-2 text-admin-sm bg-white/[0.06] border border-white/[0.14] rounded-lg text-admin-text-faint outline-none cursor-not-allowed"
+                      />
+                    </div>
+                    {/* Footer — Save + Cancel */}
+                    <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-white/[0.06]">
+                      <button
+                        onClick={() => setUserPopoverOpen(false)}
+                        className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-white transition-colors"
+                        title="Cancel"
+                      >
+                        <X size={16} />
+                      </button>
+                      <button
+                        disabled={profileSaving}
+                        onClick={async () => {
+                          setProfileSaving(true);
+                          try {
+                            await updateViewerProfile(
+                              viewerEmail,
+                              profileFirstName,
+                              profileLastName,
+                              profileAvatarUrl ? undefined : profileColor,
+                              false,
+                            );
+                            setUserPopoverOpen(false);
+                          } catch (err) {
+                            console.error('Profile save failed:', err);
+                          } finally {
+                            setProfileSaving(false);
+                          }
+                        }}
+                        className="w-8 h-8 flex items-center justify-center rounded-admin-md text-admin-success hover:bg-admin-success/10 transition-colors"
+                        title="Save"
+                      >
+                        <Check size={16} />
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
-              {/* Simple email button */}
+              {/* Email button */}
               <a
                 href="mailto:hi@fna.wtf"
-                className="w-9 h-9 rounded-full flex items-center justify-center border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors"
+                className="w-10 h-10 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors"
                 title="hi@fna.wtf"
               >
                 <Mail size={16} />
@@ -331,7 +498,7 @@ export function ScriptShareClient({
       )}
 
       {/* Toolbar */}
-      <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0">
+      <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0 overflow-hidden">
         {/* Left — Scenes toggle + Fullscreen + Width */}
         <div className="flex items-center gap-1">
           <button
@@ -376,42 +543,69 @@ export function ScriptShareClient({
             excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null
           ) : (
             <div className="ml-auto flex-shrink-0 flex items-center gap-1">
-              {/* Scene filter toggle */}
-              <div className="flex items-center rounded-lg border border-admin-border overflow-hidden">
-                {(['current', 'all'] as const).map(mode => (
-                  <button
-                    key={mode}
-                    onClick={() => setCommentSceneFilter(mode)}
-                    className={`px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors ${
-                      commentSceneFilter === mode
-                        ? 'bg-admin-bg-active text-admin-text-secondary'
-                        : 'text-admin-text-ghost hover:text-admin-text-muted'
-                    }`}
-                  >
-                    {mode === 'current' ? 'Scene' : 'All'}
-                  </button>
-                ))}
+              {/* Filter dropdown */}
+              <div className="relative" ref={filterDropdownRef}>
+                <button
+                  onClick={() => { setFilterDropdownOpen(prev => !prev); setSortDropdownOpen(false); }}
+                  className={`${btnCls} w-8 ${(commentHideCompleted || commentSceneFilter !== 'all') ? btnOn : ''}`}
+                  title="Filter comments"
+                >
+                  <Eye size={16} />
+                </button>
+                {filterDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[180px] z-50">
+                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-admin-text-faint/50">By Scene</p>
+                    {(['all', 'current'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setCommentSceneFilter(mode)}
+                        className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center justify-between"
+                      >
+                        {mode === 'all' ? 'All Scenes' : 'Current Scene'}
+                        {commentSceneFilter === mode && <Check size={14} className="text-admin-info" />}
+                      </button>
+                    ))}
+                    <div className="border-t border-admin-border my-1" />
+                    <button
+                      onClick={() => setCommentHideCompleted(prev => !prev)}
+                      className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center justify-between"
+                    >
+                      Hide Resolved
+                      {commentHideCompleted && <Check size={14} className="text-admin-info" />}
+                    </button>
+                  </div>
+                )}
               </div>
-              {/* Filter button */}
-              <button
-                onClick={() => setCommentHideCompleted(prev => !prev)}
-                className={`${btnCls} w-8 ${commentHideCompleted ? btnOn : ''}`}
-                title={commentHideCompleted ? 'Show resolved' : 'Hide resolved'}
-              >
-                <Eye size={16} />
-              </button>
-              {/* Sort button */}
-              <button
-                onClick={() => {
-                  const modes = ['script', 'oldest', 'newest', 'unresolved'] as const;
-                  const idx = modes.indexOf(commentSortMode);
-                  setCommentSortMode(modes[(idx + 1) % modes.length]);
-                }}
-                className={`${btnCls} w-8 ${commentSortMode !== 'script' ? btnOn : ''}`}
-                title={`Sort: ${commentSortMode}`}
-              >
-                <ListFilter size={16} />
-              </button>
+              {/* Sort dropdown */}
+              <div className="relative" ref={sortDropdownRef}>
+                <button
+                  onClick={() => { setSortDropdownOpen(prev => !prev); setFilterDropdownOpen(false); }}
+                  className={`${btnCls} w-8 ${commentSortMode !== 'script' ? btnOn : ''}`}
+                  title="Sort comments"
+                >
+                  <ListFilter size={16} />
+                </button>
+                {sortDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 bg-admin-bg-raised border border-admin-border rounded-admin-md shadow-xl py-1 min-w-[170px] z-50">
+                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-widest text-admin-text-faint/50">Sort by...</p>
+                    {([
+                      { key: 'script' as const, label: 'Script Order' },
+                      { key: 'oldest' as const, label: 'Oldest' },
+                      { key: 'newest' as const, label: 'Newest' },
+                      { key: 'unresolved' as const, label: 'Unresolved' },
+                    ]).map(opt => (
+                      <button
+                        key={opt.key}
+                        onClick={() => { setCommentSortMode(opt.key); setSortDropdownOpen(false); }}
+                        className="w-full text-left px-3 py-2 text-admin-sm text-white hover:bg-admin-bg-hover transition-colors flex items-center justify-between"
+                      >
+                        {opt.label}
+                        {commentSortMode === opt.key && <Check size={14} className="text-admin-info" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Comments toggle */}
               <button
                 onClick={() => presentationToggleCommentsRef.current?.()}

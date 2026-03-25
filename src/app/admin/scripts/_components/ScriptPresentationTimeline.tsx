@@ -151,10 +151,10 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
   for (const s of slides) beatsPerScene[s.sceneId] = (beatsPerScene[s.sceneId] ?? 0) + 1;
 
   const pxPerSlide = slides.length > 1 ? trackWidth / (slides.length - 1) : 999;
-  const showAllLabels = pxPerSlide >= 60;
-  const showSceneBoundaryLabels = pxPerSlide >= 35;
-  const showSceneNumbersOnly = pxPerSlide >= 20;
-  const smallAvatars = pxPerSlide < 45;
+  const showAllLabels = pxPerSlide >= 80;
+  const showSceneBoundaryLabels = pxPerSlide >= 50;
+  const showSceneNumbersOnly = pxPerSlide >= 30;
+  const smallAvatars = pxPerSlide < 50;
 
   const playheadLeft = slides.length > 1 ? `${(currentIndex / (slides.length - 1)) * 100}%` : '0%';
 
@@ -236,6 +236,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                     authors={authors}
                     isCurrent={isCurrent}
                     onClickAvatar={(email) => onClickCommentAvatar(slide.beatId, email)}
+                    small={smallAvatars}
                   />
                 )}
                 {beatLabel && (
