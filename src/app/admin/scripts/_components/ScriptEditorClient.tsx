@@ -980,6 +980,7 @@ export function ScriptEditorClient({
                 commentsMap={commentsMap}
                 commentsLoading={commentsLoading}
                 onRefreshComments={handleRefreshComments}
+                commentsBeatIdMap={commentsBeatIdMap}
                 onUpdateScene={handleUpdateScene}
                 onDeleteScene={handleDeleteScene}
               />

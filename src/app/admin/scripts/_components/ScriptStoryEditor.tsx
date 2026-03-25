@@ -12,6 +12,8 @@ import { ScriptPresentationTimeline } from './ScriptPresentationTimeline';
 import { StoryboardLayoutRenderer } from './StoryboardLayoutRenderer';
 import { StoryboardGenerateModal } from './StoryboardGenerateModal';
 import { buildPresentationSlides } from './presentationUtils';
+import { getCommentAuthors } from '@/app/s/[token]/actions';
+import type { CommentAuthor } from '@/app/s/[token]/actions';
 import type {
   ComputedScene, ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow,
   ScriptLocationRow, ScriptProductRow, ScriptBeatReferenceRow,
@@ -58,6 +60,7 @@ interface Props {
   commentsMap: Map<string, ScriptShareCommentRow[]>;
   commentsLoading?: boolean;
   onRefreshComments?: () => void;
+  commentsBeatIdMap?: Map<string, string> | null;
   onUpdateScene?: (sceneId: string, data: Record<string, unknown>) => void;
   onDeleteScene?: (sceneId: string) => void;
 }
@@ -98,6 +101,7 @@ export function ScriptStoryEditor({
   onSelectShare,
   commentsMap,
   commentsLoading: _commentsLoading,
+  commentsBeatIdMap,
   onRefreshComments,
   onUpdateScene,
   onDeleteScene,
@@ -206,22 +210,24 @@ export function ScriptStoryEditor({
   /* ── Comments for current beat ── */
   const beatComments = current ? (commentsMap.get(current.beatId) ?? []) : [];
 
-  /* ── Build comment authors map for timeline avatars ── */
-  const commentAuthors = useMemo(() => {
-    const authors: Record<string, { email: string; name: string | null; avatar_url: string | null; avatar_color: string | null }[]> = {};
-    for (const [beatId, comments] of commentsMap) {
-      const seen = new Set<string>();
-      const beatAuthors: typeof authors[string] = [];
-      for (const c of comments) {
-        if (!c.parent_comment_id && !seen.has(c.viewer_email)) {
-          seen.add(c.viewer_email);
-          beatAuthors.push({ email: c.viewer_email, name: c.viewer_name, avatar_url: null, avatar_color: null });
+  /* ── Load comment authors for timeline avatars ── */
+  const [commentAuthors, setCommentAuthors] = useState<Record<string, CommentAuthor[]>>({});
+  useEffect(() => {
+    if (!selectedShareId) { setCommentAuthors({}); return; }
+    getCommentAuthors(selectedShareId).then(authors => {
+      // Remap snapshot beat IDs → current beat IDs if needed
+      if (commentsBeatIdMap) {
+        const remapped: Record<string, CommentAuthor[]> = {};
+        for (const [beatId, arr] of Object.entries(authors)) {
+          const mapped = commentsBeatIdMap.get(beatId) ?? beatId;
+          remapped[mapped] = arr;
         }
+        setCommentAuthors(remapped);
+      } else {
+        setCommentAuthors(authors);
       }
-      if (beatAuthors.length > 0) authors[beatId] = beatAuthors;
-    }
-    return authors;
-  }, [commentsMap]);
+    });
+  }, [selectedShareId, commentsBeatIdMap, commentsMap]); // commentsMap dep to refresh when comments change
 
   /* ── Storyboard generate modal ── */
   const [modalOpen, setModalOpen] = useState(false);
