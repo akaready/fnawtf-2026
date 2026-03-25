@@ -15,6 +15,7 @@ import {
   useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
+import { motion } from 'framer-motion';
 import type { ScriptColumnConfig } from '@/types/scripts';
 
 interface Props {
@@ -28,6 +29,8 @@ interface Props {
   columnOrder?: string[];
   /** Called when columns are reordered via drag */
   onColumnOrderChange?: (order: string[]) => void;
+  /** Stagger dots in on mount with left-to-right delay */
+  staggerIn?: boolean;
 }
 
 const columns: { key: keyof ScriptColumnConfig; label: string; color: string; rawColor: string }[] = [
@@ -41,7 +44,7 @@ const columns: { key: keyof ScriptColumnConfig; label: string; color: string; ra
 
 const columnMap = Object.fromEntries(columns.map(c => [c.key, c]));
 
-export function ScriptColumnToggle({ config, onChange, compact, exclude, columnOrder, onColumnOrderChange }: Props) {
+export function ScriptColumnToggle({ config, onChange, compact, exclude, columnOrder, onColumnOrderChange, staggerIn }: Props) {
   const isDraggable = !!columnOrder && !!onColumnOrderChange;
 
   // Order columns by columnOrder when provided, else default
@@ -76,8 +79,8 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
 
     const inner = (
       <div className="flex items-center gap-0 md:gap-1 overflow-hidden min-w-0">
-        {visibleColumns.map(({ key, label, color, rawColor }) =>
-          isDraggable ? (
+        {visibleColumns.map(({ key, label, color, rawColor }, dotIdx) => {
+          const dotContent = isDraggable ? (
             <SortableDot
               key={key}
               id={key}
@@ -98,7 +101,21 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
                 {label}
               </span>
             </div>
-          )
+          );
+          if (staggerIn) {
+            return (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: dotIdx * 0.04, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {dotContent}
+              </motion.div>
+            );
+          }
+          return dotContent;
+        }
         )}
       </div>
     );

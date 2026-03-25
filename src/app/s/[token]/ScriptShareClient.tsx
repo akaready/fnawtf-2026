@@ -342,9 +342,13 @@ export function ScriptShareClient({
           className="overflow-hidden"
         >
           {/* Mobile header */}
-          <div className="flex md:hidden items-center gap-3 px-3 py-2 border-b border-border flex-shrink-0">
-            <img src="/images/logo/fna-logo.svg" alt="FNA" className="h-4 flex-shrink-0" />
+          <div className="flex md:hidden items-center gap-3 px-4 py-3 border-b border-border flex-shrink-0">
             <div className="flex-1 min-w-0">
+              {clientName && (
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-0.5 truncate">
+                  {clientName}{projectNumber ? ` \u00B7 #${projectNumber}` : ''}
+                </p>
+              )}
               <div className="flex items-center gap-2">
                 <h1 className="font-display text-sm font-bold text-foreground truncate">{script.title}</h1>
                 <span
@@ -631,11 +635,11 @@ export function ScriptShareClient({
           <ViewSwitcher views={availableViews} activeView={viewMode} onChange={(mode) => setViewMode(mode)} />
         </div>
         {/* Right — mode-dependent controls */}
-        <div className="flex-shrink-0 overflow-hidden min-w-[200px] flex justify-end">
+        <div className="ml-auto flex-shrink-0 overflow-hidden">
           <AnimatePresence mode="wait">
           {viewMode === 'table' ? (
             <motion.div key="table-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}>
-            {excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} /> : null}
+            {excludedColumns.length < 6 ? <ScriptColumnToggle config={columnConfig} onChange={setColumnConfig} compact exclude={excludedColumns} columnOrder={columnOrder} onColumnOrderChange={setColumnOrder} staggerIn /> : null}
             </motion.div>
           ) : (
             <motion.div key="story-controls" initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="flex items-center gap-1">
@@ -754,7 +758,7 @@ export function ScriptShareClient({
                 <span className="hidden md:inline text-[10px] font-semibold uppercase tracking-widest">
                   Comments{commentsMap.size > 0 ? ` (${Array.from(commentsMap.values()).reduce((sum, arr) => sum + arr.length, 0)})` : ''}
                 </span>
-                {(() => { const c = Array.from(commentsMap.values()).reduce((s, a) => s + a.length, 0); return c > 0 ? <span className="md:hidden text-[9px] font-bold bg-admin-text-primary text-admin-bg-base rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{c}</span> : null; })()}
+                {(() => { const c = Array.from(commentsMap.values()).reduce((s, a) => s + a.length, 0); return c > 0 ? <span className="md:hidden text-[10px] font-semibold uppercase tracking-widest">({c})</span> : null; })()}
               </button>
             </motion.div>
           )}
