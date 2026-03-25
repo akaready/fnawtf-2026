@@ -29,18 +29,22 @@ function BeatAvatars({
   authors,
   onClickAvatar,
   isCurrent,
+  small = false,
 }: {
   authors: CommentAuthor[];
   onClickAvatar: (email: string) => void;
   isCurrent: boolean;
+  small?: boolean;
 }) {
+  const size = small ? 16 : 20;
+  const stackGap = small ? 3 : 4;
   // Most recent commenter is last in the array — reverse so they're on top of the stack
-  const stacked = [...authors].reverse().slice(0, 5);
+  const stacked = [...authors].reverse().slice(0, small ? 3 : 5);
   // Opacity fades after the top avatar: 1, 0.55, 0.3, then hidden
   const layerOpacity = [1, 0.55, 0.3];
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto" style={{ width: 20, height: stacked.length * 4 + 16, bottom: '100%', marginBottom: 10 }}>
+    <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto" style={{ width: size, height: stacked.length * stackGap + size, bottom: '100%', marginBottom: small ? 6 : 10 }}>
       {stacked.map((author, i) => {
         const baseOpacity = layerOpacity[i] ?? 0.15;
         return (
@@ -59,9 +63,11 @@ function BeatAvatars({
               delay: i * 0.04,
             }}
             whileHover={{ scale: 1.15, opacity: 1 }}
-            className="absolute left-0 w-5 h-5 rounded-full ring-1 ring-black/60 flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer"
+            className="absolute left-0 rounded-full ring-1 ring-black/60 flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer"
             style={{
-              top: i * 4,
+              width: size,
+              height: size,
+              top: i * stackGap,
               zIndex: stacked.length - i,
               ...(!author.avatar_url ? { backgroundColor: avatarColor(author.email) } : {}),
             }}
@@ -70,7 +76,7 @@ function BeatAvatars({
             {author.avatar_url ? (
               <img src={author.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-[10px] text-black leading-none" style={{ fontWeight: 900 }}>
+              <span className="text-black leading-none" style={{ fontSize: small ? 8 : 10, fontWeight: 900 }}>
                 {getInitials(author.name, author.email)}
               </span>
             )}
@@ -148,6 +154,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
   const showAllLabels = pxPerSlide >= 60;
   const showSceneBoundaryLabels = pxPerSlide >= 35;
   const showSceneNumbersOnly = pxPerSlide >= 20;
+  const smallAvatars = pxPerSlide < 45;
 
   const playheadLeft = slides.length > 1 ? `${(currentIndex / (slides.length - 1)) * 100}%` : '0%';
 
@@ -187,6 +194,7 @@ export function ScriptPresentationTimeline({ slides, currentIndex, onSeek, comme
                       authors={authors}
                       isCurrent={isCurrent}
                       onClickAvatar={(email) => onClickCommentAvatar(slide.beatId, email)}
+                      small={smallAvatars}
                     />
                   )}
                   {beatLabel && showSceneBoundaryLabels && (

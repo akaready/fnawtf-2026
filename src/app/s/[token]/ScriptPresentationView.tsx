@@ -579,8 +579,8 @@ export function ScriptPresentationView({
             </div>
 
             {/* Audio (2/3) + Visual (1/3) */}
-            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${showVisual ? 'lg:grid-cols-4' : ''}`}>
-              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'lg:col-span-3' : ''}`}>
+            <div className={`grid gap-px border-b border-[#1a1a1a] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${showVisual ? 'xl:grid-cols-4' : ''}`}>
+              <div className={`border-l-2 border-l-[var(--admin-accent)] bg-[#0d0d0d] px-5 py-4 ${showVisual ? 'xl:col-span-3' : ''}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#444] mb-2">Audio</p>
                 <PresentationCell
                   content={current.audioContent}
