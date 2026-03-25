@@ -122,6 +122,7 @@ export function ScriptShareClient({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSceneSheetOpen, setMobileSceneSheetOpen] = useState(false);
   const [mobileCommentSheetOpen, setMobileCommentSheetOpen] = useState(false);
+  const [mobileUserSheetOpen, setMobileUserSheetOpen] = useState(false);
   const presentationToggleCommentsRef = useRef<(() => void) | null>(null);
   const presentationNavRef = useRef<{
     jumpToScene: (sceneId: string) => void;
@@ -359,7 +360,7 @@ export function ScriptShareClient({
               </div>
             </div>
             <button
-              onClick={() => setMobileMenuOpen(prev => !prev)}
+              onClick={() => setMobileUserSheetOpen(true)}
               className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:text-white transition-colors flex-shrink-0"
             >
               <User size={16} />
@@ -883,6 +884,113 @@ export function ScriptShareClient({
           externalOpen={mobileCommentSheetOpen}
           onClose={() => setMobileCommentSheetOpen(false)}
         />
+        {/* Mobile user profile sheet */}
+        {mobileUserSheetOpen && (
+          <div className="md:hidden fixed inset-0 z-[9999]">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/80" onClick={() => setMobileUserSheetOpen(false)} />
+            {/* Sheet */}
+            <div className="absolute bottom-0 left-0 right-0 bg-[#111] border-t border-admin-border rounded-t-2xl max-h-[85vh] overflow-y-auto">
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-2">
+                <div className="w-10 h-1 rounded-full bg-white/20" />
+              </div>
+              {/* Header */}
+              <div className="px-6 pb-3">
+                <p className="text-admin-sm text-admin-text-faint">Commenting as:</p>
+                <p className="text-admin-sm text-white font-medium">
+                  {[profileFirstName, profileLastName].filter(Boolean).join(' ') || viewerName || viewerEmail.split('@')[0]}
+                  {' '}<span className="text-admin-text-faint">({viewerEmail})</span>
+                </p>
+              </div>
+              {/* Avatar */}
+              <div className="px-6 pb-4">
+                <div className="flex justify-center">
+                  <div className="relative group/avatar">
+                    <div
+                      className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-black text-black overflow-hidden"
+                      style={{ backgroundColor: profileAvatarUrl ? undefined : profileColor }}
+                    >
+                      {profileAvatarUrl ? (
+                        <img src={profileAvatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{(profileFirstName?.[0] ?? viewerEmail[0] ?? '?').toUpperCase()}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/50 opacity-0 active:opacity-100 flex items-center justify-center rounded-full"
+                    >
+                      <Camera size={20} className="text-white" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {/* Color picker */}
+              {!profileAvatarUrl && (
+                <div className="px-6 pb-4">
+                  <div className="flex items-center justify-between">
+                    {['#ef4444','#e67e22','#f59e0b','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899'].map(c => (
+                      <button
+                        key={c}
+                        onClick={() => setProfileColor(c)}
+                        className="w-7 h-7 rounded-full transition-transform active:scale-110"
+                        style={{
+                          backgroundColor: c,
+                          outline: profileColor === c ? '2px solid white' : 'none',
+                          outlineOffset: '2px',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Name fields */}
+              <div className="px-6 pb-3 flex gap-3">
+                <input
+                  value={profileFirstName}
+                  onChange={e => setProfileFirstName(e.target.value)}
+                  placeholder="First name"
+                  className="flex-1 bg-white/[0.06] border border-white/[0.14] rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                />
+                <input
+                  value={profileLastName}
+                  onChange={e => setProfileLastName(e.target.value)}
+                  placeholder="Last name"
+                  className="flex-1 bg-white/[0.06] border border-white/[0.14] rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+                />
+              </div>
+              {/* Email (read-only) */}
+              <div className="px-6 pb-4">
+                <input
+                  value={viewerEmail}
+                  readOnly
+                  className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white/50 focus:outline-none"
+                />
+              </div>
+              {/* Actions */}
+              <div className="px-6 pb-6 flex items-center gap-3">
+                <button
+                  disabled={profileSaving}
+                  onClick={async () => {
+                    setProfileSaving(true);
+                    try {
+                      await updateViewerProfile(viewerEmail, profileFirstName, profileLastName, profileAvatarUrl ? undefined : profileColor, false);
+                      setMobileUserSheetOpen(false);
+                    } catch (err) { console.error('Profile save failed:', err); }
+                    finally { setProfileSaving(false); }
+                  }}
+                  className="btn-primary px-5 py-2.5 text-sm"
+                >
+                  Save
+                </button>
+                <button onClick={() => setMobileUserSheetOpen(false)} className="btn-secondary px-5 py-2.5 text-sm">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
