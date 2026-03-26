@@ -40,6 +40,11 @@ export function ReelPlayer({
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const progressRef = useRef<HTMLDivElement>(null);
   const { setIsVideoPlaying, setPauseVideo } = useVideoPlayer();
 
   // Initialize video source
@@ -61,11 +66,25 @@ export function ReelPlayer({
     video.addEventListener('canplay', handleCanPlay, { once: true });
     video.addEventListener('error', handleError, { once: true });
 
+    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleLoadedMetadata = () => setDuration(video.duration || 0);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setIsVideoPlaying(false);
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('ended', handleEnded);
+
     return () => {
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('error', handleError);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('ended', handleEnded);
     };
-  }, [videoSrc]);
+  }, [videoSrc, setIsVideoPlaying]);
 
   // Safe pause — waits for any pending play() to settle before calling pause()
   const safePause = useCallback(() => {
@@ -176,6 +195,7 @@ export function ReelPlayer({
       setIsMuted(false);
       startPlay();
       setIsVideoPlaying(true);
+      setHasPlayed(true);
     } else if (!playPendingRef.current) {
       safePause();
       hoverInitiatedRef.current = false;
@@ -248,6 +268,30 @@ export function ReelPlayer({
     }
   }, [isPlaying, setIsVideoPlaying]);
 
+  // Scrub handler — seek video when clicking/dragging the progress bar
+  const handleScrub = useCallback((e: React.MouseEvent | MouseEvent) => {
+    const bar = progressRef.current;
+    const video = videoRef.current;
+    if (!bar || !video || !duration) return;
+    const rect = bar.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    video.currentTime = pct * duration;
+    setCurrentTime(pct * duration);
+  }, [duration]);
+
+  const handleScrubStart = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsScrubbing(true);
+    handleScrub(e);
+    const onMove = (ev: MouseEvent) => handleScrub(ev);
+    const onUp = () => { setIsScrubbing(false); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [handleScrub]);
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const showTimebar = hasPlayed && !error;
+
   // Show play button when paused, or during hover preview (encourages click-to-play with sound)
   // Not gated on isLoading — on mobile, canplay won't fire until the user taps play
   const showPlayButton = !error && (!isPlaying || hoverInitiatedRef.current);
@@ -299,6 +343,25 @@ export function ReelPlayer({
             <Play className="w-8 h-8 ml-1" fill="currentColor" />
           </div>
         </button>
+      )}
+
+      {/* Progress bar */}
+      {showTimebar && (
+        <div
+          ref={progressRef}
+          className={`absolute bottom-0 left-0 right-0 z-20 h-6 flex items-end cursor-pointer group/bar transition-opacity duration-300 ${
+            showControls || !isPlaying || isScrubbing ? 'opacity-100' : 'opacity-0 hover:opacity-100'
+          }`}
+          onMouseDown={handleScrubStart}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-full h-1 group-hover/bar:h-2 transition-all duration-150 bg-white/20">
+            <div
+              className="h-full bg-accent transition-[width] duration-75"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Controls - Bottom Right (z-20 to sit above play overlay) */}
