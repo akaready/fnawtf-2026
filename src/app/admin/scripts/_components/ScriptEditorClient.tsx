@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, Check } from 'lucide-react';
+import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, Check, Undo2, Redo2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
@@ -19,6 +19,7 @@ import {
   getCharacterReferenceMap, getLocationReferenceMap,
   getScriptProducts, getProductReferenceMap,
   getScriptSharesByGroup, getShareComments, getSnapshotBeats,
+  restoreBeats, restoreScene, restoreBeatReferences, restoreStoryboardFrames,
 } from '@/app/admin/actions';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
@@ -44,6 +45,7 @@ import { ScriptVersionsPanel } from './ScriptVersionsPanel';
 import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from './ScriptScratchPad';
 import { ScriptExtractModal } from './ScriptExtractModal';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
+import { useUndoStack } from './useUndoStack';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
 import type { ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
@@ -80,7 +82,8 @@ export function ScriptEditorClient({
   globalLocations = [],
   initialProducts = [],
 }: Props) {
-  const { showError } = useAdminToast();
+  const { showError, showInfo } = useAdminToast();
+  const undoStack = useUndoStack();
   const [script, setScript] = useState(initialScript);
   const [scenes, setScenes] = useState(initialScenes);
   const [beats, setBeats] = useState(initialBeats);
@@ -412,13 +415,30 @@ export function ScriptEditorClient({
   }, []);
 
   const handleDeleteScene = useCallback(async (sceneId: string) => {
+    // Snapshot before delete for undo
+    const deletedScene = scenes.find(s => s.id === sceneId);
+    const deletedBeats = beats.filter(b => b.scene_id === sceneId);
+    const deletedBeatIds = new Set(deletedBeats.map(b => b.id));
+    const deletedRefs = references.filter(r => deletedBeatIds.has(r.beat_id));
+    const deletedFrames = storyboardFrames.filter(f => f.beat_id && deletedBeatIds.has(f.beat_id));
+
     await deleteScene(sceneId);
     setScenes(prev => prev.filter(s => s.id !== sceneId));
     setBeats(prev => prev.filter(b => b.scene_id !== sceneId));
     if (activeSceneId === sceneId) {
       setActiveSceneId(scenes.find(s => s.id !== sceneId)?.id ?? null);
     }
-  }, [activeSceneId, scenes]);
+
+    if (deletedScene) {
+      undoStack.push({
+        type: 'delete-scene',
+        timestamp: Date.now(),
+        label: `Delete scene ${deletedScene.location_name || 'Untitled'}`,
+        payload: { scene: deletedScene, beats: deletedBeats, references: deletedRefs, frames: deletedFrames },
+      });
+      showInfo('Scene deleted', { action: { label: 'Undo', onClick: () => handleUndo() }, duration: 6000 });
+    }
+  }, [activeSceneId, scenes, beats, references, storyboardFrames, undoStack, showInfo]);
 
   const handleReorderScenes = useCallback(async (orderedIds: string[]) => {
     setScenes(prev => {
@@ -465,9 +485,136 @@ export function ScriptEditorClient({
   }, [autoSave]);
 
   const handleDeleteBeat = useCallback(async (beatId: string) => {
+    // Snapshot before delete for undo
+    const deletedBeat = beats.find(b => b.id === beatId);
+    const deletedRefs = references.filter(r => r.beat_id === beatId);
+    const deletedFrames = storyboardFrames.filter(f => f.beat_id === beatId);
+
     await deleteBeat(beatId);
     setBeats(prev => prev.filter(b => b.id !== beatId));
-  }, []);
+
+    if (deletedBeat) {
+      undoStack.push({
+        type: 'delete-beat',
+        timestamp: Date.now(),
+        label: 'Delete beat',
+        payload: { beats: [deletedBeat], references: deletedRefs, frames: deletedFrames },
+      });
+      showInfo('Beat deleted', { action: { label: 'Undo', onClick: () => handleUndo() }, duration: 6000 });
+    }
+  }, [beats, references, storyboardFrames, undoStack, showInfo]);
+
+  const handleDeleteBeatsBatch = useCallback(async (beatIds: Set<string>) => {
+    const deletedBeats = beats.filter(b => beatIds.has(b.id));
+    const deletedRefs = references.filter(r => beatIds.has(r.beat_id));
+    const deletedFrames = storyboardFrames.filter(f => f.beat_id && beatIds.has(f.beat_id));
+
+    await Promise.all([...beatIds].map(id => deleteBeat(id)));
+    setBeats(prev => prev.filter(b => !beatIds.has(b.id)));
+
+    if (deletedBeats.length > 0) {
+      undoStack.push({
+        type: 'delete-beats-batch',
+        timestamp: Date.now(),
+        label: `Delete ${deletedBeats.length} beats`,
+        payload: { beats: deletedBeats, references: deletedRefs, frames: deletedFrames },
+      });
+      showInfo(`${deletedBeats.length} beats deleted`, { action: { label: 'Undo', onClick: () => handleUndo() }, duration: 6000 });
+    }
+  }, [beats, references, storyboardFrames, undoStack, showInfo]);
+
+  // ── Undo / Redo ──
+
+  const handleUndo = useCallback(async () => {
+    const entry = undoStack.popUndo();
+    if (!entry) return;
+    undoStack.processingRef.current = true;
+    try {
+      switch (entry.type) {
+        case 'delete-beat':
+        case 'delete-beats-batch': {
+          if (entry.payload.beats?.length) {
+            await restoreBeats(entry.payload.beats);
+            setBeats(prev => [...prev, ...entry.payload.beats!]);
+          }
+          if (entry.payload.references?.length) {
+            await restoreBeatReferences(entry.payload.references);
+            setReferences(prev => [...prev, ...entry.payload.references!]);
+          }
+          if (entry.payload.frames?.length) {
+            await restoreStoryboardFrames(entry.payload.frames);
+            setStoryboardFrames(prev => [...prev, ...entry.payload.frames!]);
+          }
+          showInfo('Restored', { duration: 3000 });
+          break;
+        }
+        case 'delete-scene': {
+          if (entry.payload.scene) {
+            await restoreScene(entry.payload.scene);
+            setScenes(prev => [...prev, entry.payload.scene!].sort((a, b) => a.sort_order - b.sort_order));
+          }
+          if (entry.payload.beats?.length) {
+            await restoreBeats(entry.payload.beats);
+            setBeats(prev => [...prev, ...entry.payload.beats!]);
+          }
+          if (entry.payload.references?.length) {
+            await restoreBeatReferences(entry.payload.references);
+            setReferences(prev => [...prev, ...entry.payload.references!]);
+          }
+          if (entry.payload.frames?.length) {
+            await restoreStoryboardFrames(entry.payload.frames);
+            setStoryboardFrames(prev => [...prev, ...entry.payload.frames!]);
+          }
+          showInfo('Scene restored', { duration: 3000 });
+          break;
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Undo failed';
+      showError('Undo failed', msg);
+    } finally {
+      undoStack.processingRef.current = false;
+    }
+  }, [undoStack, showInfo, showError]);
+
+  const handleRedo = useCallback(async () => {
+    const entry = undoStack.popRedo();
+    if (!entry) return;
+    undoStack.processingRef.current = true;
+    try {
+      switch (entry.type) {
+        case 'delete-beat':
+        case 'delete-beats-batch': {
+          if (entry.payload.beats?.length) {
+            await Promise.all(entry.payload.beats.map(b => deleteBeat(b.id)));
+            const ids = new Set(entry.payload.beats.map(b => b.id));
+            setBeats(prev => prev.filter(b => !ids.has(b.id)));
+            setReferences(prev => prev.filter(r => !ids.has(r.beat_id)));
+            setStoryboardFrames(prev => prev.filter(f => !f.beat_id || !ids.has(f.beat_id)));
+          }
+          showInfo('Redone', { duration: 3000 });
+          break;
+        }
+        case 'delete-scene': {
+          if (entry.payload.scene) {
+            await deleteScene(entry.payload.scene.id);
+            setScenes(prev => prev.filter(s => s.id !== entry.payload.scene!.id));
+            const beatIds = new Set((entry.payload.beats ?? []).map(b => b.id));
+            setBeats(prev => prev.filter(b => b.scene_id !== entry.payload.scene!.id));
+            setReferences(prev => prev.filter(r => !beatIds.has(r.beat_id)));
+            setStoryboardFrames(prev => prev.filter(f => !f.beat_id || !beatIds.has(f.beat_id)));
+          }
+          showInfo('Scene deleted again', { duration: 3000 });
+          break;
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Redo failed';
+      showError('Redo failed', msg);
+    } finally {
+      undoStack.processingRef.current = false;
+    }
+  }, [undoStack, showInfo, showError]);
 
   const handleReorderBeats = useCallback(async (sceneId: string, orderedIds: string[]) => {
     setBeats(prev => {
@@ -707,6 +854,25 @@ export function ScriptEditorClient({
     return () => window.removeEventListener('keydown', handler);
   }, [isFocused, toggleFocus]);
 
+  // Cmd+Z / Cmd+Shift+Z for undo/redo (only when not in editable fields)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) return;
+      if (e.key !== 'z' && e.key !== 'Z') return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      const editable = (e.target as HTMLElement)?.isContentEditable;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || editable) return;
+      e.preventDefault();
+      if (e.shiftKey) {
+        void handleRedo();
+      } else {
+        void handleUndo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo, handleRedo]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
       {/* Version switching overlay */}
@@ -899,6 +1065,23 @@ export function ScriptEditorClient({
           >
             <SeparatorVertical size={16} />
           </button>
+          <div className="w-px h-5 bg-admin-border mx-1" />
+          <button
+            onClick={() => void handleUndo()}
+            disabled={!undoStack.canUndo}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            title={undoStack.undoLabel ? `Undo: ${undoStack.undoLabel}` : 'Nothing to undo'}
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            onClick={() => void handleRedo()}
+            disabled={!undoStack.canRedo}
+            className="text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            title={undoStack.redoLabel ? `Redo: ${undoStack.redoLabel}` : 'Nothing to redo'}
+          >
+            <Redo2 size={16} />
+          </button>
         </div>
         {/* Center zone */}
         <div className="flex-1 flex justify-center items-center gap-4">
@@ -1022,6 +1205,7 @@ export function ScriptEditorClient({
                 onAddBeat={handleAddBeat}
                 onUpdateBeat={handleUpdateBeat}
                 onDeleteBeat={handleDeleteBeat}
+                onDeleteBeatsBatch={handleDeleteBeatsBatch}
                 onReorderBeats={handleReorderBeats}
                 onDeleteScene={handleDeleteScene}
                 onSelectScene={setActiveSceneId}

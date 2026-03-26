@@ -53,6 +53,7 @@ interface Props {
   onAddBeat: (sceneId: string) => void;
   onUpdateBeat: (beatId: string, field: string, value: string) => void;
   onDeleteBeat: (beatId: string) => void;
+  onDeleteBeatsBatch?: (beatIds: Set<string>) => void;
   onReorderBeats: (sceneId: string, orderedIds: string[]) => void;
   onDeleteScene: (sceneId: string) => void;
   onSelectScene: (sceneId: string) => void;
@@ -100,6 +101,7 @@ export function ScriptEditorCanvas({
   onAddBeat,
   onUpdateBeat,
   onDeleteBeat,
+  onDeleteBeatsBatch,
   onReorderBeats,
   onDeleteScene,
   onSelectScene,
@@ -560,11 +562,15 @@ export function ScriptEditorCanvas({
   // Batch delete handler for toolbar portal button
   const handleBatchDelete = useCallback(() => {
     if (selectedBeatIds.size === 0) return;
-    for (const id of selectedBeatIds) {
-      onDeleteBeat(id);
+    if (onDeleteBeatsBatch) {
+      void onDeleteBeatsBatch(selectedBeatIds);
+    } else {
+      for (const id of selectedBeatIds) {
+        onDeleteBeat(id);
+      }
     }
     setSelectedBeatIds(new Set());
-  }, [selectedBeatIds, onDeleteBeat]);
+  }, [selectedBeatIds, onDeleteBeat, onDeleteBeatsBatch]);
 
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
   const [selectionMode, _setSelectionMode] = useState(false);

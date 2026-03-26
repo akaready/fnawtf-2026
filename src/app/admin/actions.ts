@@ -2543,6 +2543,34 @@ export async function reorderBeats(_sceneId: string, orderedIds: string[]) {
   if (failed?.error) throw new Error(failed.error.message);
 }
 
+// ── Script Undo / Restore ────────────────────────────────────────────────
+
+export async function restoreBeats(beats: { id: string; scene_id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string; storyboard_layout: string | null; created_at: string; updated_at: string }[]) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_beats').upsert(beats as never[], { onConflict: 'id' });
+  if (error) throw new Error(error.message);
+}
+
+export async function restoreScene(scene: { id: string; script_id: string; sort_order: number; location_name: string; location_id: string | null; time_of_day: string; int_ext: string; scene_notes: string | null; scene_description: string | null; created_at: string }) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_scenes').upsert(scene as never, { onConflict: 'id' });
+  if (error) throw new Error(error.message);
+}
+
+export async function restoreBeatReferences(refs: { id: string; beat_id: string; image_url: string; storage_path: string; sort_order: number; created_at: string }[]) {
+  if (refs.length === 0) return;
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_beat_references').upsert(refs as never[], { onConflict: 'id' });
+  if (error) throw new Error(error.message);
+}
+
+export async function restoreStoryboardFrames(frames: { id: string; script_id: string; beat_id: string | null; scene_id: string | null; image_url: string; storage_path: string; source: string; prompt_used: string | null; is_active: boolean; is_archived: boolean; reference_urls_used: unknown[]; slot: number | null; crop_config: unknown; created_at: string }[]) {
+  if (frames.length === 0) return;
+  const { supabase } = await requireAuth();
+  const { error } = await supabase.from('script_storyboard_frames').upsert(frames as never[], { onConflict: 'id' });
+  if (error) throw new Error(error.message);
+}
+
 // ── Script Characters ────────────────────────────────────────────────────
 
 export async function getScriptCharacters(scriptGroupId: string) {
