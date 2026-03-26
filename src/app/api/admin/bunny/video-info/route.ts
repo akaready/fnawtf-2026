@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: `Bunny API error: ${res.status}` }, { status: res.status });
   }
 
-  const data = await res.json() as { width?: number; height?: number };
+  const data = await res.json() as { width?: number; height?: number; originalFileName?: string; length?: number };
   const width = data.width ?? 0;
   const height = data.height ?? 0;
 
@@ -41,5 +41,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Video dimensions not available yet (still processing?)' }, { status: 422 });
   }
 
-  return NextResponse.json({ width, height, aspectRatio: detectRatio(width, height) });
+  return NextResponse.json({
+    width,
+    height,
+    aspectRatio: detectRatio(width, height),
+    originalFileName: data.originalFileName ?? null,
+    durationSeconds: data.length ? Math.round(data.length) : null,
+  });
 }

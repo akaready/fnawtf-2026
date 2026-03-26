@@ -27,6 +27,7 @@ interface VideoRow {
   section_id: string | null;
   hidden: boolean;
   duration_seconds: number | null;
+  original_filename: string | null;
 }
 
 interface SectionRow {
@@ -120,6 +121,7 @@ function SortableVideoRow({
             <button type="button" onClick={() => { setTitleDraft(video.title); setEditingTitle(true); }} className="w-5 h-5 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-muted transition-colors flex-shrink-0 opacity-0 group-hover/vid:opacity-100"><Pencil size={10} /></button>
           </div>
         )}
+        {video.original_filename && <p className="text-[10px] text-admin-text-ghost mt-0.5 truncate">{video.original_filename}</p>}
         <p className="text-[10px] text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
       </div>
 
@@ -151,7 +153,7 @@ export function VideosTab({ projectId, initialVideos, initialSections, currentTh
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState('');
-  const [pendingVideo, setPendingVideo] = useState<{ videoId: string; title: string; video_type: VideoType } | null>(null);
+  const [pendingVideo, setPendingVideo] = useState<{ videoId: string; title: string; video_type: VideoType; original_filename: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
@@ -264,6 +266,7 @@ export function VideosTab({ projectId, initialVideos, initialSections, currentTh
         videoId,
         title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
         video_type: 'flagship',
+        original_filename: file.name,
       });
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Upload failed');
@@ -289,6 +292,7 @@ export function VideosTab({ projectId, initialVideos, initialSections, currentTh
         section_id: null,
         hidden: false,
         duration_seconds: null,
+        original_filename: pendingVideo.original_filename,
       };
       await addProjectVideo(newVideo);
       setVideos((prev) => [...prev, { id: crypto.randomUUID(), ...newVideo }]);
@@ -311,6 +315,7 @@ export function VideosTab({ projectId, initialVideos, initialSections, currentTh
         section_id: null,
         hidden: false,
         duration_seconds: null,
+        original_filename: null,
       };
       await addProjectVideo(newVideo);
       setVideos((prev) => [...prev, { id: crypto.randomUUID(), ...newVideo }]);
@@ -382,8 +387,16 @@ export function VideosTab({ projectId, initialVideos, initialSections, currentTh
   const handleAutoDetectRatio = async (video: VideoRow) => {
     const res = await fetch(`/api/admin/bunny/video-info?videoId=${video.bunny_video_id}`);
     if (!res.ok) return;
-    const { aspectRatio } = await res.json() as { aspectRatio: AspectRatio };
-    if (aspectRatio) handleAspectRatioChange(video, aspectRatio);
+    const { aspectRatio, originalFileName, durationSeconds } = await res.json() as { aspectRatio: AspectRatio; originalFileName: string | null; durationSeconds: number | null };
+    const updates: Partial<VideoRow> = {};
+    if (aspectRatio) updates.aspect_ratio = aspectRatio;
+    if (originalFileName && !video.original_filename) updates.original_filename = originalFileName;
+    if (durationSeconds != null && !video.duration_seconds) updates.duration_seconds = durationSeconds;
+    if (Object.keys(updates).length === 0) return;
+    startTransition(async () => {
+      await updateProjectVideo(video.id, updates as never);
+      setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, ...updates } : v)));
+    });
   };
 
   // Section handlers

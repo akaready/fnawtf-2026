@@ -44,10 +44,21 @@ export function VideoPlayerProvider({ children }: { children: ReactNode }) {
  * Custom hook to access video player context
  * Must be used within a VideoPlayerProvider
  */
+const NOOP = () => {};
+const DEFAULT_CONTEXT: VideoPlayerContextType = {
+  isVideoPlaying: false,
+  setIsVideoPlaying: NOOP,
+  videoId: null,
+  setVideoId: NOOP,
+  pauseVideo: null,
+  setPauseVideo: NOOP,
+};
+
+/**
+ * Custom hook to access video player context.
+ * Returns a safe no-op default during SSR when no provider is available.
+ */
 export function useVideoPlayer() {
   const context = useContext(VideoPlayerContext);
-  if (context === undefined) {
-    throw new Error('useVideoPlayer must be used within VideoPlayerProvider');
-  }
-  return context;
+  return context ?? DEFAULT_CONTEXT;
 }

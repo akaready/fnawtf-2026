@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   Inbox, X, ExternalLink, Download, Expand,
   Building2, User, FileText, Link2, Check,
@@ -13,7 +13,7 @@ import {
   Home, Flame, Trophy,
   // Partner icons
   BarChart3, PenTool, Camera, Share2, Search as SearchIcon, HeartHandshake,
-  GitMerge, Trash2,
+  GitMerge, Trash2, Loader2,
 } from 'lucide-react';
 import { QuoteSummaryCard } from './QuoteSummaryCard';
 import { IntakeCompanyCard } from './IntakeCompanyCard';
@@ -534,6 +534,26 @@ function IntakeDetailPanel({
   const [viewContact, setViewContact] = useState<ContactRow | null>(null);
   const [lightbox, setLightbox] = useState<{ images: { url: string; label?: string }[]; index: number } | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateProposal = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/admin/generate-proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intakeId: s.id }),
+      });
+      const data = await res.json();
+      if (data.proposalId) {
+        await updateIntakeSubmission(s.id, { status: 'converted' });
+        onStatusChange('converted');
+        window.location.href = `/admin/proposals?open=${data.proposalId}`;
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }, [s.id, onStatusChange]);
   const stakeholderEntries = s.stakeholders ? parseStakeholders(s.stakeholders) : [];
   const tl = TIMELINE_COLORS[s.timeline] || TIMELINE_COLORS.unsure;
   const hasFiles = s.file_urls.length > 0;
@@ -556,6 +576,17 @@ function IntakeDetailPanel({
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {s.status !== 'converted' && (
+            <button
+              type="button"
+              onClick={handleGenerateProposal}
+              disabled={generating}
+              className="btn-primary px-4 py-2.5 text-sm"
+            >
+              {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              Generate Proposal
+            </button>
+          )}
           <SaveDot status={saveStatus} />
           <StatusBadge status={s.status} config={INTAKE_STATUSES} />
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-muted hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors">

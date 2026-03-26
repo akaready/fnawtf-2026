@@ -184,6 +184,7 @@ export async function addProjectVideo(data: {
   password_protected?: boolean;
   viewer_password?: string | null;
   aspect_ratio?: string;
+  original_filename?: string | null;
 }) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('project_videos').insert(data as never);
@@ -192,7 +193,7 @@ export async function addProjectVideo(data: {
 
 export async function updateProjectVideo(
   id: string,
-  data: Partial<{ title: string; video_type: 'flagship' | 'cutdown' | 'bts' | 'pitch'; sort_order: number; password_protected: boolean; viewer_password: string | null; aspect_ratio: string; section_id: string | null; hidden: boolean }>
+  data: Partial<{ title: string; video_type: 'flagship' | 'cutdown' | 'bts' | 'pitch'; sort_order: number; password_protected: boolean; viewer_password: string | null; aspect_ratio: string; section_id: string | null; hidden: boolean; original_filename: string | null; duration_seconds: number | null }>
 ) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('project_videos').update(data as never).eq('id', id);

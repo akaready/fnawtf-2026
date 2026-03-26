@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge } from 'lucide-react';
+import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge, Settings } from 'lucide-react';
 import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals } from '@/app/admin/actions';
 import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
@@ -13,6 +13,7 @@ import {
 import { StatusBadge } from '../../_components/StatusBadge';
 import { PROPOSAL_STATUSES } from '../../_components/statusConfigs';
 import { AdminDataTable, type ColDef, type RowAction } from '@/app/admin/_components/table';
+import { PipelineSettingsPanel } from './PipelineSettingsPanel';
 import { ProposalPanel } from './ProposalPanel';
 import { ProposalViewsPanel } from './ProposalViewsPanel';
 import type { ProposalRow, ProposalStatus } from '@/types/proposal';
@@ -24,6 +25,7 @@ interface ProposalListClientProps {
 
 const STATUS_TABS: { value: ProposalStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
+  { value: 'generated', label: 'Generated' },
   { value: 'draft', label: 'Draft' },
   { value: 'sent', label: 'Sent' },
   { value: 'viewed', label: 'Viewed' },
@@ -48,6 +50,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
   const [viewsPanelId, setViewsPanelId] = useState<string | null>(null);
   const [isCreating, startCreate] = useTransition();
   const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -257,17 +260,26 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         onSearchChange={setSearch}
         searchPlaceholder="Search proposals…"
         actions={
-          <button
-            onClick={() => startCreate(async () => {
-              const id = await createProposalDraft();
-              setActiveId(id);
-            })}
-            disabled={isCreating}
-            className="btn-primary px-5 py-2.5 text-sm"
-          >
-            {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            New Proposal
-          </button>
+          <>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="btn-secondary px-2.5 py-2.5"
+              title="Proposal Settings"
+            >
+              <Settings size={16} />
+            </button>
+            <button
+              onClick={() => startCreate(async () => {
+                const id = await createProposalDraft();
+                setActiveId(id);
+              })}
+              disabled={isCreating}
+              className="btn-primary px-5 py-2.5 text-sm"
+            >
+              {isCreating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              New Proposal
+            </button>
+          </>
         }
         mobileActions={
           <button
@@ -413,6 +425,8 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         open={viewsPanelId !== null}
         onClose={() => setViewsPanelId(null)}
       />
+
+      <PipelineSettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { createServiceClient } from '@/lib/supabase/service';
 import { notifySlack } from '@/lib/slack/notify';
+import { generateProposalFromIntake } from '@/lib/proposal/generateFromIntake';
 
 export interface IntakeFormData {
   // Contact
@@ -333,6 +334,18 @@ export async function submitIntakeForm(data: IntakeFormData) {
       budgetInteracted: data.budget_interacted,
     },
   });
+
+  // Auto-generate proposal if enabled (fire-and-forget)
+  try {
+    const { data: autoSetting } = await supabase
+      .from('pipeline_settings' as never)
+      .select('value')
+      .eq('key', 'auto_generate')
+      .single();
+    if ((autoSetting as { value: string } | null)?.value === 'true') {
+      generateProposalFromIntake(inserted.id).catch(() => {});
+    }
+  } catch { /* never block submission */ }
 }
 
 export async function uploadIntakeFile(formData: FormData): Promise<string> {
