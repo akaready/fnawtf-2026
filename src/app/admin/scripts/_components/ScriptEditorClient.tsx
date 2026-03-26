@@ -46,6 +46,7 @@ import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from
 import { ScriptExtractModal } from './ScriptExtractModal';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { useUndoStack } from './useUndoStack';
+import { useScriptPresence } from './useScriptPresence';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
 import type { ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
@@ -84,6 +85,10 @@ export function ScriptEditorClient({
 }: Props) {
   const { showError, showInfo } = useAdminToast();
   const undoStack = useUndoStack();
+  const presence = useScriptPresence({
+    scriptId: initialScript.id,
+    onConflict: () => showInfo('Another user saved changes to this script', { detail: 'Reload to see their changes', duration: 10000 }),
+  });
   const [script, setScript] = useState(initialScript);
   const [scenes, setScenes] = useState(initialScenes);
   const [beats, setBeats] = useState(initialBeats);
@@ -481,6 +486,7 @@ export function ScriptEditorClient({
     saveTimers.current.set(beatId, setTimeout(async () => {
       await updateBeat(beatId, { [field]: value });
       saveTimers.current.delete(beatId);
+      presence.broadcastSave();
     }, 1500));
   }, [autoSave]);
 
@@ -1091,6 +1097,28 @@ export function ScriptEditorClient({
         </div>
         {/* Right zone — panel toggles */}
         <div className="flex items-center gap-0">
+          {/* Presence indicators */}
+          {presence.otherUsers.length > 0 && (
+            <>
+              <div className="flex items-center -space-x-1.5 mr-2">
+                {presence.otherUsers.slice(0, 3).map((u) => (
+                  <div
+                    key={u.userId}
+                    className="w-6 h-6 rounded-full bg-admin-info/20 border border-admin-info/40 flex items-center justify-center text-[10px] font-medium text-admin-info uppercase"
+                    title={u.email}
+                  >
+                    {u.email[0]}
+                  </div>
+                ))}
+                {presence.otherUsers.length > 3 && (
+                  <div className="w-6 h-6 rounded-full bg-admin-bg-hover border border-admin-border flex items-center justify-center text-[10px] text-admin-text-muted">
+                    +{presence.otherUsers.length - 3}
+                  </div>
+                )}
+              </div>
+              <div className="w-px h-5 bg-admin-border mr-1" />
+            </>
+          )}
           <div ref={toolbarSlotRef} className="w-8 h-8 flex-shrink-0" />
           <ToolbarButton icon={User} label="" onClick={() => setShowCharacters(true)} />
           <ToolbarButton icon={MapPin} label="" onClick={() => setShowLocations(true)} />
