@@ -120,9 +120,12 @@ export function ScriptEditorClient({
   const [commentSceneFilter, _setCommentSceneFilter] = useState<'current' | 'all'>('all');
   const [commentFilterOpen, setCommentFilterOpen] = useState(false);
   const [commentSortOpen, setCommentSortOpen] = useState(false);
+  // max-w values in px: 7xl=80rem=1280, 5xl=64rem=1024, 3xl=48rem=768
   const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
+  const CONTAINER_WIDTH_PX = [0, 1280, 1024, 768] as const;
   const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
   const [containerIdx, setContainerIdx] = useState(0);
+  const editorWrapperRef = useRef<HTMLDivElement>(null);
   const [switchingVersion, setSwitchingVersion] = useState(false);
 
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
@@ -881,7 +884,16 @@ export function ScriptEditorClient({
             {isFocused ? <Shrink size={16} /> : <Expand size={16} />}
           </button>
           <button
-            onClick={() => setContainerIdx(prev => (prev + 1) % CONTAINER_WIDTHS.length)}
+            onClick={() => setContainerIdx(prev => {
+              const wrapperW = editorWrapperRef.current?.offsetWidth ?? Infinity;
+              // Find the next index whose max-width actually constrains the container
+              for (let i = 1; i <= CONTAINER_WIDTHS.length; i++) {
+                const next = (prev + i) % CONTAINER_WIDTHS.length;
+                // Full width (idx 0) always works; others need to be narrower than container
+                if (next === 0 || CONTAINER_WIDTH_PX[next] < wrapperW) return next;
+              }
+              return 0;
+            })}
             className={`text-admin-text-muted hover:text-admin-text-primary p-1.5 rounded hover:bg-admin-bg-hover transition-colors ${containerIdx !== 0 ? 'bg-admin-bg-active text-admin-text-secondary' : ''}`}
             title={`Width: ${CONTAINER_LABELS[containerIdx]} → ${CONTAINER_LABELS[(containerIdx + 1) % CONTAINER_WIDTHS.length]}`}
           >
@@ -940,7 +952,7 @@ export function ScriptEditorClient({
         </SceneSidebarShell>
 
         {/* Main editor — constrained by container width toggle */}
-        <div className="flex-1 min-w-0 min-h-0 h-full">
+        <div ref={editorWrapperRef} className="flex-1 min-w-0 min-h-0 h-full">
           <div className={`h-full flex flex-col transition-[max-width,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] border-l border-r ${containerIdx > 0 ? `${CONTAINER_WIDTHS[containerIdx]} mx-auto border-admin-border` : 'border-transparent'}`}>
             {contentMode === 'story' ? (
               <ScriptStoryEditor

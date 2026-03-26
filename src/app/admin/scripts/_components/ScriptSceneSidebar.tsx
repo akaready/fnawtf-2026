@@ -69,15 +69,21 @@ export function ScriptSceneSidebar({
     return (
       <div className="bg-admin-bg-sidebar flex flex-col h-full">
         <div className="flex-1 overflow-y-auto admin-scrollbar flex flex-col">
-          {scratchScenes.map((scene, i) => (
-            <SceneListItem
-              key={`${scene.sceneIndex}-${i}`}
-              sceneNumber={i + 1}
-              slug={scene.label}
-              description={scene.description}
-              onClick={() => onScrollToScene?.(scene.label, scene.sceneIndex)}
-            />
-          ))}
+          {scratchScenes.length === 0 ? (
+            <p className="text-xs text-admin-text-faint text-center pt-8 px-3">
+              No scenes yet.<br /><br />Use ALL CAPS to create a new scene.
+            </p>
+          ) : (
+            scratchScenes.map((scene, i) => (
+              <SceneListItem
+                key={`${scene.sceneIndex}-${i}`}
+                sceneNumber={i + 1}
+                slug={scene.label}
+                description={scene.description}
+                onClick={() => onScrollToScene?.(scene.label, scene.sceneIndex)}
+              />
+            ))
+          )}
         </div>
       </div>
     );

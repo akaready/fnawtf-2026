@@ -303,16 +303,42 @@ export const ScriptScratchPad = forwardRef<ScriptScratchPadHandle, Props>(
   return (
     <div className="flex flex-col h-full">
       {/* Main editor */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto admin-scrollbar px-12 pt-8">
-        <div className="relative min-h-full">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto admin-scrollbar cursor-text"
+        onClick={(e) => {
+          // Clicks on the scroll container, spacer, or wrapper (not the editor itself)
+          // should place cursor at the end of the editor content.
+          const el = editorRef.current;
+          if (!el) return;
+          // If the click was inside the contentEditable, let it handle natively
+          if (el.contains(e.target as Node)) return;
+          const container = scrollContainerRef.current;
+          if (!container) return;
+          const scrollTop = container.scrollTop;
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          range.collapse(false);
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+          container.scrollTop = scrollTop;
+        }}
+      >
+        <div className="relative max-w-4xl mx-auto w-full px-16 pt-8">
           {/* Placeholder overlay — visible only when editor is empty */}
           {isEmpty && (
-            <div className="absolute inset-0 pointer-events-none select-none font-admin-mono text-admin-text-ghost text-sm leading-relaxed whitespace-pre-line">
-{`ALL CAPS  scene heading
-@  character or location
-#  special footage type
-@Name:  spoken words or VO
-Shot:  shot details and focus`}
+            <div className="absolute inset-x-16 top-8 pointer-events-none select-none font-admin-mono text-admin-text-ghost text-sm leading-relaxed">
+              <p className="uppercase mb-3">Hints</p>
+              <ul className="space-y-1.5">
+                <li>{'\u2022  Use ALL CAPS to create a new scene heading'}</li>
+                <li>{'\u2022  Type @{name} to reference a character, location, or product'}</li>
+                <li>{'\u2022  Use #hashtags to define consistent visual types for boards'}</li>
+                <li>{'\u2022  Start a line with @{name}: {spoken words or VO} for audio'}</li>
+                <li>{'\u2022  Start a line with CU/MS/WS/ETC: {close up on @{product}} for visuals'}</li>
+              </ul>
             </div>
           )}
           <div
@@ -322,9 +348,11 @@ Shot:  shot details and focus`}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            className="min-h-full text-admin-text-primary text-base leading-relaxed outline-none font-admin-body"
+            className="min-h-[50vh] text-admin-text-primary text-base leading-relaxed outline-none font-admin-body"
             style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
           />
+          {/* Bottom spacer — lets the last scene scroll to the top */}
+          <div className="h-[80vh] pointer-events-none" />
         </div>
         {mentionState && (
           <MentionDropdown
@@ -337,28 +365,6 @@ Shot:  shot details and focus`}
             onDismiss={() => setMentionState(null)}
           />
         )}
-        {/* Bottom spacer — lets the last scene scroll to the top; click focuses editor at end */}
-        <div
-          className="h-[80vh] cursor-text"
-          onClick={() => {
-            const el = editorRef.current;
-            const container = scrollContainerRef.current;
-            if (!el || !container) return;
-            // Save scroll position before focus
-            const scrollTop = container.scrollTop;
-            // Place cursor at end without selecting all
-            const range = document.createRange();
-            range.selectNodeContents(el);
-            range.collapse(false);
-            const sel = window.getSelection();
-            if (sel) {
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
-            // Restore scroll position (focus may have jumped)
-            container.scrollTop = scrollTop;
-          }}
-        />
       </div>
     </div>
   );
