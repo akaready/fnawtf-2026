@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, Check, X, Pencil, Upload, GripVertical } from 'lucide-react';
+import { Trash2, Check, X, Pencil, Upload, GripVertical, AlertCircle } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 /* ── Pattern Demo Card ──────────────────────────────────────────────────── */
 function PatternCard({
@@ -204,6 +205,60 @@ function ColumnToggleDemo() {
   );
 }
 
+/* ── Toast Demo ─────────────────────────────────────────────────────────── */
+function ToastDemo() {
+  const [toasts, setToasts] = useState<{ id: number; message: string; detail?: string }[]>([]);
+  let nextId = 0;
+
+  const fire = () => {
+    const id = ++nextId;
+    setToasts((p) => [...p, { id, message: 'Failed to load shares', detail: 'Check your connection and try again.' }]);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 4000);
+  };
+
+  return (
+    <div className="px-4 py-4 space-y-4">
+      <p className="text-admin-sm text-admin-text-muted">
+        Toasts use <code className="font-admin-mono text-admin-text-dim">bg-admin-bg-overlay</code> with{' '}
+        <code className="font-admin-mono text-admin-text-dim">border-admin-border</code> (never danger or white outlines).
+        A <code className="font-admin-mono text-admin-text-dim">border-l-2 border-l-admin-danger</code> accent conveys severity.
+        Positioned <code className="font-admin-mono text-admin-text-dim">top-6 right-6</code> to align with the header button row.
+        Animate in/out with Framer Motion <code className="font-admin-mono text-admin-text-dim">x: 56</code> slide.
+        Auto-dismiss after 5 s.
+      </p>
+      <button onClick={fire} className="btn-secondary px-3 py-2 text-xs">Trigger toast</button>
+      <div className="relative h-20">
+        <div className="absolute top-0 right-0 flex flex-col gap-2 w-72 pointer-events-none">
+          <AnimatePresence>
+            {toasts.map((t) => (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, x: 56 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 56 }}
+                transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="pointer-events-auto flex items-center gap-3 bg-admin-bg-overlay border border-admin-border rounded-admin-xl shadow-xl backdrop-blur-sm pl-4 pr-3 py-4 border-l-2 border-l-admin-danger"
+              >
+                <AlertCircle className="w-4 h-4 text-admin-danger flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-admin-sm font-admin-body font-medium text-admin-text-primary leading-snug">{t.message}</p>
+                  {t.detail && <p className="text-admin-sm font-admin-body text-admin-text-muted mt-0.5 leading-snug">{t.detail}</p>}
+                </div>
+                <button
+                  onClick={() => setToasts((p) => p.filter((x) => x.id !== t.id))}
+                  className="w-7 h-7 flex items-center justify-center text-admin-text-faint hover:text-admin-text-primary transition-colors flex-shrink-0 rounded-admin-sm hover:bg-admin-bg-hover"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Section ───────────────────────────────────────────────────────── */
 export function PatternsSection() {
   return (
@@ -253,6 +308,13 @@ export function PatternsSection() {
         description="Toggle visibility of columns with color-coded indicators matching the column content."
       >
         <ColumnToggleDemo />
+      </PatternCard>
+
+      <PatternCard
+        title="Error Toast"
+        description="Top-right fixed toasts. Border uses admin-border (subtle lift), never danger or white outlines. Left accent conveys type. Slides in/out from right. Auto-dismisses after 5 s."
+      >
+        <ToastDemo />
       </PatternCard>
     </section>
   );
