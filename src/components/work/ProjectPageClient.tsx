@@ -7,7 +7,8 @@ import { ProjectDeliveryAndDescription } from './ProjectDeliveryAndDescription';
 import { ProjectMetaGrid } from './ProjectMetaGrid';
 import { ProjectBTSGrid } from './ProjectBTSGrid';
 import { ProjectCredits } from './ProjectCredits';
-import type { ProjectVideo, ProjectCredit, ProjectBTSImage } from '@/types/project';
+import { ProjectAdditionalVideos } from './ProjectAdditionalVideos';
+import type { ProjectVideo, ProjectCredit, ProjectBTSImage, ProjectVideoSection as VideoSectionType } from '@/types/project';
 
 interface ProjectData {
   title: string;
@@ -36,6 +37,7 @@ interface QuoteAttribution {
 interface ProjectPageClientProps {
   project: ProjectData;
   videos: ProjectVideo[];
+  videoSections?: VideoSectionType[];
   credits: ProjectCredit[];
   btsImages: ProjectBTSImage[];
   quoteAttribution?: QuoteAttribution | null;
@@ -44,6 +46,7 @@ interface ProjectPageClientProps {
 export function ProjectPageClient({
   project,
   videos,
+  videoSections,
   credits,
   btsImages,
   quoteAttribution,
@@ -69,6 +72,7 @@ export function ProjectPageClient({
       <ProjectDeliveryAndDescription
         assetsDelivered={project.assets_delivered ?? []}
         description={project.description}
+        videos={videos}
       />
 
       <ProjectMetaGrid
@@ -80,6 +84,8 @@ export function ProjectPageClient({
         talentCount={project.talent_count ?? null}
         locationCount={project.location_count ?? null}
       />
+
+      <ProjectAdditionalVideos videos={videos} sections={videoSections} />
 
       <ProjectBTSGrid images={btsImages} />
 

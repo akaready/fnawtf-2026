@@ -15,6 +15,7 @@ import { CreditsTab } from './CreditsTab';
 import type { CreditsTabHandle } from './CreditsTab';
 import { BTSTab } from './BTSTab';
 import type { BTSTabHandle } from './BTSTab';
+import { AIVisionTab } from './AIVisionTab';
 import {
   getProjectById,
   getProjectVideos,
@@ -26,18 +27,20 @@ import {
   getContacts,
   getTagSuggestions,
   getTestimonials,
+  getVideoSections,
 } from '../actions';
 import type { TagSuggestions, TestimonialOption } from './ProjectForm';
 
 type ProjectRow = Record<string, unknown> & { id: string };
 
-type Tab = 'project' | 'videos' | 'credits' | 'bts';
+type Tab = 'project' | 'videos' | 'credits' | 'bts' | 'ai-vision';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'project', label: 'Project' },
   { id: 'videos', label: 'Videos' },
   { id: 'credits', label: 'Credits' },
   { id: 'bts', label: 'BTS' },
+  { id: 'ai-vision', label: 'AI Vision' },
 ];
 
 interface ProjectPanelProps {
@@ -66,6 +69,7 @@ export function ProjectPanel({
   const [activeTab, setActiveTab] = useState<Tab>('project');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [videos, setVideos] = useState<any[]>([]);
+  const [sections, setSections] = useState<Array<{ id: string; name: string; sort_order: number }>>([]);
   const [credits, setCredits] = useState<Array<{ id?: string; role: string; name: string; sort_order: number; role_id: string | null; contact_id: string | null }>>([]);
   const [btsImages, setBtsImages] = useState<Array<{ id?: string; image_url: string; caption: string | null; sort_order: number }>>([]);
   const [allRoles, setAllRoles] = useState<Array<{ id: string; name: string }>>([]);
@@ -102,6 +106,7 @@ export function ProjectPanel({
   useEffect(() => {
     setActiveTab('project');
     setVideos([]);
+    setSections([]);
     setCredits([]);
     setBtsImages([]);
     setConfirmClose(false);
@@ -119,9 +124,11 @@ export function ProjectPanel({
         getContacts(),
         !tagSuggestions ? getTagSuggestions() : Promise.resolve(null),
         !testimonials ? getTestimonials() : Promise.resolve(null),
+        getVideoSections(projectId),
       ])
-        .then(([v, c, b, roles, contacts, tags, tests]) => {
+        .then(([v, c, b, roles, contacts, tags, tests, secs]) => {
           setVideos(v);
+          setSections(secs);
           setCredits(c);
           setBtsImages(b);
           setAllRoles(roles);
@@ -306,7 +313,7 @@ export function ProjectPanel({
 
         {/* Videos tab */}
         {activeTab === 'videos' && projectId && (
-          loadingRelated ? <LoadingSkeleton /> : <VideosTab projectId={projectId} initialVideos={videos} currentThumbnailUrl={String(project?.thumbnail_url ?? '')} currentThumbnailTime={project?.thumbnail_time != null ? Number(project.thumbnail_time) : null} />
+          loadingRelated ? <LoadingSkeleton /> : <VideosTab projectId={projectId} initialVideos={videos} initialSections={sections} currentThumbnailUrl={String(project?.thumbnail_url ?? '')} currentThumbnailTime={project?.thumbnail_time != null ? Number(project.thumbnail_time) : null} />
         )}
 
         {/* Credits tab: always mounted after load to preserve edits */}
@@ -323,6 +330,18 @@ export function ProjectPanel({
           <div key={`${projectId}-bts`} className={activeTab === 'bts' ? '' : 'hidden'}>
             <BTSTab ref={btsRef} projectId={projectId} initialImages={btsImages} onDirty={handleDirty} />
           </div>
+        )}
+
+        {/* AI Vision tab */}
+        {activeTab === 'ai-vision' && projectId && (
+          loadingRelated ? <LoadingSkeleton /> : (
+            <AIVisionTab
+              projectId={projectId}
+              flagshipVideoId={videos.find((v: Record<string, unknown>) => v.video_type === 'flagship')?.id as string ?? null}
+              aiDescription={(project?.ai_description as string) ?? null}
+              aiDescriptionJson={(project?.ai_description_json as import('./AIVisionTab').AIVisionJson) ?? null}
+            />
+          )
         )}
       </div>
 

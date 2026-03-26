@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAnonClient } from '@supabase/supabase-js';
 import { ProjectPageClient } from '@/components/work/ProjectPageClient';
 import { FooterCTA } from '@/components/layout/FooterCTA';
-import type { FeaturedProject, ProjectVideo, ProjectCredit, ProjectBTSImage } from '@/types/project';
+import type { FeaturedProject, ProjectVideo, ProjectCredit, ProjectBTSImage, ProjectVideoSection } from '@/types/project';
 import type { Database } from '@/types/database.types';
 import type { Metadata } from 'next';
 
@@ -95,6 +95,13 @@ export default async function WorkDetailPage({ params }: PageProps) {
     .eq('project_id', project.id)
     .order('sort_order');
 
+  const sClient = supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+  const { data: rawSections } = await sClient
+    .from('project_video_sections')
+    .select('*')
+    .eq('project_id', project.id)
+    .order('sort_order');
+
   const { data: rawTestimonials } = await supabase
     .from('testimonials')
     .select('quote, person_name, person_title, display_title')
@@ -102,6 +109,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
     .limit(1);
 
   const videos = (rawVideos ?? []) as unknown as ProjectVideo[];
+  const videoSections = (rawSections ?? []) as unknown as ProjectVideoSection[];
   const credits: ProjectCredit[] = rawCredits ?? [];
   const btsImages: ProjectBTSImage[] = rawBtsImages ?? [];
   const testimonial = rawTestimonials?.[0] as { quote: string; person_name: string | null; person_title: string | null; display_title: string | null } | undefined;
@@ -112,6 +120,7 @@ export default async function WorkDetailPage({ params }: PageProps) {
       <ProjectPageClient
         project={project}
         videos={videos}
+        videoSections={videoSections}
         credits={credits}
         btsImages={btsImages}
         quoteAttribution={quoteAttribution}

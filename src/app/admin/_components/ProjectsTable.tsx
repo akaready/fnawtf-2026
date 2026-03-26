@@ -35,6 +35,10 @@ interface ProjectRow {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  deliverable_count?: number;
+  video_count?: number;
+  has_cutdowns?: boolean;
+  video_durations?: string[];
 }
 
 /* ── Main table ─────────────────────────────────────────────────────────── */
@@ -70,6 +74,10 @@ export function ProjectsTable({
     { key: 'premium_addons', label: 'Add-ons', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.premium_addons },
     { key: 'camera_techniques', label: 'Techniques', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.camera_techniques },
     { key: 'assets_delivered', label: 'Assets', type: 'tags', defaultVisible: false, tagSuggestions: tagSuggestions?.assets_delivered },
+    { key: 'deliverable_count', label: 'Deliverables', type: 'number', sortable: true, defaultVisible: false },
+    { key: 'video_count', label: 'Videos', type: 'number', sortable: true, defaultVisible: false },
+    { key: 'has_cutdowns', label: 'Cutdowns', type: 'toggle', sortable: true, defaultVisible: false },
+    { key: 'video_durations', label: 'Durations', type: 'tags', defaultVisible: false },
     { key: 'production_days', label: 'Days', type: 'number', sortable: true, defaultVisible: false },
     { key: 'crew_count', label: 'Crew', type: 'number', sortable: true, defaultVisible: false },
     { key: 'talent_count', label: 'Talent', type: 'number', sortable: true, defaultVisible: false },

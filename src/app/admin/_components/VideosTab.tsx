@@ -2,11 +2,11 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle, GripVertical } from 'lucide-react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { Trash2, Upload, Link as LinkIcon, Lock, Unlock, Scan, CheckCircle, AlertCircle, GripVertical, Plus, X, ChevronDown, ChevronRight, ChevronUp, Pencil, Check, Eye, EyeOff } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject } from '../actions';
+import { addProjectVideo, updateProjectVideo, deleteProjectVideo, updateProject, addVideoSection, updateVideoSection, deleteVideoSection } from '../actions';
 import { ThumbnailPicker } from './ThumbnailPicker';
 import { AdminCombobox } from './AdminCombobox';
 
@@ -24,11 +24,21 @@ interface VideoRow {
   password_protected: boolean;
   viewer_password: string | null;
   aspect_ratio: AspectRatio;
+  section_id: string | null;
+  hidden: boolean;
+  duration_seconds: number | null;
+}
+
+interface SectionRow {
+  id: string;
+  name: string;
+  sort_order: number;
 }
 
 interface Props {
   projectId: string;
   initialVideos: VideoRow[];
+  initialSections?: SectionRow[];
   currentThumbnailUrl?: string;
   currentThumbnailTime?: number | null;
 }
@@ -36,6 +46,15 @@ interface Props {
 const inputClass = 'admin-input w-full';
 
 const VIDEO_TYPES: VideoType[] = ['flagship', 'cutdown', 'bts'];
+
+function DroppableSection({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={`rounded-lg transition-all duration-150 ${isOver ? 'bg-accent/8 ring-2 ring-accent/40 ring-offset-1 ring-offset-admin-bg-base' : ''}`}>
+      {children}
+    </div>
+  );
+}
 
 function SortableVideoRow({
   video,
@@ -46,8 +65,11 @@ function SortableVideoRow({
   onAutoDetect,
   onPasswordToggle,
   onPasswordChange,
+  onTitleChange,
+  onVisibilityToggle,
   onDelete,
   isPending,
+  disableDrag,
 }: {
   video: VideoRow;
   isThumbSource: boolean;
@@ -57,104 +79,72 @@ function SortableVideoRow({
   onAutoDetect: () => void;
   onPasswordToggle: () => void;
   onPasswordChange: (pw: string) => void;
+  onTitleChange: (title: string) => void;
+  onVisibilityToggle: () => void;
   onDelete: () => void;
   isPending: boolean;
+  disableDrag?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: video.id, disabled: disableDrag });
   const style: React.CSSProperties = { transform: CSS.Translate.toString(transform), transition };
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(video.title);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className={`group/vid flex items-center gap-3 p-2.5 rounded-lg transition-colors cursor-pointer touch-none ${
+      className={`group/vid flex items-center gap-3 p-2.5 rounded-lg transition-colors cursor-pointer touch-none select-none ${
         isDragging
           ? 'border-2 border-dashed border-admin-border bg-admin-bg-subtle opacity-40'
           : isThumbSource
           ? 'border-2 border-accent bg-accent/5 hover:bg-accent/10'
+          : video.hidden
+          ? 'border border-admin-border-subtle bg-admin-bg-subtle opacity-50 hover:opacity-80'
           : 'border border-admin-border-subtle bg-admin-bg-subtle hover:bg-admin-bg-hover'
       }`}
       onClick={onSelectThumb}
     >
       {/* Drag handle */}
-      <span {...listeners} className="text-admin-text-muted hover:text-admin-text-primary cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
+      <span {...listeners} className={`${disableDrag ? 'text-admin-text-ghost opacity-30 cursor-default' : 'text-admin-text-muted hover:text-admin-text-primary cursor-grab active:cursor-grabbing'}`} onClick={(e) => e.stopPropagation()}>
         <GripVertical size={14} />
       </span>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-admin-text-primary truncate">{video.title}</p>
-        <p className="text-xs text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
+      <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+        {editingTitle ? (
+          <input type="text" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} onBlur={() => { onTitleChange(titleDraft); setEditingTitle(false); }} onKeyDown={(e) => { if (e.key === 'Enter') { onTitleChange(titleDraft); setEditingTitle(false); } if (e.key === 'Escape') { setTitleDraft(video.title); setEditingTitle(false); } }} autoFocus className="admin-input w-full text-sm py-1" />
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <p className={`text-sm font-medium truncate ${video.hidden ? 'text-admin-text-faint line-through' : 'text-admin-text-primary'}`}>{video.title}</p>
+            <button type="button" onClick={() => { setTitleDraft(video.title); setEditingTitle(true); }} className="w-5 h-5 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-muted transition-colors flex-shrink-0 opacity-0 group-hover/vid:opacity-100"><Pencil size={10} /></button>
+          </div>
+        )}
+        <p className="text-[10px] text-admin-text-faint font-mono mt-0.5 truncate">{video.bunny_video_id}</p>
       </div>
 
-      <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
-        <AdminCombobox
-          value={video.video_type}
-          options={VIDEO_TYPES.map((t) => ({ id: t, label: t }))}
-          onChange={(v) => { if (v) onTypeChange(v as VideoType); }}
-          nullable={false}
-          searchable={false}
-        />
-
-        <AdminCombobox
-          value={video.aspect_ratio}
-          options={ASPECT_RATIOS.map((r) => ({ id: r, label: r }))}
-          onChange={(v) => { if (v) onAspectChange(v as AspectRatio); }}
-          nullable={false}
-          searchable={false}
-        />
-
-        <button
-          type="button"
-          title="Auto-detect ratio from Bunny"
-          onClick={onAutoDetect}
-          disabled={isPending}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-ghost hover:text-admin-text-muted transition-colors opacity-0 group-hover/vid:opacity-100"
-        >
-          <Scan size={13} />
-        </button>
-
-        <button
-          type="button"
-          title={video.password_protected ? 'Password protected — click to remove' : 'No password — click to protect'}
-          onClick={onPasswordToggle}
-          disabled={isPending}
-          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-            video.password_protected
-              ? 'text-admin-warning hover:text-admin-warning bg-admin-warning-bg'
-              : 'text-admin-text-ghost hover:text-admin-text-muted opacity-0 group-hover/vid:opacity-100'
-          }`}
-        >
-          {video.password_protected ? <Lock size={13} /> : <Unlock size={13} />}
-        </button>
-
-        {video.password_protected && (
-          <input
-            type="text"
-            value={video.viewer_password ?? ''}
-            onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder="password"
-            className="w-28 px-2 py-1.5 bg-admin-bg-base border border-admin-warning-border rounded-lg text-xs text-admin-text-primary placeholder:text-admin-text-placeholder focus:outline-none focus:border-admin-warning-border font-mono transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          />
+      <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-0.5 flex-shrink-0">
+        {video.duration_seconds != null && video.duration_seconds > 0 && (
+          <span className="text-[10px] text-admin-text-ghost font-mono px-1 tabular-nums">
+            {(() => { const s = Math.round(video.duration_seconds / 5) * 5; const m = Math.floor(s / 60); const r = s % 60; return m === 0 ? `${r}s` : r === 0 ? `${m}m` : `${m}m${r}s`; })()}
+          </span>
         )}
-
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={isPending}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-admin-text-muted opacity-0 group-hover/vid:opacity-100 hover:text-admin-danger hover:bg-red-500/8 transition-all"
-        >
-          <Trash2 size={13} />
-        </button>
+        <AdminCombobox value={video.video_type} options={VIDEO_TYPES.map((t) => ({ id: t, label: t.slice(0, 3) }))} onChange={(v) => { if (v) onTypeChange(v as VideoType); }} nullable={false} searchable={false} compact />
+        <AdminCombobox value={video.aspect_ratio} options={ASPECT_RATIOS.map((r) => ({ id: r, label: r }))} onChange={(v) => { if (v) onAspectChange(v as AspectRatio); }} nullable={false} searchable={false} compact />
+        <button type="button" title="Auto-detect ratio" onClick={onAutoDetect} disabled={isPending} className="w-6 h-6 flex items-center justify-center rounded text-admin-text-ghost hover:text-admin-text-muted transition-colors"><Scan size={12} /></button>
+        <button type="button" title={video.hidden ? 'Hidden — show' : 'Visible — hide'} onClick={onVisibilityToggle} disabled={isPending} className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${video.hidden ? 'text-admin-text-ghost' : 'text-admin-text-muted hover:text-admin-text-primary'}`}>{video.hidden ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+        <button type="button" onClick={onPasswordToggle} disabled={isPending} className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${video.password_protected ? 'text-admin-warning bg-admin-warning-bg' : 'text-admin-text-ghost hover:text-admin-text-muted'}`}>{video.password_protected ? <Lock size={12} /> : <Unlock size={12} />}</button>
+        {video.password_protected && <input type="text" value={video.viewer_password ?? ''} onChange={(e) => onPasswordChange(e.target.value)} placeholder="pw" className="w-20 px-1.5 py-1 bg-admin-bg-base border border-admin-warning-border rounded text-[10px] font-mono" onClick={(e) => e.stopPropagation()} />}
+        <button type="button" onClick={onDelete} disabled={isPending} className="w-6 h-6 flex items-center justify-center rounded text-admin-text-muted hover:text-admin-danger hover:bg-red-500/8 transition-all"><Trash2 size={12} /></button>
       </div>
     </div>
   );
 }
 
-export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, currentThumbnailTime }: Props) {
+export function VideosTab({ projectId, initialVideos, initialSections, currentThumbnailUrl, currentThumbnailTime }: Props) {
   const router = useRouter();
   const [videos, setVideos] = useState<VideoRow[]>(initialVideos);
+  const [sections, setSections] = useState<SectionRow[]>(initialSections ?? []);
   const [isPending, startTransition] = useTransition();
 
   // Upload state
@@ -163,6 +153,11 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
   const [uploadError, setUploadError] = useState('');
   const [pendingVideo, setPendingVideo] = useState<{ videoId: string; title: string; video_type: VideoType } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [confirmDeleteSectionId, setConfirmDeleteSectionId] = useState<string | null>(null);
 
   // Link existing video by ID
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -180,6 +175,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
   const [thumbStatus, setThumbStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [thumbError, setThumbError] = useState<string | null>(null);
   const [currentThumbTime, setCurrentThumbTime] = useState<number | null>(currentThumbnailTime ?? null);
+
 
   const handleThumbSelect = useCallback(async (bunnyVideoId: string, thumbnailTimeMs: number, frameDataUrl: string) => {
     setSavingThumb(bunnyVideoId);
@@ -290,6 +286,9 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
         password_protected: false,
         viewer_password: null,
         aspect_ratio: '16:9' as AspectRatio,
+        section_id: null,
+        hidden: false,
+        duration_seconds: null,
       };
       await addProjectVideo(newVideo);
       setVideos((prev) => [...prev, { id: crypto.randomUUID(), ...newVideo }]);
@@ -309,6 +308,9 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
         password_protected: false,
         viewer_password: null,
         aspect_ratio: '16:9' as AspectRatio,
+        section_id: null,
+        hidden: false,
+        duration_seconds: null,
       };
       await addProjectVideo(newVideo);
       setVideos((prev) => [...prev, { id: crypto.randomUUID(), ...newVideo }]);
@@ -354,6 +356,22 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
     });
   };
 
+  const handleTitleChange = (video: VideoRow, title: string) => {
+    if (title === video.title) return;
+    startTransition(async () => {
+      await updateProjectVideo(video.id, { title });
+      setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, title } : v)));
+    });
+  };
+
+  const handleVisibilityToggle = (video: VideoRow) => {
+    const hidden = !video.hidden;
+    startTransition(async () => {
+      await updateProjectVideo(video.id, { hidden });
+      setVideos((prev) => prev.map((v) => (v.id === video.id ? { ...v, hidden } : v)));
+    });
+  };
+
   const handleAspectRatioChange = (video: VideoRow, ratio: AspectRatio) => {
     startTransition(async () => {
       await updateProjectVideo(video.id, { aspect_ratio: ratio });
@@ -368,13 +386,101 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
     if (aspectRatio) handleAspectRatioChange(video, aspectRatio);
   };
 
+  // Section handlers
+  const handleAddSection = () => {
+    startTransition(async () => {
+      const newSection = await addVideoSection(projectId, 'New Section', sections.length);
+      setSections((prev) => [...prev, newSection]);
+    });
+  };
+
+  const handleRenameSection = (sectionId: string, name: string) => {
+    setSections((prev) => prev.map((s) => (s.id === sectionId ? { ...s, name } : s)));
+    startTransition(async () => {
+      await updateVideoSection(sectionId, { name });
+    });
+  };
+
+  const handleDeleteSection = (sectionId: string) => {
+    setSections((prev) => prev.filter((s) => s.id !== sectionId));
+    setVideos((prev) => prev.map((v) => (v.section_id === sectionId ? { ...v, section_id: null } : v)));
+    startTransition(async () => {
+      await deleteVideoSection(sectionId);
+    });
+  };
+
+  const handleSectionChange = (videoId: string, sectionId: string | null) => {
+    setVideos((prev) => prev.map((v) => (v.id === videoId ? { ...v, section_id: sectionId } : v)));
+    startTransition(async () => {
+      await updateProjectVideo(videoId, { section_id: sectionId });
+    });
+  };
+
+  const handleMoveSection = (sectionId: string, direction: 'up' | 'down') => {
+    const idx = sections.findIndex((s) => s.id === sectionId);
+    if (idx === -1) return;
+    const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= sections.length) return;
+    const updated = arrayMove(sections, idx, newIdx).map((s, i) => ({ ...s, sort_order: i }));
+    setSections(updated);
+    startTransition(async () => {
+      for (const s of updated) {
+        await updateVideoSection(s.id, { sort_order: s.sort_order });
+      }
+    });
+  };
+
+  const toggleCollapse = (sectionId: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  };
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveVideoId(event.active.id as string);
+  }, []);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = videos.findIndex((v) => v.id === active.id);
-    const newIndex = videos.findIndex((v) => v.id === over.id);
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Check if dropped onto a droppable section zone
+    const droppableSectionId = overId.startsWith('section-drop-') ? overId.replace('section-drop-', '') : null;
+    const droppableUngrouped = overId === 'section-drop-ungrouped';
+
+    if (droppableSectionId || droppableUngrouped) {
+      // Dropped onto a section container — assign video to that section
+      const newSectionId = droppableUngrouped ? null : droppableSectionId;
+      const video = videos.find((v) => v.id === activeId);
+      if (video && video.section_id !== newSectionId) {
+        handleSectionChange(activeId, newSectionId);
+      }
+      return;
+    }
+
+    // Dropped onto another video — check if cross-section
+    const activeVideo = videos.find((v) => v.id === activeId);
+    const overVideo = videos.find((v) => v.id === overId);
+    if (!activeVideo || !overVideo) return;
+
+    if (activeVideo.section_id !== overVideo.section_id) {
+      // Cross-section: move to target's section
+      handleSectionChange(activeId, overVideo.section_id);
+      return;
+    }
+
+    // Same section: reorder
+    if (activeId === overId) return;
+    const oldIndex = videos.findIndex((v) => v.id === activeId);
+    const newIndex = videos.findIndex((v) => v.id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
     const updated = arrayMove(videos, oldIndex, newIndex).map((v, i) => ({ ...v, sort_order: i }));
     setVideos(updated);
@@ -383,7 +489,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
         await updateProjectVideo(v.id, { sort_order: v.sort_order });
       }
     });
-  }, [videos, startTransition]);
+  }, [videos, startTransition, handleSectionChange]);
 
   const thumbVideo = thumbVideoId ? videos.find((v) => v.bunny_video_id === thumbVideoId) : null;
 
@@ -391,7 +497,7 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
     <div className="space-y-4">
       {/* Thumbnail picker */}
       {videos.length > 0 && (
-        <section className="space-y-3 pb-4 border-b border-admin-border-subtle">
+        <section className="space-y-3 pb-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-widest text-admin-text-faint font-medium mb-0.5">Thumbnail</p>
@@ -434,30 +540,203 @@ export function VideosTab({ projectId, initialVideos, currentThumbnailUrl, curre
       {/* Existing videos */}
       {videos.length === 0 ? (
         <p className="text-sm text-admin-text-faint py-2">No videos linked yet.</p>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={videos.map((v) => v.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
-              {videos.map((video) => (
-                <SortableVideoRow
-                  key={video.id}
-                  video={video}
-                  isThumbSource={thumbVideoId === video.bunny_video_id}
-                  onSelectThumb={() => setThumbVideoId(video.bunny_video_id)}
-                  onTypeChange={(v) => handleTypeChange(video, v)}
-                  onAspectChange={(v) => handleAspectRatioChange(video, v)}
-                  onAutoDetect={() => handleAutoDetectRatio(video)}
-                  onPasswordToggle={() => handlePasswordToggle(video)}
-                  onPasswordChange={(pw) => handlePasswordChange(video, pw)}
-                  onDelete={() => setConfirmDeleteId(video.id)}
-                  isPending={isPending}
-                />
+      ) : (() => {
+        const flagships = videos.filter((v) => v.video_type === 'flagship');
+        const others = videos.filter((v) => v.video_type !== 'flagship');
 
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
+        const renderRow = (video: VideoRow, disableDrag = false) => (
+          <SortableVideoRow
+            key={video.id}
+            video={video}
+            isThumbSource={thumbVideoId === video.bunny_video_id}
+            onSelectThumb={() => setThumbVideoId(video.bunny_video_id)}
+            onTypeChange={(v) => handleTypeChange(video, v)}
+            onAspectChange={(v) => handleAspectRatioChange(video, v)}
+            onAutoDetect={() => handleAutoDetectRatio(video)}
+            onPasswordToggle={() => handlePasswordToggle(video)}
+            onPasswordChange={(pw) => handlePasswordChange(video, pw)}
+            onTitleChange={(title) => handleTitleChange(video, title)}
+            onVisibilityToggle={() => handleVisibilityToggle(video)}
+            onDelete={() => setConfirmDeleteId(video.id)}
+            isPending={isPending}
+            disableDrag={disableDrag}
+          />
+        );
+
+        return (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={(e) => { handleDragEnd(e); setActiveVideoId(null); }}>
+            {/* Flagship zone */}
+            {flagships.length > 0 && (
+              <SortableContext items={flagships.map((v) => v.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {flagships.map((video) => renderRow(video))}
+                </div>
+              </SortableContext>
+            )}
+
+            {/* Separator */}
+            {others.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 pt-4 pb-2">
+                  <div className="flex-1 border-t border-admin-border" />
+                  <span className="text-[10px] uppercase tracking-widest text-admin-text-ghost whitespace-nowrap">
+                    Cutdowns & BTS ({others.length})
+                  </span>
+                  <div className="flex-1 border-t border-admin-border" />
+                </div>
+
+                {/* Others zone — grouped by section */}
+                {(() => {
+                  const ungrouped = others.filter((v) => !v.section_id);
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Ungrouped videos */}
+                      <DroppableSection id="section-drop-ungrouped">
+                        <SortableContext items={ungrouped.map((v) => v.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-2 min-h-[8px]">
+                            {ungrouped.map((video) => renderRow(video))}
+                          </div>
+                        </SortableContext>
+                      </DroppableSection>
+
+                      {/* Section groups */}
+                      {sections.map((section) => {
+                        const sectionVideos = others.filter((v) => v.section_id === section.id);
+                        const isCollapsed = collapsedSections.has(section.id);
+                        const isEditing = editingSectionId === section.id;
+                        return (
+                          <DroppableSection key={section.id} id={`section-drop-${section.id}`}>
+                            <div className="rounded-lg bg-admin-bg-subtle border border-admin-border-subtle overflow-hidden">
+                              {/* Section header */}
+                              <div className="flex items-center gap-2 px-3 py-2.5 group/sec">
+                                {/* Reorder arrows */}
+                                <span className="flex flex-col flex-shrink-0">
+                                  <button type="button" onClick={() => handleMoveSection(section.id, 'up')} className="w-7 h-4 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-primary transition-colors disabled:opacity-20" disabled={sections.indexOf(section) === 0}>
+                                    <ChevronUp size={16} />
+                                  </button>
+                                  <button type="button" onClick={() => handleMoveSection(section.id, 'down')} className="w-7 h-4 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-primary transition-colors disabled:opacity-20" disabled={sections.indexOf(section) === sections.length - 1}>
+                                    <ChevronDown size={16} />
+                                  </button>
+                                </span>
+
+                                {/* Section name — view or edit */}
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={section.name}
+                                    onChange={(e) => handleRenameSection(section.id, e.target.value)}
+                                    onBlur={() => setEditingSectionId(null)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') setEditingSectionId(null); }}
+                                    autoFocus
+                                    className="flex-1 min-w-0 bg-admin-bg-base border border-accent rounded-admin-sm px-3 py-1.5 text-sm font-semibold text-admin-text-primary focus:outline-none transition-colors"
+                                    placeholder="Section name"
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleCollapse(section.id)}
+                                    className="flex-1 min-w-0 text-left flex items-center gap-2"
+                                  >
+                                    <span className="text-sm font-semibold text-admin-text-primary">{section.name}</span>
+                                    <span className="text-admin-text-ghost transition-transform">
+                                      {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                    </span>
+                                  </button>
+                                )}
+
+                                {/* Edit name */}
+                                {!isEditing && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingSectionId(section.id)}
+                                    className="w-8 h-8 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-muted transition-colors flex-shrink-0 opacity-0 group-hover/sec:opacity-100"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                )}
+
+                                {/* Delete section (two-stage) */}
+                                {confirmDeleteSectionId === section.id ? (
+                                  <span className="flex items-center gap-1 flex-shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => { handleDeleteSection(section.id); setConfirmDeleteSectionId(null); }}
+                                      className="w-8 h-8 flex items-center justify-center text-admin-danger hover:bg-red-500/10 rounded-admin-sm transition-colors"
+                                      title="Confirm delete"
+                                    >
+                                      <Check size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteSectionId(null)}
+                                      className="w-8 h-8 flex items-center justify-center text-admin-text-ghost hover:text-admin-text-muted rounded-admin-sm transition-colors"
+                                      title="Cancel"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteSectionId(section.id)}
+                                    className="w-8 h-8 flex items-center justify-center text-admin-text-ghost hover:text-admin-danger transition-colors flex-shrink-0 opacity-0 group-hover/sec:opacity-100"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+
+                                {/* Count — far right */}
+                                <span className="text-sm text-admin-text-faint flex-shrink-0 tabular-nums">{sectionVideos.length}</span>
+                              </div>
+
+                              {/* Videos inside the card */}
+                              {!isCollapsed && (
+                                <SortableContext items={sectionVideos.map((v) => v.id)} strategy={verticalListSortingStrategy}>
+                                  <div className="space-y-1.5 px-3 pb-3 min-h-[32px]">
+                                    {sectionVideos.length === 0 ? (
+                                      <p className="text-admin-sm text-admin-text-ghost py-2 text-center">Drag videos here</p>
+                                    ) : (
+                                      sectionVideos.map((video) => renderRow(video))
+                                    )}
+                                  </div>
+                                </SortableContext>
+                              )}
+                            </div>
+                          </DroppableSection>
+                        );
+                      })}
+
+                      {/* Add section button */}
+                      <button
+                        type="button"
+                        onClick={handleAddSection}
+                        disabled={isPending}
+                        className="btn-ghost-add w-full flex items-center justify-center gap-1.5 py-2 text-admin-sm"
+                      >
+                        <Plus size={13} /> Add Section
+                      </button>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+            {/* Drag overlay — follows cursor */}
+            <DragOverlay dropAnimation={null}>
+              {activeVideoId && (() => {
+                const v = videos.find((vid) => vid.id === activeVideoId);
+                if (!v) return null;
+                return (
+                  <div className="bg-admin-bg-raised border-2 border-accent rounded-lg px-4 py-3 shadow-2xl max-w-sm opacity-90 select-none">
+                    <p className="text-sm font-medium text-admin-text-primary truncate">{v.title}</p>
+                    <p className="text-xs text-admin-text-faint font-mono mt-0.5">{v.video_type} · {v.aspect_ratio}</p>
+                  </div>
+                );
+              })()}
+            </DragOverlay>
+          </DndContext>
+        );
+      })()}
 
       {/* Pending upload form */}
       {pendingVideo && (

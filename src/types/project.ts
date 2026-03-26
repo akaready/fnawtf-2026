@@ -44,6 +44,16 @@ export interface ProjectVideo {
   password_protected: boolean;
   viewer_password: string | null;
   aspect_ratio: '16:9' | '9:16' | '1:1' | '4:3' | '21:9';
+  duration_seconds: number | null;
+  section_id: string | null;
+  hidden: boolean;
+}
+
+export interface ProjectVideoSection {
+  id: string;
+  project_id: string;
+  name: string;
+  sort_order: number;
 }
 
 export interface ProjectCredit {

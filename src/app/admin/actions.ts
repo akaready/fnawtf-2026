@@ -192,7 +192,7 @@ export async function addProjectVideo(data: {
 
 export async function updateProjectVideo(
   id: string,
-  data: Partial<{ title: string; video_type: 'flagship' | 'cutdown' | 'bts' | 'pitch'; sort_order: number; password_protected: boolean; viewer_password: string | null; aspect_ratio: string }>
+  data: Partial<{ title: string; video_type: 'flagship' | 'cutdown' | 'bts' | 'pitch'; sort_order: number; password_protected: boolean; viewer_password: string | null; aspect_ratio: string; section_id: string | null; hidden: boolean }>
 ) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('project_videos').update(data as never).eq('id', id);
@@ -202,6 +202,39 @@ export async function updateProjectVideo(
 export async function deleteProjectVideo(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('project_videos').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Video Sections ────────────────────────────────────────────────────────
+
+export async function getVideoSections(projectId: string) {
+  const { supabase } = await requireAuth();
+  // Table not yet in generated types — cast through unknown
+  const client = supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+  const { data, error } = await client.from('project_video_sections').select('*').eq('project_id', projectId).order('sort_order');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as { id: string; project_id: string; name: string; sort_order: number }[];
+}
+
+export async function addVideoSection(projectId: string, name: string, sortOrder: number) {
+  const { supabase } = await requireAuth();
+  const client = supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+  const { data, error } = await client.from('project_video_sections').insert({ project_id: projectId, name, sort_order: sortOrder } as never).select('id, project_id, name, sort_order').single();
+  if (error) throw new Error(error.message);
+  return data as unknown as { id: string; project_id: string; name: string; sort_order: number };
+}
+
+export async function updateVideoSection(id: string, updates: Partial<{ name: string; sort_order: number }>) {
+  const { supabase } = await requireAuth();
+  const client = supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+  const { error } = await client.from('project_video_sections').update(updates as never).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteVideoSection(id: string) {
+  const { supabase } = await requireAuth();
+  const client = supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+  const { error } = await client.from('project_video_sections').delete().eq('id', id);
   if (error) throw new Error(error.message);
 }
 
@@ -5733,4 +5766,73 @@ export async function uploadContactAvatar(formData: FormData): Promise<string> {
   if (updateError) throw new Error(updateError.message);
 
   return publicUrl;
+}
+
+// ── Pipeline Settings ──────────────────────────────────────────────────────
+
+export async function getPipelineSettings(): Promise<Record<string, string>> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await (supabase.from as Function)('pipeline_settings').select('key, value');
+  if (error) throw new Error(error.message);
+  const settings: Record<string, string> = {};
+  for (const row of (data ?? []) as { key: string; value: string }[]) {
+    settings[row.key] = row.value;
+  }
+  return settings;
+}
+
+export async function updatePipelineSetting(key: string, value: string): Promise<void> {
+  const { supabase, userId } = await requireAuth();
+  const { error } = await (supabase.from as Function)('pipeline_settings').update({ value, updated_at: new Date().toISOString(), updated_by: userId }).eq('key', key);
+  if (error) throw new Error(error.message);
+}
+
+// ── Video AI Descriptions ──────────────────────────────────────────────────
+
+export async function getProjectsNeedingDescriptions() {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, title, subtitle, description, client_name, category, style_tags, premium_addons, camera_techniques, assets_delivered, production_days, crew_count, talent_count, location_count, thumbnail_url')
+    .eq('published', true)
+    .is('ai_description', null);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function updateProjectAiDescription(id: string, description: string) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('projects')
+    .update({ ai_description: description } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateProjectAiDescriptionJson(id: string, json: Record<string, unknown>) {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('projects')
+    .update({ ai_description_json: json } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// ── Video Frames ───────────────────────────────────────────────────────
+
+export interface VideoFrameRow {
+  id: string;
+  video_id: string;
+  timestamp_seconds: number;
+  storage_path: string;
+}
+
+export async function getVideoFrames(videoId: string): Promise<VideoFrameRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await (supabase.from as Function)('project_video_frames')
+    .select('id, video_id, timestamp_seconds, storage_path')
+    .eq('video_id', videoId)
+    .order('timestamp_seconds');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as VideoFrameRow[];
 }
