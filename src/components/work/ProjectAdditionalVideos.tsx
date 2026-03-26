@@ -144,7 +144,7 @@ function VideoGridRows({ videos, showTitles }: { videos: ProjectVideo[]; showTit
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-5 my-12">
+    <div className="flex items-center gap-5 mt-24 mb-6">
       <div className="flex-1 border-t border-white/10" />
       <span className="text-sm tracking-[0.2em] uppercase font-mono text-white/50">{label}</span>
       <div className="flex-1 border-t border-white/10" />
@@ -178,7 +178,7 @@ export function ProjectAdditionalVideos({ videos, sections }: Props) {
   if (hasSections) {
     const ungrouped = nonFlagship.filter((v) => !v.section_id);
     return (
-      <section className="py-10 px-6">
+      <section className="pt-10 pb-20 px-6">
         <div className="max-w-7xl mx-auto">
           {ungrouped.length > 0 && (
             <VideoGroup label="Additional" videos={ungrouped} />
