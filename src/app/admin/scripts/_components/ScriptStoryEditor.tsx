@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Pencil, ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, ImageIcon, Film } from 'lucide-react';
 import { ScriptSceneHeader } from './ScriptSceneHeader';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScriptBeatCell } from './ScriptBeatCell';
@@ -255,10 +255,10 @@ export function ScriptStoryEditor({
 
       {/* ═══ Storyboard hero — 16:9 with prev / edit / next overlay ═══ */}
       {columnConfig.storyboard && !currentBeat && (
-        <div className="w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-          <div className="flex flex-col items-center gap-2">
-            <ImageIcon size={32} className="text-admin-text-ghost" />
-            <span className="text-admin-text-ghost text-admin-sm">No beats in this scene</span>
+        <div className="w-full max-w-5xl flex-shrink-0 rounded-lg border border-dashed border-admin-border bg-admin-bg-base flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
+          <div className="flex flex-col items-center gap-3">
+            <Film size={28} className="text-admin-text-ghost" />
+            <span className="text-admin-text-muted text-admin-sm">No beats in this scene</span>
           </div>
         </div>
       )}
@@ -392,9 +392,8 @@ export function ScriptStoryEditor({
         </div>
 
         {!currentBeat && (
-          <div className="border-t border-admin-border bg-admin-bg-base px-6 py-12 flex flex-col items-center justify-center gap-3">
-            <ImageIcon size={28} className="text-admin-text-ghost" />
-            <p className="text-admin-sm text-admin-text-muted">This scene has no beats yet</p>
+          <div className="border-t border-admin-border bg-admin-bg-base px-6 py-10 flex flex-col items-center justify-center gap-2">
+            <p className="text-admin-sm text-admin-text-muted">No beats in this scene</p>
           </div>
         )}
 
