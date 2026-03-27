@@ -122,7 +122,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
 
     if (isDraggable) {
       return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
+        <DndContext id="col-dots" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
           <SortableContext items={dotItems} strategy={horizontalListSortingStrategy}>
             {inner}
           </SortableContext>
@@ -168,7 +168,7 @@ export function ScriptColumnToggle({ config, onChange, compact, exclude, columnO
 
   if (isDraggable) {
     return (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
+      <DndContext id="col-labels" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToParentElement]}>
         <SortableContext items={labelItems} strategy={horizontalListSortingStrategy}>
           {labelInner}
         </SortableContext>
