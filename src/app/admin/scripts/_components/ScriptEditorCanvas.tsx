@@ -862,7 +862,7 @@ export function ScriptEditorCanvas({
               });
             }
           }
-          return scenes.map((scene, sceneIdx) => {
+          return scenes.map((scene) => {
           const isCollapsed = collapsedScenes.has(scene.id);
           const isEditing = editingSceneId === scene.id;
           return (
