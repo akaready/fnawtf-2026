@@ -78,6 +78,7 @@ interface Props {
   getCellLock?: (beatId: string, field: string) => { email: string } | null;
   onCellFocus?: (beatId: string, field: string) => void;
   onCellBlur?: (beatId: string, field: string) => void;
+  onBatchComplete?: (success: number, failed: number) => void;
 }
 
 export function ScriptEditorCanvas({
@@ -129,6 +130,7 @@ export function ScriptEditorCanvas({
   getCellLock,
   onCellFocus,
   onCellBlur,
+  onBatchComplete,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -424,11 +426,11 @@ export function ScriptEditorCanvas({
 
     setGeneratingScope(scope);
 
-    // Collect all beat IDs that need generation
+    // Collect all beat IDs that need generation — skip beats that already have an active slotted frame
     const queuedIds = new Set<string>();
     for (const scene of targetScenes) {
       for (const beat of scene.beats) {
-        if (!storyboardFrames.some(f => f.beat_id === beat.id)) {
+        if (!storyboardFrames.some(f => f.beat_id === beat.id && f.is_active && f.slot !== null)) {
           queuedIds.add(beat.id);
         }
       }
@@ -438,13 +440,15 @@ export function ScriptEditorCanvas({
     // Local accumulator so each beat sees frames generated earlier in THIS batch run
     // (React state won't update mid-loop — this ref is the source of truth for consistency URLs)
     const batchFramesByBeatId = new Map<string, string>(); // beatId → image_url
+    let successCount = 0;
+    let failCount = 0;
 
     try {
       for (const scene of targetScenes) {
         for (let i = 0; i < scene.beats.length; i++) {
           if (controller.signal.aborted) break;
           const beat = scene.beats[i];
-          if (storyboardFrames.some(f => f.beat_id === beat.id)) continue;
+          if (storyboardFrames.some(f => f.beat_id === beat.id && f.is_active && f.slot !== null)) continue;
           const contentPrompt = buildRichPrompt(beat, i, scene, characters, locations, castMap, referenceMap, tags);
           const beatRefs = references[beat.id] ?? [];
 
@@ -516,9 +520,18 @@ export function ScriptEditorCanvas({
               if (data.frame) {
                 onFrameGenerated(data.frame, beat.id);
                 batchFramesByBeatId.set(beat.id, data.frame.image_url);
+                successCount++;
+              } else {
+                failCount++;
               }
+            } else {
+              failCount++;
             }
-          } catch { /* aborted or network error — continue to finally cleanup */ }
+          } catch (err) {
+            if (controller.signal.aborted) break;
+            failCount++;
+            console.error('Batch gen beat failed:', beat.id, err);
+          }
           setGeneratingBeatIds(prev => {
             const next = new Set(prev);
             next.delete(beat.id);
@@ -531,8 +544,9 @@ export function ScriptEditorCanvas({
       setGeneratingScope(null);
       setGeneratingBeatIds(new Set());
       abortControllerRef.current = null;
+      if (successCount > 0 || failCount > 0) onBatchComplete?.(successCount, failCount);
     }
-  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap, referenceMap, locationReferenceMap]);
+  }, [scriptStyle, styleReferences, scriptId, storyboardFrames, onFrameGenerated, generatingScope, references, characters, locations, castMap, referenceMap, locationReferenceMap, onBatchComplete]);
 
   const handleGenerateAll = useCallback(() => {
     generateForScenes(scenes, 'all');
@@ -630,6 +644,16 @@ export function ScriptEditorCanvas({
   return (
     <>
     {/* Portal: toolbar delete button when beats are selected */}
+    {toolbarPortalRef?.current && generatingScope && createPortal(
+      <button
+        onClick={e => { e.stopPropagation(); abortControllerRef.current?.abort(); }}
+        className="btn-ghost-danger w-8 h-8"
+        title="Cancel batch generation"
+      >
+        <X size={14} strokeWidth={2} />
+      </button>,
+      toolbarPortalRef.current,
+    )}
     {toolbarPortalRef?.current && selectedBeatIds.size > 0 && createPortal(
       <div className="relative w-8 h-8 flex-shrink-0" onClick={e => e.stopPropagation()}>
         {confirmBatchDelete ? (

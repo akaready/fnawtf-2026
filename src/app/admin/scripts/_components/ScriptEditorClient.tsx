@@ -1275,6 +1275,10 @@ export function ScriptEditorClient({
                 getCellLock={getCellLock}
                 onCellFocus={handleCellFocus}
                 onCellBlur={handleCellBlur}
+                onBatchComplete={(success, failed) => {
+                  if (failed === 0) showInfo(`Generated ${success} frame${success !== 1 ? 's' : ''}`, { duration: 4000 });
+                  else showInfo(`Generated ${success} frame${success !== 1 ? 's' : ''}, ${failed} failed`, { duration: 6000 });
+                }}
               />
             ) : (
               <ScriptScratchPad

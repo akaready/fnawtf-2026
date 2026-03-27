@@ -174,35 +174,62 @@ export async function POST(request: Request) {
         ? { name: 'Custom style', rendering: stylePrompt, depth_of_field: 'f/2.0' }
         : null;
 
-    // Reference image declarations numbered to match inline parts order
+    // ── Fetch all reference images first, then build declarations from what succeeded ──
+    const [styleImgs, consistencyImgs, castImgs, locImgs, beatImgs] = await Promise.all([
+      Promise.all(styleUrls.map(fetchImagePart)),
+      Promise.all(consistencyUrls.map(fetchImagePart)),
+      Promise.all(castUrls.map(fetchImagePart)),
+      Promise.all(locUrls.map(fetchImagePart)),
+      Promise.all(beatUrls.map(fetchImagePart)),
+    ]);
+
+    // Build image parts array and reference declarations based on ACTUALLY fetched images
+    const imageParts: Part[] = [];
     const refDeclarations: object[] = [];
     let imgIdx = 1;
 
-    if (styleUrls.length > 0) {
+    // Helper: add a group of images, return the image_ids that succeeded
+    function addImageGroup(results: (Part | null)[]): number[] {
+      const ids: number[] = [];
+      for (const img of results) {
+        if (img) { imageParts.push(img); ids.push(imgIdx); imgIdx++; }
+      }
+      return ids;
+    }
+
+    const styleIds = addImageGroup(styleImgs);
+    if (styleIds.length > 0) {
       refDeclarations.push({
-        image_ids: Array.from({ length: styleUrls.length }, (_, i) => imgIdx + i),
+        image_ids: styleIds,
         purpose: 'style reference',
         extract: 'visual rendering technique, line weight, color palette, shading approach, overall feel',
         apply_to: 'entire output — match this style exactly',
       });
-      imgIdx += styleUrls.length;
     }
-    if (consistencyUrls.length > 0) {
+
+    const consistencyIds = addImageGroup(consistencyImgs);
+    if (consistencyIds.length > 0) {
       refDeclarations.push({
-        image_ids: Array.from({ length: consistencyUrls.length }, (_, i) => imgIdx + i),
+        image_ids: consistencyIds,
         purpose: 'nearby frames from this storyboard sequence',
         extract: 'visual style, line weight, color palette, rendering technique, character appearances, environment',
         apply_to: 'entire output — your frame must be visually indistinguishable from these',
       });
-      imgIdx += consistencyUrls.length;
     }
-    if (castUrls.length > 0) {
-      // Group cast images per-character so the model knows which images belong to which character
+
+    // Cast images: group per-character based on which actually fetched
+    const castIds = addImageGroup(castImgs);
+    if (castIds.length > 0) {
       const charGroups = new Map<string, number[]>();
-      for (let i = 0; i < castUrls.length; i++) {
-        const name = castReferenceLabels[i] || 'Unknown character';
-        if (!charGroups.has(name)) charGroups.set(name, []);
-        charGroups.get(name)!.push(imgIdx + i);
+      // Map successful fetch indices back to their labels
+      let castSuccessIdx = 0;
+      for (let i = 0; i < castImgs.length; i++) {
+        if (castImgs[i]) {
+          const name = castReferenceLabels[i] || 'Unknown character';
+          if (!charGroups.has(name)) charGroups.set(name, []);
+          charGroups.get(name)!.push(castIds[castSuccessIdx]);
+          castSuccessIdx++;
+        }
       }
       for (const [name, ids] of charGroups) {
         refDeclarations.push({
@@ -212,20 +239,22 @@ export async function POST(request: Request) {
           apply_to: `rendering of ${name} — this is what ${name} looks like, match exactly every frame`,
         });
       }
-      imgIdx += castUrls.length;
     }
-    if (locUrls.length > 0) {
+
+    const locIds = addImageGroup(locImgs);
+    if (locIds.length > 0) {
       refDeclarations.push({
-        image_ids: Array.from({ length: locUrls.length }, (_, i) => imgIdx + i),
+        image_ids: locIds,
         purpose: 'location environment reference',
         extract: 'architecture, surfaces, spatial layout, lighting quality, color palette of this specific place',
         apply_to: 'environment rendering — this specific location, match exactly every frame',
       });
-      imgIdx += locUrls.length;
     }
-    if (beatUrls.length > 0) {
+
+    const beatIds = addImageGroup(beatImgs);
+    if (beatIds.length > 0) {
       refDeclarations.push({
-        image_ids: Array.from({ length: beatUrls.length }, (_, i) => imgIdx + i),
+        image_ids: beatIds,
         purpose: 'product or visual reference for this scene',
         extract: 'exact appearance, shape, color, and details of this product or object',
         apply_to: 'product or object rendering — match exactly as shown',
@@ -235,7 +264,7 @@ export async function POST(request: Request) {
     const promptObj = {
       task: 'Generate a single storyboard frame illustration',
       ...(styleBlock && { style: styleBlock }),
-      sequence_consistency: consistencyUrls.length > 0
+      sequence_consistency: consistencyIds.length > 0
         ? 'CRITICAL: This is one frame in an ongoing storyboard sequence. Your output MUST be visually indistinguishable from the nearby frames provided — same artist, same medium, same rendering technique, same character appearances. Zero drift between frames.'
         : 'This is one frame in an ongoing storyboard sequence. Apply the style parameters above with absolute consistency — same artist, same tools, same rendering every frame.',
       scene: {
@@ -262,43 +291,40 @@ export async function POST(request: Request) {
     };
 
     const textPart = JSON.stringify(promptObj, null, 2);
+    const parts: Part[] = [{ text: textPart }, ...imageParts];
 
-    // ── Assemble parts: text first, then reference images in declared order ──
-    const parts: Part[] = [{ text: textPart }];
-
-    // Fetch all image groups in parallel
-    const [styleImgs, consistencyImgs, castImgs, locImgs, beatImgs] = await Promise.all([
-      Promise.all(styleUrls.map(fetchImagePart)),
-      Promise.all(consistencyUrls.map(fetchImagePart)),
-      Promise.all(castUrls.map(fetchImagePart)),
-      Promise.all(locUrls.map(fetchImagePart)),
-      Promise.all(beatUrls.map(fetchImagePart)),
-    ]);
-
-    for (const img of styleImgs)       { if (img) parts.push(img); }
-    for (const img of consistencyImgs) { if (img) parts.push(img); }
-    for (const img of castImgs)        { if (img) parts.push(img); }
-    for (const img of locImgs)         { if (img) parts.push(img); }
-    for (const img of beatImgs)        { if (img) parts.push(img); }
-
-    // Call Nano Banana Pro
-    const geminiRes = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': GEMINI_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          responseModalities: ['IMAGE'],
-          imageConfig: {
-            aspectRatio,
-            imageSize: '2K',
-          },
+    // Call Gemini with 90s timeout
+    const geminiController = new AbortController();
+    const geminiTimeout = setTimeout(() => geminiController.abort(), 90_000);
+    let geminiRes: Response;
+    try {
+      geminiRes = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': GEMINI_API_KEY,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        signal: geminiController.signal,
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: {
+            responseModalities: ['IMAGE'],
+            imageConfig: {
+              aspectRatio,
+              imageSize: '2K',
+            },
+          },
+        }),
+      });
+    } catch (fetchErr) {
+      clearTimeout(geminiTimeout);
+      if (fetchErr instanceof DOMException && fetchErr.name === 'AbortError') {
+        return NextResponse.json({ error: 'Generation timed out (90s). Try again or simplify the prompt.' }, { status: 504 });
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(geminiTimeout);
+    }
 
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
