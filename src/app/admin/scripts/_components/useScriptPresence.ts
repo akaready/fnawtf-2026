@@ -10,19 +10,37 @@ export interface PresenceUser {
   joinedAt: string;
 }
 
+export interface CellLock {
+  userId: string;
+  email: string;
+}
+
+/** Key format: `${beatId}:${field}` or `scene:${sceneId}` */
+export type LockedCellsMap = Map<string, CellLock>;
+
+export function cellLockKey(beatId: string, field: string) {
+  return `${beatId}:${field}`;
+}
+
+export function sceneLockKey(sceneId: string) {
+  return `scene:${sceneId}`;
+}
+
+const LOCK_EXPIRY_MS = 30_000;
+
 interface UseScriptPresenceOptions {
   scriptId: string;
-  /** Called when a conflict is detected (another user saved) */
   onConflict?: () => void;
 }
 
 export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOptions) {
   const [otherUsers, setOtherUsers] = useState<PresenceUser[]>([]);
   const [conflictDetected, setConflictDetected] = useState(false);
+  const [lockedCells, setLockedCells] = useState<LockedCellsMap>(new Map());
   const channelRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const lockTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Track the script's updated_at when we loaded it
   const lastKnownUpdatedAtRef = useRef<string | null>(null);
 
   const updateLastKnownTimestamp = useCallback((ts: string) => {
@@ -58,7 +76,26 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
         setOtherUsers(users);
       });
 
-      // Listen for broadcast messages about saves
+      // When a user leaves, clear all their locks
+      channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        if (!mounted) return;
+        const leftIds = new Set(leftPresences.map((p: { presence_ref: string }) => {
+          // presence key is the userId
+          return Object.entries(channel.presenceState()).find(
+            ([, vals]) => vals.some((v: { presence_ref: string }) => v.presence_ref === p.presence_ref)
+          )?.[0];
+        }).filter(Boolean));
+        if (leftIds.size === 0) return;
+        setLockedCells(prev => {
+          const next = new Map(prev);
+          let changed = false;
+          for (const [key, lock] of next) {
+            if (leftIds.has(lock.userId)) { next.delete(key); changed = true; }
+          }
+          return changed ? next : prev;
+        });
+      });
+
       channel.on('broadcast', { event: 'script_saved' }, (payload) => {
         if (!mounted) return;
         const senderId = (payload.payload as { userId?: string })?.userId;
@@ -66,6 +103,42 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
           setConflictDetected(true);
           onConflict?.();
         }
+      });
+
+      // Cell lock/unlock
+      channel.on('broadcast', { event: 'cell_lock' }, (payload) => {
+        if (!mounted) return;
+        const p = payload.payload as { userId: string; email: string; key: string };
+        if (p.userId === user.id) return;
+        setLockedCells(prev => {
+          const next = new Map(prev);
+          next.set(p.key, { userId: p.userId, email: p.email });
+          return next;
+        });
+        // Auto-expire
+        const existing = lockTimersRef.current.get(p.key);
+        if (existing) clearTimeout(existing);
+        lockTimersRef.current.set(p.key, setTimeout(() => {
+          setLockedCells(prev => {
+            const next = new Map(prev);
+            next.delete(p.key);
+            return next;
+          });
+          lockTimersRef.current.delete(p.key);
+        }, LOCK_EXPIRY_MS));
+      });
+
+      channel.on('broadcast', { event: 'cell_unlock' }, (payload) => {
+        if (!mounted) return;
+        const p = payload.payload as { userId: string; key: string };
+        if (p.userId === user.id) return;
+        setLockedCells(prev => {
+          const next = new Map(prev);
+          next.delete(p.key);
+          return next;
+        });
+        const timer = lockTimersRef.current.get(p.key);
+        if (timer) { clearTimeout(timer); lockTimersRef.current.delete(p.key); }
       });
 
       await channel.subscribe(async (status) => {
@@ -84,6 +157,8 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
 
     return () => {
       mounted = false;
+      for (const timer of lockTimersRef.current.values()) clearTimeout(timer);
+      lockTimersRef.current.clear();
       if (channelRef.current) {
         void channelRef.current.unsubscribe();
         channelRef.current = null;
@@ -91,7 +166,6 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
     };
   }, [scriptId, onConflict]);
 
-  /** Call this after saving to notify other users */
   const broadcastSave = useCallback(() => {
     if (channelRef.current && userIdRef.current) {
       void channelRef.current.send({
@@ -102,11 +176,35 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
     }
   }, []);
 
+  const broadcastLock = useCallback((key: string) => {
+    if (channelRef.current && userIdRef.current) {
+      const user = channelRef.current.presenceState()[userIdRef.current]?.[0] as { email?: string } | undefined;
+      void channelRef.current.send({
+        type: 'broadcast',
+        event: 'cell_lock',
+        payload: { userId: userIdRef.current, email: user?.email ?? 'Unknown', key },
+      });
+    }
+  }, []);
+
+  const broadcastUnlock = useCallback((key: string) => {
+    if (channelRef.current && userIdRef.current) {
+      void channelRef.current.send({
+        type: 'broadcast',
+        event: 'cell_unlock',
+        payload: { userId: userIdRef.current, key },
+      });
+    }
+  }, []);
+
   return {
     otherUsers,
     conflictDetected,
     dismissConflict,
     broadcastSave,
+    broadcastLock,
+    broadcastUnlock,
+    lockedCells,
     updateLastKnownTimestamp,
   };
 }

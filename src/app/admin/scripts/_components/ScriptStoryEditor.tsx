@@ -64,6 +64,9 @@ interface Props {
   showCommentAvatars?: boolean;
   onUpdateScene?: (sceneId: string, data: Record<string, unknown>) => void;
   onDeleteScene?: (sceneId: string) => void;
+  getCellLock?: (beatId: string, field: string) => { email: string } | null;
+  onCellFocus?: (beatId: string, field: string) => void;
+  onCellBlur?: (beatId: string, field: string) => void;
 }
 
 export function ScriptStoryEditor({
@@ -107,6 +110,9 @@ export function ScriptStoryEditor({
   onRefreshComments,
   onUpdateScene,
   onDeleteScene,
+  getCellLock,
+  onCellFocus,
+  onCellBlur,
 }: Props) {
   /* ── Build slides ── */
   const slides = useMemo(
@@ -373,6 +379,9 @@ export function ScriptStoryEditor({
             onDelete={onDeleteScene}
             editing={sceneEditing}
             onEditingChange={setSceneEditing}
+            lockedBy={getCellLock?.(currentScene.id, 'scene')}
+            onSceneFocus={() => onCellFocus?.(currentScene.id, 'scene')}
+            onSceneBlur={() => onCellBlur?.(currentScene.id, 'scene')}
           />
         </div>
 
@@ -391,6 +400,9 @@ export function ScriptStoryEditor({
                 locations={locations}
                 products={products}
                 beatId={current.beatId}
+                lockedBy={getCellLock?.(current.beatId, 'audio_content')}
+                onCellFocus={() => onCellFocus?.(current.beatId, 'audio_content')}
+                onCellBlur={() => onCellBlur?.(current.beatId, 'audio_content')}
               />
               </div>
             </div>
@@ -414,6 +426,9 @@ export function ScriptStoryEditor({
                     locations={locations}
                     products={products}
                     beatId={current.beatId}
+                    lockedBy={getCellLock?.(current.beatId, 'visual_content')}
+                    onCellFocus={() => onCellFocus?.(current.beatId, 'visual_content')}
+                    onCellBlur={() => onCellBlur?.(current.beatId, 'visual_content')}
                   />
                 </motion.div>
               )}
@@ -444,6 +459,9 @@ export function ScriptStoryEditor({
                     locations={locations}
                     products={products}
                     beatId={current.beatId}
+                    lockedBy={getCellLock?.(current.beatId, 'notes_content')}
+                    onCellFocus={() => onCellFocus?.(current.beatId, 'notes_content')}
+                    onCellBlur={() => onCellBlur?.(current.beatId, 'notes_content')}
                   />
                 </motion.div>
               )}

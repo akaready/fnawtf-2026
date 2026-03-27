@@ -60,6 +60,10 @@ interface Props {
   commentsLoading?: boolean;
   commentShareId?: string;
   onRefreshComments?: () => void;
+  /** Returns lock info if another user has this cell locked */
+  getCellLock?: (beatId: string, field: string) => { email: string } | null;
+  onCellFocus?: (beatId: string, field: string) => void;
+  onCellBlur?: (beatId: string, field: string) => void;
 }
 
 function beatLetter(n: number): string {
@@ -122,6 +126,9 @@ export function ScriptBeatRow({
   commentsLoading,
   commentShareId,
   onRefreshComments,
+  getCellLock,
+  onCellFocus,
+  onCellBlur,
 }: Props) {
   const {
     attributes,
@@ -233,6 +240,9 @@ export function ScriptBeatRow({
                   locations={locations}
                   products={products}
                   beatId={beat.id}
+                  lockedBy={getCellLock?.(beat.id, 'audio_content')}
+                  onCellFocus={() => onCellFocus?.(beat.id, 'audio_content')}
+                  onCellBlur={() => onCellBlur?.(beat.id, 'audio_content')}
                 />
               ),
               visual: (
@@ -248,6 +258,9 @@ export function ScriptBeatRow({
                   locations={locations}
                   products={products}
                   beatId={beat.id}
+                  lockedBy={getCellLock?.(beat.id, 'visual_content')}
+                  onCellFocus={() => onCellFocus?.(beat.id, 'visual_content')}
+                  onCellBlur={() => onCellBlur?.(beat.id, 'visual_content')}
                 />
               ),
               notes: (
@@ -263,6 +276,9 @@ export function ScriptBeatRow({
                   locations={locations}
                   products={products}
                   beatId={beat.id}
+                  lockedBy={getCellLock?.(beat.id, 'notes_content')}
+                  onCellFocus={() => onCellFocus?.(beat.id, 'notes_content')}
+                  onCellBlur={() => onCellBlur?.(beat.id, 'notes_content')}
                 />
               ),
               reference: (

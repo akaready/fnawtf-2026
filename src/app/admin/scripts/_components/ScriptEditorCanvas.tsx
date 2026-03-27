@@ -75,6 +75,9 @@ interface Props {
   commentsMap: Map<string, ScriptShareCommentRow[]>;
   commentsLoading?: boolean;
   onRefreshComments?: () => void;
+  getCellLock?: (beatId: string, field: string) => { email: string } | null;
+  onCellFocus?: (beatId: string, field: string) => void;
+  onCellBlur?: (beatId: string, field: string) => void;
 }
 
 export function ScriptEditorCanvas({
@@ -123,6 +126,9 @@ export function ScriptEditorCanvas({
   commentsMap,
   commentsLoading,
   onRefreshComments,
+  getCellLock,
+  onCellFocus,
+  onCellBlur,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dndId = useId();
@@ -855,6 +861,9 @@ export function ScriptEditorCanvas({
                     onGenerate={columnConfig.storyboard && scriptStyle ? () => handleGenerateScene(scene.id) : undefined}
                     generating={generatingScope === scene.id}
                     isGenerating={generatingScope !== null && generatingScope !== scene.id && scene.beats.some(b => generatingBeatIds.has(b.id))}
+                    lockedBy={getCellLock?.(scene.id, 'scene')}
+                    onSceneFocus={() => onCellFocus?.(scene.id, 'scene')}
+                    onSceneBlur={() => onCellBlur?.(scene.id, 'scene')}
                   />
                 </div>
                 <div className="flex-shrink-0 flex items-center justify-center py-3 px-2 text-admin-text-faint cursor-grab hover:text-white transition-colors" {...sceneDragListeners}>
@@ -959,6 +968,9 @@ export function ScriptEditorCanvas({
                         commentsLoading={commentsLoading}
                         commentShareId={selectedShareId ?? undefined}
                         onRefreshComments={onRefreshComments}
+                        getCellLock={getCellLock}
+                        onCellFocus={onCellFocus}
+                        onCellBlur={onCellBlur}
                       />
                         );
                       });

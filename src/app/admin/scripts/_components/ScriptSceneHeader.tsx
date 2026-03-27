@@ -18,6 +18,10 @@ interface Props {
   generating?: boolean;
   /** True when any beat in this scene is actively being batch-generated (e.g. scene is collapsed) */
   isGenerating?: boolean;
+  /** If another user is editing this scene header */
+  lockedBy?: { email: string } | null;
+  onSceneFocus?: () => void;
+  onSceneBlur?: () => void;
 }
 
 const INT_EXT_OPTIONS: { id: string; label: string }[] = [
@@ -34,7 +38,7 @@ const TIME_OPTIONS: { id: string; label: string }[] = [
   { id: 'LATER', label: 'LATER' },
 ];
 
-export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating, isGenerating }: Props) {
+export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpdate, onDelete, editing, onEditingChange, onGenerate, generating, isGenerating, lockedBy, onSceneFocus, onSceneBlur }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [locQuery, setLocQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -112,6 +116,7 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
           setTimeout(() => {
             if (!container?.contains(document.activeElement)) {
               onEditingChange?.(false);
+              onSceneBlur?.();
               setShowDropdown(false);
             }
           }, 150);
@@ -208,14 +213,14 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
 
         <div className="flex-1" />
         <button
-          onClick={() => onEditingChange?.(false)}
+          onClick={() => { onEditingChange?.(false); onSceneBlur?.(); }}
           className="text-admin-success hover:text-green-300 p-1.5 transition-colors"
           title="Done editing"
         >
           <Check size={14} />
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); onEditingChange?.(false); }}
+          onClick={(e) => { e.stopPropagation(); onEditingChange?.(false); onSceneBlur?.(); }}
           className="text-admin-text-faint hover:text-admin-text-primary p-1.5 transition-colors"
           title="Cancel"
         >
@@ -237,9 +242,14 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
 
   return (
     <div
-      className="flex items-center gap-0 pr-2 h-[44px] overflow-hidden group/scene"
+      className={`flex items-center gap-0 pr-2 h-[44px] overflow-hidden group/scene relative ${lockedBy ? 'opacity-60' : ''}`}
       id={`scene-${scene.id}`}
     >
+      {lockedBy && (
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-5 h-5 rounded-full bg-admin-info/20 border border-admin-info/40 flex items-center justify-center text-[9px] font-medium text-admin-info uppercase" title={`Editing: ${lockedBy.email}`}>
+          {lockedBy.email[0]}
+        </span>
+      )}
       <span className="text-admin-border font-bebas text-[44px] leading-none flex-shrink-0 translate-y-[2px] pl-2 pr-3">
         {scene.sceneNumber}
       </span>
@@ -291,9 +301,9 @@ export function ScriptSceneHeader({ scene, scriptGroupId, locations = [], onUpda
               </button>
             )}
             <button
-              onClick={e => { e.stopPropagation(); onEditingChange?.(true); }}
-              className="text-admin-text-faint hover:text-white p-1 transition-colors"
-              title="Edit scene"
+              onClick={e => { e.stopPropagation(); if (lockedBy) return; onEditingChange?.(true); onSceneFocus?.(); }}
+              className={`text-admin-text-faint hover:text-white p-1 transition-colors ${lockedBy ? 'opacity-30 cursor-not-allowed' : ''}`}
+              title={lockedBy ? `Editing: ${lockedBy.email}` : 'Edit scene'}
             >
               <Pencil size={14} />
             </button>

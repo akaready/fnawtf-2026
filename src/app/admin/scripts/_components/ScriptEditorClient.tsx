@@ -46,7 +46,7 @@ import { ScriptScratchPad, type ScratchScene, type ScriptScratchPadHandle } from
 import { ScriptExtractModal } from './ScriptExtractModal';
 import { useAdminToast } from '@/app/admin/_components/AdminToast';
 import { useUndoStack } from './useUndoStack';
-import { useScriptPresence } from './useScriptPresence';
+import { useScriptPresence, cellLockKey } from './useScriptPresence';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
 import type { ContentMode } from '@/types/scripts';
 import type { ScriptShareRow, ScriptShareCommentRow } from '@/types/scripts';
@@ -860,6 +860,20 @@ export function ScriptEditorClient({
     return () => window.removeEventListener('keydown', handler);
   }, [isFocused, toggleFocus]);
 
+  // ── Cell locking callbacks ──
+  const getCellLock = useCallback((beatId: string, field: string) => {
+    const lock = presence.lockedCells.get(cellLockKey(beatId, field));
+    return lock ? { email: lock.email } : null;
+  }, [presence.lockedCells]);
+
+  const handleCellFocus = useCallback((beatId: string, field: string) => {
+    presence.broadcastLock(cellLockKey(beatId, field));
+  }, [presence]);
+
+  const handleCellBlur = useCallback((beatId: string, field: string) => {
+    presence.broadcastUnlock(cellLockKey(beatId, field));
+  }, [presence]);
+
   // Cmd+Z / Cmd+Shift+Z for undo/redo (only when not in editable fields)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1207,6 +1221,9 @@ export function ScriptEditorClient({
                 showCommentAvatars={showCommentsSidebar}
                 onUpdateScene={handleUpdateScene}
                 onDeleteScene={handleDeleteScene}
+                getCellLock={getCellLock}
+                onCellFocus={handleCellFocus}
+                onCellBlur={handleCellBlur}
               />
             ) : contentMode === 'table' ? (
               <ScriptEditorCanvas
@@ -1255,6 +1272,9 @@ export function ScriptEditorClient({
                 commentsMap={commentsMap}
                 commentsLoading={commentsLoading}
                 onRefreshComments={handleRefreshComments}
+                getCellLock={getCellLock}
+                onCellFocus={handleCellFocus}
+                onCellBlur={handleCellBlur}
               />
             ) : (
               <ScriptScratchPad

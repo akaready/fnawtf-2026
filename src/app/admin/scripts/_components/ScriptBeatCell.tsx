@@ -49,9 +49,15 @@ interface Props {
   locations?: ScriptLocationRow[];
   products?: ScriptProductRow[];
   beatId?: string;
+  /** If set, another user has this cell locked */
+  lockedBy?: { email: string } | null;
+  /** Called when this cell gains focus */
+  onCellFocus?: () => void;
+  /** Called when this cell loses focus */
+  onCellBlur?: () => void;
 }
 
-export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, isLastColumn, characters, tags, locations = [], products = [], beatId }: Props) {
+export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, isLastColumn, characters, tags, locations = [], products = [], beatId, lockedBy, onCellFocus, onCellBlur }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const isComposing = useRef(false);
   const lastValue = useRef(value);
@@ -394,15 +400,24 @@ export function ScriptBeatCell({ value, field, onChange, onAddBeat, onAddScene, 
       className="relative min-w-0 overflow-hidden border-b border-admin-border-subtle"
       onMouseDown={handleWrapperMouseDown}
     >
+      {/* Lock overlay */}
+      {lockedBy && (
+        <div className="absolute inset-0 z-10 bg-admin-bg-hover/40 cursor-not-allowed flex items-end justify-end pointer-events-auto">
+          <span className="m-1 w-5 h-5 rounded-full bg-admin-info/20 border border-admin-info/40 flex items-center justify-center text-[9px] font-medium text-admin-info uppercase" title={`Editing: ${lockedBy.email}`}>
+            {lockedBy.email[0]}
+          </span>
+        </div>
+      )}
       <div
         ref={ref}
-        contentEditable
+        contentEditable={!lockedBy}
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}
-        onFocus={() => { isFocused.current = true; }}
+        onFocus={() => { isFocused.current = true; onCellFocus?.(); }}
         onBlur={() => {
           isFocused.current = false;
+          onCellBlur?.();
           if (selectedMentionRef.current) {
             selectedMentionRef.current.classList.remove('mention-highlighted');
             selectedMentionRef.current = null;
