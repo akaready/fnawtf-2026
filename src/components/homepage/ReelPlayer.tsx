@@ -307,7 +307,7 @@ export function ReelPlayer({
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className={`w-full h-full ${isFullscreen ? 'object-contain' : 'object-cover'}`}
         poster={placeholderSrc}
         muted
         playsInline
