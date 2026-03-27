@@ -175,34 +175,50 @@ export function ScriptEditorClient({
     localStorage.setItem('fna-script-col-widths', JSON.stringify(columnFractions));
   }, [columnFractions]);
 
-  // Load style + storyboard + cast data on mount
+  // Load style + storyboard + cast data on mount — each settled independently so one failure doesn't block others
   useEffect(() => {
     (async () => {
-      try {
-        const groupId = script.script_group_id!;
-        const [style, frames, castData, locOptionsData, refData, locRefData, productsData, prodRefData] = await Promise.all([
-          getScriptStyle(script.id),
-          getStoryboardFrames(script.id),
-          getScriptCastMap(groupId),
-          getScriptLocationOptionsMap(groupId),
-          getCharacterReferenceMap(groupId),
-          getLocationReferenceMap(groupId),
-          getScriptProducts(groupId),
-          getProductReferenceMap(groupId),
-        ]);
-        if (style) {
-          setScriptStyle(style as ScriptStyleRow);
+      const groupId = script.script_group_id!;
+      const results = await Promise.allSettled([
+        getScriptStyle(script.id),                    // 0
+        getStoryboardFrames(script.id),               // 1
+        getScriptCastMap(groupId),                     // 2
+        getScriptLocationOptionsMap(groupId),          // 3
+        getCharacterReferenceMap(groupId),             // 4
+        getLocationReferenceMap(groupId),              // 5
+        getScriptProducts(groupId),                    // 6
+        getProductReferenceMap(groupId),               // 7
+      ]);
+
+      const get = <T,>(i: number): T | null => {
+        const r = results[i];
+        if (r.status === 'fulfilled') return r.value as T;
+        console.error(`Script editor data load [${i}] failed:`, r.reason);
+        return null;
+      };
+
+      const style = get<ScriptStyleRow | null>(0);
+      if (style) {
+        setScriptStyle(style);
+        try {
           const refs = await getStyleReferences(style.id);
           setStyleReferences(refs as ScriptStyleReferenceRow[]);
-        }
-        setStoryboardFrames(frames as unknown as ScriptStoryboardFrameRow[]);
-        setCastMap(castData);
-        setReferenceMap(refData);
-        setLocationOptionsMap(locOptionsData);
-        setLocationReferenceMap(locRefData);
-        setProducts(productsData as ScriptProductRow[]);
-        setProductReferenceMap(prodRefData as Record<string, ProductReferenceRow[]>);
-      } catch { /* tables may not exist yet */ }
+        } catch (err) { console.error('Style references load failed:', err); }
+      }
+      const frames = get<ScriptStoryboardFrameRow[]>(1);
+      if (frames) setStoryboardFrames(frames);
+      const castData = get<Record<string, CharacterCastWithContact[]>>(2);
+      if (castData) setCastMap(castData);
+      const locOptionsData = get<Record<string, LocationOptionWithLocation[]>>(3);
+      if (locOptionsData) setLocationOptionsMap(locOptionsData);
+      const refData = get<Record<string, CharacterReferenceRow[]>>(4);
+      if (refData) setReferenceMap(refData);
+      const locRefData = get<Record<string, LocationReferenceRow[]>>(5);
+      if (locRefData) setLocationReferenceMap(locRefData);
+      const productsData = get<ScriptProductRow[]>(6);
+      if (productsData) setProducts(productsData);
+      const prodRefData = get<Record<string, ProductReferenceRow[]>>(7);
+      if (prodRefData) setProductReferenceMap(prodRefData);
     })();
   }, [script.id]);
 
