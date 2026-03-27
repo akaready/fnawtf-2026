@@ -206,7 +206,11 @@ export function ScriptEditorCanvas({
   }, [activeSceneId]);
 
   // Scroll to active beat when selected from sidebar
+  const prevActiveBeatRef = useRef(activeBeatId);
   useEffect(() => {
+    // Only scroll when activeBeatId actually changes, not when scenes update
+    if (activeBeatId === prevActiveBeatRef.current) return;
+    prevActiveBeatRef.current = activeBeatId;
     if (!activeBeatId || !scrollRef.current) return;
     const container = scrollRef.current;
     const colH = colHeaderRef.current?.offsetHeight ?? 0;
