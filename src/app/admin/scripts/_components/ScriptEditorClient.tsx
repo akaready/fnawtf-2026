@@ -115,6 +115,7 @@ export function ScriptEditorClient({
   const [showVersions, setShowVersions] = useState(false);
   const [products, setProducts] = useState<ScriptProductRow[]>(initialProducts);
   const [productReferenceMap, setProductReferenceMap] = useState<Record<string, ProductReferenceRow[]>>({});
+  const [panelDataLoading, setPanelDataLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
   useEffect(() => {
     const stored = localStorage.getItem(`script-sidebar-${script.id}`);
@@ -177,6 +178,7 @@ export function ScriptEditorClient({
 
   // Load style + storyboard + cast data on mount — each settled independently so one failure doesn't block others
   useEffect(() => {
+    setPanelDataLoading(true);
     (async () => {
       const groupId = script.script_group_id!;
       const results = await Promise.allSettled([
@@ -219,6 +221,7 @@ export function ScriptEditorClient({
       if (productsData) setProducts(productsData);
       const prodRefData = get<Record<string, ProductReferenceRow[]>>(7);
       if (prodRefData) setProductReferenceMap(prodRefData);
+      setPanelDataLoading(false);
     })();
   }, [script.id]);
 
@@ -1436,6 +1439,7 @@ export function ScriptEditorClient({
         onCastMapChange={setCastMap}
         referenceMap={referenceMap}
         onReferenceMapChange={setReferenceMap}
+        loading={panelDataLoading}
       />
       <ScriptTagsPanel
         open={showTags}
