@@ -902,7 +902,7 @@ export function ScriptCharactersPanel({
                         }}
                       />
                       <div className="flex gap-2 flex-wrap">
-                        {loading && (referenceMap[selected.id] ?? []).length === 0 && (
+                        {loading && selected.cast_mode === 'references' && (referenceMap[selected.id] ?? []).length === 0 && (
                           <div className="w-20 h-20 flex items-center justify-center">
                             <Loader2 size={16} className="animate-spin text-admin-text-faint" />
                           </div>
