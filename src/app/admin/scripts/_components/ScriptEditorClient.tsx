@@ -1048,9 +1048,9 @@ export function ScriptEditorClient({
           {/* Mode toggle — table / scratchpad */}
           <ViewSwitcher
             views={[
-              { key: 'story' as ContentMode, icon: Play, label: 'Story' },
-              { key: 'table' as ContentMode, icon: Table2, label: 'Table' },
               { key: 'scratchpad' as ContentMode, icon: ScrollText, label: 'Scratchpad' },
+              { key: 'table' as ContentMode, icon: Table2, label: 'Table' },
+              { key: 'story' as ContentMode, icon: Play, label: 'Story' },
             ]}
             activeView={contentMode}
             onChange={(mode) => {
