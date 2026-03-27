@@ -862,7 +862,7 @@ export function ScriptEditorCanvas({
               });
             }
           }
-          return scenes.map((scene) => {
+          return scenes.map((scene, sceneIdx) => {
           const isCollapsed = collapsedScenes.has(scene.id);
           const isEditing = editingSceneId === scene.id;
           return (
@@ -873,8 +873,8 @@ export function ScriptEditorCanvas({
             >
               {/* Scene heading — click to collapse/expand, sticky below column headers */}
               <div
-                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border border-t border-t-admin-bg-raised -mt-px cursor-pointer`}
-                style={{ top: colHeaderHeight }}
+                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer ${sceneIdx > 0 ? 'border-t border-admin-border -mt-px' : ''}`}
+                style={{ top: sceneIdx > 0 ? colHeaderHeight - 1 : colHeaderHeight }}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isEditing) {
