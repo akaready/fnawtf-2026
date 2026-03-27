@@ -120,6 +120,7 @@ export function ScriptStoryboardCell({
 
       // Extract character mentions and collect visual references per mode
       const castReferenceUrls: string[] = [];
+      const castReferenceLabels: string[] = [];
       if (beat && (castMap || referenceMap)) {
         const mentionPattern = /\]\(([0-9a-f-]{36})\)/g;
         const beatText = `${beat.audio_content} ${beat.visual_content} ${beat.notes_content}`;
@@ -132,11 +133,15 @@ export function ScriptStoryboardCell({
           const char = characters.find(c => c.id === charId);
           if (char?.cast_mode === 'references') {
             const refs = (referenceMap?.[charId] ?? []).slice(0, 2).map(r => r.image_url);
-            castReferenceUrls.push(...refs);
+            for (const url of refs) {
+              castReferenceUrls.push(url);
+              castReferenceLabels.push(char.name);
+            }
           } else {
             const featured = castMap?.[charId]?.find(c => c.is_featured);
             if (featured?.contact.headshot_url) {
               castReferenceUrls.push(featured.contact.headshot_url);
+              castReferenceLabels.push(char?.name ?? 'Unknown');
             }
           }
         }
@@ -167,6 +172,7 @@ export function ScriptStoryboardCell({
           referenceImageUrls: styleReferences.map((r) => r.image_url),
           beatReferenceUrls,
           castReferenceUrls,
+          castReferenceLabels,
           locationReferenceUrls,
           consistencyFrameUrls: computedConsistencyUrls,
         }),

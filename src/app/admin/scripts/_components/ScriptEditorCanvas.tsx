@@ -456,8 +456,9 @@ export function ScriptEditorCanvas({
               .forEach((r: LocationReferenceRow) => locationRefUrls.push(r.image_url));
           }
 
-          // Collect visual reference URLs for mentioned characters (respects cast_mode)
+          // Collect visual reference URLs + labels for mentioned characters (respects cast_mode)
           const castRefUrls: string[] = [];
+          const castRefLabels: string[] = [];
           if (castMap || referenceMap) {
             const mentionPat = new RegExp('\\]\\(([0-9a-f-]{36})\\)', 'g');
             const beatText = `${beat.audio_content} ${beat.visual_content} ${beat.notes_content}`;
@@ -466,10 +467,11 @@ export function ScriptEditorCanvas({
               const charId = found[1];
               const char = characters.find(c => c.id === charId);
               if (char?.cast_mode === 'references') {
-                (referenceMap?.[charId] ?? []).slice(0, 2).forEach(r => castRefUrls.push(r.image_url));
+                const refs = (referenceMap?.[charId] ?? []).slice(0, 2);
+                for (const r of refs) { castRefUrls.push(r.image_url); castRefLabels.push(char.name); }
               } else {
                 const feat = castMap?.[charId]?.find(c => c.is_featured);
-                if (feat?.contact.headshot_url) castRefUrls.push(feat.contact.headshot_url);
+                if (feat?.contact.headshot_url) { castRefUrls.push(feat.contact.headshot_url); castRefLabels.push(char?.name ?? 'Unknown'); }
               }
             }
           }
@@ -504,6 +506,7 @@ export function ScriptEditorCanvas({
                 referenceImageUrls: styleReferences.map(r => r.image_url),
                 beatReferenceUrls: beatRefs.map(r => r.image_url),
                 castReferenceUrls: castRefUrls,
+                castReferenceLabels: castRefLabels,
                 locationReferenceUrls: locationRefUrls,
                 consistencyFrameUrls: priorSceneFrameUrls,
               }),

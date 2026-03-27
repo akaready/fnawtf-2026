@@ -23,6 +23,8 @@ interface GenerateRequest {
   castReferenceUrls?: string[];
   locationReferenceUrls?: string[];
   consistencyFrameUrls?: string[];
+  /** Parallel array to castReferenceUrls — character name for each cast image */
+  castReferenceLabels?: string[];
   /** When set from the generation modal, overrides contentPrompt in the structured JSON */
   promptOverride?: string;
   /** Image modification mode — send existing image + edit instructions */
@@ -48,6 +50,7 @@ export async function POST(request: Request) {
     stylePreset, notesContent: _notesContent, aspectRatio = '16:9',
     referenceImageUrls = [], beatReferenceUrls = [], castReferenceUrls = [],
     locationReferenceUrls = [], consistencyFrameUrls = [],
+    castReferenceLabels = [],
     promptOverride,
     modifyMode, modifyImageUrl,
   } = body;
@@ -194,12 +197,21 @@ export async function POST(request: Request) {
       imgIdx += consistencyUrls.length;
     }
     if (castUrls.length > 0) {
-      refDeclarations.push({
-        image_ids: Array.from({ length: castUrls.length }, (_, i) => imgIdx + i),
-        purpose: 'character appearance reference',
-        extract: 'exact facial structure, hair color and style, eye shape, skin tone, identifying physical features',
-        apply_to: 'character rendering — this specific person, match exactly every frame',
-      });
+      // Group cast images per-character so the model knows which images belong to which character
+      const charGroups = new Map<string, number[]>();
+      for (let i = 0; i < castUrls.length; i++) {
+        const name = castReferenceLabels[i] || 'Unknown character';
+        if (!charGroups.has(name)) charGroups.set(name, []);
+        charGroups.get(name)!.push(imgIdx + i);
+      }
+      for (const [name, ids] of charGroups) {
+        refDeclarations.push({
+          image_ids: ids,
+          purpose: `appearance reference for character: ${name}`,
+          extract: `exact facial structure, hair color and style, eye shape, skin tone, identifying physical features of ${name}`,
+          apply_to: `rendering of ${name} — this is what ${name} looks like, match exactly every frame`,
+        });
+      }
       imgIdx += castUrls.length;
     }
     if (locUrls.length > 0) {

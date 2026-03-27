@@ -147,8 +147,10 @@ export function StoryboardGenerateModal({
   const [loading, setLoading] = useState(true);
   const [selectedFrameId, setSelectedFrameId] = useState<string | null>(activeFrame?.id ?? null);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [flipping, setFlipping] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadDragOver, setUploadDragOver] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [localAudio, setLocalAudio] = useState(audioContent);
@@ -332,10 +334,10 @@ export function StoryboardGenerateModal({
       for (const charId of mentionedCharIds) {
         const char = characters.find(c => c.id === charId);
         if (char?.cast_mode === 'references') {
-          (referenceMap?.[charId] ?? []).slice(0, 2).forEach(r => refs.push({ url: r.image_url, purpose: 'cast' }));
+          (referenceMap?.[charId] ?? []).slice(0, 2).forEach(r => refs.push({ url: r.image_url, purpose: 'cast', label: char.name }));
         } else {
           const featured = castMap?.[charId]?.find(c => c.is_featured);
-          if (featured?.contact.headshot_url) refs.push({ url: featured.contact.headshot_url, purpose: 'cast' });
+          if (featured?.contact.headshot_url) refs.push({ url: featured.contact.headshot_url, purpose: 'cast', label: char?.name });
         }
       }
     }
@@ -422,9 +424,10 @@ export function StoryboardGenerateModal({
   const handleGenerate = useCallback(async () => {
     if (generating) return;
     setGenerating(true);
+    setGenerateError(null);
     try {
       const styleUrls = localReferences.filter(r => r.purpose === 'style').map(r => r.url);
-      const castUrls = localReferences.filter(r => r.purpose === 'cast').map(r => r.url);
+      const castRefs = localReferences.filter(r => r.purpose === 'cast').map(r => ({ url: r.url, label: r.label }));
       const locUrls = localReferences.filter(r => r.purpose === 'location').map(r => r.url);
       const beatUrls = localReferences.filter(r => r.purpose === 'beat').map(r => r.url);
       const consUrls = localReferences.filter(r => r.purpose === 'consistency').map(r => r.url);
@@ -441,7 +444,8 @@ export function StoryboardGenerateModal({
           stylePreset: localStylePreset ?? style?.style_preset,
           aspectRatio: style?.aspect_ratio,
           referenceImageUrls: styleUrls,
-          castReferenceUrls: castUrls,
+          castReferenceUrls: castRefs.map(r => r.url),
+          castReferenceLabels: castRefs.map(r => r.label),
           locationReferenceUrls: locUrls,
           beatReferenceUrls: beatUrls,
           consistencyFrameUrls: consUrls,
@@ -471,7 +475,12 @@ export function StoryboardGenerateModal({
           // Refresh sidebar so new frame appears in Current Scene
           fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
         }
+      } else {
+        const errData = await res.json().catch(() => null);
+        setGenerateError(errData?.error ?? `Generation failed (${res.status})`);
       }
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
       setGenerating(false);
     }
@@ -481,6 +490,7 @@ export function StoryboardGenerateModal({
   const handleUploadFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0 || uploading) return;
     setUploading(true);
+    setUploadError(null);
     try {
       for (const file of Array.from(files)) {
         const formData = new FormData();
@@ -501,6 +511,8 @@ export function StoryboardGenerateModal({
         }
       }
       fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -519,9 +531,9 @@ export function StoryboardGenerateModal({
       const char = characters.find(c => c.id === id);
       if (char) {
         if (char.cast_mode === 'references') {
-          (referenceMap?.[char.id] ?? []).forEach(r => newRefs.push({ url: r.image_url, purpose: 'cast' }));
+          (referenceMap?.[char.id] ?? []).forEach(r => newRefs.push({ url: r.image_url, purpose: 'cast', label: char.name }));
         } else {
-          (castMap?.[char.id] ?? []).forEach(c => { if (c.contact?.headshot_url) newRefs.push({ url: c.contact.headshot_url, purpose: 'cast' }); });
+          (castMap?.[char.id] ?? []).forEach(c => { if (c.contact?.headshot_url) newRefs.push({ url: c.contact.headshot_url, purpose: 'cast', label: char.name }); });
         }
         continue;
       }
@@ -534,8 +546,9 @@ export function StoryboardGenerateModal({
   const handleModify = useCallback(async () => {
     if (generating || !selectedFrame) return;
     setGenerating(true);
+    setGenerateError(null);
     try {
-      const castUrls = modifyRefs.filter(r => r.purpose === 'cast').map(r => r.url);
+      const castRefs = modifyRefs.filter(r => r.purpose === 'cast');
       const locUrls = modifyRefs.filter(r => r.purpose === 'location').map(r => r.url);
       const res = await fetch('/api/admin/storyboard', {
         method: 'POST',
@@ -549,7 +562,8 @@ export function StoryboardGenerateModal({
           modifyMode: true,
           modifyImageUrl: selectedFrame.image_url,
           promptOverride: modifyPrompt,
-          castReferenceUrls: castUrls,
+          castReferenceUrls: castRefs.map(r => r.url),
+          castReferenceLabels: castRefs.map(r => r.label),
           locationReferenceUrls: locUrls,
         }),
       });
@@ -563,7 +577,12 @@ export function StoryboardGenerateModal({
           onFrameChange(newFrame);
           fetchAllScriptFrames(scriptId).then(d => setAllFramesForScript(d as unknown as ScriptStoryboardFrameRow[]));
         }
+      } else {
+        const errData = await res.json().catch(() => null);
+        setGenerateError(errData?.error ?? `Modification failed (${res.status})`);
       }
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Modification failed');
     } finally {
       setGenerating(false);
     }
@@ -1443,6 +1462,11 @@ export function StoryboardGenerateModal({
 
 
         {/* ── Footer ── */}
+        {(generateError || uploadError) && (
+          <div className="px-6 py-2 bg-admin-danger/10 border-t border-admin-danger/30">
+            <p className="text-admin-sm text-admin-danger">{generateError || uploadError}</p>
+          </div>
+        )}
         <div className="flex items-center gap-2 border-t border-admin-border bg-admin-bg-wash flex-shrink-0 rounded-b-admin-xl px-6 py-4">
           {activeTab === 'upload' && (
             <button

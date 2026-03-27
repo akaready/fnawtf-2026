@@ -293,6 +293,8 @@ export interface ScriptStyleReferenceRow {
 export interface StoryboardReferenceUsed {
   url: string;
   purpose: 'style' | 'cast' | 'location' | 'beat' | 'consistency';
+  /** Character name — used to group cast images per-character in generation prompts */
+  label?: string;
 }
 
 export interface ScriptStoryboardFrameRow {
