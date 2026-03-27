@@ -46,7 +46,6 @@ interface Props {
   onCastMapChange: (map: Record<string, CharacterCastWithContact[]>) => void;
   referenceMap: Record<string, CharacterReferenceRow[]>;
   onReferenceMapChange: (map: Record<string, CharacterReferenceRow[]>) => void;
-  loading?: boolean;
 }
 
 // PRESET_COLORS imported from ColorPicker
@@ -301,7 +300,6 @@ export function ScriptCharactersPanel({
   open, onClose, scriptGroupId, characters, beats, onCharactersChange,
   castMap, onCastMapChange,
   referenceMap, onReferenceMapChange,
-  loading,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -902,11 +900,6 @@ export function ScriptCharactersPanel({
                         }}
                       />
                       <div className="flex gap-2 flex-wrap">
-                        {loading && selected.cast_mode === 'references' && (referenceMap[selected.id] ?? []).length === 0 && (
-                          <div className="w-20 h-20 flex items-center justify-center">
-                            <Loader2 size={16} className="animate-spin text-admin-text-faint" />
-                          </div>
-                        )}
                         {(referenceMap[selected.id] ?? []).map(ref => (
                           <div key={ref.id} className="group/refslot relative w-20 h-20 flex-shrink-0">
                             <img
