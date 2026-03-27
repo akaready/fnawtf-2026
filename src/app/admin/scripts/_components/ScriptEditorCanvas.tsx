@@ -873,7 +873,7 @@ export function ScriptEditorCanvas({
             >
               {/* Scene heading — click to collapse/expand, sticky below column headers */}
               <div
-                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer ${sceneIdx > 0 ? 'border-t -mt-px' : ''}`}
+                className={`sticky ${isEditing ? 'z-[20]' : 'z-[15]'} flex items-center bg-admin-bg-raised border-b border-admin-border cursor-pointer`}
                 style={{ top: colHeaderHeight }}
                 onClick={(e) => {
                   e.stopPropagation();
