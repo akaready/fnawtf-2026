@@ -242,7 +242,7 @@ export function ScriptStoryEditor({
   // Reset editing when scene changes
   useEffect(() => { setSceneEditing(false); }, [currentScene?.id]);
 
-  if (!current || !currentScene || !currentBeat) {
+  if (!current || !currentScene) {
     return (
       <div className="flex-1 flex items-center justify-center text-admin-text-muted">
         No beats to display
@@ -254,7 +254,15 @@ export function ScriptStoryEditor({
     <div className="flex-1 flex flex-col items-center overflow-y-scroll admin-scrollbar px-6 pt-4 pb-8">
 
       {/* ═══ Storyboard hero — 16:9 with prev / edit / next overlay ═══ */}
-      {columnConfig.storyboard && <><div className="group/hero relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base" style={{ aspectRatio: '16/9' }}>
+      {columnConfig.storyboard && !currentBeat && (
+        <div className="w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
+          <div className="flex flex-col items-center gap-2">
+            <ImageIcon size={32} className="text-admin-text-ghost" />
+            <span className="text-admin-text-ghost text-admin-sm">No beats in this scene</span>
+          </div>
+        </div>
+      )}
+      {columnConfig.storyboard && currentBeat && <><div className="group/hero relative w-full max-w-5xl flex-shrink-0 rounded-lg overflow-hidden bg-admin-bg-base" style={{ aspectRatio: '16/9' }}>
         {/* Image */}
         {beatFrames.length > 1 && currentBeat.storyboard_layout && currentBeat.storyboard_layout !== 'single' ? (
           <StoryboardLayoutRenderer
@@ -383,8 +391,15 @@ export function ScriptStoryEditor({
           />
         </div>
 
+        {!currentBeat && (
+          <div className="border-t border-admin-border bg-admin-bg-base px-6 py-12 flex flex-col items-center justify-center gap-3">
+            <ImageIcon size={28} className="text-admin-text-ghost" />
+            <p className="text-admin-sm text-admin-text-muted">This scene has no beats yet</p>
+          </div>
+        )}
+
         {/* Audio (2/3) + Visual (1/3) */}
-        {columnConfig.audio && (
+        {currentBeat && columnConfig.audio && (
           <div className={`grid transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${columnConfig.visual ? 'xl:grid-cols-3' : ''}`}>
             <div className={`border-l-2 border-l-[var(--admin-accent)] border-t border-admin-border bg-admin-bg-base px-4 py-3 ${columnConfig.visual ? 'xl:col-span-2' : ''}`}>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-admin-text-ghost mb-1.5">Audio</p>
@@ -435,7 +450,7 @@ export function ScriptStoryEditor({
         )}
 
         {/* Notes (2/3) + Reference (1/3) */}
-        {(columnConfig.notes || columnConfig.reference) && (
+        {currentBeat && (columnConfig.notes || columnConfig.reference) && (
           <div className={`grid transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] grid-cols-1 ${columnConfig.notes && columnConfig.reference ? 'xl:grid-cols-3' : ''}`}>
             <AnimatePresence>
               {columnConfig.notes && (
@@ -490,7 +505,7 @@ export function ScriptStoryEditor({
 
         {/* Comments — full width */}
         <AnimatePresence>
-          {columnConfig.comments && (
+          {currentBeat && columnConfig.comments && (
             <motion.div
               key="comments"
               initial={{ opacity: 0 }}
