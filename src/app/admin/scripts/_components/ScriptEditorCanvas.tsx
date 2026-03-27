@@ -518,8 +518,12 @@ export function ScriptEditorCanvas({
             if (res.ok) {
               const data = await res.json();
               if (data.frame) {
-                onFrameGenerated(data.frame, beat.id);
-                batchFramesByBeatId.set(beat.id, data.frame.image_url);
+                // Assign slot 1 so the frame appears in the storyboard cell
+                const { setFrameSlot } = await import('@/app/admin/actions');
+                await setFrameSlot(data.frame.id, 1);
+                const framedFrame = { ...data.frame, slot: 1 };
+                onFrameGenerated(framedFrame, beat.id);
+                batchFramesByBeatId.set(beat.id, framedFrame.image_url);
                 successCount++;
               } else {
                 failCount++;

@@ -33,7 +33,7 @@ export function buildRichPrompt(
       let appearance = '';
       if (char.cast_mode === 'references') {
         const refCount = (referenceMap?.[char.id] ?? []).length;
-        if (refCount > 0) appearance = ` (${refCount} visual reference image${refCount !== 1 ? 's' : ''} provided)`;
+        if (refCount > 0) appearance = ` — LOOK AT the reference images labeled "${char.name}" to see exactly what ${char.name} looks like. Match their face precisely.`;
       } else {
         const featured = castMap?.[char.id]?.find(c => c.is_featured);
         if (featured?.appearance_prompt) appearance = ` Physical appearance: ${featured.appearance_prompt}`;

@@ -182,14 +182,21 @@ export function ScriptStoryboardCell({
         const data = await res.json();
         if (data.frame) {
           const newFrame = data.frame as ScriptStoryboardFrameRow;
-          // New frame gets slot=null initially; caller can assign via modal
-          onFramesChange?.([...frames, newFrame]);
+          // Assign slot 1 if no active slotted frames exist for this beat
+          const nextSlot = activeFrames.length === 0 ? 1 : (([1, 2, 3, 4] as const).find(s => !activeFrames.some(f => f.slot === s)) ?? null);
+          if (nextSlot) {
+            const { setFrameSlot } = await import('@/app/admin/actions');
+            await setFrameSlot(newFrame.id, nextSlot);
+            onFramesChange?.([...frames, { ...newFrame, slot: nextSlot }]);
+          } else {
+            onFramesChange?.([...frames, newFrame]);
+          }
         }
       }
     } finally {
       setGenerating(false);
     }
-  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, sceneFrames, primaryFrame, scriptId, beatId, styleReferences, onFramesChange, frames]);
+  }, [generating, style, scene, beatIndex, characters, locations, castMap, referenceMap, locationReferenceMap, audioContent, visualContent, beatReferenceUrls, sceneFrames, primaryFrame, scriptId, beatId, styleReferences, onFramesChange, frames, activeFrames]);
 
   const handleUpload = useCallback(
     async (files: FileList | null) => {
@@ -199,12 +206,19 @@ export function ScriptStoryboardCell({
         const fd = new FormData();
         fd.append('file', files[0]);
         const newFrame = await uploadStoryboardFrame(scriptId, beatId, fd);
-        onFramesChange?.([...frames, newFrame]);
+        const nextSlot = activeFrames.length === 0 ? 1 : (([1, 2, 3, 4] as const).find(s => !activeFrames.some(f => f.slot === s)) ?? null);
+        if (nextSlot) {
+          const { setFrameSlot } = await import('@/app/admin/actions');
+          await setFrameSlot(newFrame.id, nextSlot);
+          onFramesChange?.([...frames, { ...newFrame, slot: nextSlot }]);
+        } else {
+          onFramesChange?.([...frames, newFrame]);
+        }
       } finally {
         setUploading(false);
       }
     },
-    [scriptId, beatId, onFramesChange, frames],
+    [scriptId, beatId, onFramesChange, frames, activeFrames],
   );
 
   const handleDrop = useCallback((e: React.DragEvent) => {
