@@ -142,30 +142,28 @@ export function ScriptStoryEditor({
   const beatFrames = storyboardFrames.filter(f => f.beat_id === current?.beatId);
 
   /* ── Navigation ── */
-  const goNext = useCallback(() => {
-    setIdx(i => {
-      const next = Math.min(i + 1, slides.length - 1);
-      const s = slides[next];
-      if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
-      return next;
-    });
+  const notifyParent = useCallback((nextIdx: number) => {
+    const s = slides[nextIdx];
+    if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
   }, [slides, onSelectScene, onSelectBeat]);
 
+  const goNext = useCallback(() => {
+    const next = Math.min(idx + 1, slides.length - 1);
+    setIdx(next);
+    notifyParent(next);
+  }, [idx, slides.length, notifyParent]);
+
   const goPrev = useCallback(() => {
-    setIdx(i => {
-      const next = Math.max(i - 1, 0);
-      const s = slides[next];
-      if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
-      return next;
-    });
-  }, [slides, onSelectScene, onSelectBeat]);
+    const next = Math.max(idx - 1, 0);
+    setIdx(next);
+    notifyParent(next);
+  }, [idx, notifyParent]);
 
   const handleSeek = useCallback((i: number) => {
     const clamped = Math.max(0, Math.min(i, slides.length - 1));
     setIdx(clamped);
-    const s = slides[clamped];
-    if (s) { onSelectScene(s.sceneId); onSelectBeat?.(s.beatId); }
-  }, [slides, onSelectScene, onSelectBeat]);
+    notifyParent(clamped);
+  }, [slides.length, notifyParent]);
 
   /* ── Keyboard nav ── */
   useEffect(() => {
