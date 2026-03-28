@@ -405,15 +405,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         deleteDisabled={isDeleting}
         secondaryActions={
           <>
-            <a
-              href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-warning px-4 py-2.5 text-sm"
-            >
-              <ExternalLink size={13} />
-              Preview
-            </a>
             {/* Status toggle — Draft / Sent */}
             <div ref={statusRef} className="relative">
               <button
@@ -458,6 +449,15 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
                 </>
               )}
             </div>
+            <a
+              href={`/p/${proposal.slug}?pwd=${proposal.proposal_password}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary px-4 py-2.5 text-sm"
+            >
+              <ExternalLink size={13} />
+              View
+            </a>
           </>
         }
       />

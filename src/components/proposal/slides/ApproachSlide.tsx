@@ -66,9 +66,15 @@ export function ApproachSlide({ section, slideRef }: Props) {
     <section
       ref={slideRef as React.RefObject<HTMLElement>}
       data-slide
-      className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative bg-black flex items-center justify-center overflow-clip"
+      className="[scroll-snap-align:start] flex-shrink-0 w-screen h-screen relative bg-black overflow-y-auto"
+      style={{ scrollbarWidth: 'none' }}
     >
-      <div ref={innerRef} className="max-w-4xl mx-auto px-12 lg:px-20">
+      {/* Top gradient mask */}
+      <div className="sticky top-0 z-20 pointer-events-none" style={{ height: 'var(--slide-gradient-h)' }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black to-transparent" />
+      </div>
+
+      <div ref={innerRef} className="max-w-4xl mx-auto px-6 sm:px-12 lg:px-20 pb-20 w-full" style={{ paddingTop: 'var(--slide-pt)', marginTop: 'calc(-1 * var(--slide-pull))' }}>
         <SlideHeader
           eyebrow="approach"
           titleWords={title.split(' ')}
@@ -78,6 +84,18 @@ export function ApproachSlide({ section, slideRef }: Props) {
         <div data-body>
           <ReactMarkdown components={mdComponents}>{rawContent}</ReactMarkdown>
         </div>
+      </div>
+
+      {/* Bottom gradient mask */}
+      <div className="sticky bottom-0 z-20 h-48 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
+        <div
+          className="absolute bottom-0 left-0 right-0 h-24 backdrop-blur-[6px]"
+          style={{
+            maskImage: 'linear-gradient(to top, black 20%, transparent)',
+            WebkitMaskImage: 'linear-gradient(to top, black 20%, transparent)',
+          }}
+        />
       </div>
     </section>
   );
