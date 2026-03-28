@@ -398,10 +398,10 @@ export function ProjectPanel({
                   href={`/work/${project.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-ghost w-10 h-10 flex items-center justify-center"
-                  title="View project page"
+                  className="btn-secondary inline-flex items-center gap-1.5 px-4 py-2.5 text-sm"
                 >
-                  <ExternalLink size={16} />
+                  View
+                  <ExternalLink size={13} />
                 </a>
               )}
             </div>
