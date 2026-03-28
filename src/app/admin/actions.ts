@@ -122,8 +122,25 @@ export async function batchDeleteTags(ids: string[]) {
 
 export async function batchDeleteScripts(ids: string[]) {
   const { supabase } = await requireAuth();
-  const { error } = await supabase.from('scripts').delete().in('id', ids);
-  if (error) throw new Error(error.message);
+  // Find all group IDs for the selected scripts
+  const { data: scripts } = await supabase.from('scripts').select('id, script_group_id').in('id', ids);
+  const groupIds = new Set<string>();
+  const standaloneIds: string[] = [];
+  for (const s of (scripts ?? []) as { id: string; script_group_id: string | null }[]) {
+    if (s.script_group_id) groupIds.add(s.script_group_id);
+    else standaloneIds.push(s.id);
+  }
+  const now = new Date().toISOString();
+  // Soft-delete all versions in each group
+  if (groupIds.size > 0) {
+    const { error } = await supabase.from('scripts').update({ deleted_at: now } as never).in('script_group_id', [...groupIds]);
+    if (error) throw new Error(error.message);
+  }
+  // Soft-delete standalone scripts
+  if (standaloneIds.length > 0) {
+    const { error } = await supabase.from('scripts').update({ deleted_at: now } as never).in('id', standaloneIds);
+    if (error) throw new Error(error.message);
+  }
   revalidatePath('/admin/scripts');
 }
 
@@ -2356,6 +2373,7 @@ export async function getScripts() {
   const { data, error } = await supabase
     .from('scripts')
     .select('*, project:projects(id, title, client_name)')
+    .is('deleted_at', null)
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -2366,6 +2384,7 @@ export async function getScriptList(): Promise<Array<{ id: string; title: string
   const { data, error } = await supabase
     .from('scripts')
     .select('id, title, major_version, minor_version, is_published, content_mode')
+    .is('deleted_at', null)
     .eq('content_mode', 'table')
     .order('title');
   if (error) throw new Error(error.message);
@@ -2418,6 +2437,7 @@ export async function getScriptVersions(scriptGroupId: string) {
     .from('scripts')
     .select('id, title, version, status, created_at, content_mode, major_version, minor_version, is_published, display_order')
     .eq('script_group_id', scriptGroupId)
+    .is('deleted_at', null)
     .order('display_order', { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -2435,8 +2455,17 @@ export async function reorderScriptVersions(orderedIds: string[]) {
 
 export async function deleteScript(id: string) {
   const { supabase } = await requireAuth();
-  const { error } = await supabase.from('scripts').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  // Find the script's group so we can soft-delete all versions
+  const { data: script } = await supabase.from('scripts').select('script_group_id').eq('id', id).single();
+  const groupId = (script as { script_group_id?: string } | null)?.script_group_id;
+  if (groupId) {
+    const { error } = await supabase.from('scripts').update({ deleted_at: new Date().toISOString() } as never).eq('script_group_id', groupId);
+    if (error) throw new Error(error.message);
+  } else {
+    // Standalone script (no group) — soft-delete just this one
+    const { error } = await supabase.from('scripts').update({ deleted_at: new Date().toISOString() } as never).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
   revalidatePath('/admin/scripts');
 }
 

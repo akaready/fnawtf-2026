@@ -81,9 +81,9 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
     setIsDeleting(true);
     try {
       await deleteScript(deleteTarget.id);
-      // Remove this version from state — the useMemo will re-collapse and surface
-      // the next latest version (if any) for this group
-      setScripts((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      // Remove all versions in the group from state (soft-delete hits the whole group)
+      const groupId = deleteTarget.script_group_id;
+      setScripts((prev) => prev.filter((s) => groupId ? s.script_group_id !== groupId : s.id !== deleteTarget.id));
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
@@ -268,8 +268,10 @@ export function ScriptsListClient({ scripts: initialScripts }: Props) {
             variant: 'danger' as const,
             requireConfirm: true,
             onClick: async (ids: string[]) => {
+              // Collect group IDs so we remove all versions from state
+              const groupIds = new Set(scripts.filter(s => ids.includes(s.id) && s.script_group_id).map(s => s.script_group_id!));
               await batchDeleteScripts(ids);
-              setScripts((prev) => prev.filter((s) => !ids.includes(s.id)));
+              setScripts((prev) => prev.filter((s) => !ids.includes(s.id) && !(s.script_group_id && groupIds.has(s.script_group_id))));
             },
           },
         ]}
