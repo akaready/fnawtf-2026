@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback, useRef } from 'react';
-import { X, ChevronDown, Check } from 'lucide-react';
+import { X, ChevronDown, Check, ExternalLink } from 'lucide-react';
 import { SaveDot } from './SaveDot';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
 import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
@@ -351,7 +351,7 @@ export function ProjectPanel({
           onSave={() => void handleSaveAll()}
           onDelete={handleDelete}
           secondaryActions={
-            <div ref={statusRef} className="relative">
+            <div ref={statusRef} className="relative flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setStatusOpen((o) => !o)}
@@ -392,6 +392,17 @@ export function ProjectPanel({
                     </button>
                   </div>
                 </>
+              )}
+              {typeof project?.slug === 'string' && (
+                <a
+                  href={`/work/${project.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost w-10 h-10 flex items-center justify-center"
+                  title="View project page"
+                >
+                  <ExternalLink size={16} />
+                </a>
               )}
             </div>
           }

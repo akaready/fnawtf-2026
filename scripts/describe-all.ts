@@ -6,7 +6,7 @@ import { join } from 'path';
 
 const CDN_HOSTNAME = 'vz-6b68e26c-531.b-cdn.net';
 const TOTAL_FRAMES = 15;
-const DELAY_MS = 65_000;
+const DELAY_MS = 90_000; // 90s — each call uses ~23K of 30K/min token budget
 const TMP_DIR = '/tmp/video-frames-extract';
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -73,6 +73,7 @@ async function main() {
   let described = 0;
   let totalFramesStored = 0;
   let skipped = 0;
+  let lastClaudeCall = 0; // timestamp of last Claude API call
 
   for (let i = 0; i < projects!.length; i++) {
     const project = projects![i];
@@ -98,12 +99,12 @@ async function main() {
       .eq('video_id', flagship.id);
     const { data: existingDesc } = await supabase
       .from('projects')
-      .select('ai_description')
+      .select('ai_description_json')
       .eq('id', project.id)
-      .single();
+      .single() as { data: { ai_description_json: unknown } | null };
 
     const hasFrames = existingFrames && existingFrames.length >= TOTAL_FRAMES;
-    const hasDesc = !!(existingDesc as { ai_description: string | null } | null)?.ai_description;
+    const hasDesc = existingDesc !== null && existingDesc.ai_description_json !== null;
 
     if (hasFrames && hasDesc) {
       console.log(`${i + 1}/${projects!.length} ${project.title} — already done`);
@@ -174,9 +175,32 @@ async function main() {
 
     // Step 2: Send to Claude for description (if needed)
     if (!hasDesc) {
-      const frameUrls = timestamps.map(t =>
-        `${supabaseUrl}/storage/v1/object/public/video-frames/${flagship.id}/${t}s.jpg`
-      );
+      // Enforce minimum gap since last Claude call
+      const elapsed = Date.now() - lastClaudeCall;
+      if (lastClaudeCall > 0 && elapsed < DELAY_MS) {
+        const waitMs = DELAY_MS - elapsed;
+        process.stdout.write(`wait ${Math.round(waitMs / 1000)}s... `);
+        await sleep(waitMs);
+      }
+      // Fetch frames from Supabase storage public URLs and send as base64
+      const { data: storedFrameRows } = await (supabase.from as Function)('project_video_frames')
+        .select('storage_path')
+        .eq('video_id', flagship.id)
+        .order('timestamp_seconds');
+      const framePaths = (storedFrameRows as { storage_path: string }[] ?? []).map(f => f.storage_path);
+      if (framePaths.length === 0) {
+        framePaths.push(...timestamps.map(t => `${flagship.id}/${t}s.jpg`));
+      }
+
+      const frameBase64: { data: string; mediaType: string }[] = [];
+      for (const path of framePaths) {
+        try {
+          const res = await fetch(`${supabaseUrl}/storage/v1/object/public/video-frames/${path}`);
+          if (!res.ok) continue;
+          const buffer = Buffer.from(await res.arrayBuffer());
+          frameBase64.push({ data: buffer.toString('base64'), mediaType: 'image/jpeg' });
+        } catch { /* skip bad frame */ }
+      }
 
       const metadata = [
         `Title: ${project.title}`,
@@ -197,12 +221,13 @@ async function main() {
       ].filter(Boolean).join('\n');
 
       const content: Anthropic.Messages.ContentBlockParam[] = [];
-      for (const url of frameUrls) {
-        content.push({ type: 'image', source: { type: 'url', url } } as Anthropic.Messages.ContentBlockParam);
+      for (const frame of frameBase64) {
+        content.push({ type: 'image', source: { type: 'base64', media_type: frame.mediaType, data: frame.data } } as Anthropic.Messages.ContentBlockParam);
       }
       content.push({ type: 'text', text: metadata });
 
       try {
+        lastClaudeCall = Date.now();
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1200,
@@ -224,11 +249,9 @@ async function main() {
           console.log('empty response');
         }
       } catch (err) {
-        console.log(`FAIL: ${(err as Error).message?.slice(0, 60)}`);
+        console.log(`FAIL: ${(err as Error).message?.slice(0, 200)}`);
       }
 
-      // Rate limit delay
-      if (i + 1 < projects!.length) await sleep(DELAY_MS);
     } else {
       console.log('desc exists');
     }
