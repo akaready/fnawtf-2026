@@ -117,6 +117,7 @@ const EMAIL_LIST_OPTIONS = [
 
 const SLIDE_NAMES = ['People', 'Project', 'Vision', 'Challenges', 'References', 'Deliverables', 'Timeline', 'Priorities', 'Experience', 'Partners', 'Goals', 'Investment', 'Extras', 'Submit'];
 const TOTAL_SLIDES = SLIDE_NAMES.length;
+const PARTNERS_SLIDE_INDEX = 9;
 const GOALS_SLIDE_INDEX = 10;
 
 function phasesToQuoteType(phases: string[]): PricingType {
@@ -1567,16 +1568,21 @@ export function IntakeFormClient() {
     }
   };
 
+  const showPartners = false; // Toggle to re-enable Partners slide
   const showGoals = phases.includes('crowdfunding');
 
   const dotHiddenIndices = (() => {
     const s = new Set<number>();
+    if (!showPartners) s.add(PARTNERS_SLIDE_INDEX);
     if (!showGoals) s.add(GOALS_SLIDE_INDEX);
     return s.size > 0 ? s : undefined;
   })();
 
   const navigateTo = useCallback((idx: number) => {
-    // Skip goals slide when crowdfunding not selected
+    // Skip hidden slides
+    if (idx === PARTNERS_SLIDE_INDEX && !showPartners) {
+      idx = currentSlide < PARTNERS_SLIDE_INDEX ? PARTNERS_SLIDE_INDEX + 1 : PARTNERS_SLIDE_INDEX - 1;
+    }
     if (idx === GOALS_SLIDE_INDEX && !showGoals) {
       idx = currentSlide < GOALS_SLIDE_INDEX ? GOALS_SLIDE_INDEX + 1 : GOALS_SLIDE_INDEX - 1;
     }
@@ -1584,9 +1590,11 @@ export function IntakeFormClient() {
     const el = slideRefsArr.current[idx]?.current;
     if (!el) return;
     el.scrollIntoView({ inline: 'start', block: 'nearest', behavior: 'smooth' });
-  }, [showGoals, currentSlide]);
+  }, [showPartners, showGoals, currentSlide]);
 
-  // Track showGoals in a ref so the IntersectionObserver (set up once) can read it
+  // Track hidden-slide flags in refs so the IntersectionObserver (set up once) can read them
+  const showPartnersRef = useRef(showPartners);
+  useEffect(() => { showPartnersRef.current = showPartners; }, [showPartners]);
   const showGoalsRef = useRef(showGoals);
   useEffect(() => { showGoalsRef.current = showGoals; }, [showGoals]);
 
@@ -1597,7 +1605,7 @@ export function IntakeFormClient() {
       if (!ref.current) return;
       const obs = new IntersectionObserver(([entry]) => {
         // Never let the Goals slide steal focus via intersection — only explicit navigation
-        if (entry.isIntersecting && !(i === GOALS_SLIDE_INDEX && !showGoalsRef.current)) {
+        if (entry.isIntersecting && !(i === PARTNERS_SLIDE_INDEX && !showPartnersRef.current) && !(i === GOALS_SLIDE_INDEX && !showGoalsRef.current)) {
           setCurrentSlide(i);
         }
       }, { threshold: 0.5 });
@@ -1690,7 +1698,7 @@ export function IntakeFormClient() {
     if (timeline === 'specific' && !timelineDate) e.timelineDate = 'Please select a date';
     if (priorityOrder.length < 3) e.priorityOrder = 'Rank all three';
     if (!experience) e.experience = 'Required';
-    if (partners.length === 0) e.partners = 'Please select at least one';
+    if (showPartners && partners.length === 0) e.partners = 'Please select at least one';
     if (phases.includes('crowdfunding')) {
       if (!publicGoal.trim()) e.publicGoal = 'Required';
       if (!internalGoal.trim()) e.internalGoal = 'Required';
@@ -2137,7 +2145,7 @@ export function IntakeFormClient() {
         {/* ── Slide 5: Deliverables ────────────────────── */}
         <section ref={slideRefsArr.current[5] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="06" title="Deliverables" subtitle="What do you need? Select all that apply." />
+            <SlideHeader eyebrow="06" title="Deliverables" subtitle="What do you need? If we don't do it, one of our allies does. Select all that apply." />
             <div className="space-y-6">
               <div id="field-deliverables">
                 <ChipSelect options={DELIVERABLE_OPTIONS} selected={deliverables} onChange={(v) => { setDeliverables(v); clearError('deliverables'); }} large />
@@ -2210,7 +2218,7 @@ export function IntakeFormClient() {
         </section>
 
         {/* ── Slide 9: Partners ────────────────────────── */}
-        <section ref={slideRefsArr.current[9] as React.RefObject<HTMLElement>} className={slideClass}>
+        <section ref={slideRefsArr.current[9] as React.RefObject<HTMLElement>} className={showPartners ? slideClass : ''} style={showPartners ? undefined : { width: 0, minWidth: 0, overflow: 'hidden', padding: 0 }}>
           <div className="max-w-2xl mx-auto">
             <SlideHeader eyebrow="10" title="Partners" subtitle="Already with any other service providers?" />
             <div className="space-y-6">
@@ -2225,7 +2233,7 @@ export function IntakeFormClient() {
         {/* ── Slide 10: Goals (crowdfunding only) ── */}
         <section ref={slideRefsArr.current[10] as React.RefObject<HTMLElement>} className={showGoals ? slideClass : ''} style={showGoals ? undefined : { width: 0, minWidth: 0, overflow: 'hidden', padding: 0 }}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow="11" title="Goals" subtitle="Help us understand your campaign targets." />
+            <SlideHeader eyebrow={showPartners ? '11' : '10'} title="Goals" subtitle="Help us understand your campaign targets." />
             <div className="space-y-6">
               <div><FieldLabel icon={Target} label="Public goal (e.g. crowdfunding target)" required />
                 <input type="text" placeholder='e.g. "Raise $25,000 on Kickstarter"' value={publicGoal} onChange={(e) => setPublicGoal(e.target.value)} className={inputClass} /></div>
@@ -2251,7 +2259,7 @@ export function IntakeFormClient() {
         {/* ── Slide 11: Investment (optional quote builder) ── */}
         <section ref={slideRefsArr.current[11] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-4xl mx-auto">
-            <SlideHeader eyebrow={showGoals ? '12' : '11'} title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
+            <SlideHeader eyebrow={`${10 + (showPartners ? 1 : 0) + (showGoals ? 1 : 0)}`} title="Investment" subtitle="Totally optional — build a rough quote to bring into our call, or skip ahead." />
 
             {/* ── Phase toggles (wrapping, with labels) ── */}
             <div className="flex flex-wrap gap-2 mt-4">
@@ -2305,7 +2313,7 @@ export function IntakeFormClient() {
         {/* ── Slide 12: Wrap Up ────────────────────────── */}
         <section ref={slideRefsArr.current[12] as React.RefObject<HTMLElement>} className={slideClass}>
           <div className="max-w-2xl mx-auto">
-            <SlideHeader eyebrow={showGoals ? '13' : '12'} title="Extras" subtitle="Upload files and add any final context." />
+            <SlideHeader eyebrow={`${11 + (showPartners ? 1 : 0) + (showGoals ? 1 : 0)}`} title="Extras" subtitle="Upload files and add any final context." />
             <div className="space-y-8">
               <div><FieldLabel icon={Upload} label="Files to share" />
                 <p className={`${helperClass} mb-3`}>Market research, brand guidelines, NDAs, existing photo or video assets — anything is relevant.</p>
