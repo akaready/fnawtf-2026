@@ -57,6 +57,7 @@ export interface ProposalRow {
   proposal_number: number;
   schedule_start_date: string | null;
   schedule_end_date: string | null;
+  schedule_notes: string | null;
   crowdfunding_approved: boolean;
   crowdfunding_deferred: boolean;
   show_welcome: boolean;
@@ -71,6 +72,11 @@ export interface ProposalRow {
   client_additional_discount: number;
   force_priority_scheduling: boolean;
   hide_deferred_payment: boolean;
+  allow_pay_after_raise: boolean;
+  allow_build: boolean;
+  allow_launch: boolean;
+  allow_crowdfunding: boolean;
+  allow_fundraising: boolean;
   prepared_date: string | null;
   created_by: string | null;
   created_at: string;
@@ -201,6 +207,8 @@ export interface ProposalQuoteRow {
   updated_at: string;
   deleted_at: string | null;
   viewer_email: string | null;
+  hide_deferred_payment: boolean;
+  force_priority_scheduling: boolean;
 }
 
 export interface ProposalMilestoneRow {

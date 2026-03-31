@@ -84,6 +84,8 @@ export function QuoteSummaryCard({ quoteData, budgetInteracted }: {
     updated_at: '',
     deleted_at: null,
     viewer_email: null,
+    hide_deferred_payment: false,
+    force_priority_scheduling: false,
   };
 
   let computed: QuoteColumnData;

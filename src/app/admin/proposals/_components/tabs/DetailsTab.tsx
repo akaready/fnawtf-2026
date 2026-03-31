@@ -293,7 +293,7 @@ export const DetailsTab = forwardRef<DetailsTabHandle, DetailsTabProps>(function
   }), [save]);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-8 py-5">
     <div className="space-y-10 max-w-3xl">
 
       {/* Proposal Details */}

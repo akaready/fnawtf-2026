@@ -547,6 +547,7 @@ function formatMessage(event: SlackEvent): Block[] {
             total_amount: null, down_amount: null, sort_order: 0,
             visible: true, description: null,
             created_at: '', updated_at: '', deleted_at: null, viewer_email: null,
+            hide_deferred_payment: false, force_priority_scheduling: false,
           };
           const allAddOns = [...buildAddOns, ...launchAddOns, ...fundraisingIncluded, ...fundraisingAddOns];
           const c = calcTotalFromQuote(stub, allAddOns);

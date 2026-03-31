@@ -41,11 +41,9 @@ interface Props {
   crowdfundingApproved?: boolean;
   crowdfundingDeferred?: boolean;
   pricingNotes?: string | null;
-  showPricingNotes?: boolean;
   forceAdditionalDiscount?: boolean;
   clientAdditionalDiscount?: number;
   forcePriorityScheduling?: boolean;
-  hideDeferredPayment?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
   viewerEmail?: string | null;
@@ -58,11 +56,9 @@ export function InvestmentSlide({
   crowdfundingApproved,
   crowdfundingDeferred,
   pricingNotes,
-  showPricingNotes,
   forceAdditionalDiscount,
   clientAdditionalDiscount,
   forcePriorityScheduling,
-  hideDeferredPayment,
   slideRef,
   viewerName,
   viewerEmail,
@@ -242,19 +238,12 @@ export function InvestmentSlide({
         <SlideHeader
           eyebrow="INVESTMENT"
           titleWords={['Pricing']}
-          description="Choose the package that works for your budget."
+          description={pricingNotes || "Choose the package that works for your budget."}
           className="mb-6 flex-shrink-0"
         />
 
         {/* Quote tabs + content */}
         <div data-content>
-          {/* ── Pricing notes (common across all quotes) ── */}
-          {showPricingNotes && pricingNotes && (
-            <div className="rounded-xl px-6 py-5 mb-6 bg-white/[0.04] border border-white/[0.12]">
-              <p className="section-eyebrow mb-2">Notes</p>
-              <p className="text-white/80 leading-relaxed text-base">{pricingNotes}</p>
-            </div>
-          )}
 
           {/* ── FNA quote cards (purple grid) ── */}
           {fnaQuotes.length > 0 && (
@@ -375,7 +364,8 @@ export function InvestmentSlide({
               isLocked={isLocked}
               proposalId={proposalId}
               proposalType={proposalType}
-              typeOverride={proposalType as PricingType}
+              typeOverride={(activeQuote?.quote_type || proposalType) as PricingType}
+              crowdfundingOverride={activeQuote?.crowdfunding_enabled}
               initialQuote={activeQuote ?? undefined}
               prefillQuote={fnaQuotes[0] ?? undefined}
               crowdfundingApproved={crowdfundingApproved}
@@ -389,7 +379,7 @@ export function InvestmentSlide({
               forceAdditionalDiscount={forceAdditionalDiscount}
               clientAdditionalDiscount={clientAdditionalDiscount}
               forcePriorityScheduling={forcePriorityScheduling}
-              hideDeferredPayment={hideDeferredPayment}
+              hideDeferredPayment={activeQuote?.hide_deferred_payment}
             />
             {/* Unlock glow burst */}
             <AnimatePresence>

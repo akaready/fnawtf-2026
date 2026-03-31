@@ -389,7 +389,14 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             proposalType={proposalType}
             initialQuotes={activeQuotes}
             initialPricingNotes={proposal.pricing_notes}
-            initialShowPricingNotes={proposal.show_pricing_notes}
+            initialForcePriorityScheduling={proposal.force_priority_scheduling}
+            initialForceAdditionalDiscount={proposal.force_additional_discount}
+            initialClientAdditionalDiscount={proposal.client_additional_discount}
+            initialAllowPayAfterRaise={proposal.allow_pay_after_raise}
+            initialAllowBuild={proposal.allow_build}
+            initialAllowLaunch={proposal.allow_launch}
+            initialAllowCrowdfunding={proposal.allow_crowdfunding}
+            initialAllowFundraising={proposal.allow_fundraising}
             onDirty={handleDirty}
           />
         </div>

@@ -283,6 +283,7 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             milestones={milestones}
             startDate={proposal.schedule_start_date}
             endDate={proposal.schedule_end_date}
+            scheduleNotes={proposal.schedule_notes}
             slideRef={scheduleRef}
           />
         )}
@@ -315,11 +316,9 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
             crowdfundingApproved={proposal.crowdfunding_approved}
             crowdfundingDeferred={proposal.crowdfunding_deferred}
             pricingNotes={proposal.pricing_notes}
-            showPricingNotes={proposal.show_pricing_notes}
             forceAdditionalDiscount={proposal.force_additional_discount}
             clientAdditionalDiscount={proposal.client_additional_discount}
             forcePriorityScheduling={proposal.force_priority_scheduling}
-            hideDeferredPayment={proposal.hide_deferred_payment}
             slideRef={investmentRef}
             viewerName={viewerName}
             viewerEmail={viewerEmail}
