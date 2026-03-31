@@ -430,7 +430,7 @@ export function InvestmentSlide({
                             if (isThisDeleting) handleDelete(q.id);
                             else setDeletingQuoteId(q.id);
                           }}
-                          className={`flex-shrink-0 rounded transition-colors cursor-pointer ${isIconDimmed || isThisDeleting ? 'bg-white/15 p-0.5' : 'bg-transparent'} text-white`}
+                          className={`flex-shrink-0 rounded transition-colors cursor-pointer p-0.5 ${isIconDimmed || isThisDeleting ? 'bg-white/15' : 'bg-transparent'} text-white`}
                         >
                           {isThisDeleting
                             ? <Check size={14} />
@@ -550,7 +550,7 @@ export function InvestmentSlide({
               onQuoteUpdated={handleQuoteUpdated}
               allQuotes={allActive}
               onActiveQuoteChange={(id) => setActiveQuoteId(id)}
-              onLockedInteract={undefined}
+              onLockedInteract={isLocked && clientQuotes.length === 0 ? handleNewQuote : undefined}
               forceAdditionalDiscount={forceAdditionalDiscount}
               clientAdditionalDiscount={clientAdditionalDiscount}
               forcePriorityScheduling={forcePriorityScheduling}

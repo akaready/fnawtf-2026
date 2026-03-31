@@ -1092,7 +1092,7 @@ export function CalculatorSummary({
       )}
 
       {/* Quote card */}
-      <div className="border border-green-900 rounded-lg bg-green-950/25 px-6 pt-6 pb-0">
+      <div data-no-intercept className="border border-green-900 rounded-lg bg-green-950/25 px-6 pt-6 pb-0">
         {/* Receipt header with compare button */}
         <div className="border-b border-dashed border-green-900/60 py-4 mb-3 -mt-5 flex items-center justify-between">
           <h3 className="font-display text-2xl font-bold text-foreground">
