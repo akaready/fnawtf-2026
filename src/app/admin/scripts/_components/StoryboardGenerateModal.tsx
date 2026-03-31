@@ -1155,7 +1155,7 @@ export function StoryboardGenerateModal({
                         </button>
                       </div>
                     </div>
-                    <div className="border border-admin-border rounded-admin-md overflow-hidden bg-admin-bg-base min-h-[140px]" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
+                    <div className="border border-admin-border rounded-admin-md overflow-hidden bg-admin-bg-base min-h-[140px] [&>div]:border-b-0" onClick={(e) => { const ce = (e.currentTarget as HTMLElement).querySelector('[contenteditable]') as HTMLElement | null; if (ce && !(e.target as HTMLElement).closest('[contenteditable]')) { ce.focus(); const sel = window.getSelection(); const range = document.createRange(); range.selectNodeContents(ce); range.collapse(false); sel?.removeAllRanges(); sel?.addRange(range); } }}>
                       <ScriptBeatCell
                         value={modifyPrompt}
                         field="audio_content"
@@ -1271,6 +1271,7 @@ export function StoryboardGenerateModal({
                       isSyntheticId={isSyntheticId}
                       isArchived={archived}
                       clickable={activeTab !== 'generate' && !generating}
+                      generating={generating && isActive && activeTab === 'modify'}
                       scenes={scenes}
                       onClick={() => { if (!generating) handleFrameClick(id, imageUrl); }}
                       onDeleted={() => {
@@ -1520,7 +1521,7 @@ export function StoryboardGenerateModal({
 // ── SidebarFrameItem ─────────────────────────────────────────────────────────
 
 function SidebarFrameItem({
-  id, imageUrl, label, isActive, isSyntheticId, isArchived, clickable = true, scenes, onClick, onDeleted, onMoved, onArchived,
+  id, imageUrl, label, isActive, isSyntheticId, isArchived, clickable = true, generating: isGenerating = false, scenes, onClick, onDeleted, onMoved, onArchived,
 }: {
   id: string;
   imageUrl: string;
@@ -1529,6 +1530,7 @@ function SidebarFrameItem({
   isSyntheticId: boolean;
   isArchived?: boolean;
   clickable?: boolean;
+  generating?: boolean;
   scenes?: import('@/types/scripts').ComputedScene[];
   onClick: () => void;
   onDeleted: () => void;
@@ -1612,9 +1614,14 @@ function SidebarFrameItem({
         }}
         onClick={onClick}
       >
-        <img src={imageUrl} alt="" className="w-full aspect-video object-cover rounded-admin-sm" />
+        <img src={imageUrl} alt="" className={`w-full aspect-video object-cover rounded-admin-sm ${isGenerating ? 'blur-[2px]' : ''}`} />
         {/* Tint overlay */}
-        {!isActive && <div className="absolute inset-0 rounded-admin-sm bg-black/35 pointer-events-none" />}
+        {!isActive && !isGenerating && <div className="absolute inset-0 rounded-admin-sm bg-black/35 pointer-events-none" />}
+        {isGenerating && (
+          <div className="absolute inset-0 rounded-admin-sm bg-black/50 flex items-center justify-center pointer-events-none">
+            <Loader2 size={16} className="animate-spin text-white/70" />
+          </div>
+        )}
       </div>
       <div className="relative flex items-center justify-between mt-1 px-0.5 min-h-[1.5rem]">
         {/* Floating beat picker — absolutely positioned, doesn't shift layout */}

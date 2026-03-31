@@ -8,6 +8,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // Nano Banana Pro — built for complex multi-constraint instructions. Override via STORYBOARD_MODEL env var.
 const MODEL = process.env.STORYBOARD_MODEL ?? 'gemini-3-pro-image-preview';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+// Image editing uses 3.1 Flash per Google docs — Pro doesn't reliably modify existing images.
+const MODIFY_MODEL = process.env.STORYBOARD_MODIFY_MODEL ?? 'gemini-3.1-flash-image-preview';
+const MODIFY_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODIFY_MODEL}:generateContent`;
 
 interface GenerateRequest {
   scriptId: string;
@@ -77,32 +80,22 @@ export async function POST(request: Request) {
 
     // ── Modification mode: send existing image + edit instructions ──
     if (modifyMode && modifyImageUrl) {
-      const modifyPromptObj = {
-        task: 'Modify this storyboard frame based on the following instructions',
-        modification: promptOverride || 'Improve this image',
-        reference_images: [{ image_ids: [1], purpose: 'source image to modify', extract: 'everything — this is the base image', apply_to: 'modify per instructions while preserving all unmentioned elements' }],
-        constraints: {
-          must_avoid: [
-            'any text, letters, numbers, words, or symbols rendered anywhere in the image',
-            'borders, panel frames, or rectangular outlines drawn inside the image',
-            'watermarks, production logos, or frame numbering',
-          ],
-          output: 'edge-to-edge illustration filling 100% of canvas with zero internal borders',
-        },
-        output_specifications: { resolution: '2K', aspect_ratio: aspectRatio, format: 'single storyboard frame' },
-      };
-
-      const modifyTextPart = JSON.stringify(modifyPromptObj, null, 2);
-      const modifyParts: Part[] = [{ text: modifyTextPart }];
+      // Image first, then instruction — Gemini edits better when it sees the image before the ask
+      const modifyParts: Part[] = [];
       const srcImg = await fetchImagePart(modifyImageUrl);
       if (srcImg) modifyParts.push(srcImg);
 
-      const geminiRes = await fetch(ENDPOINT, {
+      const instruction = (promptOverride?.trim()) || 'Improve this image';
+      const modifyTextPart = `Using the provided storyboard frame, ${instruction}. Keep the art style, medium, and any elements not mentioned in the instructions unchanged. Do not add any text, letters, borders, or watermarks.`;
+
+      modifyParts.push({ text: modifyTextPart });
+
+      const geminiRes = await fetch(MODIFY_ENDPOINT, {
         method: 'POST',
         headers: { 'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: modifyParts }],
-          generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio, imageSize: '2K' } },
+          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
         }),
       });
 
@@ -146,7 +139,7 @@ export async function POST(request: Request) {
         .insert({
           script_id: scriptId, beat_id: beatId ?? null, scene_id: sceneId ?? null,
           image_url, storage_path: storagePath, source: 'generated',
-          prompt_used: modifyTextPart, is_active: true,
+          prompt_used: modifyTextPart, is_active: true, slot: 1,
           reference_urls_used: [{ url: modifyImageUrl, purpose: 'beat' }],
         } as never)
         .select('*')
@@ -397,6 +390,7 @@ export async function POST(request: Request) {
         source: 'generated',
         prompt_used: textPart,
         is_active: true,
+        slot: 1,
         reference_urls_used: referenceUrlsUsed,
       } as never)
       .select('*')
