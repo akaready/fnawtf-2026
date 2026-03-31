@@ -316,6 +316,7 @@ export function ScriptShareClient({
         clientName={clientName}
         clientLogoUrl={clientLogoUrl ?? null}
         versionLabel={versionLabel}
+        majorVersion={script.majorVersion}
         shareNotes={shareNotes}
         onBegin={() => setShowIntro(false)}
       />
@@ -807,6 +808,7 @@ export function ScriptShareClient({
             clientName={clientName ?? undefined}
             clientLogoUrl={clientLogoUrl}
             versionLabel={versionLabel}
+            majorVersion={script.majorVersion}
             scenes={presentationScenes}
             shareId={shareId}
             viewerEmail={viewerEmail}

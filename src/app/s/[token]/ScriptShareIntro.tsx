@@ -11,11 +11,7 @@ import { useDirectionalFill } from '@/hooks/useDirectionalFill';
  * Layout and animation lifted from TitleSlide.tsx (proposal landing page).
  */
 
-const VERSION_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
-function versionColor(label: string): string {
-  const major = parseInt(label) || 0;
-  return VERSION_COLORS[major % VERSION_COLORS.length];
-}
+import { versionColor } from '@/types/scripts';
 
 interface Props {
   scriptTitle: string;
@@ -23,6 +19,7 @@ interface Props {
   clientName: string | null;
   clientLogoUrl: string | null;
   versionLabel: string;
+  majorVersion: number;
   shareNotes: string | null;
   onBegin: () => void;
 }
@@ -37,6 +34,7 @@ export function ScriptShareIntro({
   clientName,
   clientLogoUrl: _clientLogoUrl,
   versionLabel,
+  majorVersion,
   shareNotes,
   onBegin,
 }: Props) {
@@ -194,7 +192,7 @@ export function ScriptShareIntro({
 
         {/* Version pill */}
         {versionLabel && (() => {
-          const color = versionColor(versionLabel);
+          const color = versionColor(majorVersion);
           return (
             <div data-version className="mb-7" style={{ opacity: 0 }}>
               <span

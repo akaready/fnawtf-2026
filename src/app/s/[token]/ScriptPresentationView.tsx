@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, PanelLeftOpen, ImageIcon, Send } from 'lucide-react';
 import { StoryboardLayoutRenderer } from '@/app/admin/scripts/_components/StoryboardLayoutRenderer';
+import { versionColor } from '@/types/scripts';
 import type { StoryboardSlotFrame } from '@/types/scripts';
 
 
@@ -129,6 +130,7 @@ interface Props {
   clientName?: string;
   clientLogoUrl?: string | null;
   versionLabel?: string;
+  majorVersion?: number;
   scenes: Array<{
     id: string;
     sceneNumber: number;
@@ -169,6 +171,7 @@ export function ScriptPresentationView({
   clientName,
   clientLogoUrl: _clientLogoUrl,
   versionLabel,
+  majorVersion = 0,
   scenes,
   shareId,
   viewerEmail,
@@ -487,8 +490,7 @@ export function ScriptPresentationView({
                 <p className="text-[#ccc] text-sm font-medium">
                   {scriptTitle}
                   {versionLabel && (() => {
-                    const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6'];
-                    const color = colors[(parseInt(versionLabel) || 0) % colors.length];
+                    const color = versionColor(majorVersion);
                     return (
                       <span className="inline-block ml-2 px-2.5 py-0.5 text-xs font-mono font-bold rounded-full"
                         style={{ color, backgroundColor: color + '15', border: `1px solid ${color}40` }}>
