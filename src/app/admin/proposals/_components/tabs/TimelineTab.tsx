@@ -133,8 +133,12 @@ const resetBtnCls =
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+const DEFAULT_SCHEDULE_NOTES =
+  'A breakdown of key milestones across your production. Click and drag the colored boxes to try a schedule that works better for you.';
+
 export const TimelineTab = memo(function TimelineTab({ proposalId, proposal, initialMilestones }: TimelineTabProps) {
   const [milestones, setMilestones] = useState<ProposalMilestoneRow[]>(initialMilestones);
+  const [scheduleNotes, setScheduleNotes] = useState(proposal.schedule_notes ?? DEFAULT_SCHEDULE_NOTES);
   const [scheduleStart, setScheduleStart] = useState(proposal.schedule_start_date ?? '');
   const [scheduleEnd, setScheduleEnd] = useState(proposal.schedule_end_date ?? '');
   const [dragState, setDragState] = useState<DragState>(null);
@@ -395,6 +399,21 @@ export const TimelineTab = memo(function TimelineTab({ proposalId, proposal, ini
 
   return (
     <div className="flex flex-col h-full">
+
+      {/* Slide description */}
+      <div className="px-8 pt-5 pb-3 border-b border-admin-border flex-shrink-0">
+        <label className="admin-label">Slide description</label>
+        <textarea
+          className="admin-input w-full resize-none leading-relaxed mt-1"
+          rows={2}
+          value={scheduleNotes}
+          placeholder={DEFAULT_SCHEDULE_NOTES}
+          onChange={(e) => setScheduleNotes(e.target.value)}
+          onBlur={() => {
+            void updateProposal(proposalId, { schedule_notes: scheduleNotes.trim() || null });
+          }}
+        />
+      </div>
 
       {/* Schedule window header */}
       <div className="px-8 h-[51px] border-b border-admin-border flex items-center gap-6">

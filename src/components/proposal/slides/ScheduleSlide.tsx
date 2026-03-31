@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import gsap from 'gsap';
-import { Pencil, Camera, Scissors } from 'lucide-react';
+import { Pencil, Camera, Scissors, Plus, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { ProposalMilestoneRow } from '@/types/proposal';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
@@ -13,10 +13,14 @@ import {
 } from '@/lib/proposal/milestoneColors';
 import { MiniCalendar, type DragState } from '@/components/proposal/MiniCalendar';
 
+const DEFAULT_SCHEDULE_NOTES =
+  'A breakdown of key milestones across your production. Click and drag the colored boxes to try a schedule that works better for you.';
+
 interface Props {
   milestones: ProposalMilestoneRow[];
   startDate: string | null;
   endDate: string | null;
+  scheduleNotes?: string | null;
   slideRef?: React.RefObject<HTMLElement>;
 }
 
@@ -28,7 +32,7 @@ function PhaseIcon({ phase }: { phase: string }) {
 }
 
 
-export function ScheduleSlide({ milestones, slideRef }: Props) {
+export function ScheduleSlide({ milestones, scheduleNotes, slideRef }: Props) {
   const innerRef    = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
   const [originalMilestones] = useState(() => sortMilestones(milestones));
@@ -36,6 +40,7 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
   const [activeScheduleTab, setActiveScheduleTab] = useState<'recommended' | 'custom'>('recommended');
   const [dragState, setDragState] = useState<DragState>(null);
   const [deniedIdx, setDeniedIdx] = useState<number | null>(null);
+  const [extraMonths, setExtraMonths] = useState(0);
   const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // localMilestones is derived from which tab is active
@@ -58,8 +63,21 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
       months.push(cursor);
       cursor = addMonths(cursor, 1);
     }
+    for (let i = 0; i < extraMonths; i++) {
+      const next = addMonths(months[months.length - 1], 1);
+      months.push(next);
+    }
     return months;
   })();
+
+  const baseMonthCount = visibleMonths.length - extraMonths;
+  const canRemoveMonthAt = (idx: number) => {
+    if (idx < baseMonthCount) return false;
+    const m = visibleMonths[idx];
+    const mStr = ymd(m);
+    const mEnd = ymd(new Date(m.getFullYear(), m.getMonth() + 1, 0));
+    return !localMilestones.some(ms => ms.start_date <= mEnd && (ms.end_date || ms.start_date) >= mStr);
+  };
 
   // Compute phase date ranges for calendar outlines (includes end_date)
   const phaseRanges = localMilestones
@@ -218,7 +236,6 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
       const wordEls    = el.querySelectorAll('[data-word]');
       const accentLine = el.querySelector('[data-accent-line]') as HTMLElement;
       const descEl     = el.querySelector('[data-desc]')        as HTMLElement;
-      const helper     = el.querySelector('[data-helper]')      as HTMLElement;
       const tabs       = el.querySelector('[data-tabs]')        as HTMLElement;
       const divider    = el.querySelector('[data-divider]')     as HTMLElement;
       const cals       = el.querySelectorAll('[data-cal]');
@@ -228,7 +245,6 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
       gsap.set(wordEls,    { y: '115%' });
       gsap.set(accentLine, { scaleX: 0, transformOrigin: 'left center' });
       gsap.set(descEl,     { opacity: 0, y: 16 });
-      gsap.set(helper,     { opacity: 0, y: 12 });
       gsap.set(tabs,       { opacity: 0, y: 12 });
       gsap.set(divider,    { scaleY: 0, transformOrigin: 'top center' });
       gsap.set(cals,       { opacity: 0, y: 24 });
@@ -242,8 +258,7 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
             .to(wordEls,    { y: '0%', duration: 0.8, ease: 'expo.out', stagger: 0.04 }, '-=0.15')
             .to(accentLine, { scaleX: 1, duration: 0.5, ease: 'expo.out' }, '-=0.4')
             .to(descEl,     { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.25')
-            .to(helper,     { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.15')
-            .to(tabs,       { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.25')
+            .to(tabs,       { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }, '-=0.15')
             .to(divider,    { scaleY: 1, duration: 1.0, ease: 'sine.inOut' }, '-=0.25')
             .to(cals,       { opacity: 1, y: 0, duration: 0.55, ease: 'expo.out', stagger: 0.08 }, '-=0.6')
             .to(rows,       { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out', stagger: 0.05 }, '-=0.4');
@@ -272,7 +287,7 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
         <SlideHeader
           eyebrow="MILESTONES"
           titleWords={['Timeline']}
-          description="A breakdown of key milestones across your production."
+          description={scheduleNotes || DEFAULT_SCHEDULE_NOTES}
           className="mb-8"
         />
 
@@ -280,28 +295,24 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
 
           {/* ── Left: Mini calendars ───────────────────────── */}
           <div className="flex-shrink-0 w-56 flex flex-col justify-start">
-            {/* Help text */}
-            <p data-helper className="text-xs text-white/25 leading-relaxed mb-3">
-              Click and drag the colored boxes to try a schedule that works better for you.
-            </p>
             {/* Schedule tabs */}
-            <div data-tabs className="flex items-center gap-0 mb-3 w-full">
+            <div data-tabs className="flex items-center gap-1 mb-3 w-full rounded-lg bg-white/[0.06] p-0.5">
               <button
                 onClick={() => setActiveScheduleTab('recommended')}
-                className={`flex-1 px-3 py-1.5 rounded-l-lg text-xs font-medium transition-colors duration-200 border ${
+                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
                   activeScheduleTab === 'recommended'
-                    ? 'text-white bg-[var(--accent)] border-[var(--accent)]'
-                    : 'text-white/40 hover:text-white/60 bg-white/[0.04] border-white/[0.08]'
+                    ? 'text-white bg-white/15'
+                    : 'text-white/40 hover:text-white/60'
                 }`}
               >
                 Recommended
               </button>
               <button
                 onClick={() => setActiveScheduleTab('custom')}
-                className={`flex-1 px-3 py-1.5 rounded-r-lg text-xs font-medium transition-colors duration-200 border border-l-0 ${
+                className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 ${
                   activeScheduleTab === 'custom'
-                    ? 'text-white bg-[var(--accent)] border-[var(--accent)]'
-                    : 'text-white/30 hover:text-white/50 bg-white/[0.02] border-white/[0.08]'
+                    ? 'text-white bg-white/15'
+                    : 'text-white/30 hover:text-white/50'
                 }`}
               >
                 Adjusted
@@ -310,7 +321,16 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
             {/* Calendar cards */}
             <div className="flex flex-col gap-1.5">
               {visibleMonths.map((m, i) => (
-                <div key={i} data-cal className="border border-white/[0.08] rounded-xl p-1 bg-white/[0.05]">
+                <div key={i} data-cal className="relative group border border-white/[0.08] rounded-xl p-1 bg-white/[0.05]">
+                  {activeScheduleTab === 'custom' && canRemoveMonthAt(i) && (
+                    <button
+                      onClick={() => setExtraMonths(n => n - 1)}
+                      className="absolute top-1.5 right-1.5 z-10 w-5 h-5 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-white/30 hover:text-white/70 hover:bg-white/10 transition-all"
+                      title="Remove month"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
                   <MiniCalendar
                     month={m}
                     milestones={localMilestones}
@@ -322,6 +342,18 @@ export function ScheduleSlide({ milestones, slideRef }: Props) {
                 </div>
               ))}
             </div>
+            {/* Add month — only in Adjusted mode */}
+            {activeScheduleTab === 'custom' && (
+              <div className="flex items-center justify-center pt-3">
+                <button
+                  onClick={() => setExtraMonths(n => n + 1)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white/50 border border-white/15 rounded-lg hover:text-white/70 hover:border-white/25 hover:bg-white/[0.06] transition-all"
+                >
+                  <Plus size={13} />
+                  Add month
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Vertical divider */}

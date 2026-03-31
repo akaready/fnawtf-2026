@@ -221,8 +221,8 @@ export function SamplesTab({ proposalId, allProjects, initialProposalProjects }:
   return (
     <div className="flex h-full">
       {/* Left panel: selected + ordered list (40%) */}
-      <div className="w-[40%] border-r border-admin-border overflow-y-auto admin-scrollbar p-4">
-        <p className="text-xs font-mono text-admin-text-ghost uppercase tracking-widest mb-4">
+      <div className="w-[40%] border-r border-admin-border overflow-y-auto admin-scrollbar px-8 py-5">
+        <p className="admin-label">
           Selected ({proposalProjects.length})
         </p>
 
