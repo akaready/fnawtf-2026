@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState, useEffect, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Home, Hand, GitBranch, Calendar, Play, DollarSign, Eye, EyeOff, ChevronDown, Sparkles } from 'lucide-react';
+import { X, ExternalLink, Check, Home, Hand, GitBranch, Calendar, Play, DollarSign, Eye, EyeOff, ChevronDown, Sparkles, Copy, Loader2 } from 'lucide-react';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
@@ -55,13 +55,15 @@ interface Props {
   onDelete?: (id: string) => void;
   onUpdated?: (fields: Partial<ProposalRow>) => void;
   onViewsClick?: () => void;
+  onDuplicate?: () => void;
+  isDuplicating?: boolean;
 }
 
 
 
 export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(function ProposalAdminEditor({
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
-  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated, onViewsClick,
+  milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated, onViewsClick, onDuplicate, isDuplicating,
 }, editorRef) {
   const [proposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
@@ -388,11 +390,6 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             initialQuotes={activeQuotes}
             initialPricingNotes={proposal.pricing_notes}
             initialShowPricingNotes={proposal.show_pricing_notes}
-            initialForceAdditionalDiscount={proposal.force_additional_discount}
-            initialClientAdditionalDiscount={proposal.client_additional_discount}
-            initialForcePriorityScheduling={proposal.force_priority_scheduling}
-            initialHideDeferredPayment={proposal.hide_deferred_payment}
-            onProposalTypeChange={(type) => setProposalType(type)}
             onDirty={handleDirty}
           />
         </div>
@@ -458,6 +455,17 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
               <ExternalLink size={13} />
               View
             </a>
+            {onDuplicate && (
+              <button
+                type="button"
+                onClick={onDuplicate}
+                disabled={isDuplicating}
+                className="btn-secondary px-4 py-2.5 text-sm"
+              >
+                {isDuplicating ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
+                Duplicate
+              </button>
+            )}
           </>
         }
       />

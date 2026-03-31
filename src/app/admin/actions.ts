@@ -733,6 +733,135 @@ export async function deleteProposal(id: string) {
   revalidatePath('/admin/proposals');
 }
 
+export async function duplicateProposal(id: string): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+
+  // 1. Fetch source proposal
+  const { data: source, error: fetchErr } = await supabase
+    .from('proposals')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (fetchErr || !source) throw new Error(fetchErr?.message ?? 'Proposal not found');
+  const src = source as Record<string, unknown>;
+
+  // 2. Insert new proposal (draft, new slug, title with "(Copy)")
+  const newSlug = `proposal-${Date.now()}`;
+  const {
+    id: _id, proposal_number: _num, created_at: _ca, updated_at: _ua, slug: _slug, ...rest
+  } = src;
+  const { data: newRow, error: insertErr } = await supabase
+    .from('proposals')
+    .insert({
+      ...rest,
+      slug: newSlug,
+      status: 'draft',
+      title: `${src.title} (Copy)`,
+      created_by: userId,
+    } as never)
+    .select('*')
+    .single();
+  if (insertErr || !newRow) throw new Error(insertErr?.message ?? 'Failed to create duplicate');
+  const newId = (newRow as { id: string }).id;
+
+  // 3. Copy child tables
+  // Sections (need old→new ID mapping for videos & projects)
+  const { data: oldSections } = await supabase
+    .from('proposal_sections')
+    .select('*')
+    .eq('proposal_id', id)
+    .order('sort_order');
+  const sectionIdMap = new Map<string, string>();
+  if (oldSections?.length) {
+    for (const s of oldSections as Record<string, unknown>[]) {
+      const { id: oldSectionId, created_at: _c, proposal_id: _p, ...sectionRest } = s;
+      const { data: newSection } = await supabase
+        .from('proposal_sections')
+        .insert({ ...sectionRest, proposal_id: newId } as never)
+        .select('id')
+        .single();
+      if (newSection) sectionIdMap.set(oldSectionId as string, (newSection as { id: string }).id);
+    }
+  }
+
+  // Videos (remap section_id)
+  const { data: oldVideos } = await supabase
+    .from('proposal_videos')
+    .select('*')
+    .eq('proposal_id', id);
+  if (oldVideos?.length) {
+    const videoInserts = (oldVideos as Record<string, unknown>[]).map((v) => {
+      const { id: _vid, proposal_id: _p, section_id: oldSid, ...videoRest } = v;
+      return {
+        ...videoRest,
+        proposal_id: newId,
+        section_id: oldSid ? sectionIdMap.get(oldSid as string) ?? oldSid : null,
+      };
+    });
+    await supabase.from('proposal_videos').insert(videoInserts as never);
+  }
+
+  // Projects (remap section_id)
+  const { data: oldProjects } = await supabase
+    .from('proposal_projects')
+    .select('*')
+    .eq('proposal_id', id);
+  if (oldProjects?.length) {
+    const projInserts = (oldProjects as Record<string, unknown>[]).map((p) => {
+      const { id: _pid, proposal_id: _p, section_id: oldSid, ...projRest } = p;
+      return {
+        ...projRest,
+        proposal_id: newId,
+        section_id: oldSid ? sectionIdMap.get(oldSid as string) ?? oldSid : null,
+      };
+    });
+    await supabase.from('proposal_projects').insert(projInserts as never);
+  }
+
+  // Quotes
+  const { data: oldQuotes } = await supabase
+    .from('proposal_quotes')
+    .select('*')
+    .eq('proposal_id', id)
+    .is('deleted_at', null);
+  if (oldQuotes?.length) {
+    const quoteInserts = (oldQuotes as Record<string, unknown>[]).map((q) => {
+      const { id: _qid, proposal_id: _p, created_at: _c, updated_at: _u, deleted_at: _d, ...quoteRest } = q;
+      return { ...quoteRest, proposal_id: newId };
+    });
+    await supabase.from('proposal_quotes').insert(quoteInserts as never);
+  }
+
+  // Milestones
+  const { data: oldMilestones } = await supabase
+    .from('proposal_milestones')
+    .select('*')
+    .eq('proposal_id', id);
+  if (oldMilestones?.length) {
+    const msInserts = (oldMilestones as Record<string, unknown>[]).map((m) => {
+      const { id: _mid, proposal_id: _p, created_at: _c, ...msRest } = m;
+      return { ...msRest, proposal_id: newId };
+    });
+    await supabase.from('proposal_milestones').insert(msInserts as never);
+  }
+
+  // Contacts
+  const { data: oldContacts } = await supabase
+    .from('proposal_contacts')
+    .select('*')
+    .eq('proposal_id', id);
+  if (oldContacts?.length) {
+    const contactInserts = (oldContacts as Record<string, unknown>[]).map((c) => {
+      const { id: _cid, proposal_id: _p, created_at: _c, ...contactRest } = c;
+      return { ...contactRest, proposal_id: newId };
+    });
+    await supabase.from('proposal_contacts').insert(contactInserts as never);
+  }
+
+  revalidatePath('/admin/proposals');
+  return (newRow as { id: string }).id;
+}
+
 export async function createProposalDraft(): Promise<string> {
   const { supabase, userId } = await requireAuth();
   const slug = `proposal-${Date.now()}`;

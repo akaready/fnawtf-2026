@@ -2,8 +2,8 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge, Settings } from 'lucide-react';
-import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals } from '@/app/admin/actions';
+import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge, Settings, Copy } from 'lucide-react';
+import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals, duplicateProposal, getProposal } from '@/app/admin/actions';
 import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
@@ -51,6 +51,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
   const [isCreating, startCreate] = useTransition();
   const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -243,6 +244,23 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       },
     },
     {
+      icon: duplicatingId ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />,
+      label: 'Duplicate',
+      onClick: async (row, e) => {
+        e.stopPropagation();
+        if (duplicatingId) return;
+        setDuplicatingId(row.id);
+        try {
+          const newId = await duplicateProposal(row.id);
+          const newProposal = await getProposal(newId);
+          setProposals((prev) => [newProposal, ...prev]);
+          setActiveId(newId);
+        } finally {
+          setDuplicatingId(null);
+        }
+      },
+    },
+    {
       icon: <Trash2 size={13} />,
       label: 'Delete',
       variant: 'danger',
@@ -417,6 +435,18 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           setProposals((prev) => prev.map((p) => p.id === updated.id ? { ...p, ...updated } : p))
         }
         onViewsClick={() => { if (activeId) setViewsPanelId(activeId); }}
+        isDuplicating={duplicatingId === activeId}
+        onDuplicate={activeId ? () => {
+          const id = activeId;
+          if (duplicatingId) return;
+          setDuplicatingId(id);
+          duplicateProposal(id)
+            .then((newId) => getProposal(newId).then((newProposal) => {
+              setProposals((prev) => [newProposal, ...prev]);
+              setActiveId(newId);
+            }))
+            .finally(() => setDuplicatingId(null));
+        } : undefined}
       />
 
       <ProposalViewsPanel
