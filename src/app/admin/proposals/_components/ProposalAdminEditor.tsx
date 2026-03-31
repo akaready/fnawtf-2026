@@ -65,7 +65,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   proposal: initialProposal, contacts, proposalContacts, clients, snippets, sections: initialSections,
   milestones, quotes, allProjects, proposalProjects, viewCount = 0, onClose, onDelete, onUpdated, onViewsClick, onDuplicate, isDuplicating,
 }, editorRef) {
-  const [proposal] = useState(initialProposal);
+  const [proposal, setProposal] = useState(initialProposal);
   const [proposalType, setProposalType] = useState(initialProposal.proposal_type);
   const [sections, setSections] = useState(initialSections);
   const [status, setStatus] = useState(initialProposal.status);
@@ -233,6 +233,7 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
   }
 
   function handleUpdated(fields: Partial<ProposalRow>) {
+    setProposal((prev) => ({ ...prev, ...fields }));
     onUpdated?.(fields);
   }
 
