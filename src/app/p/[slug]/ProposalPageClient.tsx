@@ -110,16 +110,31 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   const videoSlideRefsRef = useRef<{ current: HTMLElement | null }[]>([]);
   const validVideos = (videos ?? []).filter((v: ProposalVideo) => v.project_video?.project);
 
-  // Slide order: Title → Welcome → Process → Approach → Timeline → Samples → Projects... → Investment → Next Steps
+  // Slide order driven by admin-configured slide_order
+  const DEFAULT_SLIDE_ORDER = ['welcome', 'process', 'approach', 'timeline', 'pricing', 'samples'];
+  const slideOrder = proposal.slide_order?.length ? proposal.slide_order : DEFAULT_SLIDE_ORDER;
+
+  const slideVisMap: Record<string, boolean> = {
+    welcome:  proposal.show_welcome && !!welcomeSection?.custom_content,
+    process:  proposal.show_process,
+    approach: proposal.show_approach && !!approachSection?.custom_content,
+    timeline: proposal.show_timeline && hasSchedule,
+    samples:  proposal.show_samples && validVideos.length > 0,
+    pricing:  proposal.show_pricing && hasQuotes,
+  };
+
+  const slideNameMap: Record<string, string[]> = {
+    welcome:  ['Welcome'],
+    process:  ['Process'],
+    approach: ['Approach'],
+    timeline: ['Timeline'],
+    samples:  ['Samples', ...validVideos.map((v: ProposalVideo) => v.project_video?.project?.title ?? 'Project')],
+    pricing:  ['Investment'],
+  };
+
   const slideNames = [
     'Title',
-    ...(proposal.show_welcome && welcomeSection?.custom_content  ? ['Welcome']  : []),
-    ...(proposal.show_process                                    ? ['Process']  : []),
-    ...(proposal.show_approach && approachSection?.custom_content ? ['Approach'] : []),
-    ...(proposal.show_timeline && hasSchedule                    ? ['Timeline'] : []),
-    ...(proposal.show_samples && validVideos.length > 0          ? ['Samples']  : []),
-    ...(proposal.show_samples ? validVideos.map((v: ProposalVideo) => v.project_video?.project?.title ?? 'Project') : []),
-    ...(proposal.show_pricing && hasQuotes                       ? ['Investment'] : []),
+    ...slideOrder.flatMap(id => slideVisMap[id] ? (slideNameMap[id] ?? []) : []),
     'Next Steps',
   ];
 
@@ -128,15 +143,18 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
   }
   const videoSlideRefs = videoSlideRefsRef.current.slice(0, validVideos.length);
 
+  const slideRefMap: Record<string, React.RefObject<HTMLElement>[]> = {
+    welcome:  [welcomeRef],
+    process:  [processRef],
+    approach: [approachRef],
+    timeline: [scheduleRef],
+    samples:  [samplesIntroRef, ...(videoSlideRefs as React.RefObject<HTMLElement>[])],
+    pricing:  [investmentRef],
+  };
+
   const slideRefs = [
     titleRef,
-    ...(proposal.show_welcome && welcomeSection?.custom_content  ? [welcomeRef]    : []),
-    ...(proposal.show_process                                    ? [processRef]    : []),
-    ...(proposal.show_approach && approachSection?.custom_content ? [approachRef]   : []),
-    ...(proposal.show_timeline && hasSchedule                    ? [scheduleRef]   : []),
-    ...(proposal.show_samples && validVideos.length > 0          ? [samplesIntroRef] : []),
-    ...(proposal.show_samples ? (videoSlideRefs as React.RefObject<HTMLElement>[]) : []),
-    ...(proposal.show_pricing && hasQuotes                       ? [investmentRef] : []),
+    ...slideOrder.flatMap(id => slideVisMap[id] ? (slideRefMap[id] ?? []) : []),
     nextStepsRef,
   ] as React.RefObject<HTMLElement>[];
 
@@ -268,62 +286,73 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
       >
         <TitleSlide proposal={proposal} slideRef={titleRef} onNext={() => navigateTo(1)} />
 
-        {proposal.show_welcome && welcomeSection?.custom_content && (
-          <WelcomeSlide section={welcomeSection} slideRef={welcomeRef} />
-        )}
-
-        {proposal.show_process && <ProcessSlide slideRef={processRef} />}
-
-        {proposal.show_approach && approachSection?.custom_content && (
-          <ApproachSlide section={approachSection} slideRef={approachRef} />
-        )}
-
-        {proposal.show_timeline && hasSchedule && (
-          <ScheduleSlide
-            milestones={milestones}
-            startDate={proposal.schedule_start_date}
-            endDate={proposal.schedule_end_date}
-            scheduleNotes={proposal.schedule_notes}
-            slideRef={scheduleRef}
-          />
-        )}
-
-        {proposal.show_samples && validVideos.length > 0 && (
-          <SamplesIntroSlide
-            videos={validVideos}
-            slideRef={samplesIntroRef}
-            onViewProject={(videoIndex: number) => {
-              const samplesIdx = slideRefs.findIndex((r) => r === samplesIntroRef);
-              if (samplesIdx >= 0) navigateTo(samplesIdx + 1 + videoIndex);
-            }}
-          />
-        )}
-
-        {proposal.show_samples && validVideos.map((v: ProposalVideo, i: number) => (
-          <ProjectSlide
-            key={v.id}
-            video={v}
-            contactCompany={proposal.contact_company}
-            slideRef={videoSlideRefs[i] as React.RefObject<HTMLElement>}
-          />
-        ))}
-
-        {proposal.show_pricing && hasQuotes && (
-          <InvestmentSlide
-            proposalId={proposal.id}
-            proposalType={proposal.proposal_type}
-            quotes={quotes}
-            crowdfundingApproved={proposal.crowdfunding_approved}
-            crowdfundingDeferred={proposal.crowdfunding_deferred}
-            pricingNotes={proposal.pricing_notes}
-            forceAdditionalDiscount={proposal.force_additional_discount}
-            clientAdditionalDiscount={proposal.client_additional_discount}
-            forcePriorityScheduling={proposal.force_priority_scheduling}
-            slideRef={investmentRef}
-            viewerName={viewerName}
-            viewerEmail={viewerEmail}
-          />
-        )}
+        {slideOrder.map(id => {
+          if (!slideVisMap[id]) return null;
+          switch (id) {
+            case 'welcome':
+              return <WelcomeSlide key={id} section={welcomeSection!} slideRef={welcomeRef} />;
+            case 'process':
+              return <ProcessSlide key={id} slideRef={processRef} />;
+            case 'approach':
+              return <ApproachSlide key={id} section={approachSection!} slideRef={approachRef} />;
+            case 'timeline':
+              return (
+                <ScheduleSlide
+                  key={id}
+                  milestones={milestones}
+                  startDate={proposal.schedule_start_date}
+                  endDate={proposal.schedule_end_date}
+                  scheduleNotes={proposal.schedule_notes}
+                  slideRef={scheduleRef}
+                />
+              );
+            case 'samples':
+              return [
+                <SamplesIntroSlide
+                  key="samples-intro"
+                  videos={validVideos}
+                  slideRef={samplesIntroRef}
+                  onViewProject={(videoIndex: number) => {
+                    const samplesIdx = slideRefs.findIndex((r) => r === samplesIntroRef);
+                    if (samplesIdx >= 0) navigateTo(samplesIdx + 1 + videoIndex);
+                  }}
+                />,
+                ...validVideos.map((v: ProposalVideo, i: number) => (
+                  <ProjectSlide
+                    key={v.id}
+                    video={v}
+                    contactCompany={proposal.contact_company}
+                    slideRef={videoSlideRefs[i] as React.RefObject<HTMLElement>}
+                  />
+                )),
+              ];
+            case 'pricing':
+              return (
+                <InvestmentSlide
+                  key={id}
+                  proposalId={proposal.id}
+                  proposalType={proposal.proposal_type}
+                  quotes={quotes}
+                  crowdfundingApproved={proposal.crowdfunding_approved}
+                  crowdfundingDeferred={proposal.crowdfunding_deferred}
+                  pricingNotes={proposal.pricing_notes}
+                  forceAdditionalDiscount={proposal.force_additional_discount}
+                  clientAdditionalDiscount={proposal.client_additional_discount}
+                  forcePriorityScheduling={proposal.force_priority_scheduling}
+                  allowPayAfterRaise={proposal.allow_pay_after_raise}
+                  allowBuild={proposal.allow_build}
+                  allowLaunch={proposal.allow_launch}
+                  allowCrowdfunding={proposal.allow_crowdfunding}
+                  allowFundraising={proposal.allow_fundraising}
+                  slideRef={investmentRef}
+                  viewerName={viewerName}
+                  viewerEmail={viewerEmail}
+                />
+              );
+            default:
+              return null;
+          }
+        })}
 
         <NextStepsSlide proposal={proposal} slideRef={nextStepsRef} viewerName={viewerName} viewerEmail={viewerEmail} />
       </div>

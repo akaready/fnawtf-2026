@@ -1,7 +1,23 @@
 'use client';
 
-import { Fragment, useState, useEffect, useTransition, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { X, ExternalLink, Check, Home, Hand, GitBranch, Calendar, Play, DollarSign, Eye, EyeOff, ChevronDown, Sparkles, Copy, Loader2 } from 'lucide-react';
+import { useState, useEffect, useTransition, useRef, useCallback, useId, forwardRef, useImperativeHandle } from 'react';
+import { X, ExternalLink, Check, Home, Hand, GitBranch, Calendar, Play, DollarSign, Eye, EyeOff, ChevronDown, Sparkles, Copy, Loader2, GripVertical, Clapperboard } from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { SaveDot } from '@/app/admin/_components/SaveDot';
 import { PanelFooter } from '@/app/admin/_components/PanelFooter';
 import type { AutoSaveStatus } from '@/app/admin/_hooks/useAutoSave';
@@ -23,17 +39,101 @@ import type {
 } from '@/types/proposal';
 import { useChatContext } from '@/app/admin/_components/chat/ChatContext';
 
-const TABS = ['details', 'welcome', 'approach', 'timeline', 'samples', 'pricing'] as const;
-type TabId = typeof TABS[number];
+const CONTENT_TABS = ['welcome', 'process', 'approach', 'timeline', 'pricing', 'samples'] as const;
+type ContentTabId = typeof CONTENT_TABS[number];
+type TabId = 'details' | ContentTabId;
 
 const TAB_ICONS: Record<TabId, LucideIcon> = {
   details: Home,
   welcome: Hand,
+  process: Clapperboard,
   approach: GitBranch,
   timeline: Calendar,
   samples: Play,
   pricing: DollarSign,
 };
+
+const TAB_VIS_KEY: Partial<Record<TabId, string>> = {
+  welcome: 'show_welcome',
+  process: 'show_process',
+  approach: 'show_approach',
+  timeline: 'show_timeline',
+  samples: 'show_samples',
+  pricing: 'show_pricing',
+};
+
+// ── Sortable tab button ─────────────────────────────────────────────────
+
+function SortableTab({
+  tabId,
+  isActive,
+  isHidden,
+  onSelect,
+  onVisibilityToggle,
+}: {
+  tabId: ContentTabId;
+  isActive: boolean;
+  isHidden: boolean;
+  onSelect: () => void;
+  onVisibilityToggle: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tabId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : isHidden ? 0.3 : 1,
+  };
+
+  const Icon = TAB_ICONS[tabId];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`flex items-center gap-1 pl-1.5 pr-1.5 rounded-lg cursor-pointer transition-colors ${
+        isActive
+          ? 'bg-admin-bg-active text-admin-text-primary'
+          : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary/80'
+      }`}
+    >
+      <span {...attributes} {...listeners} className="w-4 flex items-center justify-center cursor-grab flex-shrink-0">
+        {hovered ? (
+          <GripVertical size={12} className="text-admin-text-muted hover:text-admin-text-primary" />
+        ) : (
+          <Icon size={13} className="flex-shrink-0" />
+        )}
+      </span>
+      <span className="py-1.5 text-sm font-medium whitespace-nowrap capitalize">
+        {tabId}
+      </span>
+      <motion.span
+        animate={{ width: hovered ? 'auto' : 0, opacity: hovered ? 1 : 0 }}
+        transition={{ duration: 0.1, ease: 'easeOut' }}
+        className="flex items-center overflow-hidden flex-shrink-0"
+      >
+        <button
+          onClick={(e) => { e.stopPropagation(); onVisibilityToggle(); }}
+          className="w-5 h-5 flex items-center justify-center rounded text-admin-text-faint hover:text-admin-text-secondary transition-colors"
+          title={isHidden ? 'Show slide' : 'Hide slide'}
+        >
+          {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+        </button>
+      </motion.span>
+    </div>
+  );
+}
 
 export interface ProposalEditorHandle {
   tryClose: () => void;
@@ -79,13 +179,26 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
     show_samples: initialProposal.show_samples,
     show_pricing: initialProposal.show_pricing,
   });
-  const TAB_VISIBILITY_MAP: Partial<Record<TabId, keyof typeof slideVisibility>> = {
-    welcome: 'show_welcome',
-    approach: 'show_approach',
-    timeline: 'show_timeline',
-    samples: 'show_samples',
-    pricing: 'show_pricing',
-  };
+  // Dynamic tab order (Details always first, not in this array)
+  const [tabOrder, setTabOrder] = useState<ContentTabId[]>(
+    (initialProposal.slide_order?.length ? initialProposal.slide_order : [...CONTENT_TABS]) as ContentTabId[]
+  );
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const dndId = useId();
+
+  const handleTabDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setTabOrder(prev => {
+      const oldIndex = prev.indexOf(active.id as ContentTabId);
+      const newIndex = prev.indexOf(over.id as ContentTabId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const next = arrayMove(prev, oldIndex, newIndex);
+      void updateProposal(proposal.id, { slide_order: next });
+      return next;
+    });
+  }, [proposal.id]);
+
   const [statusOpen, setStatusOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const [isDeleting, startDelete] = useTransition();
@@ -283,44 +396,45 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — Details fixed, content tabs draggable */}
       <div className="flex-shrink-0 px-8 py-3 border-b border-admin-border bg-admin-bg-wash">
-        <nav className="inline-flex flex-wrap gap-1.5">
-          {TABS.map(tab => {
-            const Icon = TAB_ICONS[tab];
-            const visKey = TAB_VISIBILITY_MAP[tab];
-            const isHidden = visKey ? !slideVisibility[visKey] : false;
-            return (
-              <Fragment key={tab}>
-                <button
-                  onClick={() => handleTabChange(tab)}
-                  title={tab}
-                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
-                    activeTab === tab
-                      ? 'bg-admin-bg-active text-admin-text-primary'
-                      : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary/80'
-                  } ${isHidden ? 'opacity-30' : ''}`}
-                >
-                  {visKey ? (
-                    <span className="group/ico flex-shrink-0 relative w-[13px] h-[13px]" onClick={(e) => { e.stopPropagation(); handleVisibilityToggle(visKey); }}>
-                      <span className="absolute inset-0 group-hover/ico:hidden">
-                        <Icon size={13} />
-                      </span>
-                      <span className="absolute inset-0 hidden group-hover/ico:block">
-                        {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
-                      </span>
-                    </span>
-                  ) : (
-                    <Icon size={13} className="flex-shrink-0" />
-                  )}
-                  <span className="hidden md:inline">{tab}</span>
-                </button>
-                {tab === 'details' && (
-                  <div className="w-px bg-admin-bg-active mx-0.5 my-1" />
-                )}
-              </Fragment>
-            );
-          })}
+        <nav className="inline-flex flex-wrap items-center gap-1.5">
+          {/* Details — always first, not draggable */}
+          <button
+            onClick={() => handleTabChange('details')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
+              activeTab === 'details'
+                ? 'bg-admin-bg-active text-admin-text-primary'
+                : 'text-admin-text-muted hover:bg-admin-bg-hover hover:text-admin-text-primary/80'
+            }`}
+          >
+            <Home size={13} className="flex-shrink-0" />
+            <span className="hidden md:inline">Details</span>
+          </button>
+          <div className="w-px bg-admin-bg-active mx-0.5 my-1 self-stretch" />
+
+          {/* Content tabs — draggable + toggleable */}
+          <DndContext id={dndId} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
+            <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
+              {tabOrder.map(tab => {
+                const visKey = TAB_VIS_KEY[tab] as keyof typeof slideVisibility | undefined;
+                const isHidden = visKey ? !slideVisibility[visKey] : false;
+                return (
+                  <SortableTab
+                    key={tab}
+                    tabId={tab}
+                    isActive={activeTab === tab}
+                    isHidden={isHidden}
+                    onSelect={() => handleTabChange(tab)}
+                    onVisibilityToggle={() => {
+                      if (!visKey) return;
+                      handleVisibilityToggle(visKey);
+                    }}
+                  />
+                );
+              })}
+            </SortableContext>
+          </DndContext>
         </nav>
       </div>
 
@@ -338,6 +452,15 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             onDirty={handleDirty}
             currentProposalType={proposalType}
           />
+        </div>
+        <div className={activeTab === 'process' ? 'h-full overflow-y-auto admin-scrollbar' : 'hidden'}>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-2 px-8">
+              <Clapperboard size={32} className="mx-auto text-admin-text-ghost" />
+              <p className="text-sm text-admin-text-muted">Process slide shows FNA&apos;s standard workflow.</p>
+              <p className="text-sm text-admin-text-ghost">Toggle visibility with the eye icon in the tab bar.</p>
+            </div>
+          </div>
         </div>
         <div className={activeTab === 'welcome' ? 'h-full overflow-hidden' : 'hidden'}>
           <WelcomeTab

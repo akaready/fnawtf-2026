@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Check, User } from 'lucide-react';
+import { Plus, Trash2, Check, User, Hammer, Rocket, Coins, BadgeDollarSign, type LucideIcon } from 'lucide-react';
 import { ProposalCalculatorEmbed } from '@/components/proposal/ProposalCalculatorEmbed';
 import type { ProposalCalculatorSaveHandle, CalculatorStateSnapshot, PricingType } from '@/components/proposal/ProposalCalculatorEmbed';
 import { SlideHeader } from '@/components/proposal/SlideHeader';
@@ -32,6 +32,40 @@ const iconVariants = {
   },
 };
 
+// ── Phase definitions (same as /start form) ─────────────────────────────────
+
+const CLIENT_PHASES: { value: string; label: string; Icon: LucideIcon }[] = [
+  { value: 'build',        label: 'Build',        Icon: Hammer },
+  { value: 'launch',       label: 'Launch',       Icon: Rocket },
+  { value: 'crowdfunding', label: 'Crowdfunding',  Icon: Coins },
+  { value: 'fundraising',  label: 'Fundraising',  Icon: BadgeDollarSign },
+];
+
+const PHASE_RULES: Record<string, string[]> = {
+  build:        ['launch', 'crowdfunding'],
+  launch:       ['build', 'crowdfunding'],
+  crowdfunding: ['build', 'launch'],
+  fundraising:  [],
+};
+
+function phasesToPricingType(phases: string[]): PricingType {
+  const hasBuild = phases.includes('build');
+  const hasLaunch = phases.includes('launch');
+  if (hasBuild && hasLaunch) return 'build-launch';
+  if (hasBuild) return 'build';
+  if (hasLaunch) return 'launch';
+  if (phases.includes('fundraising')) return 'fundraising';
+  return 'build';
+}
+
+function quoteTypeToPhases(qt: string): string[] {
+  const phases: string[] = [];
+  if (qt === 'build' || qt === 'build-launch') phases.push('build');
+  if (qt === 'launch' || qt === 'build-launch') phases.push('launch');
+  if (qt === 'fundraising') phases.push('fundraising');
+  return phases;
+}
+
 // ── InvestmentSlide ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -44,6 +78,11 @@ interface Props {
   forceAdditionalDiscount?: boolean;
   clientAdditionalDiscount?: number;
   forcePriorityScheduling?: boolean;
+  allowPayAfterRaise?: boolean;
+  allowBuild?: boolean;
+  allowLaunch?: boolean;
+  allowCrowdfunding?: boolean;
+  allowFundraising?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
   viewerEmail?: string | null;
@@ -59,6 +98,11 @@ export function InvestmentSlide({
   forceAdditionalDiscount,
   clientAdditionalDiscount,
   forcePriorityScheduling,
+  allowPayAfterRaise,
+  allowBuild = true,
+  allowLaunch = true,
+  allowCrowdfunding = false,
+  allowFundraising = false,
   slideRef,
   viewerName,
   viewerEmail,
@@ -100,6 +144,64 @@ export function InvestmentSlide({
 
   const activeQuote = quotes.find((q) => q.id === activeQuoteId) ?? null;
   const isLocked = !!activeQuote?.is_fna_quote;
+
+  // Client-side phase selection for unlocked quotes
+  const [clientPhases, setClientPhases] = useState<string[]>(() =>
+    activeQuote ? quoteTypeToPhases(activeQuote.quote_type) : ['build']
+  );
+
+  // Sync client phases when switching to a different quote
+  useEffect(() => {
+    if (activeQuote && !activeQuote.is_fna_quote) {
+      setClientPhases(quoteTypeToPhases(activeQuote.quote_type));
+    }
+  }, [activeQuoteId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Allowed phases filter
+  const allowedMap: Record<string, boolean> = {
+    build: allowBuild,
+    launch: allowLaunch,
+    crowdfunding: allowCrowdfunding,
+    fundraising: allowFundraising,
+  };
+  const visiblePhases = CLIENT_PHASES.filter(p => allowedMap[p.value]);
+
+  const handleClientPhaseToggle = (phase: string) => {
+    setClientPhases(prev => {
+      const active = prev.includes(phase);
+      const isStandalone = PHASE_RULES[phase]?.length === 0;
+      let next: string[];
+      if (active) {
+        next = prev.filter(p => p !== phase);
+      } else if (isStandalone) {
+        next = [phase];
+      } else if (phase === 'crowdfunding' && prev.length === 0) {
+        next = ['build', 'crowdfunding'];
+      } else {
+        const withoutStandalone = prev.filter(p => (PHASE_RULES[p]?.length ?? 0) > 0);
+        next = [...withoutStandalone, phase];
+      }
+      return next;
+    });
+  };
+
+  const isClientPhaseDisabled = (phase: string): boolean => {
+    if (clientPhases.includes(phase)) return false;
+    if (clientPhases.length === 0) return false;
+    const isStandalone = PHASE_RULES[phase]?.length === 0;
+    if (isStandalone) return false;
+    const combinable = clientPhases.filter(p => (PHASE_RULES[p]?.length ?? 0) > 0);
+    if (combinable.length === 0) return false;
+    return !combinable.every(p => PHASE_RULES[p]?.includes(phase) ?? false);
+  };
+
+  // Effective type: FNA quotes use their saved type, client quotes use toggle state
+  const effectiveQuoteType: PricingType = isLocked
+    ? (activeQuote?.quote_type || proposalType) as PricingType
+    : clientPhases.length > 0 ? phasesToPricingType(clientPhases) : 'build';
+  const effectiveCrowdfunding = isLocked
+    ? activeQuote?.crowdfunding_enabled
+    : clientPhases.includes('crowdfunding');
 
   // New quote creation
   const [savingQuote, setSavingQuote] = useState(false);
@@ -358,14 +460,38 @@ export function InvestmentSlide({
           </div>
 
 
+          {/* Phase toggles for unlocked (client) quotes */}
+          {!isLocked && visiblePhases.length > 1 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {visiblePhases.map(({ value, label, Icon }) => {
+                const active = clientPhases.includes(value);
+                const disabled = isClientPhaseDisabled(value);
+                return (
+                  <button
+                    key={value}
+                    disabled={disabled}
+                    onClick={() => handleClientPhaseToggle(value)}
+                    className={`flex items-center gap-2 py-2 px-3.5 rounded-xl border transition-all duration-200 text-sm font-medium ${
+                      disabled ? 'opacity-20 cursor-not-allowed border-white/5' :
+                      active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-accent' : ''}`} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Calculator content */}
           <div className="relative">
             <ProposalCalculatorEmbed
               isLocked={isLocked}
               proposalId={proposalId}
               proposalType={proposalType}
-              typeOverride={(activeQuote?.quote_type || proposalType) as PricingType}
-              crowdfundingOverride={activeQuote?.crowdfunding_enabled}
+              typeOverride={effectiveQuoteType}
+              crowdfundingOverride={effectiveCrowdfunding}
               initialQuote={activeQuote ?? undefined}
               prefillQuote={fnaQuotes[0] ?? undefined}
               crowdfundingApproved={crowdfundingApproved}
@@ -379,7 +505,7 @@ export function InvestmentSlide({
               forceAdditionalDiscount={forceAdditionalDiscount}
               clientAdditionalDiscount={clientAdditionalDiscount}
               forcePriorityScheduling={forcePriorityScheduling}
-              hideDeferredPayment={activeQuote?.hide_deferred_payment}
+              hideDeferredPayment={isLocked ? activeQuote?.hide_deferred_payment : !allowPayAfterRaise}
             />
             {/* Unlock glow burst */}
             <AnimatePresence>

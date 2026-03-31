@@ -6,7 +6,7 @@ import {
   LogOut,
   Home,
   Hand,
-  ClipboardList,
+  Clapperboard,
   GitBranch,
   Calendar,
   Play,
@@ -117,7 +117,7 @@ export function ProposalProgressDots({ slideCount, slideRefs, slideNames, propos
   const SLIDE_ICON_MAP: Record<string, LucideIcon> = {
     Title: Home,
     Welcome: Hand,
-    Process: ClipboardList,
+    Process: Clapperboard,
     Approach: GitBranch,
     Timeline: Calendar,
     Samples: Play,

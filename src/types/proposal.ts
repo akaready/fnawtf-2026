@@ -81,6 +81,7 @@ export interface ProposalRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  slide_order: string[];
   intake_id: string | null;
   generated_by: string | null;
 }
