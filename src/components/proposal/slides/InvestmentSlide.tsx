@@ -37,9 +37,9 @@ const iconVariants = {
 const CLIENT_PHASES: { value: string; label: string; Icon: LucideIcon }[] = [
   { value: 'build',        label: 'Build',        Icon: Hammer },
   { value: 'launch',       label: 'Launch',       Icon: Rocket },
-  { value: 'crowdfunding', label: 'Crowdfunding',  Icon: Coins },
   { value: 'fundraising',  label: 'Fundraising',  Icon: BadgeDollarSign },
 ];
+
 
 const PHASE_RULES: Record<string, string[]> = {
   build:        ['launch', 'crowdfunding'],
@@ -48,21 +48,22 @@ const PHASE_RULES: Record<string, string[]> = {
   fundraising:  [],
 };
 
-function phasesToPricingType(phases: string[]): PricingType {
+function phasesToPricingType(phases: string[]): PricingType | null {
   const hasBuild = phases.includes('build');
   const hasLaunch = phases.includes('launch');
   if (hasBuild && hasLaunch) return 'build-launch';
   if (hasBuild) return 'build';
   if (hasLaunch) return 'launch';
   if (phases.includes('fundraising')) return 'fundraising';
-  return 'build';
+  return null; // crowdfunding alone or empty = no type
 }
 
-function quoteTypeToPhases(qt: string): string[] {
+function quoteToPhases(qt: string, crowdfunding?: boolean): string[] {
   const phases: string[] = [];
   if (qt === 'build' || qt === 'build-launch') phases.push('build');
   if (qt === 'launch' || qt === 'build-launch') phases.push('launch');
   if (qt === 'fundraising') phases.push('fundraising');
+  if (crowdfunding) phases.push('crowdfunding');
   return phases;
 }
 
@@ -83,6 +84,8 @@ interface Props {
   allowLaunch?: boolean;
   allowCrowdfunding?: boolean;
   allowFundraising?: boolean;
+  forceBuildWithLaunch?: boolean;
+  forceCrowdfunding?: boolean;
   slideRef?: React.RefObject<HTMLElement>;
   viewerName?: string | null;
   viewerEmail?: string | null;
@@ -98,11 +101,13 @@ export function InvestmentSlide({
   forceAdditionalDiscount,
   clientAdditionalDiscount,
   forcePriorityScheduling,
-  allowPayAfterRaise,
+  allowPayAfterRaise = false,
   allowBuild = true,
   allowLaunch = true,
   allowCrowdfunding = false,
   allowFundraising = false,
+  forceBuildWithLaunch = true,
+  forceCrowdfunding = false,
   slideRef,
   viewerName,
   viewerEmail,
@@ -147,13 +152,13 @@ export function InvestmentSlide({
 
   // Client-side phase selection for unlocked quotes
   const [clientPhases, setClientPhases] = useState<string[]>(() =>
-    activeQuote ? quoteTypeToPhases(activeQuote.quote_type) : ['build']
+    activeQuote ? quoteToPhases(activeQuote.quote_type, activeQuote.crowdfunding_enabled) : ['build']
   );
 
   // Sync client phases when switching to a different quote
   useEffect(() => {
     if (activeQuote && !activeQuote.is_fna_quote) {
-      setClientPhases(quoteTypeToPhases(activeQuote.quote_type));
+      setClientPhases(quoteToPhases(activeQuote.quote_type, activeQuote.crowdfunding_enabled));
     }
   }, [activeQuoteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -161,10 +166,11 @@ export function InvestmentSlide({
   const allowedMap: Record<string, boolean> = {
     build: allowBuild,
     launch: allowLaunch,
-    crowdfunding: allowCrowdfunding,
     fundraising: allowFundraising,
   };
   const visiblePhases = CLIENT_PHASES.filter(p => allowedMap[p.value]);
+  // Crowdfunding shows as a modifier when build or launch is allowed (not just active)
+  const showCrowdfundingToggle = allowCrowdfunding && (allowBuild || allowLaunch);
 
   const handleClientPhaseToggle = (phase: string) => {
     setClientPhases(prev => {
@@ -181,6 +187,18 @@ export function InvestmentSlide({
         const withoutStandalone = prev.filter(p => (PHASE_RULES[p]?.length ?? 0) > 0);
         next = [...withoutStandalone, phase];
       }
+      // Force build on when launch is selected
+      if (forceBuildWithLaunch && next.includes('launch') && !next.includes('build')) {
+        next = ['build', ...next];
+      }
+      // Strip crowdfunding if no build/launch remains (it's a modifier, not standalone)
+      if (next.includes('crowdfunding') && !next.includes('build') && !next.includes('launch')) {
+        next = next.filter(p => p !== 'crowdfunding');
+      }
+      // Force crowdfunding on when any combinable phase is selected
+      if (forceCrowdfunding && next.length > 0 && !next.includes('crowdfunding') && !next.includes('fundraising')) {
+        next = [...next, 'crowdfunding'];
+      }
       return next;
     });
   };
@@ -196,9 +214,10 @@ export function InvestmentSlide({
   };
 
   // Effective type: FNA quotes use their saved type, client quotes use toggle state
-  const effectiveQuoteType: PricingType = isLocked
+  const clientPricingType = phasesToPricingType(clientPhases);
+  const effectiveQuoteType: PricingType | null = isLocked
     ? (activeQuote?.quote_type || proposalType) as PricingType
-    : clientPhases.length > 0 ? phasesToPricingType(clientPhases) : 'build';
+    : clientPricingType;
   const effectiveCrowdfunding = isLocked
     ? activeQuote?.crowdfunding_enabled
     : clientPhases.includes('crowdfunding');
@@ -395,7 +414,7 @@ export function InvestmentSlide({
                       onClick={() => setActiveQuoteId(q.id)}
                       onMouseEnter={() => isOwn && setHoveredIconId(q.id)}
                       onMouseLeave={() => setHoveredIconId(null)}
-                      className={`flex items-center gap-2 pl-3 pr-4 py-2.5 text-sm font-medium transition-colors duration-200 cursor-pointer ${
+                      className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors duration-200 cursor-pointer ${
                         isActive
                           ? 'bg-cyan-600 text-white'
                           : 'bg-cyan-950/40 text-cyan-300/60 hover:text-white/80 hover:bg-cyan-900/40'
@@ -411,17 +430,17 @@ export function InvestmentSlide({
                             if (isThisDeleting) handleDelete(q.id);
                             else setDeletingQuoteId(q.id);
                           }}
-                          className={`flex-shrink-0 p-1 rounded transition-colors cursor-pointer ${isIconDimmed || isThisDeleting ? 'bg-white/15' : 'bg-transparent'} text-white`}
+                          className={`flex-shrink-0 rounded transition-colors cursor-pointer ${isIconDimmed || isThisDeleting ? 'bg-white/15 p-0.5' : 'bg-transparent'} text-white`}
                         >
                           {isThisDeleting
-                            ? <Check size={16} />
+                            ? <Check size={14} />
                             : isIconHovered
-                              ? <Trash2 size={16} />
-                              : <User size={16} className="opacity-70" />}
+                              ? <Trash2 size={14} />
+                              : <User size={14} className="opacity-70" />}
                         </span>
                       ) : (
-                        <span className="flex-shrink-0 p-1 rounded">
-                          <User size={16} className="text-current opacity-70" />
+                        <span className="flex-shrink-0 rounded">
+                          <User size={14} className="text-current opacity-70" />
                         </span>
                       )}
                       {q.label}
@@ -457,40 +476,70 @@ export function InvestmentSlide({
                 </span>
               </button>
             )}
-          </div>
 
-
-          {/* Phase toggles for unlocked (client) quotes */}
-          {!isLocked && visiblePhases.length > 1 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {visiblePhases.map(({ value, label, Icon }) => {
-                const active = clientPhases.includes(value);
-                const disabled = isClientPhaseDisabled(value);
-                return (
+            {/* Phase toggles for unlocked (client) quotes — inline to the right */}
+            {!isLocked && visiblePhases.length > 0 && (
+              <div className="inline-flex items-center gap-2 ml-auto">
+                <div className="inline-flex rounded-lg border border-cyan-700/60 overflow-hidden">
+                  {visiblePhases.map(({ value, label, Icon }, idx) => {
+                    const active = clientPhases.includes(value);
+                    const disabled = isClientPhaseDisabled(value);
+                    return (
+                      <button
+                        key={value}
+                        disabled={disabled}
+                        onClick={() => handleClientPhaseToggle(value)}
+                        className={`flex items-center gap-1.5 pl-3 pr-3.5 py-2.5 text-sm font-medium transition-colors duration-200 ${
+                          disabled ? 'opacity-20 cursor-not-allowed' :
+                          active ? 'bg-cyan-800/50 text-cyan-100' : 'bg-cyan-950/40 text-cyan-300/50 hover:text-cyan-200/80 hover:bg-cyan-900/40'
+                        } ${idx > 0 ? 'border-l border-cyan-700/30' : ''}`}
+                      >
+                        <Icon size={14} className="flex-shrink-0" />
+                        {label}
+                    </button>
+                  );
+                  })}
+                </div>
+                {showCrowdfundingToggle && (() => {
+                  const hasCombinablePhase = clientPhases.includes('build') || clientPhases.includes('launch');
+                  const isCrowdfundingActive = clientPhases.includes('crowdfunding');
+                  const isDisabled = !hasCombinablePhase || (forceCrowdfunding && isCrowdfundingActive);
+                  return (
                   <button
-                    key={value}
-                    disabled={disabled}
-                    onClick={() => handleClientPhaseToggle(value)}
-                    className={`flex items-center gap-2 py-2 px-3.5 rounded-xl border transition-all duration-200 text-sm font-medium ${
-                      disabled ? 'opacity-20 cursor-not-allowed border-white/5' :
-                      active ? 'bg-accent/15 border-accent/40 text-white' : 'bg-black border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+                    disabled={isDisabled}
+                    onClick={() => handleClientPhaseToggle('crowdfunding')}
+                    className={`flex items-center gap-1.5 pl-3 pr-3.5 py-2.5 text-sm font-medium rounded-lg border transition-colors duration-200 ${
+                      isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                    } ${
+                      isCrowdfundingActive
+                        ? 'bg-cyan-800/50 text-cyan-100 border-cyan-700/60'
+                        : isDisabled
+                          ? 'opacity-30 bg-cyan-950/40 text-cyan-300/50 border-cyan-700/60'
+                          : 'bg-cyan-950/40 text-cyan-300/50 border-cyan-700/60 hover:text-cyan-200/80 hover:bg-cyan-900/40'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-accent' : ''}`} />
-                    {label}
+                    <Coins size={14} className="flex-shrink-0" />
+                    Crowdfunding
                   </button>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })()}
+              </div>
+            )}
+          </div>
 
-          {/* Calculator content */}
+          {/* Calculator content — or empty state when no phases selected */}
+          <div className={!isLocked ? 'quote-cyan' : ''}>
+          {!isLocked && !clientPricingType ? (
+            <div className="rounded-lg border-2 border-dashed border-white/10 py-16 px-8 text-center">
+              <p className="text-white/30 text-base">Select a phase above to build your quote.</p>
+            </div>
+          ) : (
           <div className="relative">
             <ProposalCalculatorEmbed
               isLocked={isLocked}
               proposalId={proposalId}
               proposalType={proposalType}
-              typeOverride={effectiveQuoteType}
+              typeOverride={effectiveQuoteType ?? undefined}
               crowdfundingOverride={effectiveCrowdfunding}
               initialQuote={activeQuote ?? undefined}
               prefillQuote={fnaQuotes[0] ?? undefined}
@@ -501,7 +550,7 @@ export function InvestmentSlide({
               onQuoteUpdated={handleQuoteUpdated}
               allQuotes={allActive}
               onActiveQuoteChange={(id) => setActiveQuoteId(id)}
-              onLockedInteract={isLocked && clientQuotes.length === 0 ? handleNewQuote : undefined}
+              onLockedInteract={undefined}
               forceAdditionalDiscount={forceAdditionalDiscount}
               clientAdditionalDiscount={clientAdditionalDiscount}
               forcePriorityScheduling={forcePriorityScheduling}
@@ -520,6 +569,8 @@ export function InvestmentSlide({
                 />
               )}
             </AnimatePresence>
+          </div>
+          )}
           </div>
         </div>
       </div>

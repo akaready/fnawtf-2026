@@ -85,12 +85,12 @@ export function ProposalQuoteSection({ proposalId, quotes: initialQuotes }: Prop
             onClick={() => setActiveTab(i)}
             className={`px-5 py-3 text-sm font-medium transition-colors border-b-2 ${
               i === activeTab
-                ? 'text-foreground border-purple-500 bg-white/[0.03]'
+                ? 'text-foreground border-[rgb(var(--qa))] bg-white/[0.03]'
                 : 'text-muted-foreground/50 border-transparent hover:text-muted-foreground hover:bg-white/[0.02]'
             }`}
           >
             <span className="flex items-center gap-2">
-              {tab.isFna && <Lock size={12} className="text-purple-400/60" />}
+              {tab.isFna && <Lock size={12} className="text-[rgb(var(--qa-text))]/60" />}
               {tab.label}
             </span>
           </button>
@@ -137,7 +137,7 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-display font-bold">{quote.label}</h3>
             {isFna && quote.is_locked && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/20 text-purple-400 border border-purple-500/20">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[rgb(var(--qa)_/_0.2)] text-[rgb(var(--qa-text))] border border-[rgb(var(--qa))]/20">
                 Locked
               </span>
             )}
@@ -196,7 +196,7 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
             <span className="text-sm text-muted-foreground">Total Investment</span>
             <button
               onClick={copyTotal}
-              className="flex items-center gap-2 text-2xl font-display font-bold text-foreground hover:text-purple-400 transition-colors"
+              className="flex items-center gap-2 text-2xl font-display font-bold text-foreground hover:text-[rgb(var(--qa-text))] transition-colors"
               title="Copy total"
             >
               ${quote.total_amount.toLocaleString()}

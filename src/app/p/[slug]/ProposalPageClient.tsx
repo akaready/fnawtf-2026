@@ -344,6 +344,8 @@ export function ProposalPageClient({ proposal, sections, videos, quotes, milesto
                   allowLaunch={proposal.allow_launch}
                   allowCrowdfunding={proposal.allow_crowdfunding}
                   allowFundraising={proposal.allow_fundraising}
+                  forceBuildWithLaunch={proposal.force_build_with_launch}
+                  forceCrowdfunding={proposal.force_crowdfunding}
                   slideRef={investmentRef}
                   viewerName={viewerName}
                   viewerEmail={viewerEmail}

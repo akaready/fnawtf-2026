@@ -199,11 +199,13 @@ interface PricingTabProps {
   initialAllowLaunch?: boolean;
   initialAllowCrowdfunding?: boolean;
   initialAllowFundraising?: boolean;
+  initialForceBuildWithLaunch?: boolean;
+  initialForceCrowdfunding?: boolean;
   onDirty?: () => void;
 }
 
 export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function PricingTab(
-  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialForcePriorityScheduling, initialForceAdditionalDiscount, initialClientAdditionalDiscount, initialAllowPayAfterRaise, initialAllowBuild, initialAllowLaunch, initialAllowCrowdfunding, initialAllowFundraising, onDirty }: PricingTabProps,
+  { proposalId, proposalType, initialQuotes, initialPricingNotes, initialForcePriorityScheduling, initialForceAdditionalDiscount, initialClientAdditionalDiscount, initialAllowPayAfterRaise, initialAllowBuild, initialAllowLaunch, initialAllowCrowdfunding, initialAllowFundraising, initialForceBuildWithLaunch, initialForceCrowdfunding, onDirty }: PricingTabProps,
   ref,
 ) {
   // ── Quote list state ────────────────────────────────────────────────
@@ -420,6 +422,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [allowLaunch, setAllowLaunch] = useState(initialAllowLaunch ?? true);
   const [allowCrowdfunding, setAllowCrowdfunding] = useState(initialAllowCrowdfunding ?? false);
   const [allowFundraising, setAllowFundraising] = useState(initialAllowFundraising ?? false);
+  const [forceBuildWithLaunch, setForceBuildWithLaunch] = useState(initialForceBuildWithLaunch ?? true);
+  const [forceCrowdfunding, setForceCrowdfunding] = useState(initialForceCrowdfunding ?? false);
 
   const handleUserQuoteToggle = (field: string, value: boolean) => {
     switch (field) {
@@ -428,6 +432,8 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
       case 'allow_launch': setAllowLaunch(value); break;
       case 'allow_crowdfunding': setAllowCrowdfunding(value); break;
       case 'allow_fundraising': setAllowFundraising(value); break;
+      case 'force_build_with_launch': setForceBuildWithLaunch(value); break;
+      case 'force_crowdfunding': setForceCrowdfunding(value); break;
     }
     void updateProposal(proposalId, { [field]: value });
   };
@@ -614,8 +620,16 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
               </label>
             </div>
             <label className="flex items-center gap-2 h-6 cursor-pointer">
+              <input type="checkbox" checked={forceBuildWithLaunch} onChange={(e) => handleUserQuoteToggle('force_build_with_launch', e.target.checked)} className="accent-admin-accent" />
+              <span className="text-admin-sm text-admin-text-muted">Force Build with Launch</span>
+            </label>
+            <label className="flex items-center gap-2 h-6 cursor-pointer">
+              <input type="checkbox" checked={forceCrowdfunding} onChange={(e) => handleUserQuoteToggle('force_crowdfunding', e.target.checked)} className="accent-admin-accent" />
+              <span className="text-admin-sm text-admin-text-muted">Force Crowdfunding</span>
+            </label>
+            <label className="flex items-center gap-2 h-6 cursor-pointer">
               <input type="checkbox" checked={allowPayAfterRaise} onChange={(e) => handleUserQuoteToggle('allow_pay_after_raise', e.target.checked)} className="accent-admin-accent" />
-              <span className="text-admin-sm text-admin-text-muted">Allow pay after raise</span>
+              <span className="text-admin-sm text-admin-text-muted">Allow pay after campaign toggle</span>
             </label>
             <label className="flex items-center gap-2 h-6 cursor-pointer">
               <input type="checkbox" checked={forcePriorityScheduling} onChange={(e) => handleForcePrioritySchedulingChange(e.target.checked)} className="accent-admin-accent" />

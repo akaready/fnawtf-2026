@@ -77,6 +77,8 @@ export interface ProposalRow {
   allow_launch: boolean;
   allow_crowdfunding: boolean;
   allow_fundraising: boolean;
+  force_build_with_launch: boolean;
+  force_crowdfunding: boolean;
   prepared_date: string | null;
   created_by: string | null;
   created_at: string;

@@ -75,13 +75,13 @@ export function CollapsibleSection({
         aria-expanded={isOpen}
       >
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-purple-950 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-purple-300" />
+          <div className="w-10 h-10 rounded-lg bg-[rgb(var(--qa-deep))] flex items-center justify-center">
+            <Icon className="w-5 h-5 text-[rgb(var(--qa-text))]" />
           </div>
           <h3 className="font-display text-lg font-bold text-foreground">{title}</h3>
         </div>
         <ChevronDown
-          className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-[rgb(var(--qa-text))] group-hover:scale-110 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
       <div ref={contentRef} className="overflow-hidden" style={{ height: 0, opacity: 0 }}>
@@ -116,12 +116,12 @@ function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: A
         <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity - step) * 100) / 100); } }}
-            className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-purple-500'}`}
+            className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))]'}`}
           >-</button>
           <span className={`text-sm w-8 text-center ${isLocked ? 'text-muted-foreground/40' : 'text-foreground'}`}>{quantity}</span>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity + step) * 100) / 100); } }}
-            className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-purple-500'}`}
+            className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))]'}`}
           >+</button>
         </div>
       ) : (
@@ -186,14 +186,14 @@ function SliderRow({
         lockedNotIncluded
           ? 'border-border/50 bg-[#020202]'
           : isLocked
-            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
                 ? 'border-red-900/50 bg-red-950/10'
                 : enabled
-                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                  : 'border-border bg-[#020202] hover:border-purple-500/50'
+                  ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
+                  : 'border-border bg-[#020202] hover:border-[rgb(var(--qa))]/50'
       }`}
     >
       <div className="flex items-center gap-4">
@@ -208,10 +208,10 @@ function SliderRow({
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
-                  ? 'border-purple-400 bg-purple-400'
+                  ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]'
                   : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
                   : compareDecreased ? 'border-red-800 bg-red-800'
-                  : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+                  : enabled ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]' : 'border-muted-foreground/40'
               }`}
             >
               {(enabled || isLocked) && (
@@ -225,7 +225,7 @@ function SliderRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
-            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
               {enabled ? `$${value.toLocaleString('en-US')}${addOn.perDay ? '/day' : ''}` : addOn.priceDisplay}
             </span>
           </div>
@@ -249,7 +249,7 @@ function SliderRow({
                     ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
                     : compareDecreased
                       ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
-                      : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                      : '[&::-webkit-slider-thumb]:bg-[rgb(var(--qa-text))] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(var(--qa),0.4)]'
                   }`}
               />
               <span className="text-xs text-muted-foreground">${slider.max.toLocaleString()}</span>
@@ -316,14 +316,14 @@ function MultiSliderRow({
         lockedNotIncluded
           ? 'border-border/50 bg-[#020202]'
           : isLocked
-            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
                 ? 'border-red-900/50 bg-red-950/10'
                 : enabled
-                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                  : 'border-border bg-[#020202] hover:border-purple-500/50'
+                  ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
+                  : 'border-border bg-[#020202] hover:border-[rgb(var(--qa))]/50'
       }`}
     >
       {/* Header row */}
@@ -339,10 +339,10 @@ function MultiSliderRow({
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
-                  ? 'border-purple-400 bg-purple-400'
+                  ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]'
                   : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
                   : compareDecreased ? 'border-red-800 bg-red-800'
-                  : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+                  : enabled ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]' : 'border-muted-foreground/40'
               }`}
             >
               {(enabled || isLocked) && (
@@ -359,16 +359,16 @@ function MultiSliderRow({
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={(e) => { e.stopPropagation(); if (isLocked) return; if (count > 1) onCountChange(addOn.id, count - 1); else onToggle(addOn.id); }}
-                className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+                className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))] flex items-center justify-center text-xs"
               >-</button>
               <span className="text-sm text-foreground w-4 text-center">{count}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); if (count < maxCount) onCountChange(addOn.id, count + 1); }}
-                className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+                className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))] flex items-center justify-center text-xs"
               >+</button>
             </div>
           )}
-          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+          <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
             {enabled ? `$${perDayTotal.toLocaleString('en-US')}/day` : addOn.priceDisplay}
           </span>
         </div>
@@ -403,7 +403,7 @@ function MultiSliderRow({
                         ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
                         : compareDecreased
                           ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
-                          : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                          : '[&::-webkit-slider-thumb]:bg-[rgb(var(--qa-text))] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(var(--qa),0.4)]'
                       }`}
                   />
                 </div>
@@ -422,7 +422,7 @@ function MultiSliderRow({
                                 ? 'border-cyan-400 bg-cyan-400/20 text-cyan-300'
                                 : (compareRemoved || compareDecreased)
                                   ? 'border-red-900/40 bg-red-950/20 text-red-900'
-                                  : 'border-purple-400 bg-purple-400/20 text-purple-300'
+                                  : 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]/20 text-[rgb(var(--qa-text))]'
                               : 'border-border text-muted-foreground/50 hover:border-muted-foreground/50'
                           }`}
                         >
@@ -486,14 +486,14 @@ function PhotoSliderRow({
         lockedNotIncluded
           ? 'border-border/50 bg-[#020202]'
           : isLocked
-            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
                 ? 'border-red-900/50 bg-red-950/10'
                 : enabled
-                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                  : 'border-border bg-[#020202] hover:border-purple-500/50'
+                  ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
+                  : 'border-border bg-[#020202] hover:border-[rgb(var(--qa))]/50'
       }`}
     >
       <div className="flex items-start gap-4">
@@ -508,10 +508,10 @@ function PhotoSliderRow({
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
-                  ? 'border-purple-400 bg-purple-400'
+                  ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]'
                   : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
                   : compareDecreased ? 'border-red-800 bg-red-800'
-                  : enabled ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+                  : enabled ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]' : 'border-muted-foreground/40'
               }`}
             >
               {(enabled || isLocked) && (
@@ -525,7 +525,7 @@ function PhotoSliderRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
-            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
               {enabled
                 ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
                 : addOn.priceDisplay}
@@ -551,7 +551,7 @@ function PhotoSliderRow({
                     ? '[&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(34,211,238,0.4)]'
                     : compareDecreased
                       ? '[&::-webkit-slider-thumb]:bg-red-800 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(127,29,29,0.4)]'
-                      : '[&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(168,85,247,0.4)]'
+                      : '[&::-webkit-slider-thumb]:bg-[rgb(var(--qa-text))] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(var(--qa),0.4)]'
                   }`}
               />
               <span className="text-xs text-muted-foreground">{ps.max}</span>
@@ -576,13 +576,13 @@ function DaysStepper({ addOnId, currentDays, onDaysChange, disabled }: {
       <button
         onClick={(e) => { e.stopPropagation(); onDaysChange(addOnId, Math.max(0.5, Math.round((currentDays - 0.5) * 100) / 100)); }}
         disabled={disabled || currentDays <= 0.5}
-        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs disabled:opacity-30"
+        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))] flex items-center justify-center text-xs disabled:opacity-30"
       >-</button>
       <span className="text-sm text-foreground w-20 text-center">{currentDays} {currentDays === 1 ? 'day' : 'days'}</span>
       <button
         onClick={(e) => { e.stopPropagation(); onDaysChange(addOnId, Math.round((currentDays + 0.5) * 100) / 100); }}
         disabled={disabled}
-        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+        className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))] flex items-center justify-center text-xs"
       >+</button>
     </div>
   );
@@ -630,14 +630,14 @@ function AddOnRow({
         lockedNotIncluded
           ? 'border-border/50 bg-[#020202]'
           : isLocked
-            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
             : (compareAdded || compareIncreased)
               ? 'border-cyan-600 bg-cyan-950/20'
               : (compareRemoved || compareDecreased)
                 ? 'border-red-900/50 bg-red-950/10'
                 : selected
-                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                  : 'border-border bg-[#020202] hover:border-purple-500/50'
+                  ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
+                  : 'border-border bg-[#020202] hover:border-[rgb(var(--qa))]/50'
       }`}
     >
       <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -651,10 +651,10 @@ function AddOnRow({
           <div
             className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors duration-200 ${
               isLocked
-                ? 'border-purple-400 bg-purple-400'
+                ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]'
                 : (compareAdded || compareIncreased) ? 'border-cyan-500 bg-cyan-500'
                 : compareDecreased ? 'border-red-800 bg-red-800'
-                : selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+                : selected ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]' : 'border-muted-foreground/40'
             }`}
           >
             {(selected || isLocked) && (
@@ -682,16 +682,16 @@ function AddOnRow({
           <div className={`flex items-center gap-2 ${selected && !isLocked ? 'visible' : 'invisible'}`} onClick={(e) => e.stopPropagation()}>
             <button
               onClick={(e) => { e.stopPropagation(); if (isLocked) return; const step = addOn.quantity!.step ?? 1; if (quantity > addOn.quantity!.min) onQuantityChange(addOn.id, Math.round((quantity - step) * 100) / 100); else onToggle(addOn.id); }}
-              className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+              className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))] flex items-center justify-center text-xs"
             >-</button>
             <span className="text-sm text-foreground w-8 text-center">{quantity}</span>
             <button
               onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity + step) * 100) / 100); } }}
-              className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-purple-500 flex items-center justify-center text-xs"
+              className="w-6 h-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))] flex items-center justify-center text-xs"
             >+</button>
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
+        <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>{addOn.priceDisplay}</span>
       </div>
     </div>
   );
@@ -739,14 +739,14 @@ function TierToggleRow({
         lockedNotIncluded
           ? 'border-border/50 bg-[#020202]'
           : isLocked
-            ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
+            ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
             : compareAdded
               ? 'border-cyan-600 bg-cyan-950/20'
               : compareRemoved
                 ? 'border-red-900/50 bg-red-950/10'
                 : selected
-                  ? 'border-purple-500 bg-purple-950/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]'
-                  : 'border-border bg-[#020202] hover:border-purple-500/50'
+                  ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa-deep))]/30 shadow-[0_0_15px_rgba(var(--qa),0.15)]'
+                  : 'border-border bg-[#020202] hover:border-[rgb(var(--qa))]/50'
       }`}
     >
       <div className="flex items-center gap-4">
@@ -761,9 +761,9 @@ function TierToggleRow({
             <div
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-200 ${
                 isLocked
-                  ? 'border-purple-400 bg-purple-400'
+                  ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]'
                   : compareAdded ? 'border-cyan-500 bg-cyan-500'
-                  : selected ? 'border-purple-400 bg-purple-400' : 'border-muted-foreground/40'
+                  : selected ? 'border-[rgb(var(--qa-text))] bg-[rgb(var(--qa-text))]' : 'border-muted-foreground/40'
               }`}
             >
               {(selected || isLocked) && (
@@ -788,7 +788,7 @@ function TierToggleRow({
                 onClick={(e) => { e.stopPropagation(); if (!isLocked) onTierChange(addOn.id, tier); }}
                 className={`px-3 py-1 rounded text-xs font-medium transition-all duration-200 ${
                   tierSelection === tier
-                    ? 'bg-purple-600 text-white shadow-[0_0_8px_rgba(168,85,247,0.3)]'
+                    ? 'bg-[rgb(var(--qa-strong))] text-white shadow-[0_0_8px_rgba(168,85,247,0.3)]'
                     : 'bg-muted/50 text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -797,7 +797,7 @@ function TierToggleRow({
             ))}
           </div>
         )}
-        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-purple-400/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-900' : (isCompare && isRecommended) ? 'text-purple-400/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+        <span className={`text-sm font-semibold whitespace-nowrap ml-auto ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : compareAdded ? 'text-cyan-400' : compareRemoved ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
           {selected ? `$${activePrice.toLocaleString()}/day` : addOn.priceDisplay}
         </span>
       </div>
@@ -830,7 +830,7 @@ function CategoryHeader({
         className="p-1 group"
       >
         <ChevronDown
-          className={`w-3.5 h-3.5 text-muted-foreground/40 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110 ${isOpen ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-muted-foreground/40 transition-all duration-300 group-hover:text-[rgb(var(--qa-text))] group-hover:scale-110 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
     </div>
@@ -1421,7 +1421,7 @@ export function AddOnCalculator() {
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="active-tab"
-                      className="absolute inset-0 bg-purple-600 rounded-md shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                      className="absolute inset-0 bg-[rgb(var(--qa-strong))] rounded-md shadow-[0_0_12px_rgba(var(--qa),0.3)]"
                       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     />
                   )}

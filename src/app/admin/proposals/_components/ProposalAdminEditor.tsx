@@ -521,6 +521,8 @@ export const ProposalAdminEditor = forwardRef<ProposalEditorHandle, Props>(funct
             initialAllowLaunch={proposal.allow_launch}
             initialAllowCrowdfunding={proposal.allow_crowdfunding}
             initialAllowFundraising={proposal.allow_fundraising}
+            initialForceBuildWithLaunch={proposal.force_build_with_launch}
+            initialForceCrowdfunding={proposal.force_crowdfunding}
             onDirty={handleDirty}
           />
         </div>

@@ -104,7 +104,7 @@ function FundraisingPaymentSlider({
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
           [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
           isActive
-            ? '[&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(161,77,253,0.4)] [&::-moz-range-thumb]:bg-purple-500'
+            ? '[&::-webkit-slider-thumb]:bg-[rgb(var(--qa))] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(var(--qa-glow),0.4)] [&::-moz-range-thumb]:bg-[rgb(var(--qa))]'
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
@@ -117,7 +117,7 @@ function FundraisingPaymentSlider({
       </div>
       <div className="text-center mt-2">
         <span className={`text-lg font-bold transition-colors duration-200 ${
-          isActive ? 'text-purple-400' : 'text-muted-foreground'
+          isActive ? 'text-[rgb(var(--qa-text))]' : 'text-muted-foreground'
         }`}>Pay {currentTier.preRaise}% before the raise</span>
         <p className="text-xs text-muted-foreground">
           {currentTier.multiplier > 1
@@ -159,7 +159,7 @@ function CrowdfundingSlider({
           [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
           [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
           isActive
-            ? '[&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(161,77,253,0.4)] [&::-moz-range-thumb]:bg-purple-500'
+            ? '[&::-webkit-slider-thumb]:bg-[rgb(var(--qa))] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(var(--qa-glow),0.4)] [&::-moz-range-thumb]:bg-[rgb(var(--qa))]'
             : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
         }`}
       />
@@ -171,7 +171,7 @@ function CrowdfundingSlider({
       </div>
       <div className="text-center mt-2">
         <span className={`text-lg font-bold transition-colors duration-200 ${
-          isActive ? 'text-purple-400' : 'text-muted-foreground'
+          isActive ? 'text-[rgb(var(--qa-text))]' : 'text-muted-foreground'
         }`}>{currentTier.discount}% crowdfunding discount</span>
         <p className="text-xs text-muted-foreground">
           {currentTier.percentage > 0 ? `for ${currentTier.percentage}% of your campaign raise` : currentTier.label}
@@ -190,9 +190,9 @@ function DeferredPaymentCheckbox({
   deferPayment: boolean;
   onToggle: () => void;
 }) {
-  const borderColor = deferPayment ? 'border-purple-500/40' : 'border-border';
-  const bgColor = deferPayment ? 'bg-purple-900/25' : 'bg-muted/20 hover:bg-muted/30';
-  const checkBorder = deferPayment ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground/40';
+  const borderColor = deferPayment ? 'border-[rgb(var(--qa)_/_0.4)]' : 'border-border';
+  const bgColor = deferPayment ? 'bg-[rgb(var(--qa-muted)_/_0.25)]' : 'bg-muted/20 hover:bg-muted/30';
+  const checkBorder = deferPayment ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa))]' : 'border-muted-foreground/40';
 
   return (
     <button
@@ -229,9 +229,9 @@ function CrowdfundingToggle({
   enabled: boolean;
   onToggle: () => void;
 }) {
-  const borderColor = enabled ? 'border-purple-500/40' : 'border-border';
-  const bgColor = enabled ? 'bg-purple-900/25' : 'bg-muted/20 hover:bg-muted/30';
-  const checkBorder = enabled ? 'border-purple-500 bg-purple-500' : 'border-muted-foreground/40';
+  const borderColor = enabled ? 'border-[rgb(var(--qa)_/_0.4)]' : 'border-border';
+  const bgColor = enabled ? 'bg-[rgb(var(--qa-muted)_/_0.25)]' : 'bg-muted/20 hover:bg-muted/30';
+  const checkBorder = enabled ? 'border-[rgb(var(--qa))] bg-[rgb(var(--qa))]' : 'border-muted-foreground/40';
 
   return (
     <button
@@ -959,7 +959,7 @@ export function CalculatorSummary({
     <div className={`sticky ${stickyTop}`}>
       {/* Collapsible Offer section — shown when fundraising enabled */}
       {fundraisingEnabled && (
-        <div className="mb-4 rounded-lg border border-purple-800 overflow-hidden bg-purple-900/20">
+        <div className="mb-4 rounded-lg border border-[rgb(var(--qa-muted))] overflow-hidden bg-[rgb(var(--qa-muted)_/_0.2)]">
           <button
             data-no-intercept
             onClick={() => setOfferOpen((o) => !o)}
@@ -967,13 +967,13 @@ export function CalculatorSummary({
             aria-expanded={offerOpen}
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-900 flex items-center justify-center">
-                <Star className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 rounded-lg bg-[rgb(var(--qa-muted))] flex items-center justify-center">
+                <Star className="w-5 h-5 text-[rgb(var(--qa-text))]" />
               </div>
               <h3 className="font-display text-lg font-bold text-foreground">Offer</h3>
             </div>
             <ChevronDown
-              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110 ${offerOpen ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-[rgb(var(--qa-text))] group-hover:scale-110 ${offerOpen ? 'rotate-180' : ''}`}
             />
           </button>
           <div ref={offerContentRef} className="overflow-hidden">
@@ -990,7 +990,7 @@ export function CalculatorSummary({
 
       {/* Collapsible Discounts section — above the quote card */}
       {!fundraisingEnabled && (
-        <div className="mb-4 rounded-lg border border-purple-800 overflow-hidden bg-purple-900/20">
+        <div className="mb-4 rounded-lg border border-[rgb(var(--qa-muted))] overflow-hidden bg-[rgb(var(--qa-muted)_/_0.2)]">
           <button
             data-no-intercept
             onClick={() => setDiscountsOpen((o) => !o)}
@@ -998,13 +998,13 @@ export function CalculatorSummary({
             aria-expanded={discountsOpen}
           >
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-900 flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 rounded-lg bg-[rgb(var(--qa-muted))] flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-[rgb(var(--qa-text))]" />
               </div>
               <h3 className="font-display text-lg font-bold text-foreground">Discounts</h3>
             </div>
             <ChevronDown
-              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110 ${discountsOpen ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-muted-foreground transition-all duration-300 group-hover:text-[rgb(var(--qa-text))] group-hover:scale-110 ${discountsOpen ? 'rotate-180' : ''}`}
             />
           </button>
           <div ref={discountContentRef} className="overflow-hidden">
@@ -1028,7 +1028,7 @@ export function CalculatorSummary({
                       [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full
                       [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer ${
                       friendlyDiscountPercent > 0
-                        ? '[&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(161,77,253,0.4)] [&::-moz-range-thumb]:bg-purple-500'
+                        ? '[&::-webkit-slider-thumb]:bg-[rgb(var(--qa))] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(var(--qa-glow),0.4)] [&::-moz-range-thumb]:bg-[rgb(var(--qa))]'
                         : '[&::-webkit-slider-thumb]:bg-muted-foreground [&::-moz-range-thumb]:bg-muted-foreground'
                     }`}
                   />
@@ -1037,7 +1037,7 @@ export function CalculatorSummary({
                   </div>
                   <div className="text-center mt-2">
                     <span className={`text-lg font-bold transition-colors duration-200 ${
-                      friendlyDiscountPercent > 0 ? 'text-purple-400' : 'text-muted-foreground'
+                      friendlyDiscountPercent > 0 ? 'text-[rgb(var(--qa-text))]' : 'text-muted-foreground'
                     }`}>{friendlyDiscountPercent}% friendly discount</span>
                   </div>
                 </>
@@ -1069,7 +1069,7 @@ export function CalculatorSummary({
 
               {/* Additional discount — admin-only flat $ amount */}
               {onAdditionalDiscountChange && (
-                <div className="pt-2 border-t border-purple-800/40">
+                <div className="pt-2 border-t border-[rgb(var(--qa-muted))]/40">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Additional Discount</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono">$</span>
@@ -1081,7 +1081,7 @@ export function CalculatorSummary({
                       placeholder="0"
                       min={0}
                       step={50}
-                      className="w-full pl-7 pr-3 py-2 bg-muted/20 border border-border rounded-lg text-foreground font-mono text-sm focus:outline-none focus:border-purple-500 transition-colors"
+                      className="w-full pl-7 pr-3 py-2 bg-muted/20 border border-border rounded-lg text-foreground font-mono text-sm focus:outline-none focus:border-[rgb(var(--qa))] transition-colors"
                     />
                   </div>
                 </div>
