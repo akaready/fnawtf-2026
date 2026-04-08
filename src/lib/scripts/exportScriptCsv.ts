@@ -61,15 +61,16 @@ export async function exportScriptAsCsv(
 
   // ── CSV ─────────────────────────────────────────────────────────────────
   const csvEscape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const headers = ['Scene #', 'Scene', 'Beat', ...visibleCols.map(c => c.label)];
+  const headers = ['Scene ID', 'Scene', ...visibleCols.map(c => c.label)];
   const rows: string[][] = [];
 
   for (const scene of computedScenes) {
     const sceneLabel = `${scene.int_ext} ${scene.location_name} — ${scene.time_of_day}`;
+    const hasMultipleBeats = scene.beats.length > 1;
     for (let bi = 0; bi < scene.beats.length; bi++) {
       const beat = scene.beats[bi];
-      const beatLetter = toBeatLetter(bi);
-      const row: string[] = [String(scene.sceneNumber), sceneLabel, beatLetter];
+      const sceneId = hasMultipleBeats ? `${scene.sceneNumber}${toBeatLetter(bi)}` : String(scene.sceneNumber);
+      const row: string[] = [sceneId, sceneLabel];
 
       for (const col of visibleCols) {
         switch (col.key) {

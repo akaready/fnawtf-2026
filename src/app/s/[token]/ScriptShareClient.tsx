@@ -193,18 +193,6 @@ export function ScriptShareClient({
     return () => document.removeEventListener('mousedown', handler);
   }, [sortDropdownOpen]);
 
-  // Click-outside handler for export menu
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (exportBtnRef.current?.contains(t)) return;
-      setExportMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [exportMenuOpen]);
-
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
   const typedBeats = rawBeats as unknown as { id: string; scene_id: string; sort_order: number; audio_content: string; visual_content: string; notes_content: string; storyboard_layout: string | null }[];

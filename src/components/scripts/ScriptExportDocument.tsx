@@ -35,9 +35,8 @@ const COL_H = 16;      // column header row height
 const PAGE_PAD_TOP = MARGIN + HEADER_H + COL_H + 4;
 const PAGE_WIDTH = 841.89;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const SCENE_COL = 22;
-const BEAT_COL = 18;
-const DATA_WIDTH = CONTENT_WIDTH - SCENE_COL - BEAT_COL;
+const ID_COL = 32;
+const DATA_WIDTH = CONTENT_WIDTH - ID_COL;
 
 const FRACTIONS: Record<string, number> = {
   audio: 2, visual: 2, notes: 1, reference: 1, storyboard: 1, comments: 2,
@@ -116,7 +115,7 @@ const s = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
   },
   colHeaderGutter: {
-    width: SCENE_COL + BEAT_COL,
+    width: ID_COL,
   },
   colHeaderCell: {
     paddingLeft: 4,
@@ -141,14 +140,14 @@ const s = StyleSheet.create({
     marginTop: 6,
     minHeight: 16,
   },
-  sceneNumCell: {
-    width: SCENE_COL,
+  sceneIdCell: {
+    width: ID_COL,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 3,
   },
-  sceneNumText: {
-    fontSize: 5.5,
+  sceneIdText: {
+    fontSize: 6,
     fontFamily: 'SpaceGrotesk',
     fontWeight: 700,
     color: '#999',
@@ -172,13 +171,11 @@ const s = StyleSheet.create({
   beatRowAlt: {
     backgroundColor: '#fafafa',
   },
-  beatGutterScene: {
-    width: SCENE_COL,
-  },
-  beatGutterBeat: {
-    width: BEAT_COL,
+  beatGutterId: {
+    width: ID_COL,
     paddingTop: 3,
-    paddingLeft: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   beatGutterText: {
     fontSize: 6,
@@ -230,7 +227,7 @@ function ColHeaders({ visibleCols, colWidths }: { visibleCols: VisibleCol[]; col
 
 function BeatRow({
   beat,
-  beatLabel,
+  sceneId,
   visibleCols,
   colWidths,
   alt,
@@ -239,7 +236,7 @@ function BeatRow({
   commentsMap,
 }: {
   beat: ComputedScene['beats'][number];
-  beatLabel: string;
+  sceneId: string;
   visibleCols: VisibleCol[];
   colWidths: number[];
   alt: boolean;
@@ -282,9 +279,8 @@ function BeatRow({
 
   return (
     <View style={[s.beatRow, alt ? s.beatRowAlt : {}]}>
-      <View style={s.beatGutterScene} />
-      <View style={s.beatGutterBeat}>
-        <Text style={s.beatGutterText}>{beatLabel}</Text>
+      <View style={s.beatGutterId}>
+        <Text style={s.beatGutterText}>{sceneId}</Text>
       </View>
       {visibleCols.map((col, i) => (
         <View key={col.key} style={[s.beatCell, { width: colWidths[i] }]}>
@@ -344,8 +340,8 @@ export function ScriptExportDocument({
         {computedScenes.map((scene) => (
           <View key={scene.id} wrap={false}>
             <View style={s.sceneHeading}>
-              <View style={s.sceneNumCell}>
-                <Text style={s.sceneNumText}>{scene.sceneNumber}</Text>
+              <View style={s.sceneIdCell}>
+                <Text style={s.sceneIdText}>{scene.sceneNumber}</Text>
               </View>
               <Text style={s.sceneHeadingText}>
                 {scene.int_ext} {scene.location_name} — {scene.time_of_day}
@@ -356,7 +352,7 @@ export function ScriptExportDocument({
               <BeatRow
                 key={beat.id}
                 beat={beat}
-                beatLabel={toBeatLetter(bi)}
+                sceneId={scene.beats.length > 1 ? `${scene.sceneNumber}${toBeatLetter(bi)}` : String(scene.sceneNumber)}
                 visibleCols={visibleCols}
                 colWidths={colWidths}
                 alt={bi % 2 === 1}
