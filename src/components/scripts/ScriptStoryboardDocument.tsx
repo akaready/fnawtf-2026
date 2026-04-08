@@ -286,7 +286,7 @@ export function ScriptStoryboardDocument({
 
         {/* Scenes + beat card grid */}
         <View style={s.grid}>
-          {computedScenes.map((scene) => {
+          {computedScenes.filter(scene => scene.beats.length > 0).map((scene) => {
             const sceneName = `${scene.int_ext} ${scene.location_name}`;
             const sceneHeadingLabel = `${scene.sceneNumber}  ${sceneName} — ${scene.time_of_day}`;
             return [
