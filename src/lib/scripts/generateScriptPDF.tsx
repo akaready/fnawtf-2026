@@ -4,14 +4,32 @@ import type { ScriptStoryboardDocProps } from '@/components/scripts/ScriptStoryb
 
 async function fetchLogoDataUrl(): Promise<string> {
   try {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    if (typeof document === 'undefined') return '';
+    const origin = window.location.origin;
     const res = await fetch(`${origin}/images/logo/fna-logo.svg`);
     const svg = await res.text();
-    // Strip clip-path attributes and defs (react-pdf doesn't support clip-path refs)
-    const cleaned = svg
-      .replace(/\s*clip-path="url\([^)]+\)"/g, '')
-      .replace(/<defs>[\s\S]*?<\/defs>/g, '');
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleaned)}`;
+
+    // Convert SVG → PNG via canvas so react-pdf gets a format it handles reliably.
+    // The SVG has white fills, so we render on a transparent canvas; the dark
+    // PDF header band provides the contrast.
+    const SCALE = 2;
+    const W = 432, H = 168;
+    const canvas = document.createElement('canvas');
+    canvas.width = W * SCALE;
+    canvas.height = H * SCALE;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(SCALE, SCALE);
+
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => { ctx.drawImage(img, 0, 0, W, H); URL.revokeObjectURL(url); resolve(); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('svg load failed')); };
+      img.src = url;
+    });
+
+    return canvas.toDataURL('image/png');
   } catch {
     return '';
   }

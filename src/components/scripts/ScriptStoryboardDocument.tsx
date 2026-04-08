@@ -36,16 +36,11 @@ const MARGIN = 30;
 const HEADER_H = 30;
 const PAGE_PAD_TOP = MARGIN + HEADER_H;
 const PAGE_WIDTH = 841.89;   // landscape A4
-const PAGE_HEIGHT = 595.28;
 const COLS = 3;
-const ROWS = 2;
 const CARD_GAP = 8;
 const CONTENT_W = PAGE_WIDTH - MARGIN * 2;
-const CONTENT_H = PAGE_HEIGHT - PAGE_PAD_TOP - MARGIN;
 const CARD_W = (CONTENT_W - CARD_GAP * (COLS - 1)) / COLS;   // ≈ 253.9pt
-const CARD_H = (CONTENT_H - CARD_GAP * (ROWS - 1)) / ROWS;  // ≈ 246.6pt
 const IMG_H = Math.round(CARD_W * 9 / 16);                   // ≈ 143pt (16:9)
-const TEXT_H = CARD_H - IMG_H - 4;                           // ≈ 100pt
 
 const s = StyleSheet.create({
   page: {
@@ -110,7 +105,6 @@ const s = StyleSheet.create({
   },
   card: {
     width: CARD_W,
-    height: CARD_H,
     backgroundColor: '#fafafa',
     borderWidth: 1,
     borderColor: '#e8e8e8',
@@ -122,20 +116,6 @@ const s = StyleSheet.create({
   imgBox: {
     width: CARD_W,
     height: IMG_H,
-    backgroundColor: '#0a0a0a',
-  },
-  imgPlaceholder: {
-    width: CARD_W,
-    height: IMG_H,
-    backgroundColor: '#1a1a1a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imgPlaceholderText: {
-    fontSize: 9,
-    color: '#333',
-    fontFamily: 'SpaceGrotesk',
-    fontWeight: 700,
   },
   // Multi-frame rows
   imgRow: {
@@ -165,8 +145,7 @@ const s = StyleSheet.create({
   textArea: {
     paddingHorizontal: 5,
     paddingTop: 4,
-    height: TEXT_H,
-    overflow: 'hidden',
+    paddingBottom: 6,
   },
   beatLabel: {
     fontSize: 6,
@@ -323,7 +302,7 @@ export function ScriptStoryboardDocument({
                 const audio = toPlainText(beat.audio_content);
 
                 return (
-                  <View key={beat.id} style={s.card}>
+                  <View key={beat.id} style={s.card} wrap={false}>
                     {/* Storyboard image */}
                     <View style={s.imgBox}>
                       <StoryboardCell frames={frames} />

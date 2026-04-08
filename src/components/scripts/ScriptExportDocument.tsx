@@ -21,6 +21,12 @@ function toPlainText(md: string): string {
   return stripMarkdown(md).replace(/\s+/g, ' ').trim();
 }
 
+function toBeatLetter(i: number): string {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (i < 26) return letters[i];
+  return letters[Math.floor(i / 26) - 1] + letters[i % 26];
+}
+
 // Landscape A4: 841.89 × 595.28 pt
 const MARGIN = 30;
 const HEADER_H = 28;   // branding bar height
@@ -224,7 +230,7 @@ function ColHeaders({ visibleCols, colWidths }: { visibleCols: VisibleCol[]; col
 
 function BeatRow({
   beat,
-  beatNum,
+  beatLabel,
   visibleCols,
   colWidths,
   alt,
@@ -233,7 +239,7 @@ function BeatRow({
   commentsMap,
 }: {
   beat: ComputedScene['beats'][number];
-  beatNum: number;
+  beatLabel: string;
   visibleCols: VisibleCol[];
   colWidths: number[];
   alt: boolean;
@@ -278,7 +284,7 @@ function BeatRow({
     <View style={[s.beatRow, alt ? s.beatRowAlt : {}]}>
       <View style={s.beatGutterScene} />
       <View style={s.beatGutterBeat}>
-        <Text style={s.beatGutterText}>{beatNum}</Text>
+        <Text style={s.beatGutterText}>{beatLabel}</Text>
       </View>
       {visibleCols.map((col, i) => (
         <View key={col.key} style={[s.beatCell, { width: colWidths[i] }]}>
@@ -350,7 +356,7 @@ export function ScriptExportDocument({
               <BeatRow
                 key={beat.id}
                 beat={beat}
-                beatNum={bi + 1}
+                beatLabel={toBeatLetter(bi)}
                 visibleCols={visibleCols}
                 colWidths={colWidths}
                 alt={bi % 2 === 1}
