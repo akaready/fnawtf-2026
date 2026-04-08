@@ -239,7 +239,9 @@ export function ScriptVersionsPanel({
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const router = useRouter();
   const dndId = useId();
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: { distance: 5 },
+  }));
 
   const loadVersions = useCallback(async () => {
     setLoading(true);
