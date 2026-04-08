@@ -429,6 +429,7 @@ function ShareDetail({
   const [accessCode, setAccessCode] = useState(share.access_code);
   const [notes, setNotes] = useState(share.notes ?? '');
   const [activeTab, setActiveTab] = useState<'details' | 'views'>('details');
+  const prefs = resolveSharePreferences(share.share_preferences, share.share_mode);
 
   useEffect(() => {
     setAccessCode(share.access_code);
@@ -477,24 +478,40 @@ function ShareDetail({
               </div>
             </div>
 
-            {/* Access code */}
+            {/* Access code toggle + field */}
             <div className="space-y-1.5">
-              <label className="admin-label">Access Code</label>
-              <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
-                  value={accessCode}
-                  onChange={e => setAccessCode(e.target.value)}
-                  onBlur={() => { if (accessCode !== share.access_code) onUpdate(share.id, { access_code: accessCode }); }}
-                  className="admin-input flex-1 font-admin-mono"
+                  type="checkbox"
+                  checked={prefs.require_access_code}
+                  onChange={() => {
+                    const next = !prefs.require_access_code;
+                    const nextPrefs = { ...prefs, require_access_code: next };
+                    onUpdate(share.id, {
+                      share_preferences: nextPrefs as unknown as Record<string, unknown>,
+                    });
+                  }}
+                  className="w-4 h-4 rounded border-admin-border bg-transparent accent-white"
                 />
-                <button
-                  onClick={() => onCopyCode(share.access_code, share.id)}
-                  className="w-10 h-10 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 border border-admin-border-subtle"
-                  title="Copy access code"
-                >
-                  {copiedCode === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
-                </button>
-              </div>
+                <span className="admin-label !mb-0">Require Access Code</span>
+              </label>
+              {prefs.require_access_code && (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={accessCode}
+                    onChange={e => setAccessCode(e.target.value)}
+                    onBlur={() => { if (accessCode !== share.access_code) onUpdate(share.id, { access_code: accessCode }); }}
+                    className="admin-input flex-1 font-admin-mono"
+                  />
+                  <button
+                    onClick={() => onCopyCode(share.access_code, share.id)}
+                    className="w-10 h-10 flex items-center justify-center rounded-admin-md text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0 border border-admin-border-subtle"
+                    title="Copy access code"
+                  >
+                    {copiedCode === share.id ? <Check size={13} className="text-admin-success" /> : <Copy size={13} />}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Notes */}

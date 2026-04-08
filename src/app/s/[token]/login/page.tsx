@@ -10,14 +10,14 @@ export default async function ScriptLoginPage({ params }: { params: Promise<{ to
 
   const { data: share } = await supabase
     .from('script_shares')
-    .select('token, script_id')
+    .select('token, script_id, share_preferences')
     .eq('token', token)
     .eq('is_active', true)
     .single();
 
   if (!share) redirect('/');
 
-  const row = share as { token: string; script_id: string };
+  const row = share as unknown as { token: string; script_id: string; share_preferences: Record<string, unknown> | null };
 
   // Fetch script + project + client for display
   const { createServiceClient } = await import('@/lib/supabase/service');
@@ -57,11 +57,14 @@ export default async function ScriptLoginPage({ params }: { params: Promise<{ to
     }
   }
 
+  const requireAccessCode = (row.share_preferences as Record<string, unknown> | null)?.require_access_code === true;
+
   return (
     <ScriptLoginForm
       token={token}
       scriptTitle={projectTitle || (script as { title: string } | null)?.title || 'Script'}
       clientName={clientName}
+      requireAccessCode={requireAccessCode}
     />
   );
 }

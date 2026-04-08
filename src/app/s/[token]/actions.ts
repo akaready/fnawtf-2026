@@ -49,7 +49,7 @@ export async function verifyScriptShareAccess(
   // Look up share
   const { data: share, error: shareErr } = await supabase
     .from('script_shares')
-    .select('id, access_code, script_id, is_active')
+    .select('id, access_code, script_id, is_active, share_preferences')
     .eq('token', token)
     .eq('is_active', true)
     .single();
@@ -58,10 +58,11 @@ export async function verifyScriptShareAccess(
     return { success: false, error: 'Share link not found or inactive.' };
   }
 
-  const row = share as { id: string; access_code: string; script_id: string };
+  const row = share as unknown as { id: string; access_code: string; script_id: string; share_preferences: Record<string, unknown> | null };
 
-  // Verify password
-  if (!verifySharePassword(password, row.access_code)) {
+  // Verify password (skip if access code not required)
+  const requireCode = row.share_preferences?.require_access_code === true;
+  if (requireCode && !verifySharePassword(password, row.access_code)) {
     return { success: false, error: 'Invalid access code.' };
   }
 
@@ -209,7 +210,7 @@ export async function getScriptShareData(token: string) {
     sc.script_group_id
       ? service.from('script_locations').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
       : Promise.resolve({ data: [] }),
-    service.from('script_storyboard_frames').select('*').eq('script_id', sc.id),
+    service.from('script_storyboard_frames').select('*').eq('script_id', sc.id).eq('is_active', true),
     sc.script_group_id
       ? service.from('script_products').select('*').eq('script_group_id', sc.script_group_id).order('sort_order')
       : Promise.resolve({ data: [] }),

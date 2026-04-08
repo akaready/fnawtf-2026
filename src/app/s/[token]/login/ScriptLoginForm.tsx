@@ -8,9 +8,10 @@ interface Props {
   token: string;
   scriptTitle: string;
   clientName: string;
+  requireAccessCode?: boolean;
 }
 
-export function ScriptLoginForm({ token, scriptTitle, clientName }: Props) {
+export function ScriptLoginForm({ token, scriptTitle, clientName, requireAccessCode = false }: Props) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -18,7 +19,7 @@ export function ScriptLoginForm({ token, scriptTitle, clientName }: Props) {
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
 
-  const canSubmit = firstName.trim() && lastName.trim() && email.trim() && password.trim();
+  const canSubmit = firstName.trim() && lastName.trim() && email.trim() && (!requireAccessCode || password.trim());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,20 +108,22 @@ export function ScriptLoginForm({ token, scriptTitle, clientName }: Props) {
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Access Code
-            </label>
-            <input
-              id="password"
-              type="text"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your access code"
-              autoComplete="off"
-              className={inputCls}
-            />
-          </div>
+          {requireAccessCode && (
+            <div>
+              <label htmlFor="password" className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Access Code
+              </label>
+              <input
+                id="password"
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your access code"
+                autoComplete="off"
+                className={inputCls}
+              />
+            </div>
+          )}
 
           {error && (
             <p className="text-xs text-red-400 mt-1">{error}</p>

@@ -230,6 +230,7 @@ export interface SharePreferences {
   allow_story_view: boolean;
   allow_table_view: boolean;
   default_view: 'story' | 'table';
+  require_access_code: boolean;
   table_columns?: Partial<Record<keyof ScriptColumnConfig, boolean>>;
   presentation_columns?: {
     visual?: boolean;
@@ -243,6 +244,7 @@ export const DEFAULT_SHARE_PREFERENCES: SharePreferences = {
   allow_story_view: true,
   allow_table_view: true,
   default_view: 'story',
+  require_access_code: false,
 };
 
 /** Merge raw JSONB from DB with defaults, with backwards compat for share_mode */
