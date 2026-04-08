@@ -539,22 +539,22 @@ export function ScriptShareClient({
                 ref={exportBtnRef}
                 onClick={() => setExportMenuOpen(prev => !prev)}
                 disabled={isExporting}
-                className="w-10 h-10 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors disabled:opacity-50"
+                className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors disabled:opacity-50"
                 title="Export"
               >
-                <Download size={16} />
+                <Download size={14} />
               </button>
               {/* User settings popover */}
               <div className="relative" ref={userPopoverRef}>
                 <button
                   onClick={() => setUserPopoverOpen(prev => !prev)}
-                  className="w-10 h-10 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors overflow-hidden"
+                  className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors overflow-hidden"
                   title="Profile settings"
                 >
                   {profileAvatarUrl ? (
                     <img src={profileAvatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <User size={16} />
+                    <User size={14} />
                   )}
                 </button>
                 {userPopoverOpen && createPortal(
