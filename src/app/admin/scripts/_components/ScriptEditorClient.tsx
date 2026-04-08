@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, Check, Undo2, Redo2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Settings, User, Hash, MapPin, Save, CopyPlus, ChevronRight, ChevronDown, Expand, Shrink, SeparatorVertical, Paintbrush, StickyNote, ScrollText, Table2, X, Package, Share2, Play, List, MessageSquare, Eye, ArrowUpDown, Check, Undo2, Redo2, Download } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ToolbarButton } from '@/app/admin/_components/table/TableToolbar';
 import { useAutoSave } from '@/app/admin/_hooks/useAutoSave';
@@ -24,7 +25,7 @@ import {
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
-import { DEFAULT_FRACTIONS, DEFAULT_COLUMN_ORDER } from './gridUtils';
+import { DEFAULT_FRACTIONS, DEFAULT_COLUMN_ORDER, getOrderedVisibleColumns } from './gridUtils';
 import { ScriptEditorCanvas } from './ScriptEditorCanvas';
 import { ScriptSceneSidebar } from './ScriptSceneSidebar';
 import { SceneNav } from './SceneNav';
@@ -111,6 +112,8 @@ export function ScriptEditorClient({
   const [locationOptionsMap, setLocationOptionsMap] = useState<Record<string, LocationOptionWithLocation[]>>({});
   const [locationReferenceMap, setLocationReferenceMap] = useState<Record<string, LocationReferenceRow[]>>({});
   const [showProducts, setShowProducts] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<{ top: number; left: number } | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [products, setProducts] = useState<ScriptProductRow[]>(initialProducts);
@@ -876,6 +879,55 @@ export function ScriptEditorClient({
     return () => window.removeEventListener('keydown', handler);
   }, [isFocused, toggleFocus]);
 
+  // ── Export ──────────────────────────────────────────────────────────────
+  async function handleExportCsv() {
+    setIsExporting(true);
+    setExportMenuAnchor(null);
+    try {
+      const { exportScriptAsCsv } = await import('@/lib/scripts/exportScriptCsv');
+      await exportScriptAsCsv(script, computedScenes, columnConfig, columnOrder, refsByBeat, storyboardFrames, commentsMap);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setIsExporting(true);
+    setExportMenuAnchor(null);
+    try {
+      const { generateScriptPDF } = await import('@/lib/scripts/generateScriptPDF');
+      const visibleCols = getOrderedVisibleColumns(columnConfig, columnOrder);
+      const versionLabel = formatScriptVersion(script.major_version, script.minor_version, script.is_published);
+      const blob = await generateScriptPDF({ script, versionLabel, computedScenes, visibleCols, refsByBeat, storyboardFrames, commentsMap });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${script.title}-${versionLabel}-table.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleExportStoryboardPdf() {
+    setIsExporting(true);
+    setExportMenuAnchor(null);
+    try {
+      const { generateScriptStoryboardPDF } = await import('@/lib/scripts/generateScriptPDF');
+      const versionLabel = formatScriptVersion(script.major_version, script.minor_version, script.is_published);
+      const blob = await generateScriptStoryboardPDF({ script, versionLabel, computedScenes, columnConfig, refsByBeat, storyboardFrames, commentsMap });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${script.title}-${versionLabel}-storyboards.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   // ── Cell locking callbacks ──
   const getCellLock = useCallback((beatId: string, field: string) => {
     const lock = presence.lockedCells.get(cellLockKey(beatId, field));
@@ -1018,6 +1070,16 @@ export function ScriptEditorClient({
           <>
             <button onClick={() => setShowShare(true)} className="btn-secondary px-2.5" title="Share">
               <Share2 size={14} />
+            </button>
+            <button
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setExportMenuAnchor(exportMenuAnchor ? null : { top: rect.bottom + 5, left: rect.left });
+              }}
+              className={`btn-secondary px-2.5${exportMenuAnchor ? ' bg-admin-bg-active' : ''}`}
+              title="Export"
+            >
+              <Download size={14} />
             </button>
             <button
               onClick={() => setShowVersions(true)}
@@ -1542,6 +1604,40 @@ export function ScriptEditorClient({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Export dropdown — portalled to body to escape overflow:hidden */}
+      {exportMenuAnchor && createPortal(
+        <>
+          <div className="fixed inset-0 z-[998]" onClick={() => setExportMenuAnchor(null)} />
+          <div
+            className="fixed z-[999] bg-admin-bg-overlay border border-admin-border rounded-admin-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] p-2 w-52 animate-dropdown-in"
+            style={{ top: exportMenuAnchor.top, left: exportMenuAnchor.left }}
+          >
+            <button
+              onClick={() => void handleExportCsv()}
+              disabled={isExporting}
+              className="w-full text-left px-2 py-1.5 text-admin-sm text-admin-text-primary hover:bg-admin-bg-hover rounded-admin-sm transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Generating…' : 'Export CSV + Storyboards'}
+            </button>
+            <button
+              onClick={() => void handleExportPdf()}
+              disabled={isExporting}
+              className="w-full text-left px-2 py-1.5 text-admin-sm text-admin-text-primary hover:bg-admin-bg-hover rounded-admin-sm transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Generating…' : 'Export as PDF (Table)'}
+            </button>
+            <button
+              onClick={() => void handleExportStoryboardPdf()}
+              disabled={isExporting}
+              className="w-full text-left px-2 py-1.5 text-admin-sm text-admin-text-primary hover:bg-admin-bg-hover rounded-admin-sm transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Generating…' : 'Export as PDF (Storyboards)'}
+            </button>
+          </div>
+        </>,
+        document.body,
       )}
     </div>
   );
