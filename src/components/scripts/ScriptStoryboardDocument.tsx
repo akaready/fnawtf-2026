@@ -97,12 +97,28 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
 
-  // ── Grid ─────────────────────────────────────────────────────────────
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: CARD_GAP,
+  // ── Scene layout ──────────────────────────────────────────────────────
+  scenesContainer: {
+    flexDirection: 'column',
   },
+  sceneHeading: {
+    backgroundColor: '#2a2a2a',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  sceneHeadingText: {
+    fontSize: 7,
+    fontFamily: 'SpaceGrotesk',
+    fontWeight: 700,
+    color: '#ffffff',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    gap: CARD_GAP,
+    marginTop: CARD_GAP,
+  },
+
+  // ── Beat card ─────────────────────────────────────────────────────────
   card: {
     width: CARD_W,
     backgroundColor: '#fafafa',
@@ -117,7 +133,6 @@ const s = StyleSheet.create({
     width: CARD_W,
     height: IMG_H,
   },
-  // Multi-frame rows
   imgRow: {
     flexDirection: 'row',
     width: CARD_W,
@@ -125,20 +140,6 @@ const s = StyleSheet.create({
   },
   imgCol: {
     flexDirection: 'column',
-  },
-
-  // ── Scene heading (full-width row in the flex-wrap grid) ─────────────────
-  sceneHeading: {
-    width: CONTENT_W,
-    backgroundColor: '#2a2a2a',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  sceneHeadingText: {
-    fontSize: 7,
-    fontFamily: 'SpaceGrotesk',
-    fontWeight: 700,
-    color: '#ffffff',
   },
 
   // ── Text area ─────────────────────────────────────────────────────────
@@ -179,11 +180,7 @@ const s = StyleSheet.create({
 
 // ── Storyboard multi-frame renderer ──────────────────────────────────────
 
-function StoryboardCell({
-  frames,
-}: {
-  frames: ScriptStoryboardFrameRow[];
-}) {
+function StoryboardCell({ frames }: { frames: ScriptStoryboardFrameRow[] }) {
   if (frames.length === 0) {
     return <View style={{ width: CARD_W, height: IMG_H }} />;
   }
@@ -206,7 +203,6 @@ function StoryboardCell({
   }
 
   if (frames.length === 3) {
-    // Big left (2/3) + two stacked right (1/3)
     const leftW = Math.round(CARD_W * 2 / 3);
     const rightW = CARD_W - leftW;
     const halfH = Math.round(IMG_H / 2);
@@ -237,6 +233,76 @@ function StoryboardCell({
   );
 }
 
+// ── Beat card ─────────────────────────────────────────────────────────────
+
+function BeatCard({
+  beat,
+  bi,
+  sceneNumber,
+  frames,
+  columnConfig,
+  refsByBeat,
+  commentsMap,
+}: {
+  beat: ComputedScene['beats'][number];
+  bi: number;
+  sceneNumber: number;
+  frames: ScriptStoryboardFrameRow[];
+  columnConfig: ScriptColumnConfig;
+  refsByBeat: Record<string, ScriptBeatReferenceRow[]>;
+  commentsMap: Map<string, ScriptShareCommentRow[]>;
+}) {
+  const label = `${sceneNumber}·${toBeatLetter(bi)}`;
+  const audio = toPlainText(beat.audio_content);
+
+  return (
+    <View style={s.card}>
+      <View style={s.imgBox}>
+        <StoryboardCell frames={frames} />
+      </View>
+      <View style={s.textArea}>
+        <Text style={s.beatLabel}>{label}</Text>
+        {audio ? (
+          <View>
+            <Text style={s.extraLabel}>AUDIO</Text>
+            <Text style={s.audioText}>{audio}</Text>
+          </View>
+        ) : null}
+        {columnConfig.visual && (() => {
+          const t = toPlainText(beat.visual_content);
+          return t ? (
+            <View>
+              <Text style={s.extraLabel}>VISUAL</Text>
+              <Text style={s.extraText}>{t}</Text>
+            </View>
+          ) : null;
+        })()}
+        {columnConfig.notes && (() => {
+          const t = toPlainText(beat.notes_content);
+          return t ? (
+            <View>
+              <Text style={s.extraLabel}>NOTES</Text>
+              <Text style={s.extraText}>{t}</Text>
+            </View>
+          ) : null;
+        })()}
+        {columnConfig.reference && (() => {
+          const count = (refsByBeat[beat.id] ?? []).length;
+          return count > 0 ? (
+            <Text style={[s.extraLabel, { marginTop: 3 }]}>{count} ref image{count !== 1 ? 's' : ''}</Text>
+          ) : null;
+        })()}
+        {columnConfig.comments && (() => {
+          const count = commentsMap.get(beat.id)?.length ?? 0;
+          return count > 0 ? (
+            <Text style={[s.extraLabel, { marginTop: 3 }]}>{count} comment{count !== 1 ? 's' : ''}</Text>
+          ) : null;
+        })()}
+      </View>
+    </View>
+  );
+}
+
 // ── Main document ─────────────────────────────────────────────────────────
 
 export function ScriptStoryboardDocument({
@@ -262,6 +328,8 @@ export function ScriptStoryboardDocument({
     framesByBeat[id].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
   }
 
+  const scenes = computedScenes.filter(scene => scene.beats.length > 0);
+
   return (
     <Document title={`${script.title} — ${versionLabel} — Storyboards`}>
       <Page size="A4" orientation="landscape" style={s.page}>
@@ -284,75 +352,52 @@ export function ScriptStoryboardDocument({
           </View>
         </View>
 
-        {/* Scenes + beat card grid */}
-        <View style={s.grid}>
-          {computedScenes.filter(scene => scene.beats.length > 0).map((scene) => {
+        {/* Scenes */}
+        <View style={s.scenesContainer}>
+          {scenes.map((scene, sceneIdx) => {
             const sceneName = `${scene.int_ext} ${scene.location_name}`;
-            const sceneHeadingLabel = `${scene.sceneNumber}  ${sceneName} — ${scene.time_of_day}`;
-            return [
-              /* Scene heading — full width, breaks the flex-wrap flow */
-              <View key={`heading-${scene.id}`} style={s.sceneHeading}>
-                <Text style={s.sceneHeadingText}>{sceneHeadingLabel}</Text>
-              </View>,
-              /* Beat cards */
-              ...scene.beats.map((beat, bi) => {
-                const beatLetter = toBeatLetter(bi);
-                const label = `${scene.sceneNumber}·${beatLetter}`;
-                const frames = framesByBeat[beat.id] ?? [];
-                const audio = toPlainText(beat.audio_content);
+            const headingLabel = `${scene.sceneNumber}  ${sceneName} — ${scene.time_of_day}`;
 
-                return (
-                  <View key={beat.id} style={s.card} wrap={false}>
-                    {/* Storyboard image */}
-                    <View style={s.imgBox}>
-                      <StoryboardCell frames={frames} />
-                    </View>
+            // Chunk beats into rows of COLS
+            const rows: Array<{ beat: ComputedScene['beats'][number]; bi: number }[]> = [];
+            for (let i = 0; i < scene.beats.length; i += COLS) {
+              rows.push(scene.beats.slice(i, i + COLS).map((beat, j) => ({ beat, bi: i + j })));
+            }
 
-                    {/* Text info */}
-                    <View style={s.textArea}>
-                      <Text style={s.beatLabel}>{label}</Text>
-                      {audio ? (
-                        <View>
-                          <Text style={s.extraLabel}>AUDIO</Text>
-                          <Text style={s.audioText}>{audio}</Text>
-                        </View>
-                      ) : null}
+            const cardProps = (beat: ComputedScene['beats'][number], bi: number) => ({
+              beat,
+              bi,
+              sceneNumber: scene.sceneNumber,
+              frames: framesByBeat[beat.id] ?? [],
+              columnConfig,
+              refsByBeat,
+              commentsMap,
+            });
 
-                      {columnConfig.visual && (() => {
-                        const t = toPlainText(beat.visual_content);
-                        return t ? (
-                          <View>
-                            <Text style={s.extraLabel}>VISUAL</Text>
-                            <Text style={s.extraText}>{t}</Text>
-                          </View>
-                        ) : null;
-                      })()}
-                      {columnConfig.notes && (() => {
-                        const t = toPlainText(beat.notes_content);
-                        return t ? (
-                          <View>
-                            <Text style={s.extraLabel}>NOTES</Text>
-                            <Text style={s.extraText}>{t}</Text>
-                          </View>
-                        ) : null;
-                      })()}
-                      {columnConfig.reference && (() => {
-                        const count = (refsByBeat[beat.id] ?? []).length;
-                        return count > 0 ? (
-                          <Text style={[s.extraLabel, { marginTop: 3 }]}>{count} ref image{count !== 1 ? 's' : ''}</Text>
-                        ) : null;
-                      })()}
-                      {columnConfig.comments && (() => {
-                        const count = commentsMap.get(beat.id)?.length ?? 0;
-                        return count > 0 ? (
-                          <Text style={[s.extraLabel, { marginTop: 3 }]}>{count} comment{count !== 1 ? 's' : ''}</Text>
-                        ) : null;
-                      })()}
-                    </View>
+            return (
+              <View key={scene.id} style={sceneIdx > 0 ? { marginTop: CARD_GAP } : undefined}>
+                {/* Heading + first card row: always stay together on the same page */}
+                <View wrap={false}>
+                  <View style={s.sceneHeading}>
+                    <Text style={s.sceneHeadingText}>{headingLabel}</Text>
                   </View>
-                );
-              }),
-            ];
+                  <View style={s.cardRow}>
+                    {rows[0].map(({ beat, bi }) => (
+                      <BeatCard key={beat.id} {...cardProps(beat, bi)} />
+                    ))}
+                  </View>
+                </View>
+
+                {/* Remaining rows flow normally */}
+                {rows.slice(1).map((row, ri) => (
+                  <View key={ri} style={s.cardRow}>
+                    {row.map(({ beat, bi }) => (
+                      <BeatCard key={beat.id} {...cardProps(beat, bi)} />
+                    ))}
+                  </View>
+                ))}
+              </View>
+            );
           })}
         </View>
       </Page>
