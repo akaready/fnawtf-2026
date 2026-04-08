@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { List, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ArrowUpDown, User, Check, Camera } from 'lucide-react';
+import { List, SeparatorVertical, Expand, Shrink, Mail, Play, Table2, MessageSquare, Eye, ArrowUpDown, User, Check, Camera, Download } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ViewSwitcher } from '@/app/admin/_components/ViewSwitcher';
 import { ScriptColumnToggle } from '@/app/admin/scripts/_components/ScriptColumnToggle';
-import { DEFAULT_COLUMN_ORDER } from '@/app/admin/scripts/_components/gridUtils';
+import { DEFAULT_COLUMN_ORDER, getOrderedVisibleColumns } from '@/app/admin/scripts/_components/gridUtils';
 import { buildPresentationSlides } from '@/app/admin/scripts/_components/presentationUtils';
 import { ScriptShareIntro } from './ScriptShareIntro';
 import { ScriptPresentationView } from './ScriptPresentationView';
@@ -18,7 +18,7 @@ import { SceneSidebarShell } from '@/app/admin/scripts/_components/SceneSidebarS
 import { startScriptViewSession, updateScriptViewDuration, getShareComments, getViewerProfile, updateViewerProfile, uploadViewerAvatar } from './actions';
 import { computeSceneNumbers } from '@/lib/scripts/sceneNumbers';
 import { formatScriptVersion, versionColor } from '@/types/scripts';
-import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow, SharePreferences } from '@/types/scripts';
+import type { ScriptColumnConfig, ScriptCharacterRow, ScriptTagRow, ScriptLocationRow, ScriptProductRow, ScriptShareCommentRow, SharePreferences, ScriptRow, ComputedScene, ScriptBeatReferenceRow, ScriptStoryboardFrameRow } from '@/types/scripts';
 
 const CONTAINER_WIDTHS = ['', 'max-w-7xl', 'max-w-5xl', 'max-w-3xl'] as const;
 const CONTAINER_LABELS = ['Full', 'Wide', 'Medium', 'Narrow'] as const;
@@ -140,6 +140,11 @@ export function ScriptShareClient({
   const [profileSaving, setProfileSaving] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // Export state
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
+
   // Load profile on mount
   useEffect(() => {
     getViewerProfile(viewerEmail).then(p => {
@@ -187,6 +192,18 @@ export function ScriptShareClient({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [sortDropdownOpen]);
+
+  // Click-outside handler for export menu
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (exportBtnRef.current?.contains(t)) return;
+      setExportMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportMenuOpen]);
 
   // Cast raw data to typed arrays
   const typedScenes = rawScenes as unknown as { id: string; sort_order: number; location_name: string; time_of_day: string; int_ext: string; scene_notes: string | null }[];
@@ -297,6 +314,96 @@ export function ScriptShareClient({
 
   const presentationSlides = buildPresentationSlides(computedScenes, typedStoryboardFrames, refsByBeat);
 
+  // ── Export helpers ──────────────────────────────────────────────────────
+  // Build a ScriptRow-compatible object from the camelCase share page props
+  const scriptRowForExport = {
+    id: script.id,
+    title: script.title,
+    project_id: null,
+    script_group_id: null,
+    status: 'draft' as const,
+    version: 1,
+    major_version: script.majorVersion,
+    minor_version: script.minorVersion,
+    is_published: script.isPublished,
+    notes: null,
+    scratch_content: null,
+    content_mode: script.contentMode as ScriptRow['content_mode'],
+    created_by: null,
+    created_at: '',
+    updated_at: '',
+  } satisfies ScriptRow;
+
+  async function handleExportCsv() {
+    setIsExporting(true);
+    setExportMenuOpen(false);
+    try {
+      const { exportScriptAsCsv } = await import('@/lib/scripts/exportScriptCsv');
+      await exportScriptAsCsv(
+        scriptRowForExport,
+        computedScenes as unknown as ComputedScene[],
+        columnConfig,
+        columnOrder,
+        refsByBeat as unknown as Record<string, ScriptBeatReferenceRow[]>,
+        typedStoryboardFrames as unknown as ScriptStoryboardFrameRow[],
+        commentsMap,
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setIsExporting(true);
+    setExportMenuOpen(false);
+    try {
+      const { generateScriptPDF } = await import('@/lib/scripts/generateScriptPDF');
+      const visibleCols = getOrderedVisibleColumns(columnConfig, columnOrder);
+      const blob = await generateScriptPDF({
+        script: scriptRowForExport,
+        versionLabel,
+        computedScenes: computedScenes as unknown as ComputedScene[],
+        visibleCols,
+        refsByBeat: refsByBeat as unknown as Record<string, ScriptBeatReferenceRow[]>,
+        storyboardFrames: typedStoryboardFrames as unknown as ScriptStoryboardFrameRow[],
+        commentsMap,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${script.title}-${versionLabel}-table.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  async function handleExportStoryboardPdf() {
+    setIsExporting(true);
+    setExportMenuOpen(false);
+    try {
+      const { generateScriptStoryboardPDF } = await import('@/lib/scripts/generateScriptPDF');
+      const blob = await generateScriptStoryboardPDF({
+        script: scriptRowForExport,
+        versionLabel,
+        computedScenes: computedScenes as unknown as ComputedScene[],
+        columnConfig,
+        refsByBeat: refsByBeat as unknown as Record<string, ScriptBeatReferenceRow[]>,
+        storyboardFrames: typedStoryboardFrames as unknown as ScriptStoryboardFrameRow[],
+        commentsMap,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${script.title}-${versionLabel}-storyboards.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   const presentationScenes = computedScenes.map(sc => ({
     id: sc.id,
     sceneNumber: sc.sceneNumber,
@@ -355,6 +462,14 @@ export function ScriptShareClient({
                 </span>
               </div>
             </div>
+            <button
+              onClick={() => setExportMenuOpen(prev => !prev)}
+              disabled={isExporting}
+              className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:text-white transition-colors flex-shrink-0 disabled:opacity-50"
+              title="Export"
+            >
+              <Download size={14} />
+            </button>
             <button
               onClick={() => setMobileUserSheetOpen(true)}
               className="w-8 h-8 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:text-white transition-colors flex-shrink-0"
@@ -417,8 +532,18 @@ export function ScriptShareClient({
               </div>
             </div>
 
-            {/* Right — user settings + email */}
+            {/* Right — export + user settings */}
             <div className="ml-auto flex-shrink-0 hidden md:flex items-center gap-2">
+              {/* Export button */}
+              <button
+                ref={exportBtnRef}
+                onClick={() => setExportMenuOpen(prev => !prev)}
+                disabled={isExporting}
+                className="w-10 h-10 flex items-center justify-center rounded-admin-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors disabled:opacity-50"
+                title="Export"
+              >
+                <Download size={16} />
+              </button>
               {/* User settings popover */}
               <div className="relative" ref={userPopoverRef}>
                 <button
@@ -568,6 +693,43 @@ export function ScriptShareClient({
             </div>
           </div>
       </div>
+
+      {/* Export dropdown — portalled to body */}
+      {exportMenuOpen && createPortal(
+        <>
+          <div className="fixed inset-0 z-[998]" onClick={() => setExportMenuOpen(false)} />
+          <div
+            className="fixed z-[999] bg-[#111] border border-white/[0.14] rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-2 w-56"
+            style={{
+              top: (exportBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 8,
+              right: window.innerWidth - (exportBtnRef.current?.getBoundingClientRect().right ?? 0),
+            }}
+          >
+            <button
+              onClick={() => void handleExportCsv()}
+              disabled={isExporting}
+              className="w-full text-left px-3 py-2 text-admin-sm text-white/80 hover:bg-white/[0.06] rounded-lg transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Generating...' : 'Export CSV + Storyboards'}
+            </button>
+            <button
+              onClick={() => void handleExportPdf()}
+              disabled={isExporting}
+              className="w-full text-left px-3 py-2 text-admin-sm text-white/80 hover:bg-white/[0.06] rounded-lg transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Generating...' : 'Export as PDF (Table)'}
+            </button>
+            <button
+              onClick={() => void handleExportStoryboardPdf()}
+              disabled={isExporting}
+              className="w-full text-left px-3 py-2 text-admin-sm text-white/80 hover:bg-white/[0.06] rounded-lg transition-colors disabled:opacity-50"
+            >
+              {isExporting ? 'Generating...' : 'Export as PDF (Storyboards)'}
+            </button>
+          </div>
+        </>,
+        document.body,
+      )}
 
       {/* Toolbar */}
       <div className="relative h-[3rem] flex items-center px-4 border-b border-border bg-admin-bg-inset flex-shrink-0 overflow-hidden">
