@@ -40,6 +40,7 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
   const channelRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
   const lockTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lastKnownUpdatedAtRef = useRef<string | null>(null);
 
@@ -66,14 +67,20 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
 
       channel.on('presence', { event: 'sync' }, () => {
         if (!mounted) return;
-        const state = channel.presenceState<{ email: string; joined_at: string }>();
-        const users: PresenceUser[] = [];
-        for (const [key, presences] of Object.entries(state)) {
-          if (key === user.id) continue;
-          const p = presences[0];
-          if (p) users.push({ userId: key, email: p.email, joinedAt: p.joined_at });
-        }
-        setOtherUsers(users);
+        // Debounce: brief disconnects (Supabase reconnects) cause rapid sync
+        // events that make the indicator flicker. Settle for 1.5s before updating.
+        if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = setTimeout(() => {
+          if (!mounted) return;
+          const state = channel.presenceState<{ email: string; joined_at: string }>();
+          const users: PresenceUser[] = [];
+          for (const [key, presences] of Object.entries(state)) {
+            if (key === user.id) continue;
+            const p = presences[0];
+            if (p) users.push({ userId: key, email: p.email, joinedAt: p.joined_at });
+          }
+          setOtherUsers(users);
+        }, 1500);
       });
 
       // When a user leaves, clear all their locks
@@ -157,6 +164,7 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
 
     return () => {
       mounted = false;
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
       for (const timer of lockTimersRef.current.values()) clearTimeout(timer);
       lockTimersRef.current.clear();
       if (channelRef.current) {

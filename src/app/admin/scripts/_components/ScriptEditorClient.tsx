@@ -1189,24 +1189,27 @@ export function ScriptEditorClient({
         </div>
         {/* Right zone — panel toggles */}
         <div className="flex items-center gap-0">
-          {/* Presence indicators */}
+          {/* Presence indicators — other users currently viewing this script */}
           {presence.otherUsers.length > 0 && (
             <>
-              <div className="flex items-center -space-x-1.5 mr-2">
-                {presence.otherUsers.slice(0, 3).map((u) => (
-                  <div
-                    key={u.userId}
-                    className="w-6 h-6 rounded-full bg-admin-info/20 border border-admin-info/40 flex items-center justify-center text-[10px] font-medium text-admin-info uppercase"
-                    title={u.email}
-                  >
-                    {u.email[0]}
-                  </div>
-                ))}
-                {presence.otherUsers.length > 3 && (
-                  <div className="w-6 h-6 rounded-full bg-admin-bg-hover border border-admin-border flex items-center justify-center text-[10px] text-admin-text-muted">
-                    +{presence.otherUsers.length - 3}
-                  </div>
-                )}
+              <div className="flex items-center gap-1.5 mr-2" title={presence.otherUsers.map(u => u.email).join(', ')}>
+                <User size={11} className="text-admin-text-faint flex-shrink-0" />
+                <div className="flex items-center -space-x-1">
+                  {presence.otherUsers.slice(0, 3).map((u) => (
+                    <div
+                      key={u.userId}
+                      className="w-5 h-5 rounded-full bg-admin-bg-active border border-admin-border flex items-center justify-center text-[9px] font-medium text-admin-text-secondary uppercase"
+                      title={u.email}
+                    >
+                      {u.email?.[0] ?? '?'}
+                    </div>
+                  ))}
+                  {presence.otherUsers.length > 3 && (
+                    <div className="w-5 h-5 rounded-full bg-admin-bg-active border border-admin-border flex items-center justify-center text-[9px] text-admin-text-muted">
+                      +{presence.otherUsers.length - 3}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="w-px h-5 bg-admin-border mr-1" />
             </>
