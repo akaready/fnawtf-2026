@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Loader2 } from 'lucide-react';
 import type { CropConfig, StoryboardSlotFrame } from '@/types/scripts';
 import { getLayout, DEFAULT_CROP_CONFIG } from './storyboardLayouts';
 
@@ -143,6 +143,7 @@ function FrameImage({
   cropOverride?: CropConfig;
   onReframe?: (frameId: string, crop: CropConfig) => void;
 }) {
+  const [imgLoaded, setImgLoaded] = React.useState(false);
   const cropRef = React.useRef<CropConfig>(frame.crop_config ?? DEFAULT_CROP_CONFIG);
   const [crop, setCrop] = React.useState<CropConfig>(frame.crop_config ?? DEFAULT_CROP_CONFIG);
   const dragRef = React.useRef<{ mx: number; my: number; cx: number; cy: number } | null>(null);
@@ -193,6 +194,12 @@ function FrameImage({
       onMouseDown={handleMouseDown}
       style={{ cursor: interactive ? 'grab' : 'inherit' }}
     >
+      {/* Loading spinner */}
+      {!imgLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 size={16} className="animate-spin text-admin-text-ghost" />
+        </div>
+      )}
       {/* Image is centered and covers the slot. objectPosition drives panning so
           the full original image is always available — no blank edges on pan. */}
       <img
@@ -206,10 +213,13 @@ function FrameImage({
           objectPosition: `${crop.x * 100}% ${crop.y * 100}%`,
           transform: `scale(${crop.scale})`,
           transformOrigin: `${crop.x * 100}% ${crop.y * 100}%`,
+          opacity: imgLoaded ? 1 : 0,
+          transition: 'opacity 0.2s ease',
         }}
         alt=""
         draggable={false}
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        onLoad={() => setImgLoaded(true)}
+        onError={(e) => { setImgLoaded(true); (e.target as HTMLImageElement).style.display = 'none'; }}
       />
     </div>
   );
