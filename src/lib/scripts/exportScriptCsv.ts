@@ -14,6 +14,12 @@ function toPlainText(md: string): string {
   return stripMarkdown(md).replace(/\s+/g, ' ').trim();
 }
 
+function toBeatLetter(i: number): string {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (i < 26) return letters[i];
+  return letters[Math.floor(i / 26) - 1] + letters[i % 26];
+}
+
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -55,15 +61,15 @@ export async function exportScriptAsCsv(
 
   // ── CSV ─────────────────────────────────────────────────────────────────
   const csvEscape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const headers = ['Scene #', 'Scene', 'Beat #', ...visibleCols.map(c => c.label)];
+  const headers = ['Scene #', 'Scene', 'Beat', ...visibleCols.map(c => c.label)];
   const rows: string[][] = [];
 
   for (const scene of computedScenes) {
     const sceneLabel = `${scene.int_ext} ${scene.location_name} — ${scene.time_of_day}`;
     for (let bi = 0; bi < scene.beats.length; bi++) {
       const beat = scene.beats[bi];
-      const beatNum = bi + 1;
-      const row: string[] = [String(scene.sceneNumber), sceneLabel, String(beatNum)];
+      const beatLetter = toBeatLetter(bi);
+      const row: string[] = [String(scene.sceneNumber), sceneLabel, beatLetter];
 
       for (const col of visibleCols) {
         switch (col.key) {
@@ -78,7 +84,7 @@ export async function exportScriptAsCsv(
           case 'storyboard': {
             const frames = framesByBeat[beat.id] ?? [];
             row.push(frames.length
-              ? frames.map(f => frameName(scene.sceneNumber, beatNum, f.slot ?? 0)).join(', ')
+              ? frames.map(f => frameName(scene.sceneNumber, bi + 1, f.slot ?? 0)).join(', ')
               : '',
             );
             break;
