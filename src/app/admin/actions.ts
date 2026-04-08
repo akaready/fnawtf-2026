@@ -3241,6 +3241,8 @@ async function duplicateScriptCore(
       prompt_used: f.prompt_used,
       is_active: true,
       reference_urls_used: f.reference_urls_used ?? [],
+      slot: f.slot ?? null,
+      crop_config: f.crop_config ?? null,
     } as never);
   }
 

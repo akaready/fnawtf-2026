@@ -277,6 +277,7 @@ export function ScriptStoryEditor({
             alt={`Scene ${current.sceneNumber} — Beat ${current.beatLetter}`}
             className="w-full h-full object-contain select-none"
             draggable={false}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2">

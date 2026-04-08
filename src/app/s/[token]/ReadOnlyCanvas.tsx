@@ -297,7 +297,7 @@ function ReadOnlyStoryboardCell({ frames, storyboardLayout }: { frames: Storyboa
   return (
     <div className="min-w-0 overflow-hidden border-b border-b-admin-border flex items-center">
       <div className="p-1 w-full">
-        <img src={frame.image_url} alt="" className="w-full aspect-video object-cover rounded" />
+        <img src={frame.image_url} alt="" className="w-full aspect-video object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
       </div>
     </div>
   );

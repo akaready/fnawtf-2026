@@ -209,6 +209,7 @@ function FrameImage({
         }}
         alt=""
         draggable={false}
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
     </div>
   );
