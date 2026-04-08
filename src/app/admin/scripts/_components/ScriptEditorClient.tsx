@@ -1065,7 +1065,37 @@ export function ScriptEditorClient({
               </div>
             </div>
         }
-        rightContent={<SaveDot status={autoSave.status} />}
+        rightContent={
+          <div className="flex items-center gap-2">
+            {presence.otherUsers.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                {presence.otherUsers.slice(0, 4).map((u) => {
+                  const lastActive = presence.lastActiveAt.get(u.userId);
+                  const ageMs = lastActive ? Date.now() - lastActive : 0;
+                  const opacity = ageMs < 2 * 60 * 1000 ? 'opacity-100' : 'opacity-35';
+                  return (
+                    <div key={u.userId} className="relative group/avatar">
+                      <div
+                        className={`w-6 h-6 rounded-full bg-admin-bg-active border border-admin-border flex items-center justify-center text-[10px] font-medium text-admin-text-secondary uppercase transition-opacity duration-700 ${opacity}`}
+                      >
+                        {u.email?.[0] ?? '?'}
+                      </div>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-2 py-1 bg-admin-bg-overlay border border-admin-border rounded text-[10px] text-admin-text-secondary whitespace-nowrap opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
+                        {u.email}
+                      </div>
+                    </div>
+                  );
+                })}
+                {presence.otherUsers.length > 4 && (
+                  <div className="w-6 h-6 rounded-full bg-admin-bg-active border border-admin-border flex items-center justify-center text-[10px] text-admin-text-muted">
+                    +{presence.otherUsers.length - 4}
+                  </div>
+                )}
+              </div>
+            )}
+            <SaveDot status={autoSave.status} />
+          </div>
+        }
         actions={
           <>
             <button onClick={() => setShowShare(true)} className="btn-secondary px-2.5" title="Share">
@@ -1189,31 +1219,6 @@ export function ScriptEditorClient({
         </div>
         {/* Right zone — panel toggles */}
         <div className="flex items-center gap-0">
-          {/* Presence indicators — other users currently viewing this script */}
-          {presence.otherUsers.length > 0 && (
-            <>
-              <div className="flex items-center gap-1.5 mr-2" title={presence.otherUsers.map(u => u.email).join(', ')}>
-                <User size={11} className="text-admin-text-faint flex-shrink-0" />
-                <div className="flex items-center -space-x-1">
-                  {presence.otherUsers.slice(0, 3).map((u) => (
-                    <div
-                      key={u.userId}
-                      className="w-5 h-5 rounded-full bg-admin-bg-active border border-admin-border flex items-center justify-center text-[9px] font-medium text-admin-text-secondary uppercase"
-                      title={u.email}
-                    >
-                      {u.email?.[0] ?? '?'}
-                    </div>
-                  ))}
-                  {presence.otherUsers.length > 3 && (
-                    <div className="w-5 h-5 rounded-full bg-admin-bg-active border border-admin-border flex items-center justify-center text-[9px] text-admin-text-muted">
-                      +{presence.otherUsers.length - 3}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="w-px h-5 bg-admin-border mr-1" />
-            </>
-          )}
           <div ref={toolbarSlotRef} className="w-8 h-8 flex-shrink-0" />
           <ToolbarButton icon={User} label="" onClick={() => setShowCharacters(true)} />
           <ToolbarButton icon={MapPin} label="" onClick={() => setShowLocations(true)} />

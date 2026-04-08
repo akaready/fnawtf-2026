@@ -27,6 +27,7 @@ export function sceneLockKey(sceneId: string) {
 }
 
 const LOCK_EXPIRY_MS = 30_000;
+const INACTIVITY_REMOVE_MS = 10 * 60 * 1000; // 10 min: remove from list entirely
 
 interface UseScriptPresenceOptions {
   scriptId: string;
@@ -37,10 +38,14 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
   const [otherUsers, setOtherUsers] = useState<PresenceUser[]>([]);
   const [conflictDetected, setConflictDetected] = useState(false);
   const [lockedCells, setLockedCells] = useState<LockedCellsMap>(new Map());
+  // userId → ms timestamp of last observed activity (any broadcast)
+  const [lastActiveAt, setLastActiveAt] = useState<Map<string, number>>(new Map());
+
   const channelRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
   const lockTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inactivityTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const lastKnownUpdatedAtRef = useRef<string | null>(null);
 
@@ -56,6 +61,22 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
     const supabase = createClient();
     let mounted = true;
 
+    // Record activity for a user: updates lastActiveAt and resets the
+    // inactivity removal timer for that user.
+    function recordActivity(userId: string) {
+      if (!mounted) return;
+      setLastActiveAt(prev => new Map(prev).set(userId, Date.now()));
+
+      const existing = inactivityTimersRef.current.get(userId);
+      if (existing) clearTimeout(existing);
+      inactivityTimersRef.current.set(userId, setTimeout(() => {
+        if (!mounted) return;
+        setOtherUsers(prev => prev.filter(u => u.userId !== userId));
+        setLastActiveAt(prev => { const next = new Map(prev); next.delete(userId); return next; });
+        inactivityTimersRef.current.delete(userId);
+      }, INACTIVITY_REMOVE_MS));
+    }
+
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !mounted) return;
@@ -67,8 +88,8 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
 
       channel.on('presence', { event: 'sync' }, () => {
         if (!mounted) return;
-        // Debounce: brief disconnects (Supabase reconnects) cause rapid sync
-        // events that make the indicator flicker. Settle for 1.5s before updating.
+        // Debounce: brief Supabase reconnects fire rapid sync events.
+        // Settle for 1.5s before updating the list.
         if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
         syncTimerRef.current = setTimeout(() => {
           if (!mounted) return;
@@ -77,7 +98,11 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
           for (const [key, presences] of Object.entries(state)) {
             if (key === user.id) continue;
             const p = presences[0];
-            if (p) users.push({ userId: key, email: p.email, joinedAt: p.joined_at });
+            if (p) {
+              users.push({ userId: key, email: p.email, joinedAt: p.joined_at });
+              // Treat join as activity so they start at full brightness
+              recordActivity(key);
+            }
           }
           setOtherUsers(users);
         }, 1500);
@@ -87,7 +112,6 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
       channel.on('presence', { event: 'leave' }, ({ leftPresences }) => {
         if (!mounted) return;
         const leftIds = new Set(leftPresences.map((p: { presence_ref: string }) => {
-          // presence key is the userId
           return Object.entries(channel.presenceState()).find(
             ([, vals]) => vals.some((v: { presence_ref: string }) => v.presence_ref === p.presence_ref)
           )?.[0];
@@ -107,22 +131,23 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
         if (!mounted) return;
         const senderId = (payload.payload as { userId?: string })?.userId;
         if (senderId && senderId !== user.id) {
+          recordActivity(senderId);
           setConflictDetected(true);
           onConflict?.();
         }
       });
 
-      // Cell lock/unlock
+      // Cell lock/unlock — also counts as activity
       channel.on('broadcast', { event: 'cell_lock' }, (payload) => {
         if (!mounted) return;
         const p = payload.payload as { userId: string; email: string; key: string };
         if (p.userId === user.id) return;
+        recordActivity(p.userId);
         setLockedCells(prev => {
           const next = new Map(prev);
           next.set(p.key, { userId: p.userId, email: p.email });
           return next;
         });
-        // Auto-expire
         const existing = lockTimersRef.current.get(p.key);
         if (existing) clearTimeout(existing);
         lockTimersRef.current.set(p.key, setTimeout(() => {
@@ -139,6 +164,7 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
         if (!mounted) return;
         const p = payload.payload as { userId: string; key: string };
         if (p.userId === user.id) return;
+        recordActivity(p.userId);
         setLockedCells(prev => {
           const next = new Map(prev);
           next.delete(p.key);
@@ -167,6 +193,8 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
       for (const timer of lockTimersRef.current.values()) clearTimeout(timer);
       lockTimersRef.current.clear();
+      for (const timer of inactivityTimersRef.current.values()) clearTimeout(timer);
+      inactivityTimersRef.current.clear();
       if (channelRef.current) {
         void channelRef.current.unsubscribe();
         channelRef.current = null;
@@ -213,6 +241,7 @@ export function useScriptPresence({ scriptId, onConflict }: UseScriptPresenceOpt
     broadcastLock,
     broadcastUnlock,
     lockedCells,
+    lastActiveAt,
     updateLastKnownTimestamp,
   };
 }
