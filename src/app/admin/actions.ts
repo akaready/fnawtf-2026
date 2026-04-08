@@ -3220,7 +3220,8 @@ async function duplicateScriptCore(
   // 6–8: Characters, tags, locations are shared via script_group_id — no cloning needed.
   // Scene location_id references remain valid (they point to shared locations).
 
-  // 9. Clone storyboard frames (active only) with mapped beat/scene IDs
+  // 9. Clone storyboard frames (active slotted only) with mapped beat/scene IDs
+  //    Verify each source image is alive before copying — skip dead frames
   const { data: oldFrames } = await supabase
     .from('script_storyboard_frames')
     .select('*')
@@ -3231,6 +3232,11 @@ async function duplicateScriptCore(
     const newBeatId = f.beat_id ? beatIdMap.get(f.beat_id as string) : null;
     const newSceneId = f.scene_id ? sceneIdMap.get(f.scene_id as string) : null;
     if (!newBeatId && !newSceneId) continue;
+    // Verify source image exists before copying
+    try {
+      const verifyRes = await fetch(f.image_url as string, { method: 'HEAD' });
+      if (!verifyRes.ok) continue; // skip dead frames
+    } catch { continue; }
     await supabase.from('script_storyboard_frames').insert({
       script_id: newScriptId,
       beat_id: newBeatId ?? null,
@@ -3788,6 +3794,9 @@ export async function uploadStoryboardFrame(
   if (uploadErr) throw new Error(uploadErr.message);
   const { data: urlData } = supabase.storage.from('script-storyboards').getPublicUrl(storagePath);
   const image_url = urlData.publicUrl;
+  // Verify upload is retrievable before creating DB record
+  const verifyRes = await fetch(image_url, { method: 'HEAD' });
+  if (!verifyRes.ok) throw new Error('Upload verification failed — file not retrievable');
   const { data: frame, error: insertErr } = await supabase
     .from('script_storyboard_frames')
     .insert({

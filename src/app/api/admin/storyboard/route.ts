@@ -127,6 +127,13 @@ export async function POST(request: Request) {
       const { data: urlData } = serviceClient.storage.from('script-storyboards').getPublicUrl(storagePath);
       const image_url = urlData.publicUrl;
 
+      // Verify the upload is actually retrievable
+      const verifyRes = await fetch(image_url, { method: 'HEAD' });
+      if (!verifyRes.ok) {
+        console.error('Storage upload verification failed:', image_url, verifyRes.status);
+        return NextResponse.json({ error: 'Image upload could not be verified. Try again.' }, { status: 502 });
+      }
+
       // Deactivate existing active frame(s)
       if (beatId) {
         await serviceClient.from('script_storyboard_frames').update({ is_active: false } as never).eq('beat_id', beatId).eq('is_active', true);
@@ -353,6 +360,13 @@ export async function POST(request: Request) {
 
     const { data: urlData } = serviceClient.storage.from('script-storyboards').getPublicUrl(storagePath);
     const image_url = urlData.publicUrl;
+
+    // Verify the upload is actually retrievable before creating DB record
+    const verifyRes = await fetch(image_url, { method: 'HEAD' });
+    if (!verifyRes.ok) {
+      console.error('Storage upload verification failed:', image_url, verifyRes.status);
+      return NextResponse.json({ error: 'Image upload could not be verified. Try again.' }, { status: 502 });
+    }
 
     // Deactivate existing active frame(s) — preserve history instead of deleting
     if (beatId) {
