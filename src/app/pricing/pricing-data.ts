@@ -378,12 +378,12 @@ export const fundraisingPackage: FundraisingPackage = {
   minimumDown: 2000,
   minimumDownPercent: 20,
   paymentTermDays: 180,
-  multiplierOnSuccess: 2,
+  multiplierOnSuccess: 2.5,
   details: [
     'Pitch video packages starting at $10,000',
     'Minimum 20% down ($2,000)',
     'Rest owed in 180 days, or after you raise — whichever comes first',
-    'If you raise within 6 months, unpaid balance owed at 2x (risk coverage)',
+    'If you raise within 6 months, unpaid balance owed at up to 2.5x (risk coverage)',
   ],
 };
 
@@ -421,4 +421,5 @@ export const fundraisingAddOns: AddOn[] = [
   { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-rush', name: '72-hour rush fee', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-additional-post', name: 'Additional week of post', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
+  { id: 'fundraising-travel', name: 'Travel to you', price: 2500, priceDisplay: '$2,500', tier: 'fundraising', discountExempt: true, dueAtSigning: true },
 ];

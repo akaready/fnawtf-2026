@@ -10,7 +10,7 @@ import { QuoteModal } from './QuoteModal';
 import type { QuoteData } from '@/lib/pdf/types';
 import type { LeadData } from '@/lib/pricing/leadCookie';
 import type { ProposalQuoteRow } from '@/types/proposal';
-import { calcTotalFromQuote, calcTierTotal, fundraisingTiers, type QuoteColumnData } from '@/lib/pricing/calc';
+import { calcTotalFromQuote, calcTierTotal, getFundraisingTiers, type QuoteColumnData } from '@/lib/pricing/calc';
 export type { QuoteColumnData } from '@/lib/pricing/calc';
 export { calcTotalFromQuote } from '@/lib/pricing/calc';
 
@@ -83,11 +83,13 @@ function balanceLabel(opts: { crowdfunding: boolean; deferred: boolean; fundrais
 function FundraisingPaymentSlider({
   tierIndex,
   onTierChange,
+  tiers,
 }: {
   tierIndex: number;
   onTierChange: (i: number) => void;
+  tiers: ReturnType<typeof getFundraisingTiers>;
 }) {
-  const currentTier = fundraisingTiers[tierIndex];
+  const currentTier = tiers[tierIndex];
   const isActive = tierIndex > 0;
   return (
     <>
@@ -866,12 +868,15 @@ export function CalculatorSummary({
   const allAddOnTotal = buildAddOnTotal + launchAddOnTotal + fundraisingAddOnTotal;
   const totalCastCrew = (launchResult?.castCrewTotal ?? 0);
   const totalPriority = (buildResult?.priorityTotal ?? 0) + (launchResult?.priorityTotal ?? 0) + (fundraisingResult?.priorityTotal ?? 0);
+  const totalDueAtSigning = (buildResult?.dueAtSigningTotal ?? 0) + (launchResult?.dueAtSigningTotal ?? 0) + (fundraisingResult?.dueAtSigningTotal ?? 0);
+  const hasFundAddOns = (fundraisingResult?.total ?? 0) > 0;
+  const effectiveFundTiers = getFundraisingTiers(hasFundAddOns);
 
   const baseTotal = fundraisingEnabled ? fundraisingBase : (buildBase + launchBase);
   const subtotal = baseTotal + allAddOnTotal;
   const hasAnyAddOns = allAddOnTotal > 0;
-  // Priority Scheduling is exempt from overhead
-  const overheadBase = subtotal - totalPriority;
+  // Priority Scheduling + due-at-signing items are exempt from overhead
+  const overheadBase = subtotal - totalPriority - totalDueAtSigning;
   const overheadAmount = Math.round(overheadBase * 0.1);
   const overhead = (hasAnyAddOns && overheadBase > baseTotal) ? overheadAmount : 0;
 
@@ -907,14 +912,16 @@ export function CalculatorSummary({
   const downPercent = fundraisingEnabled
     ? (fundraisingTierIndex === 4 ? 0.2 : 0.4)
     : (effectiveCrowdfundingEnabled && deferPayment) ? 0.6 : 0.4;
-  const rawDown = Math.round(total * downPercent);
+  // Due-at-signing items bypass the percentage split — added entirely to the down payment
+  const splittableTotal = total - totalDueAtSigning;
+  const rawDown = Math.round(splittableTotal * downPercent) + totalDueAtSigning;
   const downAmount = hasAnyDiscount ? Math.ceil(rawDown / 50) * 50 : rawDown;
 
   // ── Fundraising balance breakdown ──
-  const fundTier = fundraisingTiers[fundraisingTierIndex];
+  const fundTier = effectiveFundTiers[fundraisingTierIndex];
   const fundPreRaisePct = fundraisingEnabled ? fundTier.preRaise / 100 : 0;
-  const fundDeliveryAmount = fundraisingEnabled ? Math.round(total * Math.max(0, fundPreRaisePct - downPercent)) : 0;
-  const fundPostRaiseBase = fundraisingEnabled ? total - Math.round(total * fundPreRaisePct) : 0;
+  const fundDeliveryAmount = fundraisingEnabled ? Math.round(splittableTotal * Math.max(0, fundPreRaisePct - downPercent)) : 0;
+  const fundPostRaiseBase = fundraisingEnabled ? splittableTotal - Math.round(splittableTotal * fundPreRaisePct) : 0;
   const fundPostRaiseAmount = Math.round(fundPostRaiseBase * (fundTier?.multiplier ?? 1));
 
   // ── Build live column data (matches QuoteColumnData shape) ──
@@ -942,6 +949,7 @@ export function CalculatorSummary({
     downPercent,
     deferPayment,
     fundraisingTierIndex,
+    dueAtSigningTotal: totalDueAtSigning,
     fundDeliveryAmount,
     fundPostRaiseAmount,
   };
@@ -982,6 +990,7 @@ export function CalculatorSummary({
               <FundraisingPaymentSlider
                 tierIndex={fundraisingTierIndex}
                 onTierChange={(i) => { if (onInteraction?.()) return; onFundraisingTierChange(i); }}
+                tiers={effectiveFundTiers}
               />
             </div>
           </div>
@@ -1481,7 +1490,7 @@ export function CalculatorSummary({
             <p className="text-base font-semibold text-foreground">Pay up front, or after you raise.</p>
             <p className="text-sm text-muted-foreground">Choose how much to pay before your raise using the slider above. Unpaid balances after delivery are subject to a multiplier.</p>
             <p className="text-xs text-muted-foreground/70 leading-relaxed">
-              Post-raise multipliers range from 1.25x to 2x depending on how much is deferred. Any amount unpaid at the time of delivery pre-raise is billed at the rates above post-raise to help cover our risk. Travel outside Silicon Valley billed at 2x (flights, hotel, rental car, per diem). Travel fees due on final delivery regardless of fee structure. A fee of up to 50% the balance due after delivery (not including any risk-adjusted rates) will be due after 1 year if no funds have been raised yet.
+              Post-raise multipliers range from 1.25x to 2.5x depending on how much is deferred and scope of work. Any amount unpaid at the time of delivery pre-raise is billed at the rates above post-raise to help cover our risk. A fee of up to 50% the balance due after delivery (not including any risk-adjusted rates) will be due after 1 year if no funds have been raised yet.
             </p>
           </div>
         )}
@@ -1517,7 +1526,8 @@ export function CalculatorSummary({
               friendlyDiscount, friendlyDiscountPercent,
               showFriendlyDiscount,
               total, downPercent, downAmount,
-              fundraisingTierIndex, fundDeliveryAmount, fundPostRaiseAmount,
+              fundraisingTierIndex, hasFundAddOns, totalDueAtSigning,
+              fundDeliveryAmount, fundPostRaiseAmount,
             })}
             prefillData={prefillData}
             onClose={() => setShowModal(false)}
@@ -1556,6 +1566,8 @@ function buildQuoteData(p: {
   downPercent: number;
   downAmount: number;
   fundraisingTierIndex: number;
+  hasFundAddOns: boolean;
+  totalDueAtSigning: number;
   fundDeliveryAmount: number;
   fundPostRaiseAmount: number;
 }): QuoteData {
@@ -1601,8 +1613,9 @@ function buildQuoteData(p: {
       : null,
     deferPayment: p.deferPayment,
     fundraisingTierIndex: p.fundraisingTierIndex,
-    fundraisingMultiplier: fundraisingTiers[p.fundraisingTierIndex]?.multiplier ?? 1,
+    fundraisingMultiplier: getFundraisingTiers(p.hasFundAddOns)[p.fundraisingTierIndex]?.multiplier ?? 1,
     fundraisingDeliveryAmount: p.fundDeliveryAmount,
     fundraisingPostRaiseAmount: p.fundPostRaiseAmount,
+    dueAtSigningTotal: p.totalDueAtSigning ?? 0,
   };
 }

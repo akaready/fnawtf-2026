@@ -37,6 +37,7 @@ export interface AddOn {
   included?: boolean;
   fundraisingFreebie?: boolean;
   discountExempt?: boolean;
+  dueAtSigning?: boolean;
   perDay?: boolean;
   quantity?: {
     min: number;

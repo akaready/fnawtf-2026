@@ -617,7 +617,6 @@ export function QuoteDocument({ data, contact }: QuoteDocumentProps) {
               <Text style={S.programNoteText}>
                 Minimum 20% due at signing, the remainder due on delivery or after you raise.
                 Any amount unpaid at the time of delivery pre-raise is billed at the rates above post-raise to help cover our risk.
-                Travel outside Silicon Valley billed at 2× (flights, hotel, rental car, per diem).
                 A fee of up to 50% the balance due after delivery (not including any risk-adjusted rates) will be due after 1 year if no funds have been raised yet.
               </Text>
             </View>

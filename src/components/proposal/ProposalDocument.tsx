@@ -454,13 +454,10 @@ export function ProposalDocument({ data }: ProposalDocumentProps) {
                         <Text style={S.paymentAmount}>{fmt(fnaQuote.down_amount)}</Text>
                       </View>
                       {fnaQuote.total_amount != null && fnaQuote.fundraising_enabled ? (() => {
-                        const ftiers = [
-                          { preRaise: 100, multiplier: 1 },
-                          { preRaise: 80, multiplier: 1.25 },
-                          { preRaise: 60, multiplier: 1.5 },
-                          { preRaise: 40, multiplier: 1.75 },
-                          { preRaise: 20, multiplier: 2 },
-                        ];
+                        const hasFundAddOns = Object.keys(fnaQuote.selected_addons ?? {}).some(k => k.startsWith('fundraising-'));
+                        const ftiers = hasFundAddOns
+                          ? [{ preRaise: 100, multiplier: 1 }, { preRaise: 80, multiplier: 1.25 }, { preRaise: 60, multiplier: 1.5 }, { preRaise: 40, multiplier: 1.75 }, { preRaise: 20, multiplier: 2 }]
+                          : [{ preRaise: 100, multiplier: 1 }, { preRaise: 80, multiplier: 1.25 }, { preRaise: 60, multiplier: 1.5 }, { preRaise: 40, multiplier: 2 }, { preRaise: 20, multiplier: 2.5 }];
                         const ft = ftiers[fnaQuote.fundraising_tier ?? 0];
                         const t = fnaQuote.total_amount;
                         const dp = (fnaQuote.fundraising_tier ?? 0) === 4 ? 0.2 : 0.4;

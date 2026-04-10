@@ -28,6 +28,7 @@ export interface QuoteData {
   fundraisingMultiplier: number;
   fundraisingDeliveryAmount: number;
   fundraisingPostRaiseAmount: number;
+  dueAtSigningTotal: number;
 }
 
 export interface ContactInfo {

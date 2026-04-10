@@ -5,13 +5,27 @@ import type { ProposalQuoteRow } from '@/types/proposal';
 
 // ── Fundraising Payment Tiers ─────────────────────────────────────────────
 
-export const fundraisingTiers = [
+// Base-only (no add-ons): higher multipliers to cover risk on small scope
+const fundraisingTiersBase = [
+  { preRaise: 100, multiplier: 1, label: '1x' },
+  { preRaise: 80, multiplier: 1.25, label: '1.25x' },
+  { preRaise: 60, multiplier: 1.5, label: '1.5x' },
+  { preRaise: 40, multiplier: 2, label: '2x' },
+  { preRaise: 20, multiplier: 2.5, label: '2.5x' },
+];
+
+// With add-ons: lower multipliers since larger scope of work
+const fundraisingTiersWithAddOns = [
   { preRaise: 100, multiplier: 1, label: '1x' },
   { preRaise: 80, multiplier: 1.25, label: '1.25x' },
   { preRaise: 60, multiplier: 1.5, label: '1.5x' },
   { preRaise: 40, multiplier: 1.75, label: '1.75x' },
   { preRaise: 20, multiplier: 2, label: '2x' },
 ];
+
+export function getFundraisingTiers(hasAddOns: boolean) {
+  return hasAddOns ? fundraisingTiersWithAddOns : fundraisingTiersBase;
+}
 
 // ── Tier Total Calculation ────────────────────────────────────────────────
 
@@ -27,6 +41,7 @@ export function calcTierTotal(
   let total = 0;
   let castCrewTotal = 0;
   let priorityTotal = 0;
+  let dueAtSigningTotal = 0;
   const items: { name: string; price: number }[] = [];
 
   for (const addOn of addOns) {
@@ -84,6 +99,7 @@ export function calcTierTotal(
       total += linePrice;
       if (addOn.category === 'CAST + CREW' || addOn.discountExempt) castCrewTotal += linePrice;
       if (addOn.category === 'PRIORITY') priorityTotal += linePrice;
+      if (addOn.dueAtSigning) dueAtSigningTotal += linePrice;
 
       let label = addOn.name;
       if (qty > 1) {
@@ -100,7 +116,7 @@ export function calcTierTotal(
     }
   }
 
-  return { total, castCrewTotal, priorityTotal, items };
+  return { total, castCrewTotal, priorityTotal, dueAtSigningTotal, items };
 }
 
 // ── Compute totals from a stored ProposalQuoteRow ────────────────────────
@@ -129,6 +145,7 @@ export interface QuoteColumnData {
   deferPayment: boolean;
   downPercent: number;
   fundraisingTierIndex: number;
+  dueAtSigningTotal: number;
   fundDeliveryAmount: number;
   fundPostRaiseAmount: number;
 }
@@ -164,11 +181,12 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
   const addOnTotal = (buildResult?.total ?? 0) + (launchResult?.total ?? 0) + (fundResult?.total ?? 0);
   const castCrewTotal = launchResult?.castCrewTotal ?? 0;
   const priorityTotal = (buildResult?.priorityTotal ?? 0) + (launchResult?.priorityTotal ?? 0) + (fundResult?.priorityTotal ?? 0);
+  const dueAtSigningTotal = (buildResult?.dueAtSigningTotal ?? 0) + (launchResult?.dueAtSigningTotal ?? 0) + (fundResult?.dueAtSigningTotal ?? 0);
   const baseTotal = isFundraising ? fundBase : (buildBase + launchBase);
   const subtotal = baseTotal + addOnTotal;
   const hasAddOns = addOnTotal > 0;
-  // Priority Scheduling is exempt from overhead — compute on subtotal minus priority fees
-  const overheadBase = subtotal - priorityTotal;
+  // Priority Scheduling + due-at-signing items are exempt from overhead
+  const overheadBase = subtotal - priorityTotal - dueAtSigningTotal;
   const overhead = (hasAddOns && overheadBase > baseTotal) ? Math.round(overheadBase * 0.1) : 0;
   const subtotalWithOverhead = subtotal + overhead;
 
@@ -193,13 +211,16 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
   const downPct = isFundraising
     ? (fundTierIdx === 4 ? 0.2 : 0.4)
     : (quote.crowdfunding_enabled && quote.defer_payment) ? 0.6 : 0.4;
-  const rawDown = Math.round(total * downPct);
+  // Due-at-signing items bypass the percentage split — added entirely to the down payment
+  const splittableTotal = total - dueAtSigningTotal;
+  const rawDown = Math.round(splittableTotal * downPct) + dueAtSigningTotal;
   const downAmount = hasDiscount ? Math.ceil(rawDown / 50) * 50 : rawDown;
 
-  const ftier = fundraisingTiers[fundTierIdx];
+  const hasFundAddOns = (fundResult?.total ?? 0) > 0;
+  const ftier = getFundraisingTiers(hasFundAddOns)[fundTierIdx];
   const fPreRaisePct = isFundraising ? ftier.preRaise / 100 : 0;
-  const fDelivery = isFundraising ? Math.round(total * Math.max(0, fPreRaisePct - downPct)) : 0;
-  const fPostBase = isFundraising ? total - Math.round(total * fPreRaisePct) : 0;
+  const fDelivery = isFundraising ? Math.round(splittableTotal * Math.max(0, fPreRaisePct - downPct)) : 0;
+  const fPostBase = isFundraising ? splittableTotal - Math.round(splittableTotal * fPreRaisePct) : 0;
   const fPostRaise = Math.round(fPostBase * (ftier?.multiplier ?? 1));
 
   return {
@@ -226,6 +247,7 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
     downPercent: downPct,
     deferPayment: quote.defer_payment,
     fundraisingTierIndex: fundTierIdx,
+    dueAtSigningTotal,
     fundDeliveryAmount: fDelivery,
     fundPostRaiseAmount: fPostRaise,
   };

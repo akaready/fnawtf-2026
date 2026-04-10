@@ -214,7 +214,10 @@ function QuoteDisplay({ quote, isFna }: { quote: ProposalQuoteRow; isFna: boolea
         )}
         {quote.down_amount != null && quote.total_amount != null && (
           quote.fundraising_enabled ? (() => {
-            const ftiers = [{ preRaise: 100, multiplier: 1 }, { preRaise: 80, multiplier: 1.25 }, { preRaise: 60, multiplier: 1.5 }, { preRaise: 40, multiplier: 1.75 }, { preRaise: 20, multiplier: 2 }];
+            const hasFundAddOns = Object.keys(quote.selected_addons ?? {}).some(k => k.startsWith('fundraising-'));
+            const ftiers = hasFundAddOns
+              ? [{ preRaise: 100, multiplier: 1 }, { preRaise: 80, multiplier: 1.25 }, { preRaise: 60, multiplier: 1.5 }, { preRaise: 40, multiplier: 1.75 }, { preRaise: 20, multiplier: 2 }]
+              : [{ preRaise: 100, multiplier: 1 }, { preRaise: 80, multiplier: 1.25 }, { preRaise: 60, multiplier: 1.5 }, { preRaise: 40, multiplier: 2 }, { preRaise: 20, multiplier: 2.5 }];
             const ft = ftiers[quote.fundraising_tier ?? 0];
             const t = quote.total_amount!;
             const dp = (quote.fundraising_tier ?? 0) === 4 ? 0.2 : 0.4;
