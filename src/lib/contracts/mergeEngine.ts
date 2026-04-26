@@ -5,6 +5,7 @@ export interface MergeContext {
   contact?: Record<string, unknown> | null;
   proposal?: Record<string, unknown> | null;
   quote?: Record<string, unknown> | null;
+  company?: Record<string, unknown> | null;
   manualFields?: Record<string, string>;
   mergeFieldDefs: MergeFieldDef[];
 }
