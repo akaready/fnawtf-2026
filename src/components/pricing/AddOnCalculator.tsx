@@ -93,6 +93,14 @@ export function CollapsibleSection({
   );
 }
 
+// ── Quantity caption formatter ──────────────────────────────────────────
+// Renders "1 week", "1.5 weeks", "1 day", "2.5 days" etc. for stepper labels.
+function formatQuantityCaption(qty: number, q: NonNullable<AddOn['quantity']>): string {
+  const useSingular = qty === 1 && q.unit.endsWith('s');
+  const unit = useSingular ? q.unit.slice(0, -1) : q.unit;
+  return `${qty} ${unit}`;
+}
+
 // ── Row Components ──────────────────────────────────────────────────────
 
 function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: AddOn; quantity?: number; onQuantityChange?: (id: string, qty: number) => void; isLocked?: boolean }) {
@@ -118,7 +126,7 @@ function IncludedRow({ addOn, quantity, onQuantityChange, isLocked }: { addOn: A
             onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity > addOn.quantity!.min) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity - step) * 100) / 100); } }}
             className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))]'}`}
           >-</button>
-          <span className={`text-sm w-8 text-center ${isLocked ? 'text-muted-foreground/40' : 'text-foreground'}`}>{quantity}</span>
+          <span className={`text-sm w-20 text-center whitespace-nowrap ${isLocked ? 'text-muted-foreground/40' : 'text-foreground'}`}>{formatQuantityCaption(quantity, addOn.quantity!)}</span>
           <button
             onClick={(e) => { e.stopPropagation(); if (!isLocked && quantity < addOn.quantity!.max) { const step = addOn.quantity!.step ?? 1; onQuantityChange(addOn.id, Math.round((quantity + step) * 100) / 100); } }}
             className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${isLocked ? 'border-white/5 text-white/10' : 'border-border text-muted-foreground hover:text-foreground hover:border-[rgb(var(--qa))]'}`}
@@ -1105,7 +1113,7 @@ export function AddOnCalculator() {
       if (!isNaN(count)) {
         interactionCount.current = count;
         // If they left while the gate was showing, show it again immediately
-        if (count >= 5) {
+        if (count >= 10) {
           setShowGate(true);
         }
       }
@@ -1125,14 +1133,14 @@ export function AddOnCalculator() {
   }, []);
 
   const handleGateDismiss = useCallback(() => {
-    persistCount(4); // next interaction immediately re-triggers gate
+    persistCount(9); // next interaction immediately re-triggers gate
     setShowGate(false);
   }, []);
 
   // Returns true if the gate was triggered (caller should bail out)
   const checkGate = useCallback((): boolean => {
     persistCount(interactionCount.current + 1);
-    if (interactionCount.current >= 5 && !gateCleared) {
+    if (interactionCount.current >= 10 && !gateCleared) {
       setShowGate(true);
       return true;
     }
@@ -1388,7 +1396,7 @@ export function AddOnCalculator() {
 
   return (
     <section id="calculator" className="relative py-20 px-6 bg-background scroll-mt-24">
-      {/* Lead capture gate — blurs content after 5 interactions */}
+      {/* Lead capture gate — blurs content after 10 interactions */}
       {showGate && <LeadCaptureModal onComplete={handleGateComplete} onDismiss={handleGateDismiss} />}
       <div className={`max-w-7xl mx-auto${showGate ? ' pointer-events-none select-none' : ''}`}>
         <div>

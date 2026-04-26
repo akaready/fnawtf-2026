@@ -67,11 +67,12 @@ export const pricingTiers: PricingTier[] = [
 export const buildAddOns: AddOn[] = [
   {
     id: 'build-branding',
-    name: '32 hours of branding, voice, and narrative prep',
+    name: 'Branding, voice, and narrative prep',
     price: 0,
     priceDisplay: 'Included',
     tier: 'build',
     included: true,
+    quantity: { min: 1, max: 4, default: 1, step: 0.5, unit: 'weeks' },
   },
   {
     id: 'build-scripting',
@@ -119,7 +120,7 @@ export const launchAddOns: AddOn[] = [
     priceDisplay: '$3,000/day',
     tier: 'launch',
     included: true,
-    quantity: { min: 1, max: 5, default: 1, unit: 'days' },
+    quantity: { min: 1, max: 5, default: 1, unit: 'days', step: 0.5 },
   },
   {
     id: 'launch-post-production',
@@ -129,6 +130,7 @@ export const launchAddOns: AddOn[] = [
     priceDisplay: 'Included',
     tier: 'launch',
     included: true,
+    quantity: { min: 1, max: 4, default: 1, step: 0.5, unit: 'weeks' },
   },
   {
     id: 'launch-stills-social',

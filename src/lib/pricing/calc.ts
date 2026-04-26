@@ -174,8 +174,10 @@ export function calcTotalFromQuote(quote: ProposalQuoteRow, addOns: AddOn[]): Qu
   const launchResult = launchActive ? calcTierTotal(launchAddOnsArr, sel, sliders, totalDays, photoCount, tiers, locDays) : null;
   const fundResult = isFundraising ? calcTierTotal(fundAddOnsArr, sel, sliders, 1, photoCount, tiers) : null;
 
-  const buildBase = buildActive ? 5000 : 0;
-  const launchBase = launchActive ? 5000 + (totalDays * 5000) : 0;
+  const buildPrepMultiplier = sel.get('build-branding') ?? 1;
+  const launchPostMultiplier = sel.get('launch-post-production') ?? 1;
+  const buildBase = buildActive ? 5000 * buildPrepMultiplier : 0;
+  const launchBase = launchActive ? (5000 * launchPostMultiplier) + (totalDays * 5000) : 0;
   const fundBase = isFundraising ? 10000 : 0;
 
   const addOnTotal = (buildResult?.total ?? 0) + (launchResult?.total ?? 0) + (fundResult?.total ?? 0);

@@ -858,8 +858,10 @@ export function CalculatorSummary({
   const launchResult = launchActive ? calcTierTotal(launchAddOnsFiltered, selectedAddOns, sliderValues, totalDays, photoCount, tierSelections, locationDays) : null;
   const fundraisingResult = fundraisingEnabled ? calcTierTotal(fundraisingAddOnsList, selectedAddOns, sliderValues, 1, photoCount, tierSelections) : null;
 
-  const buildBase = buildActive ? 5000 : 0;
-  const launchBase = launchActive ? 5000 + (totalDays * 5000) : 0;
+  const buildPrepMultiplier = selectedAddOns.get('build-branding') ?? 1;
+  const launchPostMultiplier = selectedAddOns.get('launch-post-production') ?? 1;
+  const buildBase = buildActive ? 5000 * buildPrepMultiplier : 0;
+  const launchBase = launchActive ? (5000 * launchPostMultiplier) + (totalDays * 5000) : 0;
   const fundraisingBase = fundraisingEnabled ? 10000 : 0;
 
   const buildAddOnTotal = buildResult?.total ?? 0;
