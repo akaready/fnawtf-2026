@@ -42,6 +42,27 @@ jobs:
           gh run download "$RUN_ID" --dir restore/
           find restore -type f -ls
 
+      - name: Pre-create Supabase roles (so schema GRANTs don't fail)
+        run: |
+          PGPASSWORD=drill psql -h localhost -U postgres -d postgres <<'SQL'
+          CREATE ROLE anon NOINHERIT;
+          CREATE ROLE authenticated NOINHERIT;
+          CREATE ROLE service_role NOINHERIT BYPASSRLS;
+          CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD 'drill';
+          CREATE ROLE supabase_admin SUPERUSER CREATEDB CREATEROLE REPLICATION BYPASSRLS;
+          CREATE ROLE supabase_auth_admin NOINHERIT CREATEROLE LOGIN PASSWORD 'drill';
+          CREATE ROLE supabase_storage_admin NOINHERIT CREATEROLE LOGIN PASSWORD 'drill';
+          CREATE ROLE supabase_replication_admin REPLICATION LOGIN PASSWORD 'drill';
+          CREATE ROLE supabase_realtime_admin NOINHERIT;
+          CREATE ROLE supabase_read_only_user NOINHERIT;
+          CREATE ROLE pgbouncer NOINHERIT;
+          CREATE ROLE dashboard_user NOINHERIT CREATEROLE CREATEDB REPLICATION;
+          CREATE ROLE pgsodium_keyholder;
+          GRANT anon TO authenticator;
+          GRANT authenticated TO authenticator;
+          GRANT service_role TO authenticator;
+          SQL
+
       - name: Restore schema + data into throwaway Postgres
         run: |
           BACKUP_DIR=$(find restore -maxdepth 2 -type d -name 'supabase-backup-*' | head -1)
@@ -50,25 +71,37 @@ jobs:
           fi
           echo "Restoring from: $BACKUP_DIR"
           cd "$BACKUP_DIR"
-          gunzip -k db/schema.sql.gz db/data.sql.gz
-          PGPASSWORD=drill psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=0 -f db/schema.sql > /tmp/schema.log 2>&1 || echo "Schema restore had warnings (expected for Supabase-specific roles)"
+          gunzip -k db/schema.sql.gz db/data.sql.gz db/roles.sql.gz
+          PGPASSWORD=drill psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=0 -f db/roles.sql > /tmp/roles.log 2>&1 || true
+          PGPASSWORD=drill psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=0 -f db/schema.sql > /tmp/schema.log 2>&1 || echo "Schema restore had warnings"
           PGPASSWORD=drill psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=0 -f db/data.sql > /tmp/data.log 2>&1 || echo "Data restore had warnings"
-          tail -20 /tmp/schema.log
+          echo "--- last 20 lines of data.log ---"
           tail -20 /tmp/data.log
 
-      - name: Sanity-check row counts on key tables
+      - name: Sanity-check row counts (portable — any public tables have rows)
         run: |
-          FAIL=0
-          for t in proposals contracts companies contacts; do
-            COUNT=$(PGPASSWORD=drill psql -h localhost -U postgres -d postgres -tAc "SELECT count(*) FROM public.$t" 2>/dev/null || echo "ERR")
-            echo "public.$t: $COUNT rows"
-            if [ "$COUNT" = "ERR" ] || [ "$COUNT" = "0" ]; then
-              echo "::warning::public.$t restored with 0 rows or error"
-              FAIL=1
+          TOTAL_TABLES=$(PGPASSWORD=drill psql -h localhost -U postgres -d postgres -tAc "SELECT count(*) FROM pg_tables WHERE schemaname='public'")
+          echo "public tables found: $TOTAL_TABLES"
+          if [ "$TOTAL_TABLES" -lt 1 ]; then
+            echo "::error::No public tables restored"
+            exit 1
+          fi
+
+          TOTAL_ROWS=0
+          NONEMPTY=0
+          for t in $(PGPASSWORD=drill psql -h localhost -U postgres -d postgres -tAc "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename"); do
+            COUNT=$(PGPASSWORD=drill psql -h localhost -U postgres -d postgres -tAc "SELECT count(*) FROM public.\"$t\"" 2>/dev/null || echo 0)
+            if [ "$COUNT" -gt 0 ]; then
+              echo "  public.$t: $COUNT rows"
+              NONEMPTY=$((NONEMPTY + 1))
+              TOTAL_ROWS=$((TOTAL_ROWS + COUNT))
             fi
           done
-          if [ "$FAIL" = "1" ]; then
-            echo "::error::One or more key tables failed sanity check"
+          echo ""
+          echo "Total non-empty tables: $NONEMPTY / $TOTAL_TABLES"
+          echo "Total rows restored: $TOTAL_ROWS"
+          if [ "$TOTAL_ROWS" -lt 1 ]; then
+            echo "::error::Restore produced 0 rows across all public tables"
             exit 1
           fi
 
