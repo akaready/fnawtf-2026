@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge, Settings, Copy, GitBranch } from 'lucide-react';
-import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals, duplicateProposal, getProposal, createProposalVersion, setVersionPublished } from '@/app/admin/actions';
+import { createProposalDraft, batchDeleteProposals, mergeProposals, duplicateProposal, getProposal, createProposalVersion, deleteProposalGroup } from '@/app/admin/actions';
 import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
@@ -21,6 +21,23 @@ import type { ProposalRow, ProposalStatus } from '@/types/proposal';
 interface ProposalListClientProps {
   proposals: ProposalRow[];
   viewCounts: Record<string, { views: number; lastViewed: string | null }>;
+}
+
+// One row per proposal group. Rep is the latest version; _versions holds all versions.
+type GroupedProposalRow = ProposalRow & { _versions: ProposalRow[] };
+
+function groupProposals(rows: ProposalRow[]): GroupedProposalRow[] {
+  const byGroup = new Map<string, ProposalRow[]>();
+  for (const row of rows) {
+    const key = row.proposal_group_id ?? row.id;
+    const arr = byGroup.get(key);
+    if (arr) arr.push(row); else byGroup.set(key, [row]);
+  }
+  return Array.from(byGroup.values()).map((versions) => {
+    const sorted = [...versions].sort((a, b) => b.version_number - a.version_number);
+    const rep = sorted[0];
+    return { ...rep, _versions: sorted };
+  });
 }
 
 const STATUS_TABS: { value: ProposalStatus | 'all'; label: string }[] = [
@@ -45,7 +62,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
   const [proposals, setProposals] = useState(initialProposals);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProposalStatus | 'all'>('all');
-  const [deleteTarget, setDeleteTarget] = useState<ProposalRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GroupedProposalRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [viewsPanelId, setViewsPanelId] = useState<string | null>(null);
@@ -64,7 +81,25 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     }
   }, [searchParams]);
 
-  const filtered = proposals.filter((p) => {
+  const grouped = useMemo(() => groupProposals(proposals), [proposals]);
+
+  const groupedViewCounts = useMemo(() => {
+    const out: Record<string, { views: number; lastViewed: string | null }> = {};
+    for (const g of grouped) {
+      let views = 0;
+      let lastViewed: string | null = null;
+      for (const v of g._versions) {
+        const vc = viewCounts[v.id];
+        if (!vc) continue;
+        views += vc.views;
+        if (vc.lastViewed && (!lastViewed || vc.lastViewed > lastViewed)) lastViewed = vc.lastViewed;
+      }
+      out[g.id] = { views, lastViewed };
+    }
+    return out;
+  }, [grouped, viewCounts]);
+
+  const filtered = grouped.filter((p) => {
     const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
     if (!matchesStatus) return false;
     if (!search.trim()) return true;
@@ -80,15 +115,15 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
-      await deleteProposal(deleteTarget.id);
-      setProposals((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      await deleteProposalGroup(deleteTarget.proposal_group_id);
+      setProposals((prev) => prev.filter((p) => p.proposal_group_id !== deleteTarget.proposal_group_id));
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
     }
   };
 
-  const columns: ColDef<ProposalRow>[] = [
+  const columns: ColDef<GroupedProposalRow>[] = [
     {
       key: 'proposal_number',
       label: '#',
@@ -101,19 +136,25 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     },
     {
       key: 'version_number',
-      label: 'Ver',
+      label: 'Versions',
       type: 'number',
-      defaultWidth: 52,
+      defaultWidth: 96,
       sortable: true,
-      render: (row) => (
-        <span className="text-admin-text-secondary font-mono text-xs">v{row.version_number}</span>
-      ),
+      render: (row) => {
+        const sortedAsc = [...row._versions].sort((a, b) => a.version_number - b.version_number);
+        return (
+          <span className="text-admin-text-secondary font-mono text-xs">
+            {sortedAsc.map((v) => `v${v.version_number}`).join(', ')}
+          </span>
+        );
+      },
     },
     {
       key: 'version_name',
-      label: 'Version Name',
+      label: 'Latest Version Name',
       type: 'text',
       sortable: true,
+      defaultVisible: false,
       render: (row) => row.version_name
         ? <span className="text-admin-text-secondary">{row.version_name}</span>
         : <span className="text-admin-text-ghost">—</span>,
@@ -121,14 +162,22 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     {
       key: 'is_published_version',
       label: 'Published',
-      type: 'toggle',
-      sortable: true,
       defaultWidth: 110,
-      toggleLabels: ['Published', 'Unpublished'],
-      toggleColors: ['bg-admin-success-bg text-admin-success', 'bg-admin-bg-hover text-admin-text-faint'],
-      onEdit: async (rowId, newValue) => {
-        await setVersionPublished(rowId, Boolean(newValue));
-        setProposals((prev) => prev.map((p) => p.id === rowId ? { ...p, is_published_version: Boolean(newValue) } : p));
+      render: (row) => {
+        const total = row._versions.length;
+        const published = row._versions.filter((v) => v.is_published_version).length;
+        const allPublished = published === total;
+        const nonePublished = published === 0;
+        const cls = nonePublished
+          ? 'bg-admin-bg-hover text-admin-text-faint'
+          : allPublished
+            ? 'bg-admin-success-bg text-admin-success'
+            : 'bg-admin-warning-bg text-admin-warning';
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+            {published}/{total}
+          </span>
+        );
       },
     },
     {
@@ -236,7 +285,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       label: 'Activity',
       defaultWidth: 144,
       render: (row) => {
-        const vc = viewCounts[row.id];
+        const vc = groupedViewCounts[row.id];
         if (!vc?.views) return <span className="text-admin-text-ghost text-xs">—</span>;
         return (
           <span className="text-admin-text-dim text-xs font-mono whitespace-nowrap">
@@ -260,7 +309,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
     },
   ];
 
-  const rowActions: RowAction<ProposalRow>[] = [
+  const rowActions: RowAction<GroupedProposalRow>[] = [
     {
       icon: <Eye size={13} />,
       label: 'Views',
@@ -274,7 +323,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       label: 'Preview',
       onClick: (row, e) => {
         e.stopPropagation();
-        window.open(`/p/${row.slug}/v${row.version_number}`, '_blank');
+        window.open(`/p/${row.slug}`, '_blank'); // redirects to latest published
       },
     },
     {
@@ -324,7 +373,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       <AdminPageHeader
         title="Proposals"
         icon={FileText}
-        subtitle={`${proposals.length} total`}
+        subtitle={`${grouped.length} total`}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search proposals…"
@@ -397,7 +446,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full leading-none ${
                     statusFilter === tab.value ? 'bg-admin-bg-active' : 'bg-admin-bg-hover text-admin-text-faint'
                   }`}>
-                    {proposals.filter((p) => p.status === tab.value).length}
+                    {grouped.filter((p) => p.status === tab.value).length}
                   </span>
                 )}
               </button>
@@ -416,8 +465,15 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             variant: 'danger' as const,
             requireConfirm: true,
             onClick: async (ids: string[]) => {
-              await batchDeleteProposals(ids);
-              setProposals((prev) => prev.filter((p) => !ids.includes(p.id)));
+              // Selected ids are group reps; expand to ALL version ids in those groups
+              const selectedGroups = new Set(
+                grouped.filter((g) => ids.includes(g.id)).map((g) => g.proposal_group_id)
+              );
+              const allVersionIds = proposals
+                .filter((p) => selectedGroups.has(p.proposal_group_id))
+                .map((p) => p.id);
+              await batchDeleteProposals(allVersionIds);
+              setProposals((prev) => prev.filter((p) => !selectedGroups.has(p.proposal_group_id)));
             },
           },
         ]}
@@ -434,7 +490,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       />
 
       {mergeState && (() => {
-        const sources = proposals.filter((p) => mergeState.sourceIds.includes(p.id));
+        const sources = grouped.filter((p) => mergeState.sourceIds.includes(p.id));
         return (
           <MergeDialog
             items={sources.map((p) => {
@@ -458,20 +514,25 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         );
       })()}
 
-      {deleteTarget && (
-        <AdminDeleteModal
-          title="Delete proposal?"
-          description={
-            <>
-              <span className="text-admin-text-secondary">{deleteTarget.contact_company}</span> — this action
-              cannot be undone.
-            </>
-          }
-          isDeleting={isDeleting}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+      {deleteTarget && (() => {
+        const versionCount = grouped.find((g) => g.id === deleteTarget.id)?._versions.length ?? 1;
+        return (
+          <AdminDeleteModal
+            title="Delete proposal?"
+            description={
+              <>
+                <span className="text-admin-text-secondary">{deleteTarget.contact_company}</span>
+                {' — deletes all '}
+                {versionCount} version{versionCount !== 1 ? 's' : ''}
+                {' of this proposal. This action cannot be undone.'}
+              </>
+            }
+            isDeleting={isDeleting}
+            onConfirm={handleDelete}
+            onCancel={() => setDeleteTarget(null)}
+          />
+        );
+      })()}
 
 
       <ProposalPanel

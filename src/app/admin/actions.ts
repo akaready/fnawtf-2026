@@ -942,6 +942,16 @@ export async function createProposalVersion(sourceId: string, versionName?: stri
   return newId;
 }
 
+export async function deleteProposalGroup(groupId: string): Promise<void> {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposals')
+    .delete()
+    .eq('proposal_group_id', groupId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+}
+
 export async function setVersionPublished(id: string, published: boolean): Promise<void> {
   const { supabase } = await requireAuth();
   const { error } = await supabase
