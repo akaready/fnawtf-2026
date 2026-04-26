@@ -726,11 +726,120 @@ export async function updateProposal(id: string, data: Record<string, unknown>) 
   // No revalidatePath — panel manages proposal state client-side
 }
 
+export async function checkProposalSlugUnique(slug: string, excludeId: string): Promise<boolean> {
+  const { supabase } = await requireAuth();
+  const { data } = await supabase
+    .from('proposals')
+    .select('id')
+    .eq('slug', slug)
+    .neq('id', excludeId)
+    .neq('status', 'archived')
+    .maybeSingle();
+  return !data; // true = unique (no conflict)
+}
+
 export async function deleteProposal(id: string) {
   const { supabase } = await requireAuth();
   const { error } = await supabase.from('proposals').delete().eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/admin/proposals');
+}
+
+type SupabaseSrv = Awaited<ReturnType<typeof createClient>>;
+
+async function copyProposalChildren(supabase: SupabaseSrv, oldProposalId: string, newProposalId: string) {
+  // Sections (need old→new ID mapping for videos & projects)
+  const { data: oldSections } = await supabase
+    .from('proposal_sections')
+    .select('*')
+    .eq('proposal_id', oldProposalId)
+    .order('sort_order');
+  const sectionIdMap = new Map<string, string>();
+  if (oldSections?.length) {
+    for (const s of oldSections as Record<string, unknown>[]) {
+      const { id: oldSectionId, created_at: _c, proposal_id: _p, ...sectionRest } = s;
+      const { data: newSection } = await supabase
+        .from('proposal_sections')
+        .insert({ ...sectionRest, proposal_id: newProposalId } as never)
+        .select('id')
+        .single();
+      if (newSection) sectionIdMap.set(oldSectionId as string, (newSection as { id: string }).id);
+    }
+  }
+
+  // Videos (remap section_id)
+  const { data: oldVideos } = await supabase
+    .from('proposal_videos')
+    .select('*')
+    .eq('proposal_id', oldProposalId);
+  if (oldVideos?.length) {
+    const videoInserts = (oldVideos as Record<string, unknown>[]).map((v) => {
+      const { id: _vid, proposal_id: _p, section_id: oldSid, ...videoRest } = v;
+      return {
+        ...videoRest,
+        proposal_id: newProposalId,
+        section_id: oldSid ? sectionIdMap.get(oldSid as string) ?? oldSid : null,
+      };
+    });
+    await supabase.from('proposal_videos').insert(videoInserts as never);
+  }
+
+  // Projects (remap section_id)
+  const { data: oldProjects } = await supabase
+    .from('proposal_projects')
+    .select('*')
+    .eq('proposal_id', oldProposalId);
+  if (oldProjects?.length) {
+    const projInserts = (oldProjects as Record<string, unknown>[]).map((p) => {
+      const { id: _pid, proposal_id: _p, section_id: oldSid, ...projRest } = p;
+      return {
+        ...projRest,
+        proposal_id: newProposalId,
+        section_id: oldSid ? sectionIdMap.get(oldSid as string) ?? oldSid : null,
+      };
+    });
+    await supabase.from('proposal_projects').insert(projInserts as never);
+  }
+
+  // Quotes
+  const { data: oldQuotes } = await supabase
+    .from('proposal_quotes')
+    .select('*')
+    .eq('proposal_id', oldProposalId)
+    .is('deleted_at', null);
+  if (oldQuotes?.length) {
+    const quoteInserts = (oldQuotes as Record<string, unknown>[]).map((q) => {
+      const { id: _qid, proposal_id: _p, created_at: _c, updated_at: _u, deleted_at: _d, ...quoteRest } = q;
+      return { ...quoteRest, proposal_id: newProposalId };
+    });
+    await supabase.from('proposal_quotes').insert(quoteInserts as never);
+  }
+
+  // Milestones
+  const { data: oldMilestones } = await supabase
+    .from('proposal_milestones')
+    .select('*')
+    .eq('proposal_id', oldProposalId);
+  if (oldMilestones?.length) {
+    const msInserts = (oldMilestones as Record<string, unknown>[]).map((m) => {
+      const { id: _mid, proposal_id: _p, created_at: _c, ...msRest } = m;
+      return { ...msRest, proposal_id: newProposalId };
+    });
+    await supabase.from('proposal_milestones').insert(msInserts as never);
+  }
+
+  // Contacts
+  const { data: oldContacts } = await supabase
+    .from('proposal_contacts')
+    .select('*')
+    .eq('proposal_id', oldProposalId);
+  if (oldContacts?.length) {
+    const contactInserts = (oldContacts as Record<string, unknown>[]).map((c) => {
+      const { id: _cid, proposal_id: _p, created_at: _c, ...contactRest } = c;
+      return { ...contactRest, proposal_id: newProposalId };
+    });
+    await supabase.from('proposal_contacts').insert(contactInserts as never);
+  }
 }
 
 export async function duplicateProposal(id: string): Promise<string> {
@@ -745,10 +854,12 @@ export async function duplicateProposal(id: string): Promise<string> {
   if (fetchErr || !source) throw new Error(fetchErr?.message ?? 'Proposal not found');
   const src = source as Record<string, unknown>;
 
-  // 2. Insert new proposal (draft, new slug, title with "(Copy)")
-  const newSlug = `proposal-${Date.now()}`;
+  // 2. Insert new proposal in a NEW group (let DB assign group_id), v1, published, draft, new slug
+  const newSlug = `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const {
-    id: _id, proposal_number: _num, created_at: _ca, updated_at: _ua, slug: _slug, ...rest
+    id: _id, proposal_number: _num, created_at: _ca, updated_at: _ua, slug: _slug,
+    proposal_group_id: _pgid, version_number: _vn, version_name: _vname, is_published_version: _ipv,
+    ...rest
   } = src;
   const { data: newRow, error: insertErr } = await supabase
     .from('proposals')
@@ -758,108 +869,98 @@ export async function duplicateProposal(id: string): Promise<string> {
       status: 'draft',
       title: `${src.title} (Copy)`,
       created_by: userId,
+      version_number: 1,
+      version_name: null,
+      is_published_version: true,
+      // proposal_group_id intentionally omitted — DB default gen_random_uuid() assigns a fresh group
     } as never)
     .select('*')
     .single();
   if (insertErr || !newRow) throw new Error(insertErr?.message ?? 'Failed to create duplicate');
   const newId = (newRow as { id: string }).id;
 
-  // 3. Copy child tables
-  // Sections (need old→new ID mapping for videos & projects)
-  const { data: oldSections } = await supabase
-    .from('proposal_sections')
-    .select('*')
-    .eq('proposal_id', id)
-    .order('sort_order');
-  const sectionIdMap = new Map<string, string>();
-  if (oldSections?.length) {
-    for (const s of oldSections as Record<string, unknown>[]) {
-      const { id: oldSectionId, created_at: _c, proposal_id: _p, ...sectionRest } = s;
-      const { data: newSection } = await supabase
-        .from('proposal_sections')
-        .insert({ ...sectionRest, proposal_id: newId } as never)
-        .select('id')
-        .single();
-      if (newSection) sectionIdMap.set(oldSectionId as string, (newSection as { id: string }).id);
-    }
-  }
-
-  // Videos (remap section_id)
-  const { data: oldVideos } = await supabase
-    .from('proposal_videos')
-    .select('*')
-    .eq('proposal_id', id);
-  if (oldVideos?.length) {
-    const videoInserts = (oldVideos as Record<string, unknown>[]).map((v) => {
-      const { id: _vid, proposal_id: _p, section_id: oldSid, ...videoRest } = v;
-      return {
-        ...videoRest,
-        proposal_id: newId,
-        section_id: oldSid ? sectionIdMap.get(oldSid as string) ?? oldSid : null,
-      };
-    });
-    await supabase.from('proposal_videos').insert(videoInserts as never);
-  }
-
-  // Projects (remap section_id)
-  const { data: oldProjects } = await supabase
-    .from('proposal_projects')
-    .select('*')
-    .eq('proposal_id', id);
-  if (oldProjects?.length) {
-    const projInserts = (oldProjects as Record<string, unknown>[]).map((p) => {
-      const { id: _pid, proposal_id: _p, section_id: oldSid, ...projRest } = p;
-      return {
-        ...projRest,
-        proposal_id: newId,
-        section_id: oldSid ? sectionIdMap.get(oldSid as string) ?? oldSid : null,
-      };
-    });
-    await supabase.from('proposal_projects').insert(projInserts as never);
-  }
-
-  // Quotes
-  const { data: oldQuotes } = await supabase
-    .from('proposal_quotes')
-    .select('*')
-    .eq('proposal_id', id)
-    .is('deleted_at', null);
-  if (oldQuotes?.length) {
-    const quoteInserts = (oldQuotes as Record<string, unknown>[]).map((q) => {
-      const { id: _qid, proposal_id: _p, created_at: _c, updated_at: _u, deleted_at: _d, ...quoteRest } = q;
-      return { ...quoteRest, proposal_id: newId };
-    });
-    await supabase.from('proposal_quotes').insert(quoteInserts as never);
-  }
-
-  // Milestones
-  const { data: oldMilestones } = await supabase
-    .from('proposal_milestones')
-    .select('*')
-    .eq('proposal_id', id);
-  if (oldMilestones?.length) {
-    const msInserts = (oldMilestones as Record<string, unknown>[]).map((m) => {
-      const { id: _mid, proposal_id: _p, created_at: _c, ...msRest } = m;
-      return { ...msRest, proposal_id: newId };
-    });
-    await supabase.from('proposal_milestones').insert(msInserts as never);
-  }
-
-  // Contacts
-  const { data: oldContacts } = await supabase
-    .from('proposal_contacts')
-    .select('*')
-    .eq('proposal_id', id);
-  if (oldContacts?.length) {
-    const contactInserts = (oldContacts as Record<string, unknown>[]).map((c) => {
-      const { id: _cid, proposal_id: _p, created_at: _c, ...contactRest } = c;
-      return { ...contactRest, proposal_id: newId };
-    });
-    await supabase.from('proposal_contacts').insert(contactInserts as never);
-  }
+  await copyProposalChildren(supabase, id, newId);
 
   revalidatePath('/admin/proposals');
-  return (newRow as { id: string }).id;
+  return newId;
+}
+
+export async function createProposalVersion(sourceId: string, versionName?: string | null): Promise<string> {
+  const { supabase, userId } = await requireAuth();
+
+  // 1. Fetch source proposal
+  const { data: source, error: fetchErr } = await supabase
+    .from('proposals')
+    .select('*')
+    .eq('id', sourceId)
+    .single();
+  if (fetchErr || !source) throw new Error(fetchErr?.message ?? 'Proposal not found');
+  const src = source as unknown as Record<string, unknown> & {
+    proposal_group_id: string;
+    proposal_number: number;
+    slug: string;
+  };
+
+  // 2. Compute next version number for this group
+  const { data: maxRow } = await supabase
+    .from('proposals')
+    .select('version_number')
+    .eq('proposal_group_id', src.proposal_group_id)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .single();
+  const nextVersion = ((maxRow as { version_number: number } | null)?.version_number ?? 0) + 1;
+
+  // 3. Insert new version: same group_id, same slug, same proposal_number, draft, unpublished
+  const {
+    id: _id, created_at: _ca, updated_at: _ua,
+    proposal_number: _num, slug: _slug, proposal_group_id: _pgid,
+    version_number: _vn, version_name: _vname, is_published_version: _ipv,
+    status: _status, ...rest
+  } = src;
+  const { data: newRow, error: insertErr } = await supabase
+    .from('proposals')
+    .insert({
+      ...rest,
+      slug: src.slug,
+      proposal_number: src.proposal_number,
+      proposal_group_id: src.proposal_group_id,
+      version_number: nextVersion,
+      version_name: versionName ?? null,
+      is_published_version: false,
+      status: 'draft',
+      created_by: userId,
+    } as never)
+    .select('*')
+    .single();
+  if (insertErr || !newRow) throw new Error(insertErr?.message ?? 'Failed to create version');
+  const newId = (newRow as { id: string }).id;
+
+  await copyProposalChildren(supabase, sourceId, newId);
+
+  revalidatePath('/admin/proposals');
+  return newId;
+}
+
+export async function setVersionPublished(id: string, published: boolean): Promise<void> {
+  const { supabase } = await requireAuth();
+  const { error } = await supabase
+    .from('proposals')
+    .update({ is_published_version: published } as never)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/admin/proposals');
+}
+
+export async function getProposalVersions(groupId: string): Promise<import('@/types/proposal').ProposalRow[]> {
+  const { supabase } = await requireAuth();
+  const { data, error } = await supabase
+    .from('proposals')
+    .select('*')
+    .eq('proposal_group_id', groupId)
+    .order('version_number', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('@/types/proposal').ProposalRow[];
 }
 
 export async function createProposalDraft(): Promise<string> {

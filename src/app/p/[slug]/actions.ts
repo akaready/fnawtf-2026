@@ -7,11 +7,14 @@ import type { ProposalRow, ProposalSectionRow, ProposalMilestoneRow, ProposalQuo
 
 export async function verifyProposalAccess(slug: string, email: string, password: string, firstName?: string, lastName?: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
+  // All versions in a group share the same slug & password — pick the latest version
   const { data: proposal } = await supabase
     .from('proposals')
     .select('id, title, proposal_password, status, contact_company')
     .eq('slug', slug)
-    .single();
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (!proposal) {
     return { success: false, error: 'Proposal not found.' };
@@ -81,15 +84,35 @@ export async function verifyProposalAccess(slug: string, email: string, password
   return { success: true };
 }
 
-export async function getProposalData(slug: string) {
+export async function getProposalData(slug: string, versionNumber?: number) {
   const supabase = await createClient();
 
-  const { data: proposal } = await supabase
+  let query = supabase
     .from('proposals')
     .select('*')
-    .eq('slug', slug)
-    .single();
+    .eq('slug', slug);
 
+  if (versionNumber !== undefined) {
+    query = query.eq('version_number', versionNumber);
+  } else {
+    // Default to latest published version; fall back to highest version_number if none published
+    const { data: published } = await supabase
+      .from('proposals')
+      .select('version_number')
+      .eq('slug', slug)
+      .eq('is_published_version', true)
+      .order('version_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const fallback = (published as { version_number: number } | null)?.version_number;
+    if (fallback !== undefined) {
+      query = query.eq('version_number', fallback);
+    } else {
+      query = query.order('version_number', { ascending: false }).limit(1);
+    }
+  }
+
+  const { data: proposal } = await query.maybeSingle();
   if (!proposal) return null;
 
   const p = proposal as ProposalRow;

@@ -2,8 +2,8 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge, Settings, Copy } from 'lucide-react';
-import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals, duplicateProposal, getProposal } from '@/app/admin/actions';
+import { Plus, ExternalLink, Trash2, Loader2, FileText, Eye, GitMerge, Settings, Copy, GitBranch } from 'lucide-react';
+import { deleteProposal, createProposalDraft, batchDeleteProposals, mergeProposals, duplicateProposal, getProposal, createProposalVersion, setVersionPublished } from '@/app/admin/actions';
 import { MergeDialog } from '@/app/admin/_components/MergeDialog';
 import { AdminPageHeader } from '@/app/admin/_components/AdminPageHeader';
 import {
@@ -30,6 +30,7 @@ const STATUS_TABS: { value: ProposalStatus | 'all'; label: string }[] = [
   { value: 'sent', label: 'Sent' },
   { value: 'viewed', label: 'Viewed' },
   { value: 'accepted', label: 'Accepted' },
+  { value: 'archived', label: 'Archived' },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -52,6 +53,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
   const [mergeState, setMergeState] = useState<{ sourceIds: string[] } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [versioningId, setVersioningId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -96,6 +98,38 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       render: (row) => (
         <span className="text-admin-text-ghost font-mono text-xs">{row.proposal_number}</span>
       ),
+    },
+    {
+      key: 'version_number',
+      label: 'Ver',
+      type: 'number',
+      defaultWidth: 52,
+      sortable: true,
+      render: (row) => (
+        <span className="text-admin-text-secondary font-mono text-xs">v{row.version_number}</span>
+      ),
+    },
+    {
+      key: 'version_name',
+      label: 'Version Name',
+      type: 'text',
+      sortable: true,
+      render: (row) => row.version_name
+        ? <span className="text-admin-text-secondary">{row.version_name}</span>
+        : <span className="text-admin-text-ghost">—</span>,
+    },
+    {
+      key: 'is_published_version',
+      label: 'Published',
+      type: 'toggle',
+      sortable: true,
+      defaultWidth: 110,
+      toggleLabels: ['Published', 'Unpublished'],
+      toggleColors: ['bg-admin-success-bg text-admin-success', 'bg-admin-bg-hover text-admin-text-faint'],
+      onEdit: async (rowId, newValue) => {
+        await setVersionPublished(rowId, Boolean(newValue));
+        setProposals((prev) => prev.map((p) => p.id === rowId ? { ...p, is_published_version: Boolean(newValue) } : p));
+      },
     },
     {
       key: 'contact_company',
@@ -240,7 +274,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
       label: 'Preview',
       onClick: (row, e) => {
         e.stopPropagation();
-        window.open(`/p/${row.slug}`, '_blank');
+        window.open(`/p/${row.slug}/v${row.version_number}`, '_blank');
       },
     },
     {
@@ -257,6 +291,23 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
           setActiveId(newId);
         } finally {
           setDuplicatingId(null);
+        }
+      },
+    },
+    {
+      icon: versioningId ? <Loader2 size={13} className="animate-spin" /> : <GitBranch size={13} />,
+      label: 'New Version',
+      onClick: async (row, e) => {
+        e.stopPropagation();
+        if (versioningId) return;
+        setVersioningId(row.id);
+        try {
+          const newId = await createProposalVersion(row.id);
+          const newProposal = await getProposal(newId);
+          setProposals((prev) => [newProposal, ...prev]);
+          setActiveId(newId);
+        } finally {
+          setVersioningId(null);
         }
       },
     },
@@ -422,6 +473,7 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
         />
       )}
 
+
       <ProposalPanel
         proposalId={activeId}
         open={!!activeId}
@@ -447,6 +499,13 @@ export function ProposalListClient({ proposals: initialProposals, viewCounts }: 
             }))
             .finally(() => setDuplicatingId(null));
         } : undefined}
+        onSwitchVersion={(versionId) => setActiveId(versionId)}
+        onNewVersionCreated={(versionId) => {
+          getProposal(versionId).then((newProposal) => {
+            setProposals((prev) => [newProposal, ...prev]);
+            setActiveId(versionId);
+          });
+        }}
       />
 
       <ProposalViewsPanel

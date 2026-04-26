@@ -3,7 +3,7 @@
 export type SnippetType = 'build' | 'launch' | 'scale' | 'build-launch' | 'fundraising' | 'general';
 export type SnippetCategory = string;
 export type ProposalType = 'build' | 'launch' | 'scale' | 'build-launch' | 'fundraising';
-export type ProposalStatus = 'generated' | 'draft' | 'sent' | 'viewed' | 'accepted';
+export type ProposalStatus = 'generated' | 'draft' | 'sent' | 'viewed' | 'accepted' | 'archived';
 export type SectionType = 'text' | 'video' | 'projects' | 'quote' | 'calendar' | 'custom_text';
 
 export type ContactType = 'contact' | 'crew' | 'staff' | 'vendor' | 'cast';
@@ -86,6 +86,11 @@ export interface ProposalRow {
   slide_order: string[];
   intake_id: string | null;
   generated_by: string | null;
+  subtitle_options: string[] | null;
+  proposal_group_id: string;
+  version_number: number;
+  version_name: string | null;
+  is_published_version: boolean;
 }
 
 export interface ProposalSectionRow {

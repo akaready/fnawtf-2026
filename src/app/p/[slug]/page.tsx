@@ -1,54 +1,38 @@
-import { redirect } from 'next/navigation';
-import type { Metadata } from 'next';
+import { redirect, notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getProposalAuthCookie } from '@/lib/proposal/auth';
-import { getProposalData } from './actions';
-import { ProposalPageClient } from './ProposalPageClient';
-import type { ProposalVideo } from '@/types/proposal';
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export default async function ProposalSlugRoot({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data } = await supabase
+
+  // Find the latest published version for this slug
+  const { data: published } = await supabase
     .from('proposals')
-    .select('title')
+    .select('version_number')
     .eq('slug', slug)
-    .single();
+    .eq('is_published_version', true)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const row = data as { title: string } | null;
-  return {
-    title: row?.title ? `FNA.wtf • ${row.title}` : 'FNA.wtf • Proposal',
-  };
-}
+  let target = (published as unknown as { version_number: number } | null)?.version_number;
 
-export default async function ProposalPage({ params }: Props) {
-  const { slug } = await params;
-
-  // Check auth cookie
-  const viewer = await getProposalAuthCookie(slug);
-  if (!viewer) {
-    redirect(`/p/${slug}/login`);
+  // Fallback: if nothing is marked published (edge case), use the highest version_number
+  if (target === undefined) {
+    const { data: anyVersion } = await supabase
+      .from('proposals')
+      .select('version_number')
+      .eq('slug', slug)
+      .order('version_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    target = (anyVersion as unknown as { version_number: number } | null)?.version_number;
   }
 
-  // Fetch proposal data
-  const data = await getProposalData(slug);
-  if (!data) {
-    redirect(`/p/${slug}/login`);
-  }
-
-  return (
-    <ProposalPageClient
-      proposal={data.proposal}
-      sections={data.sections}
-      videos={data.videos as ProposalVideo[]}
-      quotes={data.quotes as Parameters<typeof ProposalPageClient>[0]['quotes']}
-      milestones={data.milestones}
-      viewerEmail={viewer.email}
-      viewerName={viewer.name}
-    />
-  );
+  if (target === undefined) notFound();
+  redirect(`/p/${slug}/v${target}`);
 }

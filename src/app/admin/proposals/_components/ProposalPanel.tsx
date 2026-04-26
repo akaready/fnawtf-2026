@@ -51,9 +51,11 @@ interface ProposalPanelProps {
   onViewsClick?: () => void;
   onDuplicate?: () => void;
   isDuplicating?: boolean;
+  onSwitchVersion?: (versionId: string) => void;
+  onNewVersionCreated?: (versionId: string) => void;
 }
 
-export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalDeleted, onProposalUpdated, onViewsClick, onDuplicate, isDuplicating }: ProposalPanelProps) {
+export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposalDeleted, onProposalUpdated, onViewsClick, onDuplicate, isDuplicating, onSwitchVersion, onNewVersionCreated }: ProposalPanelProps) {
   const editorRef = useRef<ProposalEditorHandle>(null);
   const [data, setData] = useState<PanelData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -134,6 +136,8 @@ export function ProposalPanel({ proposalId, open, viewCount, onClose, onProposal
           onUpdated={onProposalUpdated && proposalId ? (fields) => onProposalUpdated({ ...fields, id: proposalId }) : undefined}
           onDuplicate={onDuplicate}
           isDuplicating={isDuplicating}
+          onSwitchVersion={onSwitchVersion}
+          onNewVersionCreated={onNewVersionCreated}
         />
       )}
     </PanelDrawer>

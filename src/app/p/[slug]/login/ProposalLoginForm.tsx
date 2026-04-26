@@ -6,11 +6,11 @@ import { verifyProposalAccess } from '../actions';
 
 interface Props {
   slug: string;
-  title: string;
   company: string;
+  returnVersion?: string;
 }
 
-export function ProposalLoginForm({ slug, title, company }: Props) {
+export function ProposalLoginForm({ slug, company, returnVersion }: Props) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -36,7 +36,7 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
       // Auth succeeded — navigate via a synthetic link click so that
       // PageTransition intercepts it and plays the purple panel sweep.
       const link = document.createElement('a');
-      link.href = `/p/${slug}`;
+      link.href = returnVersion ? `/p/${slug}/${returnVersion}` : `/p/${slug}`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
@@ -55,7 +55,7 @@ export function ProposalLoginForm({ slug, title, company }: Props) {
             Proposal for {company}
           </p>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            {title}
+            {company} × FNA
           </h1>
         </div>
 
