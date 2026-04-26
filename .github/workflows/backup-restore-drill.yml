@@ -1,0 +1,90 @@
+name: Weekly Backup Restore Drill
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC (after Sunday's backup)
+  workflow_dispatch:
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: drill
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-retries 5
+    steps:
+      - name: Find latest successful backup run
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          RUN_ID=$(gh run list --workflow="Daily Supabase Backup" --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "::error::No successful backup runs found"
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Using backup run: $RUN_ID"
+
+      - name: Download latest backup artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ steps.find.outputs.run_id }}
+        run: |
+          mkdir -p restore
+          gh run download "$RUN_ID" --dir restore/
+          find restore -type f -ls
+
+      - name: Restore schema + data into throwaway Postgres
+        run: |
+          BACKUP_DIR=$(find restore -maxdepth 2 -type d -name 'supabase-backup-*' | head -1)
+          if [ -z "$BACKUP_DIR" ]; then
+            BACKUP_DIR=$(find restore -maxdepth 2 -type d -name 'db' | head -1 | xargs dirname)
+          fi
+          echo "Restoring from: $BACKUP_DIR"
+          cd "$BACKUP_DIR"
+          gunzip -k db/schema.sql.gz db/data.sql.gz
+          PGPASSWORD=drill psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=0 -f db/schema.sql > /tmp/schema.log 2>&1 || echo "Schema restore had warnings (expected for Supabase-specific roles)"
+          PGPASSWORD=drill psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=0 -f db/data.sql > /tmp/data.log 2>&1 || echo "Data restore had warnings"
+          tail -20 /tmp/schema.log
+          tail -20 /tmp/data.log
+
+      - name: Sanity-check row counts on key tables
+        run: |
+          FAIL=0
+          for t in proposals contracts companies contacts; do
+            COUNT=$(PGPASSWORD=drill psql -h localhost -U postgres -d postgres -tAc "SELECT count(*) FROM public.$t" 2>/dev/null || echo "ERR")
+            echo "public.$t: $COUNT rows"
+            if [ "$COUNT" = "ERR" ] || [ "$COUNT" = "0" ]; then
+              echo "::warning::public.$t restored with 0 rows or error"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" = "1" ]; then
+            echo "::error::One or more key tables failed sanity check"
+            exit 1
+          fi
+
+      - name: Verify storage tarball is non-empty
+        run: |
+          BACKUP_DIR=$(find restore -maxdepth 2 -type d -name 'supabase-backup-*' | head -1)
+          if [ -z "$BACKUP_DIR" ]; then
+            BACKUP_DIR=$(find restore -maxdepth 2 -type d -name 'db' | head -1 | xargs dirname)
+          fi
+          cd "$BACKUP_DIR"
+          test -s storage.tar.gz
+          OBJ_COUNT=$(tar -tzf storage.tar.gz | grep -v '/$' | wc -l)
+          echo "Storage object count: $OBJ_COUNT"
+          if [ "$OBJ_COUNT" -lt 1 ]; then
+            echo "::error::Storage tarball contains no objects"
+            exit 1
+          fi
+          echo "First 20 entries:"
+          tar -tzf storage.tar.gz | head -20
