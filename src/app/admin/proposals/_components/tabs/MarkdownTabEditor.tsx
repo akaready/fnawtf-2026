@@ -28,6 +28,8 @@ interface MarkdownTabEditorProps {
   defaultSnippetCategory?: string;
   titlePlaceholder?: string;
   onDirty?: () => void;
+  /** Pipeline-generated content shown as a "Generated" snippet in the sidebar */
+  generatedContent?: { title: string; body: string } | null;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -44,6 +46,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
     defaultSnippetCategory,
     titlePlaceholder,
     onDirty,
+    generatedContent,
   }, ref) {
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl]           = useState('');
@@ -203,10 +206,31 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const matchingSnippets = useMemo(
-    () => snippets.filter((s) => s.snippet_type === proposalType || s.snippet_type === 'general'),
-    [snippets, proposalType]
-  );
+  const matchingSnippets = useMemo(() => {
+    const matched = snippets.filter((s) => s.snippet_type === proposalType || s.snippet_type === 'general');
+    if (generatedContent?.title && generatedContent?.body) {
+      // Split by --- dividers into complete version blocks
+      const versions = generatedContent.body
+        .split(/\n---\n/)
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
+      const synthetics: ContentSnippetRow[] = versions.map((version, i) => {
+        const firstLine = version.split('\n')[0].replace(/^[#*]+\s*/, '').slice(0, 50);
+        return {
+          id: `__generated_v${i}__`,
+          title: `\u{1F916} Option ${i + 1}: ${firstLine}${firstLine.length >= 50 ? '...' : ''}`,
+          body: version,
+          snippet_type: 'general' as const,
+          category: 'Generated',
+          sort_order: i,
+          created_at: '',
+          updated_at: '',
+        };
+      });
+      return [...synthetics, ...matched];
+    }
+    return matched;
+  }, [snippets, proposalType, generatedContent]);
 
   const snippetCategories = useMemo(() => {
     const set = new Set<string>();
@@ -284,7 +308,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
           {/* Page title */}
           {titlePlaceholder && (
-            <div className="flex-shrink-0 max-w-3xl w-full px-8 pt-5 pb-2">
+            <div className="flex-shrink-0 w-full px-8 pt-5 pb-2">
               <label className="admin-label">Slide Title</label>
               <input
                 type="text"
@@ -297,7 +321,7 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
           )}
 
           {/* Toolbar — normal bg, fixed height, aligned with snippet sidebar header */}
-          <div className="flex-shrink-0 max-w-3xl w-full">
+          <div className="flex-shrink-0 w-full">
             <div className="flex items-center gap-0.5 px-8 py-3 border-b border-admin-border">
               {formatTools.map(({ key, Icon, label, fn, isActive }) => (
                 <button
@@ -315,60 +339,40 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
                 </button>
               ))}
 
-              <span className="w-px h-3.5 bg-admin-border-muted mx-1 flex-shrink-0" />
-
-              {/* Sidebar toggle — show when collapsed */}
-              {!sidebarOpen && (
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(true)}
-                  title="Show snippets"
-                  className="p-1.5 rounded transition-colors text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover ml-auto"
-                >
-                  <PanelRight size={14} />
-                </button>
-              )}
-
-              {/* Link button */}
-              {isLink ? (
-                <div className="flex items-center gap-1 px-2 py-1 rounded bg-admin-bg-hover text-xs">
-                  <Link2 size={12} className="text-admin-text-dim flex-shrink-0" />
-                  <span className="text-admin-text-dim max-w-[120px] truncate">{linkHref}</span>
-                  <a
-                    href={linkHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open link"
-                    className="ml-0.5 text-admin-text-faint hover:text-admin-text-primary transition-colors p-0.5 rounded"
-                  >
-                    <ExternalLink size={11} />
-                  </a>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); openLink(); }}
-                    title="Edit link"
-                    className="text-admin-text-faint hover:text-admin-text-primary transition-colors p-0.5 rounded"
-                  >
-                    <Link2 size={11} />
-                  </button>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
-                    title="Remove link"
-                    className="text-admin-text-faint hover:text-admin-danger transition-colors p-0.5 rounded"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); openLink(); }}
-                  title="Link (⌘⇧U)"
-                  className="p-1.5 rounded transition-colors text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover"
-                >
-                  <Link2 size={14} />
-                </button>
+              {/* Link display — only shown when cursor is on an existing link */}
+              {isLink && (
+                <>
+                  <span className="w-px h-3.5 bg-admin-border-muted mx-1 flex-shrink-0" />
+                  <div className="flex items-center gap-1 px-2 py-1 rounded bg-admin-bg-hover text-xs">
+                    <Link2 size={12} className="text-admin-text-dim flex-shrink-0" />
+                    <span className="text-admin-text-dim max-w-[120px] truncate">{linkHref}</span>
+                    <a
+                      href={linkHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open link"
+                      className="ml-0.5 text-admin-text-faint hover:text-admin-text-primary transition-colors p-0.5 rounded"
+                    >
+                      <ExternalLink size={11} />
+                    </a>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); openLink(); }}
+                      title="Edit link"
+                      className="text-admin-text-faint hover:text-admin-text-primary transition-colors p-0.5 rounded"
+                    >
+                      <Link2 size={11} />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}
+                      title="Remove link"
+                      className="text-admin-text-faint hover:text-admin-danger transition-colors p-0.5 rounded"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -444,7 +448,21 @@ export const MarkdownTabEditor = forwardRef<MarkdownTabEditorHandle, MarkdownTab
 
         </div>
 
-        {/* Snippet sidebar */}
+        {/* Snippet sidebar — collapsed state shows just the toggle button in a narrow strip */}
+        {!sidebarOpen && (
+          <div className="flex-shrink-0 border-l border-admin-border flex flex-col">
+            <div className="h-[3rem] border-b border-admin-border flex items-center justify-center px-1.5">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                title="Show snippets"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-admin-text-faint hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors"
+              >
+                <PanelRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
         {sidebarOpen && (
           <div className="w-72 flex-shrink-0 border-l border-admin-border flex flex-col">
             <div className="px-3 h-[3rem] border-b border-admin-border flex-shrink-0 flex items-center gap-1.5">

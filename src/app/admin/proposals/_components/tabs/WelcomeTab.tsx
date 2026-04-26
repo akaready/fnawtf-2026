@@ -13,10 +13,14 @@ interface Props {
   snippets: ContentSnippetRow[];
   onSectionUpdated: (s: ProposalSectionRow) => void;
   onDirty?: () => void;
+  generatedBy?: string | null;
 }
 
 export const WelcomeTab = forwardRef<MarkdownTabEditorHandle, Props>(
-  function WelcomeTab({ proposalId, proposalType, section, snippets, onSectionUpdated, onDirty }, ref) {
+  function WelcomeTab({ proposalId, proposalType, section, snippets, onSectionUpdated, onDirty, generatedBy }, ref) {
+    const generatedContent = generatedBy === 'friendly-bot' && section?.custom_title && section?.custom_content
+      ? { title: section.custom_title, body: section.custom_content }
+      : null;
     return (
       <MarkdownTabEditor
         ref={ref}
@@ -30,6 +34,7 @@ export const WelcomeTab = forwardRef<MarkdownTabEditorHandle, Props>(
         label="Welcome"
         defaultSnippetCategory="Welcome"
         titlePlaceholder="A Note for You"
+        generatedContent={generatedContent}
       />
     );
   }
