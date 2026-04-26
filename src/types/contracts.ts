@@ -13,13 +13,17 @@ export type ContractStatus =
 export type SignerRole = 'signer' | 'approver' | 'cc';
 export type SignerStatus = 'pending' | 'viewed' | 'signed' | 'declined';
 
-export type MergeFieldSource = 'client' | 'contact' | 'proposal' | 'quote' | 'manual';
+export type MergeFieldSource = 'client' | 'contact' | 'proposal' | 'quote' | 'company' | 'manual';
+
+export type MergeFieldType = 'text' | 'boolean' | 'number' | 'date' | 'currency';
 
 export interface MergeFieldDef {
   key: string;
   label: string;
   source: MergeFieldSource;
   db_path: string | null;
+  field_type?: MergeFieldType;
+  default_value?: string;
 }
 
 export interface ContractTemplateRow {
