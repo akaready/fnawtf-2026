@@ -84,7 +84,7 @@ export const buildAddOns: AddOn[] = [
   },
   {
     id: 'build-prelaunch-site',
-    name: 'Pre-launch website build-out',
+    name: 'Pre-launch website support',
     price: 1500,
     priceDisplay: '$1,500',
     tier: 'build',
