@@ -615,12 +615,15 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
           )}
         </div>
         <div className={`space-y-1.5 transition-opacity duration-150 ${rightDimmed ? 'opacity-30' : 'opacity-100'}`}>
-        {tiers.map((tier, ti) => (
+        {tiers.map((tier, ti) => {
+          const baseColor = tier.rightBase < tier.leftBase ? 'text-red-400/80' : tier.rightBase > tier.leftBase ? 'text-cyan-400' : 'text-foreground';
+          const baseLabelColor = tier.rightBase < tier.leftBase ? 'text-red-400/60' : tier.rightBase > tier.leftBase ? 'text-cyan-400/80' : 'text-muted-foreground';
+          return (
           <Fragment key={tier.label}>
             {ti > 0 && <div className="h-px bg-green-900/50 my-1" />}
             <div className="flex justify-between gap-1">
-              <span className="text-muted-foreground truncate">{tier.label} base</span>
-              <span className="text-foreground flex-shrink-0">{formatPrice(tier.rightBase)}</span>
+              <span className={`truncate ${baseLabelColor}`}>{tier.label} base</span>
+              <span className={`flex-shrink-0 ${baseColor}`}>{formatPrice(tier.rightBase)}</span>
             </div>
             {tier.rows.map((row) => {
               const { leftItem, rightItem } = row;
@@ -655,7 +658,8 @@ function ComparisonGrid({ left, right, rightHeader, rightDimmed }: { left: Quote
               );
             })}
           </Fragment>
-        ))}
+          );
+        })}
         <div className="h-px bg-green-900/50 my-1" />
         <div className="flex justify-between gap-1">
           <span className="text-muted-foreground truncate">Overhead (10%)</span>
