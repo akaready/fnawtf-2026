@@ -27,22 +27,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const supabase = await createClient();
-  const [{ data: proposalRow }, { data: seoRow }] = await Promise.all([
-    supabase
-      .from('proposals')
-      .select('title, subtitle, contact_company')
-      .eq('slug', slug)
-      .eq('version_number', versionNumber)
-      .maybeSingle(),
-    supabase
-      .from('seo_settings')
-      .select('og_image_url')
-      .eq('page_slug', '_global')
-      .maybeSingle(),
-  ]);
+  const { data: proposalRow } = await supabase
+    .from('proposals')
+    .select('title, subtitle, contact_company')
+    .eq('slug', slug)
+    .eq('version_number', versionNumber)
+    .maybeSingle();
 
   const row = proposalRow as { title: string; subtitle: string | null; contact_company: string | null } | null;
-  const ogImage = (seoRow as { og_image_url: string | null } | null)?.og_image_url ?? undefined;
 
   const title = row?.title ? `FNA.wtf • ${row.title}` : 'FNA.wtf • Proposal';
   const ogTitle = row?.contact_company
@@ -58,13 +50,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: ogTitle,
       description,
       type: 'website',
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      siteName: 'FNA.wtf',
     },
     twitter: {
       card: 'summary_large_image',
       title: ogTitle,
       description,
-      ...(ogImage ? { images: [ogImage] } : {}),
     },
   };
 }
