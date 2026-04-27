@@ -106,7 +106,7 @@ export const buildAddOns: AddOn[] = [
     priceDisplay: '$3,500',
     description: 'Front-of-line scheduling and dedicated creative access',
     tier: 'build',
-    category: 'PRIORITY',
+    category: 'MISCELLANEOUS',
   },
 ];
 
@@ -364,7 +364,19 @@ export const launchAddOns: AddOn[] = [
     priceDisplay: '$3,500',
     description: 'Front-of-line scheduling and dedicated creative access',
     tier: 'launch',
-    category: 'PRIORITY',
+    category: 'MISCELLANEOUS',
+  },
+  {
+    id: 'launch-travel-expenses',
+    name: 'Travel Expenses',
+    description: 'Covers airfare to anywhere, extra baggage fees, hotel fees, prep days, car rental, and contingencies for Director and Cinematographer when travel is necessary for production.',
+    price: 5000,
+    priceDisplay: '$5,000',
+    tier: 'launch',
+    category: 'MISCELLANEOUS',
+    discountExempt: true,
+    dueAtSigning: true,
+    slider: { min: 500, max: 15000, step: 250, default: 5000 },
   },
 ];
 
@@ -423,5 +435,5 @@ export const fundraisingAddOns: AddOn[] = [
   { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-rush', name: '72-hour rush fee', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-additional-post', name: 'Additional week of post', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
-  { id: 'fundraising-travel', name: 'Travel to you', price: 2500, priceDisplay: '$2,500', tier: 'fundraising', discountExempt: true, dueAtSigning: true },
+  { id: 'fundraising-travel', name: 'Travel Expenses', description: 'Covers airfare to anywhere, extra baggage fees, hotel fees, prep days, car rental, and contingencies for Director and Cinematographer when travel is necessary for production.', price: 5000, priceDisplay: '$5,000', tier: 'fundraising', discountExempt: true, dueAtSigning: true, slider: { min: 500, max: 15000, step: 250, default: 5000 } },
 ];

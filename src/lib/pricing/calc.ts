@@ -98,7 +98,7 @@ export function calcTierTotal(
 
       total += linePrice;
       if (addOn.category === 'CAST + CREW' || addOn.discountExempt) castCrewTotal += linePrice;
-      if (addOn.category === 'PRIORITY') priorityTotal += linePrice;
+      if (addOn.id === 'priority-scheduling-build' || addOn.id === 'priority-scheduling-launch') priorityTotal += linePrice;
       if (addOn.dueAtSigning) dueAtSigningTotal += linePrice;
 
       let label = addOn.name;
