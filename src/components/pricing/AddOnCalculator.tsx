@@ -455,7 +455,8 @@ function PhotoSliderRow({
   enabled,
   onToggle,
   onPhotoCountChange,
-  totalDays,
+  itemDays,
+  onDaysChange,
   isLocked,
   isCompare,
   isRecommended,
@@ -466,7 +467,8 @@ function PhotoSliderRow({
   enabled: boolean;
   onToggle: (id: string) => void;
   onPhotoCountChange: (count: number) => void;
-  totalDays: number;
+  itemDays: number;
+  onDaysChange: (id: string, days: number) => void;
   isLocked?: boolean;
   isCompare?: boolean;
   isRecommended?: boolean;
@@ -475,7 +477,7 @@ function PhotoSliderRow({
   const ps = addOn.photoSlider!;
   const extraPhotos = Math.max(0, photoCount - ps.included);
   const extraCost = extraPhotos * ps.extraPrice;
-  const baseCost = addOn.price * totalDays;
+  const baseCost = addOn.price * itemDays;
   const totalCost = baseCost + extraCost;
 
   const lockedNotIncluded = isLocked && !enabled;
@@ -533,11 +535,16 @@ function PhotoSliderRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <span className={`text-sm font-medium ${lockedNotIncluded ? 'text-white/20' : compareRemoved ? 'text-red-900' : 'text-foreground'}`}>{addOn.name}</span>
-            <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
-              {enabled
-                ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
-                : addOn.priceDisplay}
-            </span>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {enabled && addOn.perDay && !isLocked && (
+                <DaysStepper addOnId={addOn.id} currentDays={itemDays} onDaysChange={onDaysChange} />
+              )}
+              <span className={`text-sm font-semibold whitespace-nowrap ${lockedNotIncluded ? 'text-white/20' : isLocked ? 'text-[rgb(var(--qa-text))]/60' : (compareAdded || compareIncreased) ? 'text-cyan-400' : (compareRemoved || compareDecreased) ? 'text-red-900' : (isCompare && isRecommended) ? 'text-[rgb(var(--qa-text))]/60' : isCompare ? 'text-white/50' : 'text-accent'}`}>
+                {enabled
+                  ? `$${totalCost.toLocaleString('en-US')} (${photoCount} photos)`
+                  : addOn.priceDisplay}
+              </span>
+            </div>
           </div>
           {!enabled && !isLocked && (
             <span className="text-xs text-muted-foreground block mt-1">includes {ps.included} photos, add&apos;l at ${ps.extraPrice}/ea</span>
@@ -1000,7 +1007,8 @@ export function AddOnSection({
           enabled={selectedAddOns.has(addOn.id)}
           onToggle={onToggle}
           onPhotoCountChange={onPhotoCountChange}
-          totalDays={days}
+          itemDays={sliderValues.get(`${addOn.id}:days`) ?? days}
+          onDaysChange={onDaysChange ?? (() => {})}
           isLocked={isLocked}
           isCompare={isCompare}
           isRecommended={addonIsRecommended}

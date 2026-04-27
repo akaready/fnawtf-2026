@@ -76,7 +76,6 @@ export function VersionDropdown({ proposal, onSwitchVersion, onNewVersionCreated
         className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-admin-bg-selected text-admin-text-secondary border-admin-border hover:bg-admin-bg-hover hover:text-admin-text-primary transition-colors max-w-[220px]"
         title="Versions"
       >
-        <GitBranch size={11} className="flex-shrink-0" />
         <span className="truncate">{label}</span>
         <ChevronDown size={11} className={`transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>

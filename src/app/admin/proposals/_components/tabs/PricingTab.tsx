@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect, useRef, useId, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, GripVertical, PenLine, type LucideIcon } from 'lucide-react';
+import { TrendingUp, Eye, EyeOff, Plus, Trash2, Check, X, Hammer, Rocket, Coins, BadgeDollarSign, GripVertical, PenLine, Maximize2, Minimize2, type LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   DndContext,
@@ -224,6 +224,9 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   const [activeQuoteIndex, setActiveQuoteIndex] = useState(0);
   const activeQuote = quotes[activeQuoteIndex] ?? null;
   const activeQuoteId = activeQuote?.id;
+
+  // ── Fullscreen toggle — collapses everything above the quote tabs ───
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // ── Per-quote phase state (derived from active quote) ───────────────
   const activePhases = activeQuote ? quoteToPhasesArray(activeQuote) : [];
@@ -587,7 +590,7 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
   return (
     <div className="flex flex-col h-full">
       {/* Pricing notes + user quote options */}
-      <div className="flex gap-6 px-8 pt-5 pb-3 border-b border-admin-border flex-shrink-0">
+      <div className={`flex gap-6 px-8 pt-5 pb-3 border-b border-admin-border flex-shrink-0 ${isFullscreen ? 'hidden' : ''}`}>
         <div className="flex-1 min-w-0 flex flex-col">
           <label className={labelCls}>Slide description</label>
           <textarea
@@ -658,6 +661,13 @@ export const PricingTab = forwardRef<PricingTabHandle, PricingTabProps>(function
 
       {/* Quote tabs nav — always visible */}
       <div className="flex items-center gap-1 px-6 @md:px-8 h-[3rem] border-b border-admin-border flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <button
+          onClick={() => setIsFullscreen((v) => !v)}
+          title={isFullscreen ? 'Exit fullscreen' : 'Expand quote area'}
+          className="flex items-center justify-center w-8 h-8 mr-1 rounded-admin-sm text-admin-text-dim hover:text-admin-text-primary hover:bg-admin-bg-hover transition-colors flex-shrink-0"
+        >
+          {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
         <DndContext id={dndId} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={quotes.map((q) => q.id)} strategy={horizontalListSortingStrategy}>
             {quotes.map((q, i) => (

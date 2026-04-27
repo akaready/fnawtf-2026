@@ -675,7 +675,7 @@ export function ProposalCalculatorEmbed({ proposalId, proposalType, initialQuote
               isReadOnly={isReadOnly}
               isLocked={isLocked}
               allQuotes={standalone ? undefined : allQuotes}
-              activeQuoteId={standalone ? undefined : activeQuoteId}
+              activeQuoteId={activeQuoteId}
               onFriendlyDiscountChange={setFriendlyDiscountPct}
               onActiveQuoteChange={standalone ? undefined : onActiveQuoteChange}
             />
