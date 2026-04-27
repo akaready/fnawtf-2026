@@ -10,7 +10,8 @@ function parseVersion(seg: string): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
-export default async function Image({ params }: { params: { slug: string; version: string } }) {
-  const versionNumber = parseVersion(params.version);
-  return generateProposalOg(params.slug, versionNumber);
+export default async function Image({ params }: { params: Promise<{ slug: string; version: string }> }) {
+  const { slug, version } = await params;
+  const versionNumber = parseVersion(version);
+  return generateProposalOg(slug, versionNumber);
 }

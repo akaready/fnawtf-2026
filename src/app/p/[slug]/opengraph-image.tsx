@@ -4,6 +4,7 @@ export { size, contentType };
 export const runtime = 'nodejs';
 export const alt = 'FNA.wtf proposal';
 
-export default async function Image({ params }: { params: { slug: string } }) {
-  return generateProposalOg(params.slug);
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return generateProposalOg(slug);
 }
