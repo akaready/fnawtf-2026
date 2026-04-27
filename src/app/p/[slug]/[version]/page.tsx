@@ -19,19 +19,53 @@ function parseVersion(seg: string): number | null {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, version } = await params;
   const versionNumber = parseVersion(version);
-  if (versionNumber === null) return { title: 'FNA.wtf • Proposal' };
+
+  const baseRobots = { index: false, follow: false } as const;
+
+  if (versionNumber === null) {
+    return { title: 'FNA.wtf • Proposal', robots: baseRobots };
+  }
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from('proposals')
-    .select('title')
-    .eq('slug', slug)
-    .eq('version_number', versionNumber)
-    .maybeSingle();
+  const [{ data: proposalRow }, { data: seoRow }] = await Promise.all([
+    supabase
+      .from('proposals')
+      .select('title, subtitle, contact_company')
+      .eq('slug', slug)
+      .eq('version_number', versionNumber)
+      .maybeSingle(),
+    supabase
+      .from('seo_settings')
+      .select('og_image_url')
+      .eq('page_slug', '_global')
+      .maybeSingle(),
+  ]);
 
-  const row = data as { title: string } | null;
+  const row = proposalRow as { title: string; subtitle: string | null; contact_company: string | null } | null;
+  const ogImage = (seoRow as { og_image_url: string | null } | null)?.og_image_url ?? undefined;
+
+  const title = row?.title ? `FNA.wtf • ${row.title}` : 'FNA.wtf • Proposal';
+  const ogTitle = row?.contact_company
+    ? `${row.title} — for ${row.contact_company}`
+    : row?.title ?? 'Proposal';
+  const description = row?.subtitle?.trim() || 'A proposal from Friends \'n Allies.';
+
   return {
-    title: row?.title ? `FNA.wtf • ${row.title}` : 'FNA.wtf • Proposal',
+    title,
+    description,
+    robots: baseRobots,
+    openGraph: {
+      title: ogTitle,
+      description,
+      type: 'website',
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description,
+      ...(ogImage ? { images: [ogImage] } : {}),
+    },
   };
 }
 
