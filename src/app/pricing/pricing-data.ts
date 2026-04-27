@@ -369,7 +369,7 @@ export const launchAddOns: AddOn[] = [
   {
     id: 'launch-travel-expenses',
     name: 'Travel Expenses',
-    description: 'Covers airfare to anywhere, extra baggage fees, hotel fees, prep days, car rental, and contingencies for Director and Cinematographer when travel is necessary for production.',
+    description: 'Covers airfare to anywhere, extra baggage fees, hotel fees, prep days, car rental, and contingencies for Director and Cinematographer when travel outside of the SF Bay Area is necessary for production.',
     price: 5000,
     priceDisplay: '$5,000',
     tier: 'launch',
@@ -435,5 +435,5 @@ export const fundraisingAddOns: AddOn[] = [
   { id: 'fundraising-motion-graphics', name: 'Bespoke motion graphics or renders', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-rush', name: '72-hour rush fee', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
   { id: 'fundraising-additional-post', name: 'Additional week of post', price: 2500, priceDisplay: '$2,500', tier: 'fundraising' },
-  { id: 'fundraising-travel', name: 'Travel Expenses', description: 'Covers airfare to anywhere, extra baggage fees, hotel fees, prep days, car rental, and contingencies for Director and Cinematographer when travel is necessary for production.', price: 5000, priceDisplay: '$5,000', tier: 'fundraising', discountExempt: true, dueAtSigning: true, slider: { min: 500, max: 15000, step: 250, default: 5000 } },
+  { id: 'fundraising-travel', name: 'Travel Expenses', description: 'Covers airfare to anywhere, extra baggage fees, hotel fees, prep days, car rental, and contingencies for Director and Cinematographer when travel outside of the SF Bay Area is necessary for production.', price: 5000, priceDisplay: '$5,000', tier: 'fundraising', discountExempt: true, dueAtSigning: true, slider: { min: 500, max: 15000, step: 250, default: 5000 } },
 ];
